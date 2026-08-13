@@ -1,0 +1,193 @@
+/*
+ * Translucent materials.
+ *
+ * Four weights, thin to thick. Weight encodes hierarchy: the heavier the
+ * material, the more it separates its contents from what is behind it. Two
+ * rules are not negotiable — never stack one translucent surface directly on
+ * another (legibility collapses), and content scrolls *under* chrome rather
+ * than beside it.
+ *
+ * Each surface carries a bright top edge. That single line is what makes a
+ * panel read as a material catching light rather than a flat rectangle.
+ */
+
+.mat-ultrathin,
+.mat-thin,
+.mat-regular,
+.mat-thick {
+  position: relative;
+  background-color: var(--mat-bg);
+  -webkit-backdrop-filter: blur(var(--mat-blur)) saturate(var(--mat-sat));
+  backdrop-filter: blur(var(--mat-blur)) saturate(var(--mat-sat));
+  border-color: var(--mat-edge);
+}
+
+.mat-ultrathin {
+  --mat-blur: 8px;
+  --mat-sat: 150%;
+  --mat-bg: color-mix(in oklab, var(--color-base-100) 30%, transparent);
+  --mat-edge: color-mix(in oklab, white 22%, transparent);
+}
+
+.mat-thin {
+  --mat-blur: 16px;
+  --mat-sat: 180%;
+  --mat-bg: color-mix(in oklab, var(--color-base-100) 45%, transparent);
+  --mat-edge: color-mix(in oklab, white 28%, transparent);
+}
+
+.mat-regular {
+  --mat-blur: 28px;
+  --mat-sat: 180%;
+  --mat-bg: color-mix(in oklab, var(--color-base-100) 60%, transparent);
+  --mat-edge: color-mix(in oklab, white 30%, transparent);
+}
+
+.mat-thick {
+  --mat-blur: 48px;
+  --mat-sat: 200%;
+  --mat-bg: color-mix(in oklab, var(--color-base-100) 78%, transparent);
+  --mat-edge: color-mix(in oklab, white 34%, transparent);
+}
+
+[data-theme='shelf-dark'] .mat-ultrathin {
+  --mat-bg: color-mix(in oklab, var(--color-base-100) 25%, transparent);
+  --mat-edge: color-mix(in oklab, white 8%, transparent);
+}
+[data-theme='shelf-dark'] .mat-thin {
+  --mat-bg: color-mix(in oklab, var(--color-base-100) 40%, transparent);
+  --mat-edge: color-mix(in oklab, white 10%, transparent);
+}
+[data-theme='shelf-dark'] .mat-regular {
+  --mat-bg: color-mix(in oklab, var(--color-base-100) 55%, transparent);
+  --mat-edge: color-mix(in oklab, white 12%, transparent);
+}
+[data-theme='shelf-dark'] .mat-thick {
+  --mat-bg: color-mix(in oklab, var(--color-base-100) 72%, transparent);
+  --mat-edge: color-mix(in oklab, white 14%, transparent);
+}
+
+/* The light-catching edge, applied to whichever sides face the light. */
+.mat-edge-top {
+  border-top: 1px solid var(--mat-edge);
+}
+.mat-edge-bottom {
+  border-bottom: 1px solid var(--mat-edge);
+}
+.mat-edge-inline {
+  border-inline: 1px solid var(--mat-edge);
+}
+
+/*
+ * Where content meets floating chrome, fade it out instead of drawing a rule.
+ * A hard 1px divider announces that two panels were bolted together; a fade
+ * reads as one surface passing beneath another.
+ */
+.scroll-edge-top {
+  mask-image: linear-gradient(to bottom, transparent 0, black var(--scroll-fade, 12px));
+}
+
+.scroll-edge-bottom {
+  mask-image: linear-gradient(to top, transparent 0, black var(--scroll-fade, 12px));
+}
+
+/*
+ * When the user asks for less transparency, give them none: raise the surface
+ * to opaque and drop the blur entirely rather than merely softening it.
+ */
+@media (prefers-reduced-transparency: reduce) {
+  .mat-ultrathin,
+  .mat-thin,
+  .mat-regular,
+  .mat-thick {
+    background-color: var(--color-base-100);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .mat-ultrathin,
+  .mat-thin,
+  .mat-regular,
+  .mat-thick {
+    background-color: var(--color-base-100);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border-color: var(--color-base-content);
+  }
+}
+
+/*
+ * Vertical panel shades.
+ *
+ * The three columns are not the same surface, and pretending they are flattens
+ * the window into one sheet. Reading left to right they get progressively more
+ * present: the rail is furthest back, the sidebar sits in front of it, and the
+ * content area — where the data actually is — is the only opaque surface.
+ *
+ * That ordering is the platform convention (a translucent sidebar in front of
+ * the desktop, an opaque list beside it), and it is also the legible one: a
+ * grid of ten thousand cells over a moving wallpaper is unreadable, and
+ * blurring that much area every frame is the most expensive thing the window
+ * could ask the compositor to do.
+ */
+.panel-recessed {
+  /*
+   * Furthest back, so it is tinted toward the text colour rather than merely
+   * given a lower alpha: dropping alpha alone makes a panel more transparent
+   * without making it read as further away, and over a light desktop the two
+   * are indistinguishable.
+   */
+  --panel-tint: color-mix(in oklab, var(--color-base-300) 88%, var(--color-base-content));
+  --mat-bg: color-mix(in oklab, var(--panel-tint) 62%, transparent);
+  /*
+   * The window controls float over the top of the rail and overhang into the
+   * sidebar beside it. A shade boundary running underneath them cuts the
+   * controls in half, so the rail wears the sidebar's shade for exactly the
+   * height they occupy — see `.rail` in Workspace.vue.
+   */
+  --panel-strip: color-mix(in oklab, var(--color-base-300) 55%, transparent);
+}
+
+.panel-sidebar {
+  --panel-tint: var(--color-base-300);
+  --mat-bg: color-mix(in oklab, var(--panel-tint) 55%, transparent);
+}
+
+/* The working surface. Opaque on purpose — see above. */
+.panel-content {
+  background: var(--color-base-100);
+}
+
+[data-theme='shelf-dark'] .panel-recessed {
+  /* Dark surfaces recede by getting darker, the opposite of the light theme,
+     so the ordering has to be restated rather than reused. */
+  --panel-tint: color-mix(in oklab, var(--color-base-200) 82%, black);
+  --mat-bg: color-mix(in oklab, var(--panel-tint) 64%, transparent);
+  --panel-strip: color-mix(in oklab, var(--color-base-200) 58%, transparent);
+}
+
+[data-theme='shelf-dark'] .panel-sidebar {
+  --panel-tint: var(--color-base-200);
+  --mat-bg: color-mix(in oklab, var(--panel-tint) 58%, transparent);
+}
+
+/*
+ * With nothing behind the window to sample, the shades above would be mixed
+ * against the desktop and lose their ordering entirely.
+ */
+:root[data-translucency='none'] .panel-recessed {
+  --mat-bg: var(--panel-tint);
+}
+
+:root[data-translucency='none'] .panel-sidebar {
+  --mat-bg: var(--panel-tint);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .panel-recessed,
+  .panel-sidebar {
+    background-color: var(--panel-tint);
+  }
+}

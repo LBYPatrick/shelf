@@ -1,0 +1,10 @@
+onlyBuiltDependencies:
+  - better-sqlite3
+  - electron
+  - esbuild
+
+minimumReleaseAgeExclude:
+  - '@aws-sdk/client-dynamodb@3.1109.0'
+  - '@aws-sdk/credential-providers@3.1109.0'
+  - '@aws-sdk/lib-dynamodb@3.1109.0'
+  - pinia@4.0.3

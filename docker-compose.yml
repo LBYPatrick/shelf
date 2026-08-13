@@ -1,0 +1,86 @@
+# Test databases for the driver conformance suite.
+#
+# Every engine that needs a server lives here so `make db-up` gives a machine
+# everything the tests need. Ports are offset from the defaults so a local
+# Postgres or MySQL already running is not shadowed.
+#
+#   make db-up      start everything and wait until it answers
+#   make test-drivers  run the conformance suite against it
+#   make db-down    stop and delete the data
+
+name: shelf-test
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: shelf
+      POSTGRES_USER: shelf
+      POSTGRES_DB: shelf
+    ports: ['55432:5432']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U shelf -d shelf']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: shelf
+      MYSQL_DATABASE: shelf
+    ports: ['53306:3306']
+    # The default buffer pool is larger than this box wants to give one engine.
+    command: --innodb-buffer-pool-size=64M --performance-schema=OFF
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-pshelf']
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  tidb:
+    image: pingcap/tidb:v8.5.0
+    ports: ['54000:4000']
+    healthcheck:
+      test: ['CMD-SHELL', '/tidb-server -V || exit 1']
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  redis:
+    image: redis:7-alpine
+    ports: ['56379:6379']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  scylla:
+    image: scylladb/scylla:6.2
+    ports: ['59042:9042']
+    # Scylla assumes a whole machine by default. These flags fit it into a
+    # share of one, which is all a conformance run needs.
+    command: --smp 1 --memory 1G --overprovisioned 1 --developer-mode 1 --skip-wait-for-gossip-to-settle 0
+    healthcheck:
+      test: ['CMD-SHELL', 'cqlsh -e "describe cluster" || exit 1']
+      interval: 5s
+      timeout: 10s
+      retries: 60
+
+  mongodb:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: shelf
+      MONGO_INITDB_ROOT_PASSWORD: shelf
+    ports: ['57017:27017']
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand("ping")']
+      interval: 3s
+      timeout: 5s
+      retries: 40
+
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    ports: ['58000:8000']
+    command: -jar DynamoDBLocal.jar -inMemory -sharedDb

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <!-- Electron needs these two under the hardened runtime; without them the
+         renderer cannot start at all. -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <!-- Connecting to a database server is the entire point of the app. -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <!-- Opening a SQLite or DuckDB file the user chose. -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+  </dict>
+</plist>

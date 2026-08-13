@@ -1,0 +1,210 @@
+/*
+ * Application base. The window itself is the material: the OS paints vibrancy
+ * behind it on macOS and acrylic on Windows, so the body stays transparent and
+ * lets that through. On Linux, where neither is available, a solid base colour
+ * is painted instead.
+ */
+
+:root {
+  --font-ui:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Inter, system-ui,
+    sans-serif;
+  --font-mono:
+    ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+
+  font-family: var(--font-ui);
+  font-optical-sizing: auto;
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+/*
+ * daisyUI paints the root with `--root-bg: var(--color-base-100)`, which is
+ * opaque and therefore covered the vibrancy the OS was drawing behind the
+ * window — the window was translucent the whole time, the page on top of it
+ * was not. Clearing the token rather than overriding `background-color` keeps
+ * daisyUI's own rule intact for anything else that reads it.
+ */
+:root,
+[data-theme] {
+  --root-bg: transparent;
+}
+
+body {
+  background: transparent;
+  color: var(--color-base-content);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+/*
+ * Where the OS gives us nothing to see through — most Linux compositors, or a
+ * user who asked for less transparency — paint a real surface instead. Without
+ * this the transparent root would show the desktop unblurred, which is worse
+ * than an honest opaque window.
+ */
+:root[data-translucency='none'],
+:root[data-translucency='none'] body {
+  --root-bg: var(--color-base-200);
+  background: var(--color-base-200);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  [data-theme],
+  body {
+    --root-bg: var(--color-base-200);
+    background: var(--color-base-200);
+  }
+}
+
+/* The whole window is a drag surface except where we opt out. */
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Only text and inputs should be selectable; the chrome is not a document. */
+:root {
+  user-select: none;
+  cursor: default;
+}
+
+input,
+textarea,
+[contenteditable='true'],
+.selectable {
+  user-select: text;
+  cursor: auto;
+}
+
+/*
+ * Focus is always visible and always clears 3:1 against its surroundings, but
+ * only for keyboard users — a ring on every mouse click is noise.
+ */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-field);
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-primary) 32%, transparent);
+}
+
+/* Scrollbars: present when used, out of the way when not. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--color-base-content) 22%, transparent) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--color-base-content) 20%, transparent);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--color-base-content) 34%, transparent);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/*
+ * Reduced motion means a gentler equivalent, not a dead interface: transforms
+ * and springs go away, short opacity changes stay so state changes remain
+ * legible.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 150ms !important;
+    transition-property: opacity, background-color, border-color, color !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * Easing.
+ *
+ * The built-in CSS curves are too weak to read as intentional — `ease-out` is
+ * nearly linear at the start, which is exactly the moment the eye is watching.
+ * These are the stronger variants.
+ *
+ * `ease-in` is deliberately absent. It delays the first movement, which makes
+ * an interface feel sluggish no matter how short the duration is.
+ */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  /* The iOS sheet curve: fast departure, long settle. */
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Durations. Anything a user triggers repeatedly stays under 200ms. */
+  --t-press: 140ms;
+  --t-hover: 180ms;
+  --t-pop: 220ms;
+  --t-sheet: 300ms;
+}
+
+/*
+ * Syntax colours.
+ *
+ * Defined as tokens rather than inside the editor so they can be checked for
+ * contrast alongside everything else, and so the two appearances can differ in
+ * lightness while keeping the same hues — a hue shift between light and dark
+ * would make the same keyword look like a different kind of thing.
+ */
+:root {
+  --syntax-keyword: oklch(52% 0.19 285);
+  --syntax-string: oklch(48% 0.15 145);
+  --syntax-number: oklch(52% 0.16 40);
+  --syntax-comment: oklch(60% 0.02 250);
+  --syntax-function: oklch(50% 0.17 250);
+  --syntax-type: oklch(52% 0.13 195);
+  --syntax-operator: oklch(45% 0.06 250);
+  --syntax-property: oklch(48% 0.12 330);
+}
+
+[data-theme='shelf-dark'] {
+  --syntax-keyword: oklch(78% 0.15 285);
+  --syntax-string: oklch(80% 0.14 145);
+  --syntax-number: oklch(80% 0.13 40);
+  --syntax-comment: oklch(58% 0.02 250);
+  --syntax-function: oklch(78% 0.13 250);
+  --syntax-type: oklch(80% 0.11 195);
+  --syntax-operator: oklch(72% 0.05 250);
+  --syntax-property: oklch(78% 0.11 330);
+}

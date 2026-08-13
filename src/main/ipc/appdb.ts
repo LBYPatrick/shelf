@@ -1,0 +1,125 @@
+import { randomUUID } from 'node:crypto';
+import { BrowserWindow, ipcMain } from 'electron';
+import {
+  APPDB_CHANNELS,
+  type HistoryInput,
+  type PrepareConnectionRequest,
+  type SaveQueryInput,
+} from '@shared/appdb';
+import type { SaveConnectionInput } from '@shared/connections';
+import type { ConnectionConfig } from '@drivers/types';
+import type { ConnectionRepository } from '../appdb/connections';
+import { QueryRepository } from '../appdb/queries';
+import type { AppDatabase } from '../appdb/database';
+import type { ConnectionHost } from '../host';
+import type { SecretStore } from '../secrets';
+
+/**
+ * Bookkeeping the main process owns: saved connections, folders and settings.
+ *
+ * These deliberately do not go through the connection host. The host is for
+ * database traffic and is restartable; losing it must not lose the user's saved
+ * connections, and secrets must never travel further than they have to.
+ */
+export function registerAppDbHandlers(
+  db: AppDatabase,
+  connections: ConnectionRepository,
+  secrets: SecretStore,
+  host: ConnectionHost,
+  sessionIdFor: (window: BrowserWindow) => string
+): void {
+  ipcMain.handle(APPDB_CHANNELS.listConnections, () => connections.list());
+  ipcMain.handle(APPDB_CHANNELS.listFolders, () => connections.listFolders());
+
+  ipcMain.handle(APPDB_CHANNELS.saveConnection, (_event, input: SaveConnectionInput) =>
+    connections.save(input)
+  );
+
+  ipcMain.handle(APPDB_CHANNELS.removeConnection, (_event, id: string) => {
+    connections.remove(id);
+  });
+
+  ipcMain.handle(APPDB_CHANNELS.markConnectionUsed, (_event, id: string) => {
+    connections.markUsed(id);
+  });
+
+  ipcMain.handle(APPDB_CHANNELS.secretsAvailable, () => secrets.available);
+
+  const queries = new QueryRepository(db);
+
+  ipcMain.handle(APPDB_CHANNELS.recordHistory, (_event, entry: HistoryInput) =>
+    queries.record(entry)
+  );
+  ipcMain.handle(APPDB_CHANNELS.listHistory, (_event, connectionId: string | null) =>
+    queries.history(connectionId)
+  );
+  ipcMain.handle(APPDB_CHANNELS.clearHistory, (_event, connectionId: string | null) =>
+    queries.clearHistory(connectionId)
+  );
+  ipcMain.handle(APPDB_CHANNELS.listSavedQueries, (_event, connectionId: string | null) =>
+    queries.listSaved(connectionId)
+  );
+  ipcMain.handle(APPDB_CHANNELS.saveQuery, (_event, input: SaveQueryInput) =>
+    queries.saveQuery({ ...input, connectionId: input.connectionId })
+  );
+  ipcMain.handle(APPDB_CHANNELS.removeSavedQuery, (_event, id: string) =>
+    queries.removeSaved(id)
+  );
+
+  ipcMain.handle(
+    APPDB_CHANNELS.prepareConnection,
+    (event, request: PrepareConnectionRequest): string => {
+      const window = BrowserWindow.fromWebContents(event.sender);
+      if (!window) throw new Error('No window for this request');
+
+      let config: ConnectionConfig;
+
+      if (request.kind === 'saved') {
+        config = connections.resolveConfig(request.connectionId);
+      } else {
+        // A draft may leave the password field blank to mean "keep the one you
+        // already have", which is the normal case when editing a saved
+        // connection, so fall back to the keyring for anything not retyped.
+        const stored = request.basedOn ? connections.resolveConfig(request.basedOn) : undefined;
+
+        const password = request.secrets?.['password'] || stored?.password;
+        const ssh = request.config.ssh
+          ? {
+              ...request.config.ssh,
+              password: request.secrets?.['sshPassword'] || stored?.ssh?.password,
+              passphrase: request.secrets?.['sshPassphrase'] || stored?.ssh?.passphrase,
+            }
+          : undefined;
+
+        config = {
+          ...request.config,
+          ...(password ? { password } : {}),
+          ...(ssh ? { ssh } : {}),
+        };
+      }
+
+      const handle = randomUUID();
+      host.stage(sessionIdFor(window), handle, config);
+      return handle;
+    }
+  );
+
+  const readSetting = db.prepare('SELECT value FROM setting WHERE key = ?');
+  const writeSetting = db.prepare(
+    'INSERT INTO setting (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+  );
+
+  ipcMain.handle(APPDB_CHANNELS.getSetting, (_event, key: string, fallback: unknown) => {
+    const row = readSetting.get(key) as { value: string } | undefined;
+    if (!row) return fallback;
+    try {
+      return JSON.parse(row.value);
+    } catch {
+      return fallback;
+    }
+  });
+
+  ipcMain.handle(APPDB_CHANNELS.setSetting, (_event, key: string, value: unknown) => {
+    writeSetting.run(key, JSON.stringify(value));
+  });
+}

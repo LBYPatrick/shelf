@@ -1,0 +1,264 @@
+/*
+ * Control surfaces: fills, elevation, focus.
+ *
+ * Ported from the sibling project, whose derivation is better than the one this
+ * file replaced, and for the reason its own notes give.
+ *
+ * FILLS. Every tint here used to be a percentage of `--color-base-content`,
+ * which is wrong in a way that only shows on the dark theme: base-content is
+ * near-white there, so a "12% fill" was 12% white and composited far lighter
+ * than the same alpha of dark over a light surface. Apple mixes its fills from
+ * one neutral grey in *both* appearances and changes only the alpha. That is
+ * what these are — systemFill down to quaternarySystemFill at their real light
+ * and dark values.
+ *
+ * This is the direct cause of the segmented control having no visible selected
+ * segment: its track and its thumb were derived from the same near-white, which
+ * left a few points of lightness between them.
+ *
+ * ELEVATION. Shadow is spent only on things that genuinely float — a segmented
+ * thumb, a popover, a sheet. Buttons are deliberately absent: a flat fill is the
+ * whole treatment, and giving every button a drop shadow is most of what makes
+ * an interface read as "web" rather than native.
+ */
+
+:root {
+  /* Mixed from neutral grey, never from the label colour. */
+  --fill-base: oklch(55% 0 0);
+
+  --fill-1: color-mix(in oklab, var(--fill-base) 20%, transparent);
+  --fill-2: color-mix(in oklab, var(--fill-base) 16%, transparent);
+  --fill-3: color-mix(in oklab, var(--fill-base) 12%, transparent);
+  --fill-4: color-mix(in oklab, var(--fill-base) 8%, transparent);
+
+  /* Separators come from the label colour, which is where Apple draws them. */
+  --separator: color-mix(in oklab, var(--color-base-content) 29%, transparent);
+
+  /* The raised part of a control: a segmented thumb, a switch knob. */
+  --control-thumb: oklch(100% 0 0);
+  --switch-off: oklch(92.5% 0 0);
+
+  /* One radius for every control, so a button and the segmented track beside it
+     stop each choosing their own. */
+  --control-radius: 0.5rem;
+
+  /* Shadows are cast by light, so they are ink — never a tint of the text
+     colour, which on a dark theme turns every shadow into a pale halo. */
+  --shadow-ink: 0 0 0;
+  --shadow-alpha: 0.14;
+  --elev-thumb:
+    0 3px 8px rgb(var(--shadow-ink) / 0.12), 0 3px 1px rgb(var(--shadow-ink) / 0.04);
+  --elev-popover:
+    0 8px 24px rgb(var(--shadow-ink) / 0.12), 0 1px 3px rgb(var(--shadow-ink) / 0.08);
+  --elev-sheet:
+    0 20px 56px rgb(var(--shadow-ink) / 0.18), 0 4px 12px rgb(var(--shadow-ink) / 0.1);
+}
+
+[data-theme='shelf-dark'] {
+  /* Same grey, roughly double the alpha — a light tint over a dark surface
+     reads far weaker than the same alpha of dark over white. */
+  --fill-1: color-mix(in oklab, var(--fill-base) 36%, transparent);
+  --fill-2: color-mix(in oklab, var(--fill-base) 32%, transparent);
+  --fill-3: color-mix(in oklab, var(--fill-base) 24%, transparent);
+  --fill-4: color-mix(in oklab, var(--fill-base) 18%, transparent);
+  --separator: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+
+  /* A switch knob stays white in the dark; a segmented thumb does not. Apple
+     turns that one grey — lighter than its own track, but a white capsule on a
+     dark track reads as a headlight. */
+  --control-thumb: oklch(48.5% 0 0);
+  --switch-off: oklch(30% 0 0);
+
+  /* Ink has little to darken on a dark surface, so these run heavier to
+     register at all. */
+  --shadow-alpha: 0.44;
+  --elev-thumb: 0 3px 8px rgb(var(--shadow-ink) / 0.3), 0 3px 1px rgb(var(--shadow-ink) / 0.12);
+  --elev-popover:
+    0 8px 24px rgb(var(--shadow-ink) / 0.44), 0 1px 3px rgb(var(--shadow-ink) / 0.24);
+  --elev-sheet:
+    0 20px 56px rgb(var(--shadow-ink) / 0.55), 0 4px 12px rgb(var(--shadow-ink) / 0.28);
+}
+
+/*
+ * Focus.
+ *
+ * A tint of the control's own surface plus a brightened edge, rather than a
+ * ring. Applied as a background-image so it composites over whatever colour the
+ * control already carries — a coloured button, an accent swatch — without this
+ * file having to know about it, and so it leaves `box-shadow` free for whatever
+ * the control is already casting.
+ *
+ * Accent-tinted rather than a brighter neutral, because hover is already a
+ * neutral lift on every control here; a neutral focus state would be
+ * indistinguishable from the pointer merely resting on it.
+ */
+:root {
+  --focus-fill: color-mix(in oklab, var(--color-primary) 16%, transparent);
+  --focus-edge: color-mix(in oklab, var(--color-primary) 70%, transparent);
+}
+
+.focus-fill:focus-visible {
+  outline: none;
+  background-image: linear-gradient(var(--focus-fill), var(--focus-fill));
+  border-color: var(--focus-edge);
+}
+
+@media (prefers-contrast: more) {
+  /* A tint carries less contrast than a ring. Where the user has asked for
+     more, give them the ring back rather than a stronger tint. */
+  .focus-fill:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+/*
+ * The accent, as a foreground.
+ *
+ * The colour that works as a *fill* is rarely the one that works as *type*.
+ * Setting `--color-primary` as text on a wash of itself — a key chip, an active
+ * rail item, a selected row — is the one combination guaranteed to be low
+ * contrast, because both sides carry the same hue and nearly the same chroma.
+ *
+ * So the accent gets a second form for text: same hue, same chroma, lightness
+ * forced to where it reads. Relative colour syntax does the derivation, so a
+ * custom accent is covered without anyone listing values.
+ */
+@supports (color: oklch(from red l c h)) {
+  :root {
+    --color-primary-text: oklch(from var(--color-primary) 0.44 c h);
+  }
+
+  [data-theme='shelf-dark'] {
+    --color-primary-text: oklch(from var(--color-primary) 0.78 c h);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Tab toolbars.
+ *
+ * Every tab has a bar of actions across its top, and each had grown its own:
+ * the table's were flat text, the query's mixed a filled button, a tonal one
+ * and three bare labels, and the heights and paddings agreed by coincidence
+ * rather than by construction. One definition here, used by all of them.
+ *
+ * The language is: everything in the row is the same height and the same shape,
+ * and *loudness* carries the difference. Quiet by default, a tonal surface when
+ * a thing is switched on, and a filled accent for the single action that
+ * commits — never more than one of those in a bar.
+ * ------------------------------------------------------------------------- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-hair);
+  height: calc(var(--field-h) + var(--gap));
+  padding-inline: var(--gap);
+}
+
+.toolbar__action,
+.toolbar__mode {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-tight);
+  height: var(--field-h);
+  padding-inline: var(--gap);
+  border-radius: var(--control-radius);
+  color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color var(--t-hover) var(--ease-out),
+    color var(--t-hover) var(--ease-out);
+}
+
+/* A square target for an action that is only ever an icon. */
+.toolbar__action--icon {
+  min-width: var(--field-h);
+  padding-inline: 0;
+  justify-content: center;
+}
+
+/* On/off, not press: a mode wears a surface for as long as it is in force. */
+.toolbar__mode--on {
+  background-color: color-mix(in oklab, var(--color-primary) 14%, transparent);
+  color: var(--color-primary-text, var(--color-primary));
+}
+
+.toolbar__action:disabled,
+.toolbar__mode:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.toolbar__spacer {
+  flex: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .toolbar__action:not(:disabled):hover,
+  .toolbar__mode:not(.toolbar__mode--on):not(:disabled):hover {
+    background-color: var(--fill-4);
+    color: var(--color-base-content);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Modal presentation: the scrim dims, the surface blurs.
+ *
+ * Blurring both is the common mistake and it undoes the effect. A blurred scrim
+ * already flattens everything behind it, so the glass on top has nothing left
+ * to refract and reads as flat tint — the surface stops looking like a material
+ * and starts looking like a grey rectangle. Worse, it is two full-screen
+ * backdrop filters composited every frame for one visual result.
+ *
+ * So: the scrim is dim only, and the panel carries a *large* blur, which is
+ * what makes it read as thick glass rather than a frosted pane. Bigger
+ * surfaces read as thicker, so a sheet blurs harder than a popover, which
+ * blurs harder than a menu.
+ * ------------------------------------------------------------------------- */
+.scrim {
+  background: oklch(0% 0 0 / 0.32);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+[data-theme='shelf-dark'] .scrim {
+  background: oklch(0% 0 0 / 0.5);
+}
+
+/* The surfaces that sit on a scrim. */
+.surface-sheet {
+  -webkit-backdrop-filter: blur(48px) saturate(180%);
+  backdrop-filter: blur(48px) saturate(180%);
+  background-color: color-mix(in oklab, var(--color-base-100) 76%, transparent);
+  box-shadow: var(--elev-sheet);
+}
+
+[data-theme='shelf-dark'] .surface-sheet {
+  background-color: color-mix(in oklab, var(--color-base-100) 70%, transparent);
+}
+
+.surface-popover {
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  background-color: color-mix(in oklab, var(--color-base-100) 72%, transparent);
+  box-shadow: var(--elev-popover);
+}
+
+[data-theme='shelf-dark'] .surface-popover {
+  background-color: color-mix(in oklab, var(--color-base-100) 66%, transparent);
+}
+
+/*
+ * Asked for less transparency: the surface becomes real and the scrim carries
+ * the separation on its own.
+ */
+@media (prefers-reduced-transparency: reduce) {
+  .surface-sheet,
+  .surface-popover {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: var(--color-base-100);
+  }
+}

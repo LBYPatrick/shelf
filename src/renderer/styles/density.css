@@ -1,0 +1,96 @@
+/*
+ * One factor scales the whole interface. Sizes are expressed in rem so an
+ * enlarged OS text size scales the layout with the text instead of overflowing
+ * it, and every component reads these instead of hardcoding padding.
+ */
+
+:root {
+  --density: 1;
+
+  /*
+   * The floor for anything you can hit. This is a pointer-driven desktop app,
+   * so it follows the desktop minimum rather than the touch one: 28pt, roughly
+   * a standard large control. iOS's 44pt is the right number for a finger and
+   * the wrong one here — it was tried, and it pushed everything so far apart
+   * that the density this interface exists for was gone.
+   *
+   * It sits outside the density factor deliberately. Density changes spacing
+   * and how much data fits on screen; it never shrinks a target below this.
+   */
+  --hit-min: 1.75rem;
+
+  /*
+   * The grid is the one thing allowed under the floor, and deliberately. A cell
+   * is not a discrete target the way a button is — it is as wide as its column,
+   * usually well over 200px — and it is reached by keyboard, by range selection
+   * and by dragging as often as by a single click.
+   */
+  --row-h: calc(1.625rem * var(--density));
+  --sidebar-row-h: max(var(--hit-min), calc(1.625rem * var(--density)));
+  --tab-h: max(var(--hit-min), calc(2.125rem * var(--density)));
+  --field-h: max(var(--hit-min), calc(1.75rem * var(--density)));
+  --rail-w: 3rem;
+  --statusbar-h: calc(1.625rem * var(--density));
+  --titlebar-h: calc(2.5rem * var(--density));
+
+  --gap-hair: calc(0.125rem * var(--density));
+  --gap-tight: calc(0.25rem * var(--density));
+  --gap: calc(0.5rem * var(--density));
+  --gap-loose: calc(0.75rem * var(--density));
+  --gap-section: calc(1.25rem * var(--density));
+}
+
+:root[data-density='comfortable'] {
+  --density: 1.15;
+}
+
+:root[data-density='compact'] {
+  --density: 0.85;
+}
+
+/*
+ * Tracking is size-specific: large text reads too loose at default spacing and
+ * small text reads too tight, so a single letter-spacing value is wrong
+ * somewhere. Leading is tight in dense lists and loose in prose.
+ */
+
+.type-display {
+  font-size: 1.5rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+.type-title {
+  font-size: 1.0625rem;
+  line-height: 1.25;
+  letter-spacing: -0.011em;
+  font-weight: 600;
+}
+
+.type-body {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  letter-spacing: 0;
+}
+
+.type-dense {
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.type-label {
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  font-weight: 500;
+}
+
+.type-mono {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}

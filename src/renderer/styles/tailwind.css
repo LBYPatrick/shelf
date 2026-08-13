@@ -1,0 +1,95 @@
+@import 'tailwindcss';
+@plugin "daisyui";
+
+/*
+ * Shelf ships two daisyUI themes. Every value here is a *fallback*: the accent
+ * picker overwrites the same custom properties inline on <html> at runtime
+ * (see styles/theme.ts), and inline styles outrank the [data-theme] rules
+ * daisyUI emits, so the two systems compose instead of fighting.
+ *
+ * Neutrals are not truly neutral. They carry a trace of the accent hue, which
+ * is what makes changing the accent read as a new theme rather than a repainted
+ * button.
+ */
+
+@plugin "daisyui/theme" {
+  name: 'shelf-light';
+  default: true;
+  color-scheme: light;
+
+  --color-base-100: oklch(99% 0.003 250);
+  --color-base-200: oklch(96.5% 0.004 250);
+  --color-base-300: oklch(93% 0.006 250);
+  --color-base-content: oklch(24% 0.012 250);
+
+  --color-primary: oklch(60% 0.21 250);
+  --color-primary-content: oklch(99% 0 0);
+  --color-secondary: oklch(60% 0.09 250);
+  --color-secondary-content: oklch(99% 0 0);
+  --color-accent: oklch(60% 0.21 250);
+  --color-accent-content: oklch(99% 0 0);
+  --color-neutral: oklch(46% 0.014 250);
+  --color-neutral-content: oklch(99% 0 0);
+
+  --color-info: oklch(62% 0.15 240);
+  --color-info-content: oklch(99% 0 0);
+  --color-success: oklch(62% 0.15 150);
+  --color-success-content: oklch(99% 0 0);
+  --color-warning: oklch(72% 0.16 75);
+  --color-warning-content: oklch(20% 0.02 75);
+  --color-error: oklch(58% 0.2 25);
+  --color-error-content: oklch(99% 0 0);
+
+  --radius-selector: 1rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+  name: 'shelf-dark';
+  prefersdark: true;
+  color-scheme: dark;
+
+  --color-base-100: oklch(21% 0.008 250);
+  --color-base-200: oklch(17.5% 0.008 250);
+  --color-base-300: oklch(27% 0.01 250);
+  --color-base-content: oklch(93% 0.006 250);
+
+  --color-primary: oklch(70% 0.17 250);
+  --color-primary-content: oklch(18% 0.03 250);
+  --color-secondary: oklch(66% 0.07 250);
+  --color-secondary-content: oklch(16% 0.02 250);
+  --color-accent: oklch(70% 0.17 250);
+  --color-accent-content: oklch(18% 0.03 250);
+  --color-neutral: oklch(34% 0.012 250);
+  --color-neutral-content: oklch(93% 0.006 250);
+
+  --color-info: oklch(70% 0.13 240);
+  --color-info-content: oklch(16% 0.02 240);
+  --color-success: oklch(70% 0.13 150);
+  --color-success-content: oklch(16% 0.02 150);
+  --color-warning: oklch(78% 0.14 75);
+  --color-warning-content: oklch(18% 0.02 75);
+  --color-error: oklch(68% 0.17 25);
+  --color-error-content: oklch(16% 0.02 25);
+
+  --radius-selector: 1rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@import './density.css';
+@import './controls.css';
+@import './materials.css';
+@import './base.css';
+@import './tabulator.css';

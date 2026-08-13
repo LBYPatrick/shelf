@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": false,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "composite": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"],
+      "@drivers/*": ["src/drivers/*"],
+      "@renderer/*": ["src/renderer/*"]
+    }
+  },
+  "include": [
+    "src/main/**/*.ts",
+    "src/preload/**/*.ts",
+    "src/utility/**/*.ts",
+    "src/drivers/**/*.ts",
+    "src/shared/**/*.ts",
+    "tests/**/*.ts",
+    "electron.vite.config.ts",
+    "electron-builder.config.cjs",
+    "vitest.config.ts"
+  ]
+}

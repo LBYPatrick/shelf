@@ -1,0 +1,215 @@
+/*
+ * Grid appearance.
+ *
+ * Tabulator's own stylesheet is not imported: it carries a full visual language
+ * that would fight this one. Everything the grid needs is defined here against
+ * the same tokens as the rest of the interface, so it follows the accent, the
+ * density scale and the theme.
+ *
+ * Two rules exist for measurement rather than looks and must not be removed:
+ * the header's explicit height, and the header row being flex. Tabulator
+ * measures the header and subtracts it from the body height, and left to inline
+ * layout the columns wrap and it measures many times too tall.
+ */
+
+.tabulator {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  font-size: 0.8125rem;
+  overflow: hidden;
+}
+
+/*
+ * Tabulator sizes the scroll area itself, from a header height it measures with
+ * its own stylesheet's assumptions in mind. Since the layout here is ours, the
+ * inline sizing it writes is neutralised and the flex column decides instead:
+ * the header takes its natural height and the body takes what is left. Without
+ * this the body is offset by the difference between the two measurements.
+ */
+.tabulator .tabulator-tableholder {
+  flex: 1;
+  min-height: 0;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 !important;
+  overflow: auto;
+}
+
+.tabulator .tabulator-header {
+  position: relative;
+  flex: 0 0 auto;
+  height: var(--row-h);
+  min-height: var(--row-h);
+  box-sizing: border-box;
+  background: color-mix(in oklab, var(--color-base-200) 82%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/*
+ * The header row must be as wide as its columns, not as wide as its container.
+ * Without an intrinsic width the header has nothing to scroll, so syncing it to
+ * the body's scroll position does nothing and every label sits over the wrong
+ * column once the table is wider than the pane.
+ */
+.tabulator .tabulator-headers {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  height: 100%;
+  white-space: nowrap;
+}
+
+.tabulator .tabulator-col {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  align-items: center;
+  height: 100%;
+  padding: 0 var(--gap);
+  border-inline-end: 1px solid color-mix(in oklab, var(--color-base-content) 7%, transparent);
+  color: color-mix(in oklab, var(--color-base-content) 68%, transparent);
+  font-size: 0.6875rem;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.tabulator .tabulator-col-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabulator .tabulator-col.tabulator-sortable:hover {
+  background: color-mix(in oklab, var(--color-base-content) 6%, transparent);
+}
+
+.tabulator .tabulator-col .tabulator-col-sorter {
+  margin-inline-start: auto;
+  opacity: 0;
+  color: var(--color-primary-text, var(--color-primary));
+  transition: opacity 140ms ease-out;
+}
+
+.tabulator .tabulator-col[aria-sort='ascending'] .tabulator-col-sorter,
+.tabulator .tabulator-col[aria-sort='descending'] .tabulator-col-sorter {
+  opacity: 1;
+}
+
+.tabulator .tabulator-col:hover .tabulator-col-sorter {
+  opacity: 0.5;
+}
+
+.tabulator .tabulator-row {
+  display: flex;
+  box-sizing: border-box;
+  height: var(--row-h);
+  min-height: var(--row-h);
+  background: transparent;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 5%, transparent);
+}
+
+/* Zebra striping is subtle enough to guide the eye across a wide row without
+   becoming a pattern in its own right. */
+.tabulator .tabulator-row.tabulator-row-even {
+  background: color-mix(in oklab, var(--color-base-content) 2.5%, transparent);
+}
+
+.tabulator .tabulator-row:hover {
+  background: color-mix(in oklab, var(--color-primary) 8%, transparent);
+}
+
+.tabulator .tabulator-cell {
+  display: flex;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  align-items: center;
+  height: var(--row-h);
+  padding: 0 var(--gap);
+  border-inline-end: 1px solid color-mix(in oklab, var(--color-base-content) 5%, transparent);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tabulator .tabulator-cell.tabulator-editing {
+  padding: 0;
+  border: 1px solid var(--color-primary);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary) 30%, transparent);
+}
+
+.tabulator .tabulator-cell.tabulator-editing input {
+  width: 100%;
+  height: 100%;
+  padding: 0 var(--gap);
+  border: 0;
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+/* Range selection: a tinted fill with a solid border only at the edges, so a
+   selected block reads as one region rather than a grid of highlighted cells. */
+.tabulator .tabulator-cell.tabulator-range-selected {
+  background: color-mix(in oklab, var(--color-primary) 16%, transparent);
+}
+
+.tabulator .tabulator-range-overlay .tabulator-range {
+  border: 1px solid var(--color-primary);
+}
+
+.tabulator .tabulator-range-overlay .tabulator-range.tabulator-range-active::after {
+  background: var(--color-primary);
+}
+
+/* A cell edited but not yet applied is marked, so the pending set is visible in
+   the data itself and not only as a count in the status bar. */
+.tabulator .tabulator-cell.cell-pending {
+  background: color-mix(in oklab, var(--color-warning) 22%, transparent);
+}
+
+.tabulator .tabulator-cell.cell-applied {
+  background: color-mix(in oklab, var(--color-success) 20%, transparent);
+  transition: background-color 900ms ease-out;
+}
+
+.tabulator .tabulator-cell.cell-failed {
+  background: color-mix(in oklab, var(--color-error) 22%, transparent);
+}
+
+.cell-null,
+.cell-empty {
+  font-style: italic;
+  font-size: 0.6875rem;
+  color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
+}
+
+.tabulator .tabulator-placeholder {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  font-size: 0.75rem;
+}
+
+.tabulator .tabulator-col-resize-handle {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: -3px;
+  width: 6px;
+  cursor: col-resize;
+}
+
+.tabulator .tabulator-col-resize-handle:hover {
+  background: var(--color-primary);
+}

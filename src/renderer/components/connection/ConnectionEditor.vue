@@ -1,0 +1,151 @@
+<script setup lang="ts">
+/**
+ * Setting up a connection.
+ *
+ * A sheet rather than a permanent panel: creating a connection is a deliberate,
+ * occasional act, and giving it the whole window while it is happening is
+ * better than leaving a form on screen forever competing with the list.
+ */
+import { computed, onBeforeUnmount, ref } from 'vue';
+import type { SaveConnectionInput, SavedConnection } from '@shared/connections';
+import type { ParsedConnection } from '@shared/connectionUrl';
+import { useConnections } from '../../stores/connections';
+import PressButton from '../ui/PressButton.vue';
+import Sheet from '../ui/Sheet.vue';
+import ConnectionForm from './ConnectionForm.vue';
+
+const props = defineProps<{
+  editing: SavedConnection | null;
+  seed?: ParsedConnection | undefined;
+  keyringAvailable: boolean;
+}>();
+
+const emit = defineEmits<{
+  close: [];
+  saved: [SavedConnection, boolean];
+  draft: [SaveConnectionInput];
+}>();
+
+const connections = useConnections();
+
+const form = ref<InstanceType<typeof ConnectionForm>>();
+const open = ref(true);
+const testing = ref(false);
+/**
+ * The form's own validity, polled rather than mirrored: duplicating the rules
+ * here is how the button and the form drift apart.
+ */
+const tick = ref(0);
+const ready = computed(() => {
+  void tick.value;
+  return form.value?.isValid() ?? false;
+});
+const problem = computed(() => {
+  void tick.value;
+  return form.value?.problem();
+});
+
+// Cheap and bounded: the sheet is open for seconds, not minutes.
+const poll = setInterval(() => (tick.value += 1), 150);
+onBeforeUnmount(() => clearInterval(poll));
+
+function submit(connect: boolean): void {
+  const input = form.value?.buildInput();
+  if (input) void save(input, connect);
+}
+
+function runTest(): void {
+  const input = form.value?.buildInput();
+  if (input) void test(input);
+}
+const testResult = ref<{ ok: true; version: string } | { ok: false; message: string } | null>(
+  null
+);
+
+async function test(input: SaveConnectionInput): Promise<void> {
+  testing.value = true;
+  testResult.value = null;
+  try {
+    testResult.value = await connections.test({
+      kind: 'draft',
+      config: input.config,
+      ...(input.secrets ? { secrets: input.secrets } : {}),
+      ...(input.id ? { basedOn: input.id } : {}),
+    });
+  } finally {
+    testing.value = false;
+  }
+}
+
+async function save(input: SaveConnectionInput, connect: boolean): Promise<void> {
+  const stored = await connections.save(input);
+  open.value = false;
+  emit('saved', stored, connect);
+}
+
+function close(): void {
+  open.value = false;
+  // Let the exit animation finish before the component is torn down.
+  setTimeout(() => emit('close'), 260);
+}
+</script>
+
+<template>
+  <Sheet
+    v-model="open"
+    :title="props.editing ? props.editing.name : 'New connection'"
+    wide
+    @update:model-value="!$event && close()"
+  >
+    <ConnectionForm
+      ref="form"
+      :editing="props.editing"
+      :seed="props.seed"
+      :keyring-available="props.keyringAvailable"
+      :testing="testing"
+      :test-result="testResult"
+      @save="save($event, false)"
+      @connect="save($event, true)"
+      @test="test"
+    />
+
+    <template #footer>
+      <span
+        v-if="problem"
+        class="problem"
+      >{{ problem }}</span>
+
+      <PressButton @click="close">
+        Cancel
+      </PressButton>
+      <PressButton
+        :disabled="!ready"
+        @click="submit(false)"
+      >
+        Save
+      </PressButton>
+      <PressButton
+        variant="glass"
+        :disabled="!ready || testing"
+        @click="runTest"
+      >
+        {{ testing ? 'Testing…' : 'Test' }}
+      </PressButton>
+      <PressButton
+        variant="primary"
+        :disabled="!ready"
+        @click="submit(true)"
+      >
+        Connect
+      </PressButton>
+    </template>
+  </Sheet>
+</template>
+
+<style scoped>
+.problem {
+  margin-inline-end: auto;
+  font-size: 0.6875rem;
+  color: color-mix(in oklab, var(--color-warning) 92%, var(--color-base-content));
+}
+</style>
