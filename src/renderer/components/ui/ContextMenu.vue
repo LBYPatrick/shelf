@@ -1,0 +1,254 @@
+<script setup lang="ts">
+/**
+ * A menu opened at a point.
+ *
+ * Anchored where it was summoned from rather than at a fixed corner: it scales
+ * out of the pointer, so the relationship between what you clicked and what
+ * appeared is stated by the motion instead of having to be inferred.
+ *
+ * Teleported, because the sidebar it is usually summoned from is a scrolling
+ * box with `overflow: hidden` — a menu rendered inside it would be clipped by
+ * the very row it belongs to.
+ */
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import AppIcon from './AppIcon.vue';
+
+export interface MenuItem {
+  readonly id: string;
+  readonly label: string;
+  /** Drawn before the label, if the action has an icon in the set. */
+  readonly icon?: string;
+  readonly disabled?: boolean;
+  /** Separated from what came before it. */
+  readonly startsGroup?: boolean;
+}
+
+const props = defineProps<{
+  items: readonly MenuItem[];
+  /** Where the pointer was, in viewport coordinates. */
+  at: { x: number; y: number };
+}>();
+
+const open = defineModel<boolean>({ required: true });
+const emit = defineEmits<{ choose: [string] }>();
+
+const panel = ref<HTMLElement>();
+/*
+ * Nothing is highlighted until the pointer or the keyboard picks something. A
+ * menu that opens with its first item already lit looks like it has decided for
+ * you, and on a right-click — where the pointer is nowhere near that row — it
+ * reads as a misplaced hover.
+ */
+const active = ref(-1);
+/** Resolved after mount, once the menu has a size to flip against. */
+const placement = ref({ left: 0, top: 0, origin: 'top left' });
+
+const enabled = computed(() => props.items.filter((item) => !item.disabled));
+
+/**
+ * Placed at the pointer, flipped rather than clamped at an edge.
+ *
+ * Clamping slides the menu sideways until it fits, which leaves it sitting on
+ * top of the thing you clicked. Flipping keeps the corner nearest the pointer
+ * pinned and grows the menu the other way, which is what every desktop menu
+ * does and what the transform origin then matches.
+ */
+function place(): void {
+  const box = panel.value?.getBoundingClientRect();
+  if (!box) return;
+
+  const margin = 8;
+  const flipX = props.at.x + box.width + margin > globalThis.innerWidth;
+  const flipY = props.at.y + box.height + margin > globalThis.innerHeight;
+
+  placement.value = {
+    left: flipX ? Math.max(margin, props.at.x - box.width) : props.at.x,
+    top: flipY ? Math.max(margin, props.at.y - box.height) : props.at.y,
+    origin: `${flipY ? 'bottom' : 'top'} ${flipX ? 'right' : 'left'}`,
+  };
+}
+
+function move(delta: number): void {
+  const count = enabled.value.length;
+  if (count === 0) return;
+  // From nothing, Down lands on the first item and Up on the last.
+  if (active.value < 0) active.value = delta > 0 ? 0 : count - 1;
+  else active.value = (active.value + delta + count) % count;
+}
+
+function choose(item: MenuItem): void {
+  if (item.disabled) return;
+  open.value = false;
+  emit('choose', item.id);
+}
+
+function commit(): void {
+  const item = enabled.value[active.value];
+  if (item) choose(item);
+}
+
+/*
+ * Dismissal is handled at the window, in the capture phase. A menu that only
+ * closes on its own click-outside handler stays up when the next click lands
+ * inside a canvas, an iframe, or anything that stops propagation — which is
+ * exactly when someone is trying to get rid of it.
+ */
+function onWindowPointerDown(event: PointerEvent): void {
+  if (!open.value) return;
+  if (panel.value?.contains(event.target as Node)) return;
+  open.value = false;
+}
+
+function onWindowKeydown(event: KeyboardEvent): void {
+  if (!open.value) return;
+
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    event.stopPropagation();
+    open.value = false;
+  }
+}
+
+watch(open, async (isOpen) => {
+  if (!isOpen) return;
+
+  active.value = -1;
+  await nextTick();
+  place();
+  panel.value?.focus();
+});
+
+watch(() => props.at, place);
+
+globalThis.addEventListener('pointerdown', onWindowPointerDown, true);
+globalThis.addEventListener('keydown', onWindowKeydown, true);
+
+onBeforeUnmount(() => {
+  globalThis.removeEventListener('pointerdown', onWindowPointerDown, true);
+  globalThis.removeEventListener('keydown', onWindowKeydown, true);
+});
+</script>
+
+<template>
+  <Teleport to="body">
+    <Transition name="menu">
+      <div
+        v-if="open"
+        ref="panel"
+        class="menu surface-popover"
+        role="menu"
+        tabindex="-1"
+        :style="{
+          left: `${placement.left}px`,
+          top: `${placement.top}px`,
+          transformOrigin: placement.origin,
+        }"
+        @keydown.down.prevent="move(1)"
+        @keydown.up.prevent="move(-1)"
+        @keydown.enter.prevent="commit"
+        @keydown.space.prevent="commit"
+      >
+        <template
+          v-for="item in items"
+          :key="item.id"
+        >
+          <hr
+            v-if="item.startsGroup"
+            class="menu__rule"
+          >
+          <button
+            type="button"
+            class="menu__item"
+            :class="{ 'menu__item--active': enabled[active]?.id === item.id }"
+            role="menuitem"
+            :disabled="item.disabled"
+            @pointerenter="
+              !item.disabled &&
+                (active = enabled.findIndex((candidate) => candidate.id === item.id))
+            "
+            @click="choose(item)"
+          >
+            <AppIcon
+              v-if="item.icon"
+              class="menu__icon"
+              :name="item.icon"
+              :size="12"
+            />
+            <span>{{ item.label }}</span>
+          </button>
+        </template>
+      </div>
+    </Transition>
+  </Teleport>
+</template>
+
+<style scoped>
+.menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 12rem;
+  padding: var(--gap-tight);
+  border-radius: 0.75rem;
+  outline: none;
+}
+
+.menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  width: 100%;
+  height: var(--hit-min);
+  padding-inline: var(--gap);
+  border-radius: var(--radius-field);
+  font-size: 0.8125rem;
+  text-align: start;
+  color: var(--color-base-content);
+}
+
+/*
+ * One highlight, driven by the keyboard cursor and moved by hover, so pointer
+ * and keyboard cannot both claim a row at once — two highlighted items is the
+ * classic menu bug and it is entirely a question of having two states.
+ */
+.menu__item--active:not(:disabled) {
+  background-color: color-mix(in oklab, var(--color-primary) 16%, transparent);
+  color: var(--color-primary-text, var(--color-primary));
+}
+
+.menu__item:disabled {
+  opacity: 0.4;
+}
+
+.menu__icon {
+  flex: 0 0 auto;
+  opacity: 0.7;
+}
+
+.menu__rule {
+  height: 1px;
+  margin: var(--gap-tight) var(--gap);
+  border: 0;
+  background: var(--separator);
+}
+
+/* Out of the pointer, not out of nowhere. */
+.menu-enter-active,
+.menu-leave-active {
+  transition:
+    transform 160ms var(--ease-out),
+    opacity 120ms var(--ease-out);
+}
+
+.menu-enter-from,
+.menu-leave-to {
+  opacity: 0;
+  transform: scale(0.94);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-enter-from,
+  .menu-leave-to {
+    transform: none;
+  }
+}
+</style>

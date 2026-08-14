@@ -19,10 +19,10 @@ function excerpt(text: string): string {
 </script>
 
 <template>
-  <div class="list">
+  <div class="entries">
     <p
       v-if="queries.visibleSaved.length === 0"
-      class="list__empty type-label"
+      class="entries__empty type-label"
     >
       Nothing saved. Write a query and press ⌘S.
     </p>
@@ -64,14 +64,14 @@ function excerpt(text: string): string {
 </template>
 
 <style scoped>
-.list {
+.entries {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding-bottom: var(--gap);
 }
 
-.list__empty {
+.entries__empty {
   padding: var(--gap) var(--gap-loose);
   color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
 }

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { BrowserWindow, app, ipcMain } from 'electron';
+import { BrowserWindow, app, ipcMain, nativeTheme } from 'electron';
 import { platformIdFrom, type PlatformInfo } from '@shared/platform';
-import { HOST_CHANNELS, WINDOW_CHANNELS } from '@shared/window';
+import { HOST_CHANNELS, WINDOW_CHANNELS, type Appearance } from '@shared/window';
 import { ConnectionRepository } from './appdb/connections';
 import { closeAppDatabase, openAppDatabase } from './appdb/database';
 import { ConnectionHost } from './host';
@@ -56,6 +56,20 @@ function registerWindowHandlers(): void {
     WINDOW_CHANNELS.isMaximized,
     (event) => senderWindow(event)?.isMaximized() ?? false
   );
+
+  /*
+   * The window's material is painted by the OS, behind the page, so the OS is
+   * the one that has to be told which appearance we are wearing. Setting a
+   * `data-theme` attribute in the renderer changes nothing about it.
+   *
+   * Until this existed, a dark interface on a light desktop got the *light*
+   * vibrancy material: a pale frosted rail, sidebar and status bar around a
+   * near-black content pane, so the panels that are meant to recede were the
+   * brightest things on screen.
+   */
+  ipcMain.on(WINDOW_CHANNELS.setAppearance, (_event, appearance: Appearance) => {
+    nativeTheme.themeSource = appearance;
+  });
 
   ipcMain.handle(WINDOW_CHANNELS.platformInfo, (): PlatformInfo => {
     const platform = platformIdFrom(process.platform);

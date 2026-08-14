@@ -59,7 +59,6 @@ function onAuxClick(event: MouseEvent, tab: Tab): void {
 const KIND_MARK: Record<Tab['kind'], string> = {
   table: '▤',
   query: '›_',
-  structure: '⚙',
   erd: '◇',
 };
 </script>
@@ -67,7 +66,7 @@ const KIND_MARK: Record<Tab['kind'], string> = {
 <template>
   <div
     ref="stripEl"
-    class="strip mat-regular"
+    class="strip drag-region"
   >
     <!--
       The tablist holds tabs and nothing else. The new-tab button used to sit
@@ -81,7 +80,7 @@ const KIND_MARK: Record<Tab['kind'], string> = {
       <div
         v-for="(tab, index) in tabs.tabs"
         :key="tab.id"
-        class="striptab"
+        class="striptab no-drag"
         :class="{
           'striptab--on': tab.id === tabs.activeId,
           'striptab--dragging': dragIndex === index,
@@ -118,7 +117,7 @@ const KIND_MARK: Record<Tab['kind'], string> = {
     </div>
 
     <button
-      class="strip__new"
+      class="strip__new no-drag"
       aria-label="New query tab"
       @click="tabs.openQuery()"
     >
@@ -129,29 +128,44 @@ const KIND_MARK: Record<Tab['kind'], string> = {
 
 <style scoped>
 /*
+ * The strip is a drag surface, and the tabs on it are not.
+ *
+ * Everything along the window's top edge that is not itself a control should
+ * move the window — that is where the hand goes. The tabs opt out because they
+ * are draggable in their own right, for reordering.
+ */
+
+/*
  * A recessed track holding raised tabs — the same relationship the segmented
  * control has between its track and its thumb, because it is the same idea.
  * The strip used to be flush with the content and marked the active tab with a
  * coloured rule across its top, which is the one shape in the window that was
  * neither rounded nor tonal.
+ *
+ * A tint, not a material. It sits *inside* the content pane, and now that the
+ * pane is glass too, a second backdrop filter here would be one blur composited
+ * on another — the one material rule that cannot be bent, because legibility
+ * goes with it.
  */
 .strip {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--gap-tight);
   height: var(--tab-h);
-  padding: var(--gap-hair) var(--gap-tight);
+  padding: var(--gap-tight) var(--gap);
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
-  background-color: var(--fill-4);
+  /* One step further back than the editor well below it, so the stack reads
+     top-to-front rather than as two bands that happen to differ. */
+  background-color: var(--fill-3);
 }
 
 /* The tabs themselves; the strip around them is what scrolls. */
 .strip__tabs {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--gap-tight);
   min-width: 0;
 }
 
@@ -165,10 +179,10 @@ const KIND_MARK: Record<Tab['kind'], string> = {
   align-items: center;
   gap: var(--gap-tight);
   flex: 0 0 auto;
-  height: calc(var(--tab-h) - var(--gap-tight));
-  max-width: 14rem;
-  padding-inline: var(--gap) var(--gap-hair);
-  border-radius: calc(var(--control-radius) - 1px);
+  height: calc(var(--tab-h) - var(--gap));
+  max-width: 16rem;
+  padding-inline: var(--gap-loose) var(--gap-tight);
+  border-radius: var(--control-radius);
   font-size: 0.75rem;
   color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
   touch-action: none;
@@ -178,22 +192,30 @@ const KIND_MARK: Record<Tab['kind'], string> = {
     color 140ms ease-out;
 }
 
-.striptab:hover {
-  background: color-mix(in oklab, var(--color-base-content) 5%, transparent);
+/* Only the ones that are not already raised; hover on the open tab would
+   darken the very surface that marks it as open. */
+.striptab:not(.striptab--on):hover {
+  background: var(--fill-3);
 }
 
 /*
  * Raised, not underlined. A coloured rule across the top edge was the one shape
  * in the window that was neither rounded nor tonal; the surface says which tab
  * is open, exactly as the segmented control's thumb does.
+ *
+ * These matched `.tab--on` while the template wrote `striptab--on` — a rename
+ * that took the block and left the modifiers behind — so for as long as that
+ * stood, the open tab was styled exactly like the closed ones and there was no
+ * way to tell which one you were looking at.
  */
-.tab--on {
+.striptab--on {
   background-color: var(--control-thumb);
   box-shadow: var(--elev-thumb);
   color: var(--color-base-content);
+  font-weight: 550;
 }
 
-.tab--dragging {
+.striptab--dragging {
   z-index: 2;
   background-color: var(--control-thumb);
   box-shadow: 0 4px 16px oklch(0% 0 0 / 0.18);
@@ -230,14 +252,14 @@ const KIND_MARK: Record<Tab['kind'], string> = {
 }
 
 .striptab:hover .striptab__close,
-.tab--on .striptab__close,
+.striptab--on .striptab__close,
 .striptab__close:focus-visible {
   opacity: 0.7;
 }
 
 .striptab__close:hover {
   opacity: 1;
-  background: color-mix(in oklab, var(--color-base-content) 12%, transparent);
+  background: var(--fill-2);
 }
 
 /* Sized like a tab, because it sits in the same row as one. */
@@ -245,13 +267,13 @@ const KIND_MARK: Record<Tab['kind'], string> = {
   flex: 0 0 auto;
   width: 2rem;
   min-width: var(--hit-min);
-  height: calc(var(--tab-h) - var(--gap-tight));
-  border-radius: calc(var(--control-radius) - 1px);
+  height: calc(var(--tab-h) - var(--gap));
+  border-radius: var(--control-radius);
   color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
 }
 
 .strip__new:hover {
-  background: color-mix(in oklab, var(--color-base-content) 6%, transparent);
+  background: var(--fill-4);
   color: var(--color-base-content);
 }
 </style>

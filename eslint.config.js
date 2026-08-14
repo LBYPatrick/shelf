@@ -44,6 +44,12 @@ export default tseslint.config(
       ],
       'vue/multi-word-component-names': 'off',
       'vue/block-lang': ['error', { script: { lang: 'ts' } }],
+      /*
+       * Nothing is registered globally, so a component the template names but
+       * the script never imported renders as *nothing at all* — no warning, no
+       * error, no element. That is how the Export sheet shipped unopenable.
+       */
+      'vue/no-undef-components': 'error',
     },
   }
 );

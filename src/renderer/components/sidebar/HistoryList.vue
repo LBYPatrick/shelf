@@ -30,17 +30,17 @@ function ago(at: number): string {
 </script>
 
 <template>
-  <div class="list">
-    <div class="list__head">
+  <div class="entries">
+    <div class="entries__head">
       <CheckBox
         v-model="queries.showAll"
-        class="list__toggle"
+        class="entries__toggle"
         :label="$t('history.allConnections')"
         @change="queries.refresh()"
       />
 
       <button
-        class="list__clear"
+        class="entries__clear"
         @click="queries.clearHistory()"
       >
         {{ $t('history.clear') }}
@@ -49,7 +49,7 @@ function ago(at: number): string {
 
     <p
       v-if="queries.visibleHistory.length === 0"
-      class="list__empty type-label"
+      class="entries__empty type-label"
     >
       {{ $t('history.empty') }}
     </p>
@@ -84,14 +84,14 @@ function ago(at: number): string {
 </template>
 
 <style scoped>
-.list {
+.entries {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding-bottom: var(--gap);
 }
 
-.list__head {
+.entries__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -100,17 +100,17 @@ function ago(at: number): string {
   color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
 }
 
-.list__toggle {
+.entries__toggle {
   display: flex;
   align-items: center;
   gap: var(--gap-tight);
 }
 
-.list__clear:hover {
+.entries__clear:hover {
   color: var(--color-error);
 }
 
-.list__empty {
+.entries__empty {
   padding: var(--gap) var(--gap-loose);
   color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
 }

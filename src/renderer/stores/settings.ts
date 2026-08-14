@@ -19,6 +19,11 @@ export interface Settings {
   editTrigger: 'dblclick' | 'click';
   /** How binary values are rendered. */
   binaryEncoding: 'hex' | 'base64';
+  /**
+   * Where the grid's row numbers start. A database person counting rows and a
+   * programmer indexing an array want different answers, and both are right.
+   */
+  rowIndexBase: 0 | 1;
   /** Which run action the primary button performs. */
   primaryRun: 'all' | 'current';
   editorFontSize: number;
@@ -32,6 +37,7 @@ const DEFAULTS: Settings = {
   maxRows: 50_000,
   editTrigger: 'dblclick',
   binaryEncoding: 'hex',
+  rowIndexBase: 1,
   primaryRun: 'all',
   editorFontSize: 13,
   wrapLines: true,

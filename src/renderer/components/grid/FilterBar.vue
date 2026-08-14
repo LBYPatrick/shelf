@@ -10,11 +10,12 @@
  * Switching modes keeps whichever side you were on intact, so flipping to raw to
  * check something and back does not cost you the rows you had built.
  */
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useTranslation } from 'i18next-vue';
 import type { Column, ColumnFilter, FilterOperator, Filters } from '@drivers/types';
 import AppIcon from '../ui/AppIcon.vue';
 import PressButton from '../ui/PressButton.vue';
+import SegmentedControl from '../ui/SegmentedControl.vue';
 import SelectMenu from '../ui/SelectMenu.vue';
 
 const props = defineProps<{
@@ -94,6 +95,11 @@ const joinOptions = computed(() => [
   { value: 'or' as const, label: t('filter.or') },
 ]);
 
+const modeOptions = computed(() => [
+  { value: 'builder' as const, label: t('filter.builder') },
+  { value: 'raw' as const, label: t('filter.raw') },
+]);
+
 function takesValue(operator: FilterOperator): boolean {
   return !VALUELESS.includes(operator);
 }
@@ -141,6 +147,19 @@ function removeRow(index: number): void {
   rows.value =
     rows.value.length === 1 ? [blankRow()] : rows.value.filter((_, i) => i !== index);
 }
+
+const first = ref<HTMLInputElement>();
+
+/*
+ * Opening the bar and leaving the caret where it was makes the shortcut half a
+ * shortcut. Whichever mode is showing, focus lands on the thing you were going
+ * to type into.
+ */
+function focus(): void {
+  void nextTick(() => first.value?.focus());
+}
+
+defineExpose({ focus });
 </script>
 
 <template>
@@ -190,6 +209,11 @@ function removeRow(index: number): void {
              disabling it: a greyed box invites a click that does nothing. -->
         <input
           v-if="takesValue(row.operator)"
+          :ref="
+            (element) => {
+              if (index === 0) first = element as HTMLInputElement;
+            }
+          "
           v-model="row.value"
           class="filterbar__value focus-fill"
           type="text"
@@ -234,6 +258,7 @@ function removeRow(index: number): void {
 
     <input
       v-else
+      ref="first"
       v-model="raw"
       class="filterbar__raw focus-fill"
       type="text"
@@ -246,23 +271,17 @@ function removeRow(index: number): void {
     <!-- The controls that act on the whole filter sit apart from the conditions
          they act on, at the end of the bar rather than above them. -->
     <div class="filterbar__actions">
-      <div
-        class="filterbar__modes"
-        role="group"
+      <!--
+        The shared control, not a lookalike. This used to draw its own track and
+        its own thumb from the same tokens, which is two definitions of one
+        shape kept in agreement by hand — and the app already showed the same
+        two-way choice a different way three screens over.
+      -->
+      <SegmentedControl
+        v-model="mode"
+        :options="modeOptions"
         :aria-label="$t('filter.mode')"
-      >
-        <button
-          v-for="option in ['builder', 'raw'] as const"
-          :key="option"
-          type="button"
-          class="filterbar__mode"
-          :class="{ 'filterbar__mode--on': mode === option }"
-          :aria-pressed="mode === option"
-          @click="mode = option"
-        >
-          {{ $t(`filter.${option}`) }}
-        </button>
-      </div>
+      />
 
       <button
         v-if="applied"
@@ -391,34 +410,6 @@ span.filterbar__lead {
   margin-inline-start: auto;
 }
 
-/* A two-state switch, not a segmented control: there is nothing between the
-   two states for an indicator to travel across. */
-.filterbar__modes {
-  display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  border-radius: var(--control-radius);
-  background-color: var(--fill-4);
-}
-
-.filterbar__mode {
-  height: calc(var(--field-h) - 4px);
-  padding-inline: var(--gap);
-  border-radius: calc(var(--control-radius) - 2px);
-  font-size: 0.6875rem;
-  font-weight: 500;
-  color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
-  transition:
-    background-color var(--t-hover) var(--ease-out),
-    color var(--t-hover) var(--ease-out);
-}
-
-.filterbar__mode--on {
-  background-color: var(--control-thumb);
-  box-shadow: var(--elev-thumb);
-  color: var(--color-base-content);
-}
-
 .filterbar__clear {
   height: var(--field-h);
   padding-inline: var(--gap);
@@ -441,7 +432,6 @@ span.filterbar__lead {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .filterbar__mode:not(.filterbar__mode--on):hover,
   .filterbar__clear:hover {
     color: var(--color-base-content);
   }

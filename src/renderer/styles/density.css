@@ -27,9 +27,17 @@
    */
   --row-h: calc(1.625rem * var(--density));
   --sidebar-row-h: max(var(--hit-min), calc(1.625rem * var(--density)));
-  --tab-h: max(var(--hit-min), calc(2.125rem * var(--density)));
+  --tab-h: max(var(--hit-min), calc(2.5rem * var(--density)));
   --field-h: max(var(--hit-min), calc(1.75rem * var(--density)));
   --rail-w: 3rem;
+  /* The band below the window controls that the connection row and the rail's
+     first icon both sit in. One value, so the two cannot drift apart. */
+  --header-h: max(var(--hit-min), calc(2.5rem * var(--density)));
+  /* A rail icon's own size, needed to centre it inside that band. */
+  --rail-item: 2rem;
+  /* Header and cell share one size, so a column name sits on the same glyph
+     grid as the values under it. */
+  --grid-font: 0.75rem;
   --statusbar-h: calc(1.625rem * var(--density));
   --titlebar-h: calc(2.5rem * var(--density));
 

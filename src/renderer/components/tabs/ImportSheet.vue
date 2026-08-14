@@ -14,6 +14,7 @@ import CheckBox from '../ui/CheckBox.vue';
 import FormField from '../ui/FormField.vue';
 import PressButton from '../ui/PressButton.vue';
 import Sheet from '../ui/Sheet.vue';
+import { errorMessage } from '@shared/errors';
 
 const props = defineProps<{
   entity: EntityRef;
@@ -61,7 +62,7 @@ async function choose(): Promise<void> {
       ])
     );
   } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : String(caught);
+    error.value = errorMessage(caught);
   }
 }
 
@@ -89,7 +90,7 @@ async function run(): Promise<void> {
     open.value = false;
     emit('done', result.inserted);
   } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : String(caught);
+    error.value = errorMessage(caught);
   } finally {
     running.value = false;
   }
@@ -130,7 +131,7 @@ watch(open, (isOpen) => {
         {{ total.toLocaleString() }} rows found.
       </p>
 
-      <p class="label type-label">
+      <p class="import__label type-label">
         First rows
       </p>
       <div class="preview">
@@ -161,7 +162,7 @@ watch(open, (isOpen) => {
         </table>
       </div>
 
-      <p class="label type-label">
+      <p class="import__label type-label">
         Columns
       </p>
       <div class="map">
@@ -177,7 +178,7 @@ watch(open, (isOpen) => {
 
           <select
             v-model="mapping[column.name]"
-            class="map__select"
+            class="textfield map__select"
             :aria-label="`Source for ${column.name}`"
           >
             <option :value="SKIP">
@@ -247,7 +248,7 @@ watch(open, (isOpen) => {
   display: flex;
   align-items: center;
   border-radius: var(--radius-field);
-  background: color-mix(in oklab, var(--color-base-content) 6%, transparent);
+  background: var(--fill-4);
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   overflow: hidden;
@@ -263,7 +264,7 @@ watch(open, (isOpen) => {
   color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
 }
 
-.label {
+.import__label {
   padding-block: var(--gap-tight);
   color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
 }
@@ -271,7 +272,7 @@ watch(open, (isOpen) => {
 .preview {
   overflow-x: auto;
   border-radius: 0.5rem;
-  border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  border: 1px solid var(--separator);
   margin-bottom: var(--gap-loose);
 }
 
@@ -285,12 +286,12 @@ watch(open, (isOpen) => {
 .preview th,
 .preview td {
   padding: 3px var(--gap);
-  border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 6%, transparent);
+  border-bottom: 1px solid var(--separator);
   text-align: start;
 }
 
 .preview th {
-  background: color-mix(in oklab, var(--color-base-content) 5%, transparent);
+  background: var(--fill-4);
   font-weight: 500;
 }
 
@@ -321,12 +322,6 @@ watch(open, (isOpen) => {
 
 .map__select {
   min-width: 11rem;
-  height: calc(var(--field-h) * 0.9);
-  padding-inline: var(--gap);
-  border-radius: var(--radius-field);
-  border: 1px solid color-mix(in oklab, var(--color-base-content) 14%, transparent);
-  background: color-mix(in oklab, var(--color-base-100) 80%, transparent);
-  color: var(--color-base-content);
   font-size: 0.75rem;
 }
 

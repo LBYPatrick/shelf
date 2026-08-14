@@ -10,13 +10,20 @@
 import { computed } from 'vue';
 import type { CellValue } from '@drivers/types';
 import { displayValue, valueKind } from '@shared/values';
+import { useSettings } from '../../stores/settings';
 import PressButton from '../ui/PressButton.vue';
 import Sheet from '../ui/Sheet.vue';
 
 const props = defineProps<{ column: string; value: CellValue }>();
 const open = defineModel<boolean>({ required: true });
 
-const raw = computed(() => displayValue(props.value));
+const settings = useSettings();
+
+// The same rendering the cell used, or the inspector would disagree with the
+// grid about what the value is — which is the one thing it exists to settle.
+const raw = computed(() =>
+  displayValue(props.value, { encoding: settings.values.binaryEncoding })
+);
 const kind = computed(() => valueKind(props.value));
 
 /** JSON is pretty-printed; anything else is shown exactly as stored. */
@@ -87,7 +94,7 @@ async function copy(): Promise<void> {
 .chip {
   padding: 2px 8px;
   border-radius: 999px;
-  background: color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  background: var(--fill-3);
   font-size: 0.625rem;
   letter-spacing: 0.02em;
 }
@@ -101,7 +108,7 @@ async function copy(): Promise<void> {
   overflow: auto;
   padding: var(--gap-loose);
   border-radius: var(--radius-box);
-  background: color-mix(in oklab, var(--color-base-content) 5%, transparent);
+  background: var(--fill-4);
   font-family: var(--font-mono);
   font-size: 0.75rem;
   line-height: 1.55;

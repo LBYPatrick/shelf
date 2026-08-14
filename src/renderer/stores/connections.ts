@@ -8,6 +8,7 @@ import type {
   SavedConnection,
 } from '@shared/connections';
 import { host } from '../lib/host';
+import { errorMessage } from '@shared/errors';
 
 export interface LiveConnection {
   readonly id: string;
@@ -17,6 +18,13 @@ export interface LiveConnection {
   readonly version: string;
   readonly labelColor: string | null;
   readonly readOnly: boolean;
+  /**
+   * The database this connection is inside, when it is inside a named one.
+   *
+   * The sidebar's top folder. A file-backed engine has no such thing — the file
+   * *is* the database — so it is null there and the tree starts a level down.
+   */
+  readonly database: string | null;
 }
 
 export type ConnectStatus =
@@ -77,7 +85,7 @@ export const useConnections = defineStore('connections', () => {
       const handle = await window.shelf.db.prepareConnection(request);
       return await host.call('conn/test', { handle });
     } catch (error) {
-      return { ok: false, message: error instanceof Error ? error.message : String(error) };
+      return { ok: false, message: errorMessage(error) };
     }
   }
 
@@ -108,6 +116,7 @@ export const useConnections = defineStore('connections', () => {
         version,
         labelColor: connection.labelColor,
         readOnly: connection.readOnly,
+        database: connection.config.database ?? null,
       };
 
       status.value = { state: 'idle' };
@@ -118,7 +127,7 @@ export const useConnections = defineStore('connections', () => {
       status.value = {
         state: 'failed',
         connectionId: connection.id,
-        message: error instanceof Error ? error.message : String(error),
+        message: errorMessage(error),
       };
       return false;
     }
@@ -170,6 +179,7 @@ export const useConnections = defineStore('connections', () => {
         version,
         labelColor: null,
         readOnly: false,
+        database: 'sample',
       };
 
       status.value = { state: 'idle' };
@@ -178,10 +188,23 @@ export const useConnections = defineStore('connections', () => {
       status.value = {
         state: 'failed',
         connectionId: 'sample',
-        message: error instanceof Error ? error.message : String(error),
+        message: errorMessage(error),
       };
       return false;
     }
+  }
+
+  /**
+   * The open connection's id, or a throw.
+   *
+   * Every tab needs this before it can ask the host anything, and each one used
+   * to carry its own identical four-line copy of it — including the store
+   * itself, which is where it belonged all along.
+   */
+  function requireId(): string {
+    const id = active.value?.id;
+    if (!id) throw new Error('No open connection');
+    return id;
   }
 
   return {
@@ -190,6 +213,7 @@ export const useConnections = defineStore('connections', () => {
     pinned,
     recent,
     active,
+    requireId,
     status,
     keyringAvailable,
     refresh,

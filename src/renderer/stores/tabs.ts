@@ -3,7 +3,12 @@ import { computed, ref, watch } from 'vue';
 import type { EntityRef } from '@drivers/types';
 import { entityKey } from './entities';
 
-export type TabKind = 'table' | 'query' | 'structure' | 'erd';
+/*
+ * `structure` was a fourth kind until the Properties popup replaced it. A tab
+ * nothing can open is dead weight the compiler cannot see, so it went — and
+ * `restore` drops any that a session saved before it did.
+ */
+export type TabKind = 'table' | 'query' | 'erd';
 
 export interface Tab {
   readonly id: string;
@@ -54,7 +59,7 @@ export const useTabs = defineStore('tabs', () => {
     });
   }
 
-  function openEntity(kind: 'table' | 'structure', entity: EntityRef): Tab {
+  function openEntity(kind: 'table', entity: EntityRef): Tab {
     const existing = find(kind, entity);
     if (existing) {
       focus(existing.id);
@@ -177,7 +182,12 @@ export const useTabs = defineStore('tabs', () => {
 
     if (!stored?.tabs?.length) return;
 
-    tabs.value = stored.tabs.map((tab) => ({ ...tab, unsaved: false }));
+    const KINDS: readonly string[] = ['table', 'query', 'erd'];
+    // A session saved before a tab kind was removed still restores; it just
+    // restores the tabs that still exist.
+    tabs.value = stored.tabs
+      .filter((tab) => KINDS.includes(tab.kind))
+      .map((tab) => ({ ...tab, unsaved: false }));
     activeId.value =
       stored.activeId && tabs.value.some((tab) => tab.id === stored.activeId)
         ? stored.activeId

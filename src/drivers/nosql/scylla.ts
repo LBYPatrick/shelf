@@ -1,6 +1,6 @@
 import { auth, Client, types } from 'cassandra-driver';
 import { capabilities } from '../capabilities';
-import { encodeRows, tagFields } from '../transcode';
+import { encodeRows, tagFields, untagValue } from '../transcode';
 import type {
   ChangeSet,
   Column,
@@ -434,7 +434,7 @@ export class ScyllaClient implements DatabaseClient {
           `INSERT INTO ${quoteIdentifier(insert.entity.name, CQL_DIALECT)} ` +
           `(${columns.map((c) => quoteIdentifier(c, CQL_DIALECT)).join(', ')}) ` +
           `VALUES (${columns.map(() => '?').join(', ')})`,
-        params: columns.map((column) => unwrap(insert.values[column])),
+        params: columns.map((column) => untagValue(insert.values[column])),
       });
     }
 
@@ -446,7 +446,10 @@ export class ScyllaClient implements DatabaseClient {
           update.primaryKeys
             .map((key) => `${quoteIdentifier(key.column, CQL_DIALECT)} = ?`)
             .join(' AND '),
-        params: [unwrap(update.value), ...update.primaryKeys.map((key) => unwrap(key.value))],
+        params: [
+          untagValue(update.value),
+          ...update.primaryKeys.map((key) => untagValue(key.value)),
+        ],
       });
     }
 
@@ -457,7 +460,7 @@ export class ScyllaClient implements DatabaseClient {
           remove.primaryKeys
             .map((key) => `${quoteIdentifier(key.column, CQL_DIALECT)} = ?`)
             .join(' AND '),
-        params: remove.primaryKeys.map((key) => unwrap(key.value)),
+        params: remove.primaryKeys.map((key) => untagValue(key.value)),
       });
     }
 
@@ -532,15 +535,8 @@ function normalise(row: types.Row): Record<string, unknown> {
   return result;
 }
 
-function unwrap(value: unknown): unknown {
-  if (value && typeof value === 'object' && '$' in value) {
-    return (value as { data: unknown }).data;
-  }
-  return value;
-}
-
 function literal(value: unknown): string {
-  const raw = unwrap(value);
+  const raw = untagValue(value);
   if (raw === null || raw === undefined) return 'null';
   if (typeof raw === 'number' || typeof raw === 'boolean') return String(raw);
   return `'${String(raw).split("'").join("''")}'`;

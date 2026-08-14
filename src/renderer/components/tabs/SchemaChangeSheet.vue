@@ -99,7 +99,7 @@ async function copy(): Promise<void> {
 .summary {
   padding: var(--gap) var(--gap-loose);
   border-radius: 0.75rem;
-  background: color-mix(in oklab, var(--color-base-content) 5%, transparent);
+  background: var(--fill-4);
   font-size: 0.8125rem;
   margin-bottom: var(--gap-loose);
 }
@@ -116,7 +116,7 @@ async function copy(): Promise<void> {
 .sql {
   padding: var(--gap-loose);
   border-radius: 0.75rem;
-  background: color-mix(in oklab, var(--color-base-content) 6%, transparent);
+  background: var(--fill-4);
   font-family: var(--font-mono);
   font-size: 0.75rem;
   line-height: 1.6;

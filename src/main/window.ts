@@ -91,14 +91,27 @@ export function createMainWindow(): BrowserWindow {
       nodeIntegration: false,
       sandbox: false,
       spellcheck: false,
+      /*
+       * A hidden window is still painted, but Chromium throttles a window it
+       * believes nobody is looking at — which under test means animations and
+       * layout settle late or not at all.
+       */
+      backgroundThrottling: false,
     },
   });
 
-  // `showInactive` presents the window without activating the app, so a test
-  // run does not pull focus out of whatever the user is typing into.
-  window.once('ready-to-show', () =>
-    process.env['SHELF_E2E'] ? window.showInactive() : window.show()
-  );
+  /*
+   * Under test the window is never shown at all.
+   *
+   * Electron paints a window that has not been shown (`paintWhenInitiallyHidden`
+   * is on by default), and Playwright drives it and captures screenshots over
+   * the debugging protocol, which needs neither an on-screen window nor OS
+   * focus. So a suite run is invisible: no window appearing and disappearing on
+   * the developer's screen, and nothing taking their keyboard mid-sentence.
+   */
+  window.once('ready-to-show', () => {
+    if (!process.env['SHELF_E2E']) window.show();
+  });
 
   const notifyMaximized = () =>
     window.webContents.send(WINDOW_CHANNELS.maximizedChanged, window.isMaximized());

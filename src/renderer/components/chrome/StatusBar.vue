@@ -7,13 +7,51 @@
  * rest is contributed by whichever tab is active, which is why it is a teleport
  * target rather than a component that knows about tabs.
  */
+import { useActivity } from '../../stores/activity';
 import { useConnections } from '../../stores/connections';
 
 const connections = useConnections();
+const activity = useActivity();
 </script>
 
 <template>
-  <footer class="statusbar mat-regular">
+  <footer
+    class="statusbar mat-regular"
+    :class="{
+      'statusbar--busy': activity.busy,
+      'statusbar--ok': !activity.busy && activity.outcome === 'ok',
+      'statusbar--error': !activity.busy && activity.outcome === 'error',
+    }"
+  >
+    <!--
+      The wash is a layer rather than the bar's own background: the bar is a
+      material, and animating a material's `background-color` would fight the
+      opacity dial for the same property. A layer on top composites over
+      whatever the glass resolved to, at any setting.
+    -->
+    <span
+      class="statusbar__wash"
+      aria-hidden="true"
+    />
+
+    <!--
+      Announced once, politely. The colour is the fast channel and the text is
+      the accessible one; a screen reader should hear "query failed" rather than
+      nothing at all because the signal was a shade of red.
+    -->
+    <span
+      class="sr-only"
+      role="status"
+    >{{
+      activity.busy
+        ? $t('activity.working')
+        : activity.outcome === 'ok'
+          ? $t('activity.done')
+          : activity.outcome === 'error'
+            ? $t('activity.failed')
+            : ''
+    }}</span>
+
     <!--
       The connection's identity lives in the title bar, where the eye already
       goes. Repeating it here would be two places to keep in agreement and one
@@ -42,6 +80,7 @@ const connections = useConnections();
 
 <style scoped>
 .statusbar {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--gap-loose);
@@ -55,8 +94,82 @@ const connections = useConnections();
   /* Clears the window's rounded bottom corners, which were clipping the
      row count on the right and the connection dot on the left. */
   padding-inline: var(--gap-section);
-  border-top: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+  border-top: 1px solid var(--separator);
   font-size: 0.6875rem;
+}
+
+/*
+ * Breathing while it works, a wash when it stops.
+ *
+ * Slow on purpose — a fast pulse in the corner of the eye is an alarm, and this
+ * is only saying "still going". The finished states are brief and fade rather
+ * than cut, because the moment worth noticing is the *change*, not the colour
+ * sitting there afterwards.
+ */
+.statusbar__wash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: currentColor;
+  transition: opacity var(--t-sheet) var(--ease-out);
+}
+
+.statusbar--busy .statusbar__wash {
+  background: var(--color-primary);
+  animation: statusbar-breathe 1.8s ease-in-out infinite;
+}
+
+.statusbar--ok .statusbar__wash {
+  background: var(--color-success);
+  animation: statusbar-flash 1.4s var(--ease-out) forwards;
+}
+
+.statusbar--error .statusbar__wash {
+  background: var(--color-error);
+  animation: statusbar-flash 1.4s var(--ease-out) forwards;
+}
+
+@keyframes statusbar-breathe {
+  0%,
+  100% {
+    opacity: 0.06;
+  }
+  50% {
+    opacity: 0.24;
+  }
+}
+
+@keyframes statusbar-flash {
+  0% {
+    opacity: 0.34;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/*
+ * Reduced motion keeps the information and drops the movement: a steady tint
+ * while working, and a finished state that fades once instead of pulsing.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .statusbar--busy .statusbar__wash {
+    animation: none;
+    opacity: 0.16;
+  }
+
+  .statusbar--ok .statusbar__wash,
+  .statusbar--error .statusbar__wash {
+    animation: none;
+    opacity: 0.24;
+  }
+}
+
+/* The bar's own contents sit above the wash. */
+.statusbar__version,
+.statusbar__slot {
+  position: relative;
 }
 
 .statusbar__dot {

@@ -117,6 +117,74 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **A disabled primary button loses its fill rather than fading.** A filled
   accent at 40% opacity is pale colour carrying pale white text, which reads as
   a rendering fault rather than as "not yet".
+- **The start screen painted no surface of its own**, borrowing its contrast
+  from whatever was behind the window. On the dark theme its text is light, so
+  over a bright desktop the title, the subtitle and the "new connection" card
+  were light-on-light and effectively invisible. The workspace was only fine
+  because its content pane is opaque. The gate now checks that every screen
+  paints its own background, and covers the start screen in dark.
+- **An Export sheet for query results** — format (CSV, TSV, JSON, JSON Lines,
+  Markdown, SQL) and destination (file or clipboard) as two choices rather than
+  a list of eight download items. A file is streamed to disk by the host, so it
+  carries the whole result set however large; the clipboard carries what is
+  loaded, and the sheet says which is which. **It does not open yet** — see the
+  fixme in the end-to-end suite.
+- **Column labels sat high in the header** rather than centred in it: Tabulator
+  writes an inline height onto every column from the natural height of its
+  label, which is shorter than the header row and beat the stylesheet.
+- **An empty outlined box floated below the last row.** This stylesheet
+  replaces Tabulator's rather than extending it, and the range overlay's
+  *positioning* rules were never carried across — only its colours. The overlay
+  therefore laid out in normal flow instead of over the cells, so the selection
+  rectangle sat one column left and one row below the cell it belonged to.
+- **Two highlights for one selection in the icon rail.** The travelling marker
+  and the selected item each painted a surface, which only goes unnoticed for
+  as long as they line up exactly — and after the header band was aligned they
+  no longer did, leaving a grey square peeking out above the blue one. The
+  marker is the whole indicator now, and both it and the rail's padding derive
+  from one value.
+- **Column headers could not line up with their values.** The header was set in
+  the UI face at 11px over 13px monospace data; different faces have different
+  side bearings, so every label sat a pixel or two off the column it named. A
+  column name and its values are both identifiers — they share one face and one
+  size now, with weight and colour carrying the difference.
+- **Hover and selection fills came from `--color-base-content`**, the same flaw
+  already fixed for borders: on the dark theme that colour is near-white, so an
+  "8% hover" was 8% white. Twenty-three of them now come from the fill ramp.
+- **The rail and the sidebar are one surface now.** Giving them separate shades
+  put their boundary directly under the window controls, which are wider than
+  the rail; hiding that with a banded top only moved the seam above the first
+  rail icon instead. Matching alphas does not fix it either — two surfaces
+  sharing a tint but differing in opacity diverge by an amount that depends on
+  what is behind the window, so the seam shows over a bright desktop and not a
+  dark one. Two depths, not three.
+- **The rail's first icon and the connection row beside it sat four pixels
+  apart** — close enough to read as a mistake rather than a choice. They were
+  positioned independently; both now centre in one shared header band.
+- **The dark panels had lost most of their translucency.** They were pushed to
+  88% opacity to stop the sidebar photographing as washed-out grey, which was
+  an artifact of a screenshot compositing against white rather than anything
+  visible on screen. Restored to real glass, with a check that fails if a panel
+  becomes opaque or loses its blur.
+- **A bright vertical line down the full height of the window.** The resize
+  handle occupies a one-pixel column of layout between the sidebar and the
+  content, and painted nothing — so the window's own backdrop showed through
+  it. On a translucent window that is the desktop, which is why the line was
+  bright over a light wallpaper, present in both themes, and unaffected by
+  every attempt to adjust the colours around it: the page was not drawing it.
+  The gate now samples every column of the window and fails on any pixel the
+  page leaves unpainted.
+- **The rail and sidebar dividers are gone.** Panels that already differ in
+  tone do not also need a line between them; on the dark theme the hairline was
+  the brightest thing in the window, brighter than either surface it separated.
+- **Bright white lines between every panel.** Dividers were a percentage of
+  `--color-base-content`, which is near-white on the dark theme — so an "8%
+  hairline" was 8% white. They come from the neutral grey the fills use now,
+  and the gate fails any border brighter than the text beside it.
+- **The dark sidebar washed out over a bright wallpaper.** A dark surface at
+  58% opacity composites *lighter* than the opaque content pane next to it, so
+  the two stopped reading as the same window. Dark materials hold their tone
+  now.
 - **A grey pill was painted across the whole status bar.** `.status` is a
   daisyUI component name, and our per-tab status group had taken it — so
   daisyUI drew its own surface behind the row count and the pager. Same cause

@@ -87,6 +87,12 @@ before considering a change finished.
   much fits on screen, it never shrinks a target below the floor. The grid is
   the single exception, documented where it is declared. iOS's 44pt was tried
   and is the wrong number for a pointer-driven app this dense.
+- **The rail and the sidebar are one surface.** The window controls are wider
+  than the rail and overhang the sidebar, so their boundary runs directly under
+  the traffic lights; any difference in tone draws a line through them. Matching
+  alphas does not help either — two surfaces sharing a tint but differing in
+  opacity diverge by an amount that depends on what is behind the window. The
+  depth comes from glass columns against the opaque content pane instead.
 - **Nothing may draw a boundary under the window controls.** They are wider than
   the rail and overhang the sidebar, so a divider or a shade change at that seam
   cuts each control in half. The rail wears the sidebar's shade for exactly the
@@ -109,6 +115,11 @@ before considering a change finished.
 - Anything touching `better-sqlite3` cannot run under plain Node, because the
   module is compiled against Electron's ABI. Cover it with an end-to-end test
   instead.
+- **Test runs are invisible.** Under `SHELF_E2E` the window is never shown at
+  all: Electron paints an unshown window, and Playwright drives it and captures
+  screenshots over the debugging protocol, which needs neither an on-screen
+  window nor OS focus. `backgroundThrottling` is off so a window nobody is
+  looking at still settles its layout and animations.
 - End-to-end tests run against the *built* app and use a throwaway user-data
   directory, so they never touch real saved connections.
 - **`make ui` is the design gate**, and it is the one to extend when a visual

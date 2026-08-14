@@ -9,62 +9,217 @@
  *
  * Each surface carries a bright top edge. That single line is what makes a
  * panel read as a material catching light rather than a flat rectangle.
+ *
+ * TINT AND ALPHA ARE SEPARATE, and that is what makes the two settings sliders
+ * possible. A surface declares the colour it is made of and how much of it
+ * there is; the sliders scale those two numbers across every surface at once.
+ * Had each material kept baking its own finished `background-color`, a
+ * translucency control could only have set one alpha for all four — which is
+ * the same as deleting the hierarchy the weights exist to express.
  */
+
+:root {
+  /*
+   * The opacity dial, arriving as a straight line: every surface computes
+   * `its own designed alpha x scale + lift`.
+   *
+   * Linear in the designed alpha on purpose — a straight line through the four
+   * weights cannot reorder them, so a thick material stays thicker than a thin
+   * one at every position of the slider. `theme.ts` derives the pair; these are
+   * the identity, which is the appearance the app ships with.
+   */
+  --material-alpha-scale: 1;
+  --material-alpha-lift: 0%;
+
+  /*
+   * A floor the dial cannot pull a surface below. Zero for the window's own
+   * materials — the whole point of the control is to let those go thin — and
+   * raised on anything modal, where separation from what is behind is not a
+   * matter of taste.
+   */
+  --mat-alpha-floor: 0%;
+
+  /*
+   * The blur radius of a standard surface. Every weight is a fixed multiple of
+   * it — a thick material has always blurred harder than a thin one, and one
+   * absolute radius for all of them would flatten that the way one absolute
+   * alpha would flatten the tints.
+   */
+  --material-blur: 30px;
+}
 
 .mat-ultrathin,
 .mat-thin,
 .mat-regular,
-.mat-thick {
+.mat-thick,
+.surface-sheet,
+.surface-popover,
+.panel-content {
   position: relative;
-  background-color: var(--mat-bg);
-  -webkit-backdrop-filter: blur(var(--mat-blur)) saturate(var(--mat-sat));
-  backdrop-filter: blur(var(--mat-blur)) saturate(var(--mat-sat));
+  background-color: color-mix(
+    in oklab,
+    var(--mat-tint)
+      clamp(
+        0%,
+        max(
+          var(--mat-alpha-floor),
+          calc(var(--mat-alpha) * var(--material-alpha-scale) + var(--material-alpha-lift))
+        ),
+        100%
+      ),
+    transparent
+  );
+  -webkit-backdrop-filter: blur(calc(var(--material-blur) * var(--mat-blur-ratio)))
+    saturate(var(--mat-sat));
+  backdrop-filter: blur(calc(var(--material-blur) * var(--mat-blur-ratio)))
+    saturate(var(--mat-sat));
   border-color: var(--mat-edge);
 }
 
+/*
+ * With the blur off there is nothing left for the filter to do, and a
+ * `blur(0px)` still costs a full compositing pass per surface per frame. The
+ * root carries the flag so the whole window drops the filter together.
+ */
+:root[data-glass='off'] .mat-ultrathin,
+:root[data-glass='off'] .mat-thin,
+:root[data-glass='off'] .mat-regular,
+:root[data-glass='off'] .mat-thick,
+:root[data-glass='off'] .surface-sheet,
+:root[data-glass='off'] .surface-popover,
+:root[data-glass='off'] .panel-content {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 .mat-ultrathin {
-  --mat-blur: 8px;
+  --mat-blur-ratio: 0.27;
   --mat-sat: 150%;
-  --mat-bg: color-mix(in oklab, var(--color-base-100) 30%, transparent);
+  --mat-tint: var(--color-base-100);
+  --mat-alpha: 30%;
   --mat-edge: color-mix(in oklab, white 22%, transparent);
 }
 
 .mat-thin {
-  --mat-blur: 16px;
+  --mat-blur-ratio: 0.53;
   --mat-sat: 180%;
-  --mat-bg: color-mix(in oklab, var(--color-base-100) 45%, transparent);
+  --mat-tint: var(--color-base-100);
+  --mat-alpha: 45%;
   --mat-edge: color-mix(in oklab, white 28%, transparent);
 }
 
 .mat-regular {
-  --mat-blur: 28px;
+  --mat-blur-ratio: 1;
   --mat-sat: 180%;
-  --mat-bg: color-mix(in oklab, var(--color-base-100) 60%, transparent);
+  --mat-tint: var(--color-base-100);
+  --mat-alpha: 60%;
   --mat-edge: color-mix(in oklab, white 30%, transparent);
 }
 
 .mat-thick {
-  --mat-blur: 48px;
+  --mat-blur-ratio: 1.6;
   --mat-sat: 200%;
-  --mat-bg: color-mix(in oklab, var(--color-base-100) 78%, transparent);
+  --mat-tint: var(--color-base-100);
+  --mat-alpha: 78%;
   --mat-edge: color-mix(in oklab, white 34%, transparent);
 }
 
 [data-theme='shelf-dark'] .mat-ultrathin {
-  --mat-bg: color-mix(in oklab, var(--color-base-100) 25%, transparent);
+  --mat-alpha: 25%;
   --mat-edge: color-mix(in oklab, white 8%, transparent);
 }
 [data-theme='shelf-dark'] .mat-thin {
-  --mat-bg: color-mix(in oklab, var(--color-base-100) 40%, transparent);
+  --mat-alpha: 40%;
   --mat-edge: color-mix(in oklab, white 10%, transparent);
 }
 [data-theme='shelf-dark'] .mat-regular {
-  --mat-bg: color-mix(in oklab, var(--color-base-100) 55%, transparent);
-  --mat-edge: color-mix(in oklab, white 12%, transparent);
+  --mat-alpha: 55%;
+  --mat-edge: color-mix(in oklab, white 7%, transparent);
 }
 [data-theme='shelf-dark'] .mat-thick {
-  --mat-bg: color-mix(in oklab, var(--color-base-100) 72%, transparent);
-  --mat-edge: color-mix(in oklab, white 14%, transparent);
+  --mat-alpha: 72%;
+  --mat-edge: color-mix(in oklab, white 9%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+ * Modal presentation: the scrim dims, the surface blurs.
+ *
+ * Blurring both is the common mistake and it undoes the effect. A blurred scrim
+ * already flattens everything behind it, so the glass on top has nothing left
+ * to refract and reads as flat tint — the surface stops looking like a material
+ * and starts looking like a grey rectangle. Worse, it is two full-screen
+ * backdrop filters composited every frame for one visual result.
+ *
+ * So: the scrim is dim only, and the panel carries a *large* blur, which is
+ * what makes it read as thick glass rather than a frosted pane. Bigger
+ * surfaces read as thicker, so a sheet blurs harder than a popover, which
+ * blurs harder than a menu.
+ *
+ * These live here rather than with the controls because they are materials —
+ * and because that is what lets the two settings sliders reach them. Declared
+ * beside the buttons, they carried their own hardcoded blur and alpha and were
+ * the two surfaces the sliders could not move.
+ * ------------------------------------------------------------------------- */
+.scrim {
+  background: oklch(0% 0 0 / 0.32);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+[data-theme='shelf-dark'] .scrim {
+  background: oklch(0% 0 0 / 0.5);
+}
+
+/*
+ * Modal surfaces take the dial upward only.
+ *
+ * At a quarter opacity the sheet's fill came within a few points of the window
+ * behind it and its edge simply vanished — you could not tell where the modal
+ * began. A sheet that does not separate itself from what it interrupts has
+ * stopped being a sheet, so the dial can make these more solid and never less.
+ */
+.surface-sheet {
+  --mat-blur-ratio: 1.6;
+  --mat-sat: 180%;
+  --mat-tint: var(--color-base-100);
+  --mat-alpha: 76%;
+  --mat-alpha-floor: var(--mat-alpha);
+  box-shadow: var(--elev-sheet);
+}
+
+[data-theme='shelf-dark'] .surface-sheet {
+  --mat-alpha: 70%;
+}
+
+.surface-popover {
+  --mat-blur-ratio: 1;
+  --mat-sat: 180%;
+  --mat-tint: var(--color-base-100);
+  --mat-alpha: 72%;
+  --mat-alpha-floor: var(--mat-alpha);
+  box-shadow: var(--elev-popover);
+}
+
+[data-theme='shelf-dark'] .surface-popover {
+  --mat-alpha: 66%;
+}
+
+/*
+ * A popover on a sheet is solid, not glass.
+ *
+ * Two reasons, and they point the same way. The material rule: stacking one
+ * translucent surface on another collapses legibility. And the mechanism: an
+ * ancestor carrying a `backdrop-filter` becomes the backdrop root for
+ * everything inside it, so a popover in a sheet was blurring the *sheet's own
+ * flat fill* rather than the page — which is a blur that costs a compositing
+ * pass and produces a grey rectangle. That is what "the blur is broken" looked
+ * like, and the fix is not to blur at all.
+ */
+.surface-sheet .surface-popover,
+.surface-popover .surface-popover {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background-color: var(--color-base-100);
 }
 
 /* The light-catching edge, applied to whichever sides face the light. */
@@ -95,12 +250,20 @@
  * When the user asks for less transparency, give them none: raise the surface
  * to opaque and drop the blur entirely rather than merely softening it.
  */
+/*
+ * The OS outranks the sliders. Someone who has asked the system for less
+ * transparency has asked every app, and a preference inside one of them is not
+ * a licence to override it.
+ */
 @media (prefers-reduced-transparency: reduce) {
   .mat-ultrathin,
   .mat-thin,
   .mat-regular,
-  .mat-thick {
-    background-color: var(--color-base-100);
+  .mat-thick,
+  .surface-sheet,
+  .surface-popover,
+  .panel-content {
+    background-color: var(--mat-tint, var(--color-base-100));
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
@@ -110,8 +273,11 @@
   .mat-ultrathin,
   .mat-thin,
   .mat-regular,
-  .mat-thick {
-    background-color: var(--color-base-100);
+  .mat-thick,
+  .surface-sheet,
+  .surface-popover,
+  .panel-content {
+    background-color: var(--mat-tint, var(--color-base-100));
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     border-color: var(--color-base-content);
@@ -132,57 +298,91 @@
  * blurring that much area every frame is the most expensive thing the window
  * could ask the compositor to do.
  */
-.panel-recessed {
-  /*
-   * Furthest back, so it is tinted toward the text colour rather than merely
-   * given a lower alpha: dropping alpha alone makes a panel more transparent
-   * without making it read as further away, and over a light desktop the two
-   * are indistinguishable.
-   */
-  --panel-tint: color-mix(in oklab, var(--color-base-300) 88%, var(--color-base-content));
-  --mat-bg: color-mix(in oklab, var(--panel-tint) 62%, transparent);
-  /*
-   * The window controls float over the top of the rail and overhang into the
-   * sidebar beside it. A shade boundary running underneath them cuts the
-   * controls in half, so the rail wears the sidebar's shade for exactly the
-   * height they occupy — see `.rail` in Workspace.vue.
-   */
-  --panel-strip: color-mix(in oklab, var(--color-base-300) 55%, transparent);
-}
-
+/*
+ * The rail and the sidebar are one surface, not two.
+ *
+ * They were given separate shades so the three columns would read as three
+ * depths. The window controls make that untenable: they are wider than the
+ * rail and overhang the sidebar, so the boundary between the two runs directly
+ * underneath them. Any difference in tone draws a line through the traffic
+ * lights, and hiding it with a banded top only moved the seam somewhere else.
+ *
+ * Matching alphas is not enough either. Two surfaces sharing a tint but
+ * differing in opacity diverge by an amount that depends on what is *behind*
+ * the window — imperceptible over a dark desktop, obvious over a bright one.
+ * The only seam that never shows is the one that is not there.
+ *
+ * The depth that matters survives regardless: translucent glass columns against
+ * an opaque working surface. That difference is large, and its boundary is
+ * nowhere near the window controls.
+ */
+.panel-recessed,
 .panel-sidebar {
-  --panel-tint: var(--color-base-300);
-  --mat-bg: color-mix(in oklab, var(--panel-tint) 55%, transparent);
+  --panel-tint: var(--color-recessed);
+  --mat-tint: var(--panel-tint);
+  /* Thinner than the working surface on purpose. Depth is what the ordering
+     means: the columns are furthest back, so they let the most through. */
+  --mat-alpha: 45%;
 }
 
-/* The working surface. Opaque on purpose — see above. */
-.panel-content {
-  background: var(--color-base-100);
-}
-
-[data-theme='shelf-dark'] .panel-recessed {
-  /* Dark surfaces recede by getting darker, the opposite of the light theme,
-     so the ordering has to be restated rather than reused. */
-  --panel-tint: color-mix(in oklab, var(--color-base-200) 82%, black);
-  --mat-bg: color-mix(in oklab, var(--panel-tint) 64%, transparent);
-  --panel-strip: color-mix(in oklab, var(--color-base-200) 58%, transparent);
-}
-
+/*
+ * The dark theme's own tint, and the reason it needs one.
+ *
+ * This rule had lost its second selector and run straight into the one below
+ * it, so `[data-theme='shelf-dark'] .panel-recessed` was being handed
+ * `background: var(--color-base-100)` — the *content* pane's opaque colour —
+ * while the sidebar beside it kept the translucent light-theme mix. That is the
+ * one seam this file exists to prevent: the rail went opaque and dark, the
+ * sidebar stayed pale glass, and the boundary between them ran directly under
+ * the traffic lights.
+ *
+ * It ran at 82% for a while, which was a correction for a problem that has
+ * since been fixed at the source: the OS was painting the *light* vibrancy
+ * material behind a dark window, and a bright desktop through a thin dark tint
+ * washed the panel out. With `nativeTheme.themeSource` following the theme the
+ * material behind is dark too, and 82% is simply a wall — it was the reason the
+ * window stopped looking translucent at all.
+ */
+[data-theme='shelf-dark'] .panel-recessed,
 [data-theme='shelf-dark'] .panel-sidebar {
-  --panel-tint: var(--color-base-200);
-  --mat-bg: color-mix(in oklab, var(--panel-tint) 58%, transparent);
+  --panel-tint: var(--color-recessed);
+  --mat-tint: var(--panel-tint);
+  --mat-alpha: 52%;
+}
+
+/*
+ * The working surface.
+ *
+ * Glass too, and the thickest of the three. It was flatly opaque for a long
+ * time and for a good reason — a grid of ten thousand cells over a moving
+ * wallpaper is hard to read, and blurring an area that size is the most
+ * expensive thing the window can ask of the compositor. What changed is that
+ * the opacity dial exists: anyone who wants the working surface solid can have
+ * it solid, and at the top of the range it is exactly what it used to be.
+ *
+ * It stays the *most* present of the three regardless. The ordering the panels
+ * exist to express is relative, so the content pane simply sits at the far end
+ * of it rather than outside it.
+ */
+.panel-content {
+  --mat-blur-ratio: 1.6;
+  --mat-sat: 180%;
+  --mat-tint: var(--color-base-100);
+  --mat-alpha: 90%;
+}
+
+[data-theme='shelf-dark'] .panel-content {
+  --mat-alpha: 88%;
 }
 
 /*
  * With nothing behind the window to sample, the shades above would be mixed
  * against the desktop and lose their ordering entirely.
  */
-:root[data-translucency='none'] .panel-recessed {
-  --mat-bg: var(--panel-tint);
-}
-
-:root[data-translucency='none'] .panel-sidebar {
-  --mat-bg: var(--panel-tint);
+:root[data-translucency='none'] .panel-recessed,
+:root[data-translucency='none'] .panel-sidebar,
+:root[data-translucency='none'] .panel-content {
+  --mat-alpha: 100%;
 }
 
 @media (prefers-reduced-transparency: reduce) {

@@ -21,6 +21,8 @@ import {
 } from 'tabulator-tables';
 import type { CellValue, Field, Row } from '@drivers/types';
 import { displayValue } from '@shared/values';
+import { isNumericType } from '@shared/columnTypes';
+import { useSettings } from '../../stores/settings';
 
 const props = defineProps<{
   fields: readonly Field[];
@@ -35,6 +37,8 @@ const emit = defineEmits<{
   selectRow: [Row | null];
 }>();
 
+const settings = useSettings();
+
 const container = ref<HTMLElement>();
 const table = shallowRef<Tabulator>();
 
@@ -47,16 +51,29 @@ function inspect(column: string, value: CellValue): void {
   inspectorOpen.value = true;
 }
 
-/** Null is a value, not an absence, so it is shown as such rather than blank. */
-function formatCell(cell: CellComponent): string {
-  const value = cell.getValue() as CellValue;
-  if (value === null || value === undefined) {
-    return '<span class="cell-null">NULL</span>';
-  }
-  const text = displayValue(value);
-  return text === ''
-    ? '<span class="cell-empty">empty</span>'
-    : text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+/**
+ * Null is a value, not an absence, so it is shown as such rather than blank.
+ *
+ * The column's declared type comes in with the formatter because it decides how
+ * an instant is written: a `date` column has no time of day, and rendering the
+ * transport's full ISO instant spent twenty-four characters of width on ten
+ * characters of information.
+ */
+function formatCellOf(field: Field) {
+  return (cell: CellComponent): string => {
+    const value = cell.getValue() as CellValue;
+    if (value === null || value === undefined) {
+      return '<span class="cell-null">NULL</span>';
+    }
+
+    const text = displayValue(value, {
+      encoding: settings.values.binaryEncoding,
+      ...(field.dataType === undefined ? {} : { dataType: field.dataType }),
+    });
+    return text === ''
+      ? '<span class="cell-empty">empty</span>'
+      : text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  };
 }
 
 function columnsFor(fields: readonly Field[]): ColumnDefinition[] {
@@ -65,10 +82,22 @@ function columnsFor(fields: readonly Field[]): ColumnDefinition[] {
     return {
       title: field.name,
       field: field.name,
-      formatter: formatCell,
+      formatter: formatCellOf(field),
       headerTooltip: field.dataType ?? field.name,
       resizable: true,
       minWidth: 64,
+      /*
+       * Numbers align on their last digit, the way every spreadsheet and every
+       * printed table does: it is what lets you compare magnitudes down a
+       * column without reading a single value. Text stays left.
+       *
+       * Marked with a class rather than Tabulator's `hozAlign`, which writes an
+       * inline `text-align` — and this stylesheet lays every cell out as a flex
+       * row, where text-align has nothing to act on.
+       */
+      ...(isNumericType(field.dataType)
+        ? { cssClass: 'col-numeric', headerCssClass: 'col-numeric' }
+        : {}),
       ...(permission?.editable
         ? { editor: 'input' as const }
         : {
@@ -99,7 +128,36 @@ function build(): void {
     selectableRangeColumns: true,
     selectableRangeRows: true,
     selectableRangeClearCells: true,
-    editTriggerEvent: 'dblclick',
+    /*
+     * The row-number gutter.
+     *
+     * Not the same thing as the table's key, which is what the argument for
+     * leaving it out used to be: a key tells you *which row this is*, and a row
+     * number tells you *where you are* — which of ten thousand rows you have
+     * scrolled to, and how far apart two rows you are comparing sit. A query
+     * result often has no key at all.
+     *
+     * The formatter reads the base on every render rather than closing over it,
+     * so flipping the toggle is a redraw and not a rebuild.
+     */
+    rowHeader: {
+      title: '',
+      field: '',
+      headerSort: false,
+      resizable: false,
+      frozen: true,
+      width: 56,
+      minWidth: 44,
+      hozAlign: 'right',
+      cssClass: 'col-rownum',
+      headerCssClass: 'col-rownum',
+      formatter: (cell: CellComponent) => {
+        const position = cell.getRow().getPosition();
+        if (typeof position !== 'number') return '';
+        return String(settings.values.rowIndexBase === 0 ? position - 1 : position);
+      },
+    },
+    editTriggerEvent: settings.values.editTrigger,
     columnDefaults: { headerSortTristate: true },
     history: true,
   });
@@ -133,9 +191,34 @@ function build(): void {
     const header = container.value?.querySelector<HTMLElement>('.tabulator-header');
     if (!holder || !header) return;
 
+    /*
+     * The header also has to be *able* to scroll as far as the body.
+     *
+     * The body reserves room for a vertical scrollbar and the header does not,
+     * so the header's scrollable extent is short by exactly that width — and at
+     * the far right the assignment below silently clamps, leaving every column
+     * label sitting a scrollbar's width from its data. It went unnoticed until
+     * the row-number gutter changed the geometry enough to make the gap
+     * measurable.
+     *
+     * The padding goes on the header's *contents*, not on the header itself:
+     * the header is an `overflow: hidden` box whose `scrollWidth` is decided by
+     * that child, so padding on the outer element changes nothing. Measured
+     * rather than assumed — the scrollbar is only there while the rows overflow.
+     */
+    const contents = header.querySelector<HTMLElement>('.tabulator-header-contents');
+    let gutter = -1;
+
     syncHeader = () => {
+      const measured = holder.offsetWidth - holder.clientWidth;
+      if (contents && measured !== gutter) {
+        gutter = measured;
+        contents.style.paddingInlineEnd = `${measured}px`;
+      }
       if (header.scrollLeft !== holder.scrollLeft) header.scrollLeft = holder.scrollLeft;
     };
+
+    syncHeader();
 
     holder.addEventListener('scroll', syncHeader, { passive: true });
     scroller = holder;
@@ -190,15 +273,40 @@ onMounted(() => {
   if (container.value) observer.observe(container.value);
 });
 
-onBeforeUnmount(() => {
+/** Drops the table and everything bound to it, leaving the container empty. */
+function teardown(): void {
   if (scroller && syncHeader) scroller.removeEventListener('scroll', syncHeader);
   scroller = undefined;
   syncHeader = undefined;
-  observer?.disconnect();
-  observer = undefined;
   table.value?.destroy();
   table.value = undefined;
+}
+
+onBeforeUnmount(() => {
+  teardown();
+  observer?.disconnect();
+  observer = undefined;
 });
+
+/*
+ * Two preferences are read when the table is constructed rather than per cell,
+ * so the table is rebuilt when they change. Heavy-handed for something nobody
+ * changes twice — but a preference that only takes effect in tabs opened
+ * afterwards is the kind of thing people report as not working at all.
+ */
+watch(
+  () => [settings.values.editTrigger, settings.values.binaryEncoding],
+  () => {
+    teardown();
+    redraw();
+  }
+);
+
+/* The gutter's formatter reads the base, so this only has to re-run it. */
+watch(
+  () => settings.values.rowIndexBase,
+  () => table.value?.redraw(true)
+);
 
 defineExpose({ redraw });
 

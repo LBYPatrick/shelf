@@ -422,7 +422,7 @@ defineExpose({ fit });
   bottom: var(--gap);
   padding: var(--gap-tight) var(--gap);
   border-radius: var(--radius-field);
-  border: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
+  border: 1px solid var(--separator);
   background: color-mix(in oklab, var(--color-base-100) 78%, transparent);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);

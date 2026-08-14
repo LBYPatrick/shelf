@@ -122,11 +122,11 @@ function draftFor(input: SaveConnectionInput): void {
     </div>
 
     <div class="manager__inner">
-      <header class="hero">
-        <h1 class="hero__title">
+      <header class="banner">
+        <h1 class="banner__title">
           {{ $t('app.name') }}
         </h1>
-        <p class="hero__sub">
+        <p class="banner__sub">
           {{ $t('app.tagline') }}
         </p>
 
@@ -303,11 +303,35 @@ function draftFor(input: SaveConnectionInput): void {
  * `justify-content: center` with `margin: auto` on the inner block centres it
  * when the content is short and lets it scroll normally once it is tall.
  */
+/*
+ * The start screen paints a surface of its own.
+ *
+ * It used to paint nothing, relying on the window being translucent — which
+ * works only for as long as whatever is behind the window is dark. On the dark
+ * theme its text is light, so over a bright desktop the title, the subtitle and
+ * the "new connection" card were light-on-light and effectively invisible. The
+ * workspace never had this problem because its content pane is opaque; this
+ * screen simply had no equivalent.
+ *
+ * Translucent still, so the window keeps its material — but opaque enough to
+ * own its own contrast rather than borrowing the desktop's.
+ */
 .manager {
   position: relative;
   height: 100%;
   overflow-y: auto;
   display: flex;
+  background-color: color-mix(in oklab, var(--color-base-100) 80%, transparent);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .manager {
+    background-color: var(--color-base-100);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 .manager__chrome {
@@ -341,7 +365,7 @@ function draftFor(input: SaveConnectionInput): void {
 
 @media (hover: hover) and (pointer: fine) {
   .manager__settings:hover {
-    background: color-mix(in oklab, var(--color-base-content) 8%, transparent);
+    background: var(--fill-3);
     color: var(--color-base-content);
   }
 }
@@ -356,7 +380,7 @@ function draftFor(input: SaveConnectionInput): void {
   gap: var(--gap-loose);
 }
 
-.hero {
+.banner {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -365,14 +389,14 @@ function draftFor(input: SaveConnectionInput): void {
 }
 
 /* Large text wants negative tracking; at this size the default reads loose. */
-.hero__title {
+.banner__title {
   font-size: 2.25rem;
   font-weight: 650;
   letter-spacing: -0.03em;
   line-height: 1.05;
 }
 
-.hero__sub {
+.banner__sub {
   font-size: 0.875rem;
   color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
   margin-bottom: var(--gap-loose);
@@ -387,7 +411,7 @@ function draftFor(input: SaveConnectionInput): void {
   background: color-mix(in oklab, var(--color-base-100) 78%, transparent);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid color-mix(in oklab, var(--color-base-content) 11%, transparent);
+  border: 1px solid var(--separator);
   box-shadow:
     inset 0 1px 2px oklch(0% 0 0 / 0.04),
     0 1px 2px oklch(0% 0 0 / 0.04);
@@ -524,7 +548,7 @@ function draftFor(input: SaveConnectionInput): void {
   gap: var(--gap);
   min-height: 4.5rem;
   border-radius: 1rem;
-  border: 1px dashed color-mix(in oklab, var(--color-base-content) 20%, transparent);
+  border: 1px dashed var(--separator-strong);
   color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
   font-size: 0.8125rem;
   transition:
@@ -567,7 +591,7 @@ function draftFor(input: SaveConnectionInput): void {
   gap: var(--gap-section);
   padding: var(--gap-loose) var(--gap-section);
   border-radius: 1rem;
-  border: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+  border: 1px solid var(--separator);
   background: color-mix(in oklab, var(--color-base-100) 55%, transparent);
   -webkit-backdrop-filter: blur(16px) saturate(160%);
   backdrop-filter: blur(16px) saturate(160%);
@@ -628,7 +652,7 @@ function draftFor(input: SaveConnectionInput): void {
 
 @media (hover: hover) and (pointer: fine) {
   .finder__clear:hover {
-    background: color-mix(in oklab, var(--color-base-content) 12%, transparent);
+    background: var(--fill-2);
     color: var(--color-base-content);
   }
 

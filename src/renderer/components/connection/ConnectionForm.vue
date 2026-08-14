@@ -7,6 +7,7 @@
  * adding a descriptor, not another form.
  */
 import { computed, reactive, ref, watch } from 'vue';
+import { useTranslation } from 'i18next-vue';
 import type { ConnectionConfig, EngineId } from '@drivers/types';
 import type { SaveConnectionInput, SavedConnection } from '@shared/connections';
 import type { ParsedConnection } from '@shared/connectionUrl';
@@ -181,18 +182,22 @@ const suggestedName = computed(() => {
   return draft.port ? `${host}:${draft.port}` : host;
 });
 
+// These were written in English in the source while the translations for all
+// five of them sat unused in every locale file.
+const { t } = useTranslation();
+
 const problems = computed(() => {
   const found: string[] = [];
-  if (!draft.engine) found.push('Choose a database engine.');
+  if (!draft.engine) found.push(t('connection.chooseEngine'));
   else if (isFileEngine(draft.engine)) {
-    if (!draft.filePath) found.push('Choose a database file.');
+    if (!draft.filePath) found.push(t('connection.chooseFile'));
   } else if (!draft.url && !draft.socketPath && !draft.host) {
-    found.push('Enter a host, a socket path, or a connection URL.');
+    found.push(t('connection.needHost'));
   }
 
   for (const option of descriptor.value?.options ?? []) {
     if (option.required && !draft.options[option.key])
-      found.push(`${option.label} is required.`);
+      found.push(t('connection.required', { field: option.label }));
   }
 
   return found;
@@ -374,7 +379,7 @@ async function pickFile(): Promise<void> {
             v-if="option.kind === 'select'"
             :id="id"
             v-model="draft.options[option.key]"
-            class="select"
+            class="textfield"
           >
             <option
               v-for="choice in option.choices"
@@ -451,7 +456,7 @@ async function pickFile(): Promise<void> {
               <select
                 :id="id"
                 v-model="draft.sshMode"
-                class="select"
+                class="textfield"
               >
                 <option value="agent">
                   SSH agent
@@ -521,10 +526,15 @@ async function pickFile(): Promise<void> {
         />
       </FormField>
 
+      <!--
+        What to do next, not what you did wrong. The actions this blocks are
+        disabled while it stands, so it can only ever be read *before* anything
+        was attempted — and amber on an untouched form is a rebuke for nothing.
+      -->
       <p
         v-if="problems.length"
         class="problems"
-        role="alert"
+        role="status"
       >
         {{ problems[0] }}
       </p>
@@ -569,16 +579,6 @@ async function pickFile(): Promise<void> {
   min-width: 0;
 }
 
-.select {
-  height: var(--field-h);
-  padding-inline: var(--gap);
-  border-radius: var(--radius-field);
-  border: 1px solid color-mix(in oklab, var(--color-base-content) 16%, transparent);
-  background: color-mix(in oklab, var(--color-base-100) 70%, transparent);
-  color: var(--color-base-content);
-  font-size: 0.8125rem;
-}
-
 .advanced__body {
   display: flex;
   flex-direction: column;
@@ -600,8 +600,11 @@ async function pickFile(): Promise<void> {
 }
 
 .problems {
-  background: color-mix(in oklab, var(--color-warning) 16%, transparent);
-  color: var(--color-base-content);
+  background: var(--fill-4);
+  color: color-mix(in oklab, var(--color-base-content) 68%, transparent);
+  transition:
+    background-color var(--t-hover) var(--ease-out),
+    color var(--t-hover) var(--ease-out);
 }
 
 .result--ok {

@@ -13,6 +13,7 @@ import { useConnections } from '../../stores/connections';
 import { useEntities } from '../../stores/entities';
 import { useTabs } from '../../stores/tabs';
 import ErdCanvas, { type ErdEdge, type ErdTable } from '../viz/ErdCanvas.vue';
+import { errorMessage } from '@shared/errors';
 
 defineProps<{ active: boolean }>();
 
@@ -100,7 +101,7 @@ async function load(): Promise<void> {
 
     edges.value = collected;
   } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : String(caught);
+    error.value = errorMessage(caught);
   } finally {
     loading.value = false;
   }
@@ -156,7 +157,7 @@ onMounted(load);
       to="#statusbar-slot"
       defer
     >
-      <span class="tabstatus">{{ summary }}</span>
+      <span class="tabstatus__item">{{ summary }}</span>
     </Teleport>
   </div>
 </template>
@@ -177,11 +178,5 @@ onMounted(load);
 
 .erd-tab__note--error {
   color: var(--color-error);
-}
-
-.tabstatus {
-  font-size: 0.6875rem;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
-  white-space: nowrap;
 }
 </style>

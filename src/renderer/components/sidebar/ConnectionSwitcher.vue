@@ -89,7 +89,7 @@ const subtitle = computed(() => {
   align-items: center;
   gap: var(--gap);
   width: 100%;
-  height: 2.5rem;
+  height: var(--header-h);
   padding-inline: var(--gap) var(--gap-tight);
   border-radius: 0.625rem;
   text-align: start;
@@ -165,7 +165,7 @@ const subtitle = computed(() => {
 
 @media (hover: hover) and (pointer: fine) {
   .switcher__button:hover {
-    background: color-mix(in oklab, var(--color-base-content) 7%, transparent);
+    background: var(--fill-3);
   }
 }
 

@@ -1,6 +1,6 @@
 import { MongoClient, ObjectId, type Collection, type Db, type Document } from 'mongodb';
 import { capabilities } from '../capabilities';
-import { encodeRows, tagFields } from '../transcode';
+import { encodeRows, tagFields, untagValue } from '../transcode';
 import type {
   ChangeSet,
   Column,
@@ -497,7 +497,7 @@ export class MongodbClient implements DatabaseClient {
 
     for (const update of changes.updates) {
       await this.collection(update.entity).updateOne(this.identify(update.primaryKeys), {
-        $set: { [update.column]: unwrap(update.value) },
+        $set: { [update.column]: untagValue(update.value) },
       });
     }
 
@@ -511,7 +511,7 @@ export class MongodbClient implements DatabaseClient {
     const id = keys.find((key) => key.column === '_id');
     if (!id) throw new Error('Cannot address a document without its _id.');
 
-    const value = unwrap(id.value);
+    const value = untagValue(id.value);
     // An ObjectId arrives as its hex string; matching on the string would not
     // find the document, because the stored value is the binary form.
     if (typeof value === 'string' && ObjectId.isValid(value)) {
@@ -529,13 +529,15 @@ export class MongodbClient implements DatabaseClient {
     for (const update of changes.updates) {
       const id = update.primaryKeys.find((key) => key.column === '_id')?.value;
       lines.push(
-        `db.${update.entity.name}.updateOne({"_id": ${JSON.stringify(unwrap(id))}}, ` +
-          `{"$set": {${JSON.stringify(update.column)}: ${JSON.stringify(unwrap(update.value))}}})`
+        `db.${update.entity.name}.updateOne({"_id": ${JSON.stringify(untagValue(id))}}, ` +
+          `{"$set": {${JSON.stringify(update.column)}: ${JSON.stringify(untagValue(update.value))}}})`
       );
     }
     for (const remove of changes.deletes) {
       const id = remove.primaryKeys.find((key) => key.column === '_id')?.value;
-      lines.push(`db.${remove.entity.name}.deleteOne({"_id": ${JSON.stringify(unwrap(id))}})`);
+      lines.push(
+        `db.${remove.entity.name}.deleteOne({"_id": ${JSON.stringify(untagValue(id))}})`
+      );
     }
 
     return lines.join('\n');
@@ -578,14 +580,6 @@ function fieldNames(documents: readonly Document[]): string[] {
     for (const key of Object.keys(document)) names.add(key);
   }
   return [...names];
-}
-
-/** Tagged values arrive wrapped; the driver needs the value itself. */
-function unwrap(value: unknown): unknown {
-  if (value && typeof value === 'object' && '$' in value) {
-    return (value as { data: unknown }).data;
-  }
-  return value;
 }
 
 /** Splits a script into statements on newlines, ignoring blanks and comments. */

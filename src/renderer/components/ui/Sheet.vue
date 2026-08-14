@@ -177,15 +177,49 @@ void props;
 }
 
 .panel__close:hover {
-  background: color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  background: var(--fill-3);
   color: var(--color-base-content);
 }
 
+/*
+ * A scroll edge, not a hard cut.
+ *
+ * A sheet taller than the window used to guillotine its content against the
+ * footer — the Settings pane ended mid-control with nothing to say there was
+ * more. The mask fades the last few millimetres out where the content passes
+ * under the chrome, which reads as "this continues" without spending a divider
+ * on it. `animation-timeline: scroll()` fades the top edge in only once you
+ * have actually scrolled, so a sheet that fits shows no edge at all.
+ */
 .panel__body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding: 0 var(--gap-section) var(--gap-section);
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--sheet-edge-top, 0px),
+    #000 calc(100% - 1.25rem),
+    transparent 100%
+  );
+}
+
+@supports (animation-timeline: scroll()) {
+  .panel__body {
+    animation: sheet-edge-top linear both;
+    animation-timeline: scroll(self block);
+    animation-range: 0 1.25rem;
+  }
+
+  @keyframes sheet-edge-top {
+    from {
+      --sheet-edge-top: 0px;
+    }
+    to {
+      --sheet-edge-top: 1.25rem;
+    }
+  }
 }
 
 .panel__foot {
@@ -193,7 +227,7 @@ void props;
   justify-content: flex-end;
   gap: var(--gap);
   padding: var(--gap-loose) var(--gap-section);
-  border-top: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+  border-top: 1px solid var(--separator);
 }
 
 /*

@@ -31,6 +31,13 @@ export const usePlatform = defineStore('platform', () => {
       value.nativeWindowControls ? '2.5rem' : '0.5rem'
     );
 
+    // How far in from the window's leading edge the controls reach. Anything
+    // that can end up beneath them has to keep this much clear.
+    document.documentElement.style.setProperty(
+      '--controls-inset',
+      `${value.windowControlsInset}px`
+    );
+
     return value;
   });
 

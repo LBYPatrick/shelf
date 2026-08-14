@@ -91,10 +91,21 @@ function nudge(delta: number): void {
   cursor: row-resize;
 }
 
+/*
+ * The handle occupies a one-pixel column of layout between the two panes, and
+ * that column has to be painted. Left transparent it was a gap in the page
+ * through which the window's own backdrop showed — a bright vertical line down
+ * the full height of the window over any light desktop, in either theme, which
+ * no amount of adjusting the panels' colours could remove because the line was
+ * not being drawn by the page at all.
+ *
+ * It wears the content pane's surface, so the seam reads as the content
+ * starting a pixel earlier rather than as a rule between two panels.
+ */
 .handle__line {
   position: absolute;
   inset: 0;
-  background: transparent;
+  background-color: var(--color-base-100);
   transition: background-color 160ms ease-out;
 }
 
@@ -137,7 +148,7 @@ function nudge(delta: number): void {
 .handle:hover .handle__line,
 .handle--dragging .handle__line,
 .handle:focus-visible .handle__line {
-  background: color-mix(in oklab, var(--color-base-content) 12%, transparent);
+  background: var(--fill-2);
 }
 
 .handle:hover .handle__line::after,

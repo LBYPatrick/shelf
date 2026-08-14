@@ -1,10 +1,14 @@
 <script setup lang="ts">
 /**
- * A table's structure.
+ * A table's structure: its columns, indexes, relations, triggers and partitions.
  *
  * Which sections exist is decided by the engine's capabilities, not by trying
  * each one and catching the failure — a store with no triggers simply has no
  * Triggers pill rather than an empty tab that looks broken.
+ *
+ * Shared rather than owned by the structure tab, because the same five sections
+ * are what the Properties popup shows. Two copies of this would be four hundred
+ * lines kept in agreement by hand.
  */
 import { computed, onMounted, ref, watch } from 'vue';
 import type {
@@ -28,8 +32,16 @@ import Sheet from '../ui/Sheet.vue';
 import TextInput from '../ui/TextInput.vue';
 import CheckBox from '../ui/CheckBox.vue';
 import SchemaChangeSheet from './SchemaChangeSheet.vue';
+import { errorMessage } from '@shared/errors';
 
-const props = defineProps<{ entity: EntityRef; active: boolean }>();
+const props = defineProps<{ entity: EntityRef }>();
+
+/*
+ * The properties travel out rather than being rendered here: the tab puts them
+ * in the status bar and the popup puts them in its header, and neither of those
+ * is this component's business.
+ */
+const emit = defineEmits<{ loaded: [EntityProperties] }>();
 
 const connections = useConnections();
 const { t } = useTranslation();
@@ -64,17 +76,11 @@ const sections = computed(() => {
   return available;
 });
 
-function connectionId(): string {
-  const id = connections.active?.id;
-  if (!id) throw new Error('No open connection');
-  return id;
-}
-
 async function load(): Promise<void> {
   loading.value = true;
   error.value = null;
 
-  const connection = connectionId();
+  const connection = connections.requireId();
   const entity = props.entity;
   const can = capabilities.value;
 
@@ -101,23 +107,12 @@ async function load(): Promise<void> {
     triggers.value = triggerList;
     partitions.value = partitionList;
     properties.value = props_;
+    emit('loaded', props_);
   } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : String(caught);
+    error.value = errorMessage(caught);
   } finally {
     loading.value = false;
   }
-}
-
-function formatBytes(bytes: number | undefined): string {
-  if (bytes === undefined) return '—';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let value = bytes;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit += 1;
-  }
-  return `${value < 10 && unit > 0 ? value.toFixed(1) : Math.round(value)} ${units[unit]}`;
 }
 
 const isEmpty = computed(() => {
@@ -163,7 +158,7 @@ async function apply(sql: string): Promise<void> {
 
   try {
     await host.call('query/run', {
-      connectionId: connectionId(),
+      connectionId: connections.requireId(),
       text: sql,
       options: { maxRows: 1 },
     });
@@ -171,7 +166,7 @@ async function apply(sql: string): Promise<void> {
     pending.value = null;
     await load();
   } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : String(caught);
+    error.value = errorMessage(caught);
   } finally {
     applying.value = false;
   }
@@ -594,40 +589,22 @@ watch(() => props.entity, load);
       @apply="apply"
       @cancel="pending = null"
     />
-
-    <Teleport
-      v-if="active"
-      to="#statusbar-slot"
-      defer
-    >
-      <div class="tabstatus">
-        <span
-          v-if="properties.rowCount !== undefined"
-          class="tabstatus__item"
-        >
-          {{ properties.rowCount.toLocaleString() }} rows
-        </span>
-        <span
-          v-if="properties.dataSizeBytes !== undefined"
-          class="tabstatus__item"
-        >
-          {{ formatBytes(properties.dataSizeBytes) }} data
-        </span>
-        <span
-          v-if="properties.indexSizeBytes !== undefined"
-          class="tabstatus__item"
-        >
-          {{ formatBytes(properties.indexSizeBytes) }} indexes
-        </span>
-      </div>
-    </Teleport>
   </div>
 </template>
 
 <style scoped>
+/*
+ * Fills whatever it is put in. As a tab's only child that was automatic; inside
+ * the Properties popup it is a flex item, where the default is to be sized by
+ * its own content — which left the section switcher and the table bunched
+ * against the left edge of a pane twice their width.
+ */
 .structure {
   display: flex;
+  flex: 1;
   flex-direction: column;
+  width: 100%;
+  min-width: 0;
   height: 100%;
   min-height: 0;
 }
@@ -637,7 +614,7 @@ watch(() => props.entity, load);
   align-items: center;
   gap: var(--gap);
   padding: var(--gap-tight) var(--gap);
-  border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+  border-bottom: 1px solid var(--separator);
 }
 
 .structure__body {
@@ -713,14 +690,14 @@ watch(() => props.entity, load);
   background: color-mix(in oklab, var(--color-base-200) 92%, transparent);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
+  border-bottom: 1px solid var(--separator);
 }
 
 .grid td {
   padding: 0 var(--gap);
   /* Matches the data grid and the sidebar, so the three panes share a rhythm. */
   height: calc(var(--row-h) * 1.15);
-  border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 5%, transparent);
+  border-bottom: 1px solid var(--separator);
   white-space: nowrap;
 }
 
@@ -804,18 +781,5 @@ watch(() => props.entity, load);
 .chip--key {
   background-color: color-mix(in oklab, var(--color-primary) 14%, transparent);
   color: var(--color-primary-text, var(--color-primary));
-}
-
-.tabstatus {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-loose);
-  white-space: nowrap;
-}
-
-.tabstatus__item {
-  font-size: 0.6875rem;
-  font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
 }
 </style>

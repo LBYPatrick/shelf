@@ -116,7 +116,7 @@ const model = defineModel<EngineId | null>({ required: true });
 
 @media (hover: hover) and (pointer: fine) {
   .engine:hover:not(.engine--on) {
-    background: color-mix(in oklab, var(--color-base-content) 6%, transparent);
+    background: var(--fill-4);
   }
 
   .engine:hover .engine__mark {

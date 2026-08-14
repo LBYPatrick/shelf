@@ -143,6 +143,27 @@ const matches = computed(() => {
     .map((entry) => entry.command);
 });
 
+/**
+ * The same list, in sections.
+ *
+ * Every row used to carry its own group name on the right — "OPEN TABS" printed
+ * once per row, five times over, for a heading that changes twice in the list.
+ * The sections keep the flat `matches` array as the source of truth for
+ * selection and keyboard movement, so the index a row reports is still its
+ * index in that array.
+ */
+const sections = computed(() => {
+  const groups: { group: string; items: { command: Command; index: number }[] }[] = [];
+
+  matches.value.forEach((command, index) => {
+    const last = groups[groups.length - 1];
+    if (last?.group === command.group) last.items.push({ command, index });
+    else groups.push({ group: command.group, items: [{ command, index }] });
+  });
+
+  return groups;
+});
+
 watch(matches, () => (selected.value = 0));
 
 watch(open, async (isOpen) => {
@@ -203,31 +224,43 @@ function commit(): void {
             go with it — pointing either at an element that does not exist is
             what a screen reader reports as a broken control.
           -->
-          <ul
+          <div
             v-if="matches.length"
             id="palette-results"
             class="palette__list"
             role="listbox"
           >
-            <li
-              v-for="(command, index) in matches"
-              :id="`palette-option-${index}`"
-              :key="command.id"
-              class="palette__item"
-              :class="{ 'palette__item--on': index === selected }"
-              role="option"
-              :aria-selected="index === selected"
-              @mouseenter="selected = index"
-              @click="commit()"
+            <template
+              v-for="section in sections"
+              :key="section.group"
             >
-              <span class="palette__label">{{ command.label }}</span>
-              <span
-                v-if="command.detail"
-                class="palette__detail"
-              >{{ command.detail }}</span>
-              <span class="palette__group">{{ command.group }}</span>
-            </li>
-          </ul>
+              <p
+                class="palette__section type-label"
+                role="presentation"
+              >
+                {{ section.group }}
+              </p>
+              <div
+                v-for="entry in section.items"
+                :id="`palette-option-${entry.index}`"
+                :key="entry.command.id"
+                class="palette__item"
+                :class="{ 'palette__item--on': entry.index === selected }"
+                role="option"
+                :aria-selected="entry.index === selected"
+                @mouseenter="selected = entry.index"
+                @click="commit()"
+              >
+                <span class="palette__label">{{ entry.command.label }}</span>
+                <span
+                  v-if="entry.command.detail"
+                  class="palette__detail"
+                >{{
+                  entry.command.detail
+                }}</span>
+              </div>
+            </template>
+          </div>
 
           <p
             v-else
@@ -270,6 +303,17 @@ function commit(): void {
   font-size: 0.9375rem;
 }
 
+/*
+ * No ring. The input is focused the instant the palette opens and is the only
+ * thing in it that can take focus, so the global focus outline had nothing to
+ * distinguish — and being clipped by the panel's own `overflow: hidden` it drew
+ * as a single accent line across the palette rather than a ring around
+ * anything.
+ */
+.palette__input:focus-visible {
+  outline: none;
+}
+
 .palette__input::placeholder {
   color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
 }
@@ -277,22 +321,42 @@ function commit(): void {
 .palette__list {
   max-height: 22rem;
   overflow-y: auto;
-  border-top: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
-  padding: var(--gap-tight);
+  border-top: 1px solid var(--separator);
+  padding: var(--gap-tight) var(--gap-tight) var(--gap);
+}
+
+.palette__section {
+  padding: var(--gap) var(--gap) var(--gap-hair);
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  text-transform: uppercase;
+}
+
+.palette__section:first-child {
+  padding-top: var(--gap-tight);
 }
 
 .palette__item {
   display: flex;
   align-items: center;
   gap: var(--gap);
-  padding: var(--gap-tight) var(--gap);
+  height: var(--hit-min);
+  padding-inline: var(--gap);
   border-radius: var(--radius-field);
   font-size: 0.8125rem;
 }
 
+/*
+ * A tint, not the accent at full strength.
+ *
+ * A saturated bar across a glass panel is the loudest thing on screen for a
+ * row you are merely hovering past, and it takes the sub-label down with it:
+ * the detail is drawn at 0.6 opacity, which over white-on-accent lands well
+ * under the contrast floor. The tonal surface is the same one a selected row
+ * wears everywhere else in the app.
+ */
 .palette__item--on {
-  background: var(--color-primary);
-  color: var(--color-primary-content);
+  background: color-mix(in oklab, var(--color-primary) 16%, transparent);
+  color: var(--color-primary-text, var(--color-primary));
 }
 
 .palette__label {
@@ -302,16 +366,10 @@ function commit(): void {
 }
 
 .palette__detail {
-  font-size: 0.6875rem;
-  opacity: 0.6;
-}
-
-.palette__group {
   margin-inline-start: auto;
-  font-size: 0.625rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  opacity: 0.45;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklab, currentColor 60%, transparent);
 }
 
 .palette__empty {
@@ -319,7 +377,7 @@ function commit(): void {
   text-align: center;
   font-size: 0.75rem;
   color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
-  border-top: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+  border-top: 1px solid var(--separator);
 }
 
 .palette-enter-active,

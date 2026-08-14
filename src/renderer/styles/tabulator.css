@@ -17,7 +17,7 @@
   display: flex;
   flex-direction: column;
   background: transparent;
-  font-size: 0.8125rem;
+  font-size: var(--grid-font);
   overflow: hidden;
 }
 
@@ -46,7 +46,7 @@
   background: color-mix(in oklab, var(--color-base-200) 82%, transparent);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   backdrop-filter: blur(16px) saturate(180%);
-  border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
+  border-bottom: 1px solid var(--separator);
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -72,13 +72,41 @@
   flex: 0 0 auto;
   box-sizing: border-box;
   align-items: center;
-  height: 100%;
+  /*
+   * `min-height`, not `height`: Tabulator writes an inline height onto every
+   * column from the natural height of its label, which is smaller than the
+   * header row and beat the stylesheet — leaving the labels sitting high in a
+   * band of empty space rather than centred in the row.
+   */
+  min-height: var(--row-h);
   padding: 0 var(--gap);
-  border-inline-end: 1px solid color-mix(in oklab, var(--color-base-content) 7%, transparent);
-  color: color-mix(in oklab, var(--color-base-content) 68%, transparent);
-  font-size: 0.6875rem;
-  letter-spacing: 0.01em;
+  border-inline-end: 1px solid var(--separator);
+  /*
+   * The same face and size as the values beneath it.
+   *
+   * A column header set in the UI face over monospace data cannot line up with
+   * it: the two have different side bearings, so every label sat a pixel or two
+   * off the column it named, and the 11px-over-13px jump made the header read
+   * as a different kind of thing rather than the name of that column. A column
+   * name and its values are both identifiers; they belong on one glyph grid.
+   * Weight and colour carry the difference instead.
+   */
+  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  font-family: var(--font-mono);
+  font-size: var(--grid-font);
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: none;
+}
+
+/* The label fills its column, so `align-items: center` has something to
+   centre it within. */
+.tabulator .tabulator-col .tabulator-col-content,
+.tabulator .tabulator-col .tabulator-col-title-holder {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--row-h);
 }
 
 .tabulator .tabulator-col-title {
@@ -88,7 +116,7 @@
 }
 
 .tabulator .tabulator-col.tabulator-sortable:hover {
-  background: color-mix(in oklab, var(--color-base-content) 6%, transparent);
+  background: var(--fill-4);
 }
 
 .tabulator .tabulator-col .tabulator-col-sorter {
@@ -113,13 +141,13 @@
   height: var(--row-h);
   min-height: var(--row-h);
   background: transparent;
-  border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 5%, transparent);
+  border-bottom: 1px solid var(--separator);
 }
 
 /* Zebra striping is subtle enough to guide the eye across a wide row without
    becoming a pattern in its own right. */
 .tabulator .tabulator-row.tabulator-row-even {
-  background: color-mix(in oklab, var(--color-base-content) 2.5%, transparent);
+  background: var(--fill-4);
 }
 
 .tabulator .tabulator-row:hover {
@@ -133,12 +161,78 @@
   align-items: center;
   height: var(--row-h);
   padding: 0 var(--gap);
-  border-inline-end: 1px solid color-mix(in oklab, var(--color-base-content) 5%, transparent);
+  border-inline-end: 1px solid var(--separator);
   font-family: var(--font-mono);
+  font-size: var(--grid-font);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/*
+ * Rows span their content, not the viewport.
+ *
+ * Tabulator's own stylesheet sizes these; this one replaces it, so a row was a
+ * viewport-wide box with its cells hanging out of the right-hand side. Two
+ * things follow from that and both were broken: a sticky column cannot escape
+ * its parent, so the row-number gutter scrolled away with the data, and the
+ * header's scrollable extent came up short of the body's, which left every
+ * column label a scrollbar's width from the values beneath it.
+ */
+.tabulator .tabulator-row,
+.tabulator .tabulator-header-contents {
+  width: max-content;
+  min-width: 100%;
+}
+
+/*
+ * The row-number gutter.
+ *
+ * Recessed, so it reads as a margin on the data rather than as the first
+ * column of it — the one thing that would make it worse than useless is if it
+ * could be mistaken for a value.
+ */
+.tabulator .tabulator-cell.col-rownum,
+.tabulator .tabulator-col.col-rownum {
+  /*
+   * Pinned to the left edge. Tabulator's `frozen` marks the column and its own
+   * stylesheet does the pinning — and this stylesheet replaces that one, so the
+   * gutter scrolled away with the data and took the whole point of it with it.
+   *
+   * Opaque, because a sticky column has to occlude what slides under it, and
+   * the tint alone is see-through. `base-100` is the content pane's own colour,
+   * so it reads as part of the surface rather than as a stripe laid on it.
+   */
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  justify-content: flex-end;
+  background-color: var(--color-base-100);
+  background-image: linear-gradient(var(--fill-4), var(--fill-4));
+  border-inline-end: 1px solid var(--separator);
+  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.tabulator .tabulator-row.tabulator-selected .tabulator-cell.col-rownum,
+.tabulator .tabulator-cell.col-rownum.tabulator-range-selected {
+  color: var(--color-primary-text, var(--color-primary));
+}
+
+/*
+ * Numeric columns align on the last digit. `tabular-nums` above already gives
+ * every digit the same advance, so a right-aligned column of numbers lines up
+ * decimal point under decimal point without anything else being asked of it.
+ */
+.tabulator .tabulator-cell.col-numeric {
+  justify-content: flex-end;
+}
+
+.tabulator .tabulator-col.col-numeric .tabulator-col-title {
+  flex: 1;
+  text-align: right;
 }
 
 .tabulator .tabulator-cell.tabulator-editing {
@@ -155,13 +249,37 @@
   background: var(--color-base-100);
   color: var(--color-base-content);
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: var(--grid-font);
 }
 
 /* Range selection: a tinted fill with a solid border only at the edges, so a
    selected block reads as one region rather than a grid of highlighted cells. */
 .tabulator .tabulator-cell.tabulator-range-selected {
   background: color-mix(in oklab, var(--color-primary) 16%, transparent);
+}
+
+/*
+ * The range overlay's geometry.
+ *
+ * This stylesheet replaces Tabulator's rather than extending it, and these
+ * rules were never carried across — so the overlay laid out in normal flow
+ * instead of over the cells, and appeared as an empty outlined box below the
+ * last row, one column left and one row down from the cell it belonged to. It
+ * is positioning, not decoration: without it the range module renders in the
+ * wrong place entirely.
+ */
+.tabulator .tabulator-range-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  /* The overlay is a drawing surface; clicks belong to the cells beneath it. */
+  pointer-events: none;
+}
+
+.tabulator .tabulator-range-overlay .tabulator-range,
+.tabulator .tabulator-range-overlay .tabulator-range-cell-active {
+  position: absolute;
+  box-sizing: border-box;
 }
 
 .tabulator .tabulator-range-overlay .tabulator-range {

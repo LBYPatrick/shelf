@@ -20,6 +20,7 @@
     "clear": "清除",
     "discard": "放弃",
     "import": "导入",
+    "filter": "筛选",
     "export": "导出",
     "run": "运行",
     "runCurrent": "运行当前语句",
@@ -101,7 +102,6 @@
     "noMatch": "没有匹配的内容。",
     "loadingColumns": "正在加载列…",
     "noColumns": "没有列",
-    "structureOf": "{{name}} 的结构",
     "disconnect": "{{version}} — 点击断开连接",
     "readOnly": "只读",
     "disconnectHint": "点击断开连接"
@@ -114,7 +114,6 @@
     "previousPage": "上一页",
     "nextPage": "下一页",
     "lastPage": "最后一页",
-    "exporting": "导出中…",
     "imported": "已导入 {{count}} 行",
     "discardChanges": "放弃 {{count}} 项未保存的更改？",
     "nullValue": "NULL",
@@ -140,7 +139,9 @@
     "showingFirst": "仅显示前 {{count}} 行",
     "planUnreadable": "该引擎返回的执行计划 Shelf 无法解析。",
     "explainHint": "查看数据库将如何执行此查询",
-    "saveHint": "保存此查询"
+    "saveHint": "保存此查询",
+    "caret": "第 {{line}} 行第 {{column}} 列 / 共 {{lines}} 行",
+    "selected": "已选 {{count}} 个字符"
   },
   "structure": {
     "columns": "列",
@@ -185,6 +186,12 @@
     "accentHelp": "每种颜色都会自动调整，直到其上的文字清晰可读。",
     "customHue": "自定义色相",
     "density": "密度",
+    "materials": "材质",
+    "opacity": "不透明度",
+    "opacityHelp": "玻璃面板的实心程度。1.00 为完全不透明，中间为出厂设置。",
+    "blur": "模糊",
+    "blurHelp": "标准表面的模糊半径。更厚的表面按比例放大；为 0 时关闭玻璃效果。",
+    "resetMaterials": "重置材质",
     "compact": "紧凑",
     "default": "标准",
     "comfortable": "宽松",
@@ -269,5 +276,47 @@
     "listHint": "a, b, c",
     "addCondition": "添加条件",
     "removeRow": "删除条件"
+  },
+  "export": {
+    "title": "导出结果",
+    "delivery": "输出到",
+    "format": "格式",
+    "toFile": "文件",
+    "toClipboard": "剪贴板",
+    "fileHint": "由主机直接写入磁盘，包含完整结果集。",
+    "clipboardHint": "复制当前已加载的 {{count}} 行。",
+    "fileUnavailable": "请先运行查询，文件通过重新执行写出。",
+    "copied": "已复制 {{count}} 行。",
+    "written": "已写出。",
+    "working": "处理中…",
+    "run": "导出"
+  },
+  "grid": {
+    "oneBased": "从 1 开始",
+    "zeroBased": "从 0 开始",
+    "indexHint": "左侧行号从 1 还是从 0 开始。"
+  },
+  "activity": {
+    "working": "正在执行…",
+    "done": "已完成。",
+    "failed": "执行失败。"
+  },
+  "menu": {
+    "copyName": "复制表名",
+    "quickDocs": "快速文档",
+    "properties": "属性",
+    "exportData": "导出数据到文件…",
+    "actionsFor": "{{name}} 的操作"
+  },
+  "properties": {
+    "rows": "行数",
+    "data": "数据",
+    "indexes": "索引",
+    "key": "主键",
+    "required": "必填",
+    "noSchema": "无模式",
+    "rowsCount": "{{count}} 行",
+    "copySelect": "复制 SELECT",
+    "copied": "已复制"
   }
 }

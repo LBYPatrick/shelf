@@ -8,22 +8,28 @@
  */
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { format } from 'sql-formatter';
-import type { SQLNamespace } from '@codemirror/lang-sql';
-import type { Field, ResultSet, Row } from '@drivers/types';
+import { useTranslation } from 'i18next-vue';
+import type { CellValue, Field, ResultSet, Row } from '@drivers/types';
+import type { Statement } from '@shared/sqlText';
 import { explainStatement, parsePlan, type PlanNode } from '@shared/explain';
 import { RpcCancelled } from '@shared/rpc';
 import { host } from '../../lib/host';
 import { useConnections } from '../../stores/connections';
 import { useEntities } from '../../stores/entities';
 import { useQueries } from '../../stores/queries';
+import { useSettings } from '../../stores/settings';
+import { useActivity } from '../../stores/activity';
 import DataGrid from '../grid/DataGrid.vue';
-import SqlEditor from '../editor/SqlEditor.vue';
+import ExportSheet from '../grid/ExportSheet.vue';
+import RowIndexToggle from '../grid/RowIndexToggle.vue';
+import SqlEditor, { type SchemaMap } from '../editor/SqlEditor.vue';
 import ExplainTree from '../viz/ExplainTree.vue';
 import PressButton from '../ui/PressButton.vue';
 import ResizeHandle from '../ui/ResizeHandle.vue';
 import FormField from '../ui/FormField.vue';
 import Sheet from '../ui/Sheet.vue';
 import TextInput from '../ui/TextInput.vue';
+import { errorMessage } from '@shared/errors';
 
 const props = defineProps<{ tabId: string; active: boolean }>();
 const text = defineModel<string>('text', { required: true });
@@ -31,10 +37,19 @@ const text = defineModel<string>('text', { required: true });
 const connections = useConnections();
 const entities = useEntities();
 const queries = useQueries();
+const settings = useSettings();
+const activity = useActivity();
+const { t } = useTranslation();
 
-const MAX_ROWS = 50_000;
+/** Read live, so the preference applies to the next run rather than the next tab. */
+const maxRows = computed(() => settings.values.maxRows);
 
 const editor = ref<InstanceType<typeof SqlEditor>>();
+
+/** Mirrors the editor's own line/column readout into the status bar. */
+const editorStats = computed(
+  () => editor.value?.stats ?? { lines: 1, line: 1, column: 1, selected: 0 }
+);
 const grid = ref<InstanceType<typeof DataGrid>>();
 
 const editorHeight = ref(240);
@@ -42,7 +57,7 @@ const running = ref(false);
 const error = ref<string | null>(null);
 const results = ref<ResultSet[]>([]);
 const selectedResult = ref(0);
-const currentStatement = ref<{ text: string; from: number; to: number } | null>(null);
+const currentStatement = ref<Statement | null>(null);
 const transactionOpen = ref(false);
 const plan = ref<PlanNode | null>(null);
 const explaining = ref(false);
@@ -55,7 +70,7 @@ const language = computed(() => capabilities.value?.queryLanguage ?? 'sql');
 const activeResult = computed(() => results.value[selectedResult.value]);
 
 /** Completions come from the schema the sidebar already loaded. */
-const schema = computed<SQLNamespace>(() => {
+const schema = computed<SchemaMap>(() => {
   const namespace: Record<string, string[]> = {};
   for (const entity of entities.entities) {
     const columns = entities.columns.get(
@@ -66,15 +81,13 @@ const schema = computed<SQLNamespace>(() => {
   return namespace;
 });
 
-function connectionId(): string {
-  const id = connections.active?.id;
-  if (!id) throw new Error('No open connection');
-  return id;
-}
-
 async function execute(source: string): Promise<void> {
   const statement = source.trim();
   if (!statement || running.value) return;
+
+  // Remembered so an export can re-run exactly what produced what is on screen,
+  // rather than whatever has been typed since.
+  lastRunText.value = statement;
 
   controller = new AbortController();
   running.value = true;
@@ -82,14 +95,19 @@ async function execute(source: string): Promise<void> {
   plan.value = null;
 
   try {
-    const sets = await host.call(
-      'query/run',
-      {
-        connectionId: connectionId(),
-        text: statement,
-        options: { maxRows: MAX_ROWS, ...(manualCommit.value ? { tabId: props.tabId } : {}) },
-      },
-      controller.signal
+    const sets = await activity.track(
+      host.call(
+        'query/run',
+        {
+          connectionId: connections.requireId(),
+          text: statement,
+          options: {
+            maxRows: maxRows.value,
+            ...(manualCommit.value ? { tabId: props.tabId } : {}),
+          },
+        },
+        controller.signal
+      )
     );
 
     results.value = [...sets];
@@ -110,7 +128,7 @@ async function execute(source: string): Promise<void> {
     // A cancel is something the user asked for, not a failure to report.
     if (caught instanceof RpcCancelled) return;
 
-    error.value = caught instanceof Error ? caught.message : String(caught);
+    error.value = errorMessage(caught);
     results.value = [];
 
     // Failures are recorded too: a statement that errored is exactly the one
@@ -136,6 +154,27 @@ function runCurrent(): void {
   void execute(currentStatement.value?.text ?? '');
 }
 
+/*
+ * Which of the two ⌘↩ and the filled button perform is a preference, because
+ * which one is "the" run action genuinely differs by habit: people who keep one
+ * statement in the tab want the whole buffer, and people who keep a scratchpad
+ * of twenty want the one under the cursor. The other is always still there,
+ * quiet, beside it.
+ */
+const runsCurrentFirst = computed(() => settings.values.primaryRun === 'current');
+
+const primaryRun = computed(() =>
+  runsCurrentFirst.value
+    ? { label: t('action.runCurrent'), run: runCurrent, ready: !!currentStatement.value }
+    : { label: t('action.run'), run: runAll, ready: text.value.trim().length > 0 }
+);
+
+const secondaryRun = computed(() =>
+  runsCurrentFirst.value
+    ? { label: t('action.run'), run: runAll, ready: text.value.trim().length > 0 }
+    : { label: t('action.runCurrent'), run: runCurrent, ready: !!currentStatement.value }
+);
+
 function cancel(): void {
   controller?.abort();
 }
@@ -155,11 +194,13 @@ async function explain(): Promise<void> {
   error.value = null;
 
   try {
-    const sets = await host.call('query/run', {
-      connectionId: connectionId(),
-      text: explainStatement(engine, statement),
-      options: { maxRows: 1000 },
-    });
+    const sets = await activity.track(
+      host.call('query/run', {
+        connectionId: connections.requireId(),
+        text: explainStatement(engine, statement),
+        options: { maxRows: 1000 },
+      })
+    );
 
     const rows = (sets[0]?.rows ?? []) as unknown as Record<string, unknown>[];
     const parsed = parsePlan(engine, rows);
@@ -172,7 +213,7 @@ async function explain(): Promise<void> {
     plan.value = parsed;
     results.value = [];
   } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : String(caught);
+    error.value = errorMessage(caught);
   } finally {
     explaining.value = false;
   }
@@ -217,16 +258,36 @@ async function confirmSave(): Promise<void> {
 }
 
 async function beginTransaction(): Promise<void> {
-  await host.call('txn/begin', { connectionId: connectionId(), tabId: props.tabId });
+  await host.call('txn/begin', { connectionId: connections.requireId(), tabId: props.tabId });
   transactionOpen.value = true;
 }
 
 async function finishTransaction(action: 'commit' | 'rollback'): Promise<void> {
   await host.call(action === 'commit' ? 'txn/commit' : 'txn/rollback', {
-    connectionId: connectionId(),
+    connectionId: connections.requireId(),
     tabId: props.tabId,
   });
   transactionOpen.value = false;
+}
+
+const exporting = ref(false);
+const lastRunText = ref('');
+
+/**
+ * Writing a file re-runs the statement in the host so it streams to disk in
+ * full — the interface only ever holds the first page, and an export that
+ * silently stopped there would be worse than no export.
+ */
+async function writeResultsToFile(
+  path: string,
+  format: 'csv' | 'json' | 'jsonl' | 'sql'
+): Promise<void> {
+  await host.call('export/run', {
+    connectionId: connections.requireId(),
+    path,
+    format,
+    query: lastRunText.value,
+  });
 }
 
 const rows = computed<readonly Row[]>(() => activeResult.value?.rows ?? []);
@@ -241,7 +302,7 @@ const summary = computed(() => {
     parts.push(`${set.rowCount.toLocaleString()} ${set.rowCount === 1 ? 'row' : 'rows'}`);
   }
   if (set.affectedRows !== undefined) parts.push(`${set.affectedRows} affected`);
-  if (set.truncated) parts.push(`showing first ${MAX_ROWS.toLocaleString()}`);
+  if (set.truncated) parts.push(`showing first ${maxRows.value.toLocaleString()}`);
   parts.push(`${Math.round(set.durationMs)} ms`);
   return parts.join(' · ');
 });
@@ -260,15 +321,37 @@ watch(
 
 <template>
   <div class="query">
+    <div
+      class="editor-pane"
+      :style="{ height: `${editorHeight}px` }"
+    >
+      <SqlEditor
+        ref="editor"
+        v-model="text"
+        :schema="schema"
+        @run="runAll"
+        @run-current="runCurrent"
+        @statement-change="currentStatement = $event"
+      />
+    </div>
+
+    <ResizeHandle
+      v-model:size="editorHeight"
+      orientation="horizontal"
+      :min="80"
+      :max="700"
+      aria-label="Resize editor"
+    />
+
     <div class="toolbar">
       <PressButton
         v-if="!running"
         variant="primary"
         size="sm"
-        :disabled="!text.trim()"
-        @click="runAll"
+        :disabled="!primaryRun.ready"
+        @click="primaryRun.run"
       >
-        {{ $t('action.run') }}
+        {{ primaryRun.label }}
         <kbd class="key">⌘↩</kbd>
       </PressButton>
       <PressButton
@@ -287,11 +370,11 @@ watch(
       <button
         type="button"
         class="toolbar__action focus-fill"
-        :disabled="running || !currentStatement"
+        :disabled="running || !secondaryRun.ready"
         :title="currentStatement?.text"
-        @click="runCurrent"
+        @click="secondaryRun.run"
       >
-        {{ $t('action.runCurrent') }}
+        {{ secondaryRun.label }}
       </button>
 
       <button
@@ -324,15 +407,43 @@ watch(
         {{ savedId ? $t('action.update') : $t('action.save') }}
       </button>
 
-      <span class="toolbar__spacer" />
+      <!--
+        Everything to the left acts on the query; everything from here acts on
+        what it returned. They were one undifferentiated row of six words, which
+        gave no clue that half of them do nothing until a result exists.
+      -->
+      <span class="toolbar__rule" />
+
+      <RowIndexToggle />
+
+      <button
+        type="button"
+        class="toolbar__action focus-fill"
+        :disabled="!rows.length"
+        @click="exporting = true"
+      >
+        {{ $t('action.export') }}
+      </button>
+
+      <span class="toolbar__rule" />
 
       <template v-if="capabilities?.transactions">
-        <CheckBox
-          v-model="manualCommit"
-          class="toolbar__toggle"
+        <!--
+          A mode, not a form field. The bar's own language already has a shape
+          for "switched on" — a tonal surface that stays for as long as it is in
+          force — and a checkbox dropped into a row of buttons read as a stray
+          piece of a settings pane.
+        -->
+        <button
+          type="button"
+          class="toolbar__mode focus-fill"
+          :class="{ 'toolbar__mode--on': manualCommit }"
           :disabled="transactionOpen"
-          :label="$t('query.manualCommit')"
-        />
+          :aria-pressed="manualCommit"
+          @click="manualCommit = !manualCommit"
+        >
+          {{ $t('query.manualCommit') }}
+        </button>
 
         <template v-if="manualCommit">
           <span
@@ -367,28 +478,6 @@ watch(
         </template>
       </template>
     </div>
-
-    <div
-      class="editor-pane"
-      :style="{ height: `${editorHeight}px` }"
-    >
-      <SqlEditor
-        ref="editor"
-        v-model="text"
-        :schema="schema"
-        @run="runAll"
-        @run-current="runCurrent"
-        @statement-change="currentStatement = $event"
-      />
-    </div>
-
-    <ResizeHandle
-      v-model:size="editorHeight"
-      orientation="horizontal"
-      :min="80"
-      :max="700"
-      aria-label="Resize editor"
-    />
 
     <div class="results">
       <div
@@ -482,12 +571,39 @@ watch(
       </template>
     </Sheet>
 
+    <ExportSheet
+      v-model="exporting"
+      :fields="fields"
+      :rows="rows as readonly Record<string, CellValue>[]"
+      :name="savedName.trim() || 'query-results'"
+      :write-file="lastRunText ? writeResultsToFile : undefined"
+    />
+
     <Teleport
       v-if="active"
       to="#statusbar-slot"
       defer
     >
       <div class="tabstatus">
+        <!--
+          Where the caret is and how long the query is. An engine that reports
+          an error "near line 14" is useless without the first, and the line
+          count is the cheapest possible answer to "is this the short one".
+        -->
+        <span class="tabstatus__item">{{
+          $t('query.caret', {
+            line: editorStats.line,
+            column: editorStats.column,
+            lines: editorStats.lines,
+          })
+        }}</span>
+        <span
+          v-if="editorStats.selected > 0"
+          class="tabstatus__item"
+        >{{
+          $t('query.selected', { count: editorStats.selected })
+        }}</span>
+
         <select
           v-if="results.length > 1"
           v-model.number="selectedResult"
@@ -525,12 +641,15 @@ watch(
   min-height: 0;
 }
 
-.toolbar__toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-tight);
-  font-size: 0.6875rem;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+/*
+ * Hairlines on both edges rather than a fill: a band that is a *different
+ * colour* from the panes either side would be a fourth shade in a stack that
+ * already has three, and the job here is to mark a boundary, not to add a
+ * surface.
+ */
+.query > .toolbar {
+  flex: 0 0 auto;
+  border-block: 1px solid var(--separator);
 }
 
 /*
@@ -549,18 +668,31 @@ watch(
   font-size: 0.6875rem;
 }
 
+/*
+ * The pane stack, in one order.
+ *
+ * Reading down: the tab strip is the most recessed chrome, the editor is a
+ * shallower well because it is something you type into, the control bar is on
+ * the working surface with a hairline either side so it reads as the divider it
+ * now is, and the results are the working surface itself.
+ *
+ * The bar sits *between* the two panes rather than above both. It was at the
+ * top, which put "Run" as far from the results it produces as the layout
+ * allowed and left the split between editor and grid unmarked.
+ */
 .editor-pane {
   flex: 0 0 auto;
   min-height: 0;
   overflow: hidden;
+  background-color: var(--fill-4);
 }
 
+/* The bar above it is the divider now, so the results need no line of their own. */
 .results {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
-  border-top: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
 }
 
 .results__tabs {
@@ -613,19 +745,6 @@ watch(
   font-family: var(--font-ui);
   font-size: 0.625rem;
   line-height: 1.4;
-}
-
-.tabstatus {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-loose);
-  white-space: nowrap;
-}
-
-.tabstatus__item {
-  font-size: 0.6875rem;
-  font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
 }
 
 .tabstatus__select {

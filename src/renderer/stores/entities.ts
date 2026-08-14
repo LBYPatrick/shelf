@@ -3,22 +3,34 @@ import { computed, ref } from 'vue';
 import type { Column, Entity, EntityKind, EntityRef } from '@drivers/types';
 import { host } from '../lib/host';
 import { useConnections } from './connections';
+import { errorMessage } from '@shared/errors';
 
 /** A flattened row in the sidebar tree, ready to be virtualised. */
 export interface TreeRow {
   readonly key: string;
-  readonly kind: 'schema' | 'entity' | 'column' | 'loading' | 'empty';
+  readonly kind: 'database' | 'schema' | 'entity' | 'column' | 'loading' | 'empty';
   readonly depth: number;
   readonly label: string;
   readonly detail?: string;
   readonly entity?: Entity;
   readonly expanded?: boolean;
   readonly entityKind?: EntityKind;
+  /** Set on anything that opens, so the row can be toggled without knowing what it is. */
+  readonly groupKey?: string;
 }
 
 export function entityKey(entity: EntityRef): string {
   return entity.schema ? `${entity.schema}.${entity.name}` : entity.name;
 }
+
+/**
+ * Keys are prefixed by what they name.
+ *
+ * A database and a schema can share a name — on MySQL they are the same word —
+ * and without the prefix collapsing one would collapse the other.
+ */
+const databaseKey = (name: string) => `db:${name}`;
+const schemaKey = (name: string) => `schema:${name}`;
 
 /**
  * The database's structure, as the sidebar shows it.
@@ -35,7 +47,15 @@ export const useEntities = defineStore('entities', () => {
   const entities = ref<Entity[]>([]);
   const columns = ref<Map<string, Column[]>>(new Map());
   const loadingColumns = ref<Set<string>>(new Set());
+  /*
+   * Two sets, because the two kinds of folder want opposite defaults.
+   *
+   * Schemas and tables are opt-in: there can be hundreds, and opening a table
+   * costs a round trip for its columns. The database is opt-out — there is
+   * exactly one, and a tree whose single root is shut shows you nothing at all.
+   */
   const expanded = ref<Set<string>>(new Set());
+  const collapsedDatabases = ref<Set<string>>(new Set());
   const loading = ref(false);
   const error = ref<string | null>(null);
 
@@ -44,12 +64,6 @@ export const useEntities = defineStore('entities', () => {
   const showViews = ref(true);
   const showRoutines = ref(true);
 
-  function connectionId(): string {
-    const id = connections.active?.id;
-    if (!id) throw new Error('No open connection');
-    return id;
-  }
-
   async function refresh(): Promise<void> {
     if (!connections.active) return;
 
@@ -57,7 +71,7 @@ export const useEntities = defineStore('entities', () => {
     error.value = null;
 
     try {
-      const id = connectionId();
+      const id = connections.requireId();
       const [schemaList, entityList] = await Promise.all([
         connections.active.capabilities.schemas
           ? host.call('schema/schemas', { connectionId: id })
@@ -69,7 +83,7 @@ export const useEntities = defineStore('entities', () => {
       entities.value = [...entityList];
       columns.value = new Map();
     } catch (caught) {
-      error.value = caught instanceof Error ? caught.message : String(caught);
+      error.value = errorMessage(caught);
     } finally {
       loading.value = false;
     }
@@ -82,7 +96,7 @@ export const useEntities = defineStore('entities', () => {
     loadingColumns.value = new Set(loadingColumns.value).add(key);
     try {
       const result = await host.call('schema/columns', {
-        connectionId: connectionId(),
+        connectionId: connections.requireId(),
         entity: { name: entity.name, ...(entity.schema ? { schema: entity.schema } : {}) },
       });
       columns.value = new Map(columns.value).set(key, [...result]);
@@ -110,8 +124,33 @@ export const useEntities = defineStore('entities', () => {
     expanded.value = next;
   }
 
+  /** Opens or closes a database or schema folder. */
+  function toggleGroup(key: string): void {
+    if (key.startsWith('db:')) {
+      const next = new Set(collapsedDatabases.value);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      collapsedDatabases.value = next;
+      return;
+    }
+
+    const next = new Set(expanded.value);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    expanded.value = next;
+  }
+
+  /**
+   * Shuts every folder except the one they all hang from.
+   *
+   * Collapsing the database as well is literal and useless: the sidebar empties
+   * to a single row, the button then does nothing, and getting back requires
+   * finding the one thing left on screen. "All" means all the folders you were
+   * looking through, not the container you were looking in.
+   */
   function collapseAll(): void {
     expanded.value = new Set();
+    collapsedDatabases.value = new Set();
   }
 
   const visibleEntities = computed(() => {
@@ -132,9 +171,18 @@ export const useEntities = defineStore('entities', () => {
   const hiddenCount = computed(() => entities.value.length - visibleEntities.value.length);
 
   /**
-   * Grouping by schema is suppressed when there is only one, because a tree
-   * with a single root that everything hangs from is a wasted level of
-   * indentation.
+   * The tree, flattened to the rows that are actually visible.
+   *
+   * Three levels of folder — database, schema, table — and the columns inside a
+   * table below that. Folders are shut until opened, with one exception: a
+   * level holding exactly one thing opens itself, because a folder you must
+   * click to reveal its only child is a click that tells you nothing. That is
+   * also why a lone schema disappears rather than being drawn as a branch with
+   * everything hanging off it.
+   *
+   * A filter opens what it matched. Typing a table name and being shown a list
+   * of shut folders that contain it is a search that has answered the question
+   * and then hidden the answer.
    */
   const rows = computed<TreeRow[]>(() => {
     const grouped = new Map<string, Entity[]>();
@@ -145,22 +193,32 @@ export const useEntities = defineStore('entities', () => {
       else grouped.set(schema, [entity]);
     }
 
-    const useGroups = grouped.size > 1;
+    const filtering = filter.value.trim() !== '';
+    const useSchemas = grouped.size > 1;
+
+    const database = connections.active?.database ?? null;
+    const dbKey = database ? databaseKey(database) : null;
+    const dbOpen = !dbKey || filtering || !collapsedDatabases.value.has(dbKey);
+
     const result: TreeRow[] = [];
 
-    for (const [schema, list] of [...grouped.entries()].sort(([a], [b]) =>
-      a.localeCompare(b)
-    )) {
-      if (useGroups) {
-        result.push({
-          key: `schema:${schema}`,
-          kind: 'schema',
-          depth: 0,
-          label: schema || 'default',
-          detail: String(list.length),
-        });
-      }
+    if (database && dbKey) {
+      result.push({
+        key: dbKey,
+        kind: 'database',
+        depth: 0,
+        label: database,
+        detail: String(visibleEntities.value.length),
+        expanded: dbOpen,
+        groupKey: dbKey,
+      });
+    }
 
+    if (!dbOpen) return result;
+
+    const base = database ? 1 : 0;
+
+    const appendEntities = (list: readonly Entity[], depth: number): void => {
       for (const entity of list) {
         const key = entityKey(entity);
         const isExpanded = expanded.value.has(key);
@@ -168,7 +226,7 @@ export const useEntities = defineStore('entities', () => {
         result.push({
           key: `entity:${key}`,
           kind: 'entity',
-          depth: useGroups ? 1 : 0,
+          depth,
           label: entity.name,
           entity,
           entityKind: entity.kind,
@@ -182,7 +240,7 @@ export const useEntities = defineStore('entities', () => {
           result.push({
             key: `loading:${key}`,
             kind: 'loading',
-            depth: (useGroups ? 1 : 0) + 1,
+            depth: depth + 1,
             label: 'Loading columns…',
           });
           continue;
@@ -192,7 +250,7 @@ export const useEntities = defineStore('entities', () => {
           result.push({
             key: `empty:${key}`,
             kind: 'empty',
-            depth: (useGroups ? 1 : 0) + 1,
+            depth: depth + 1,
             label: 'No columns',
           });
           continue;
@@ -202,12 +260,36 @@ export const useEntities = defineStore('entities', () => {
           result.push({
             key: `column:${key}.${column.name}`,
             kind: 'column',
-            depth: (useGroups ? 1 : 0) + 1,
+            depth: depth + 1,
             label: column.name,
             detail: column.dataType,
           });
         }
       }
+    };
+
+    if (!useSchemas) {
+      appendEntities([...grouped.values()].flat(), base);
+      return result;
+    }
+
+    for (const [schema, list] of [...grouped.entries()].sort(([a], [b]) =>
+      a.localeCompare(b)
+    )) {
+      const key = schemaKey(schema);
+      const open = filtering || expanded.value.has(key);
+
+      result.push({
+        key,
+        kind: 'schema',
+        depth: base,
+        label: schema || 'default',
+        detail: String(list.length),
+        expanded: open,
+        groupKey: key,
+      });
+
+      if (open) appendEntities(list, base + 1);
     }
 
     return result;
@@ -218,6 +300,7 @@ export const useEntities = defineStore('entities', () => {
     entities.value = [];
     columns.value = new Map();
     expanded.value = new Set();
+    collapsedDatabases.value = new Set();
     filter.value = '';
     error.value = null;
   }
@@ -239,6 +322,7 @@ export const useEntities = defineStore('entities', () => {
     refresh,
     loadColumns,
     toggle,
+    toggleGroup,
     collapseAll,
     reset,
   };

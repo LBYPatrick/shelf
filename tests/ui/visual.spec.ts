@@ -10,6 +10,7 @@
  * do; a snapshot updated without being looked at is worse than no snapshot.
  */
 import { setAppearance, stabilize, test, expect } from './fixtures';
+import { openTable } from '../e2e/helpers';
 
 test.describe('light', () => {
   test('start screen', async ({ page }) => {
@@ -18,7 +19,7 @@ test.describe('light', () => {
   });
 
   test('workspace with a table open', async ({ sample }) => {
-    await sample.getByRole('treeitem', { name: 'album' }).first().dblclick();
+    await openTable(sample, 'album');
     await sample.locator('.tabulator-row').first().waitFor();
     await stabilize(sample);
     await expect(sample).toHaveScreenshot('table-light.png');
@@ -29,7 +30,7 @@ test.describe('light', () => {
       .getByRole('button', { name: /new query/i })
       .first()
       .click();
-    await sample.locator('.cm-editor').waitFor();
+    await sample.locator('.monaco-editor').waitFor();
     await stabilize(sample);
     await expect(sample).toHaveScreenshot('query-light.png');
   });
@@ -43,6 +44,12 @@ test.describe('light', () => {
 });
 
 test.describe('dark', () => {
+  test('start screen', async ({ page }) => {
+    await setAppearance(page, 'dark');
+    await stabilize(page);
+    await expect(page).toHaveScreenshot('start-dark.png');
+  });
+
   test('workspace with a table open', async ({ page }) => {
     await setAppearance(page, 'dark');
     await page
@@ -50,7 +57,7 @@ test.describe('dark', () => {
       .first()
       .click();
     await page.locator('.workspace').waitFor({ timeout: 30_000 });
-    await page.getByRole('treeitem', { name: 'album' }).first().dblclick();
+    await openTable(page, 'album');
     await page.locator('.tabulator-row').first().waitFor();
     await stabilize(page);
     await expect(page).toHaveScreenshot('table-dark.png');
@@ -65,7 +72,7 @@ test.describe('density', () => {
       await sample.evaluate((value) => {
         document.documentElement.dataset['density'] = value;
       }, density);
-      await sample.getByRole('treeitem', { name: 'album' }).first().dblclick();
+      await openTable(sample, 'album');
       await sample.locator('.tabulator-row').first().waitFor();
       await stabilize(sample);
       await expect(sample).toHaveScreenshot(`table-${density}.png`);

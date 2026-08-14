@@ -116,36 +116,43 @@ function close(): void {
       >{{ problem }}</span>
 
       <PressButton @click="close">
-        Cancel
+        {{ $t('action.cancel') }}
       </PressButton>
       <PressButton
         :disabled="!ready"
         @click="submit(false)"
       >
-        Save
+        {{ $t('action.save') }}
       </PressButton>
       <PressButton
         variant="glass"
         :disabled="!ready || testing"
         @click="runTest"
       >
-        {{ testing ? 'Testing…' : 'Test' }}
+        {{ testing ? $t('connection.testing') : $t('action.test') }}
       </PressButton>
       <PressButton
         variant="primary"
         :disabled="!ready"
         @click="submit(true)"
       >
-        Connect
+        {{ $t('action.connect') }}
       </PressButton>
     </template>
   </Sheet>
 </template>
 
 <style scoped>
+/*
+ * Guidance, in the voice of a hint rather than a warning.
+ *
+ * Every action this describes is already disabled, so the sentence can only be
+ * read before anything has been attempted — and amber on a form nobody has
+ * touched spends the warning colour on the one state where nothing is wrong.
+ */
 .problem {
   margin-inline-end: auto;
   font-size: 0.6875rem;
-  color: color-mix(in oklab, var(--color-warning) 92%, var(--color-base-content));
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
 }
 </style>

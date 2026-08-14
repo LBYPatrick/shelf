@@ -1,5 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { test } from './fixtures';
+import { openTable } from './helpers';
 
 /** Developer tool. Run with `pnpm shots`. */
 const OUT = process.env['SHOT_DIR'] ?? 'test-results/shots';
@@ -34,9 +35,7 @@ test('capture the interface', async ({ page }) => {
   await settle(900);
   await page.screenshot({ path: `${OUT}/03-sample-workspace.png` });
 
-  await page.getByRole('treeitem', { name: 'album' }).first().click();
-  await settle(400);
-  await page.getByRole('treeitem', { name: 'album' }).first().dblclick();
+  await openTable(page, 'album');
   await settle(900);
   await page.screenshot({ path: `${OUT}/04-sample-table.png` });
 

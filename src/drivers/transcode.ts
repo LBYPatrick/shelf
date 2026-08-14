@@ -108,3 +108,14 @@ export function tagFields(
     return { ...field };
   });
 }
+
+/**
+ * A tagged value, back to the scalar the driver should write.
+ *
+ * The inverse of `encodeValue` for the drivers that hand values straight to a
+ * client library rather than to a parameterised statement. Three of them had
+ * written their own identical copy of this at the bottom of the file.
+ */
+export function untagValue(value: unknown): unknown {
+  return isTagged(value) ? value.data : value;
+}

@@ -20,6 +20,7 @@
     "clear": "지우기",
     "discard": "버리기",
     "import": "가져오기",
+    "filter": "필터",
     "export": "내보내기",
     "run": "실행",
     "runCurrent": "현재 문 실행",
@@ -101,7 +102,6 @@
     "noMatch": "필터와 일치하는 항목이 없습니다.",
     "loadingColumns": "열을 불러오는 중…",
     "noColumns": "열 없음",
-    "structureOf": "{{name}}의 구조",
     "disconnect": "{{version}} — 클릭하면 연결 해제",
     "readOnly": "읽기 전용",
     "disconnectHint": "클릭하면 연결 해제"
@@ -114,7 +114,6 @@
     "previousPage": "이전 페이지",
     "nextPage": "다음 페이지",
     "lastPage": "마지막 페이지",
-    "exporting": "내보내는 중…",
     "imported": "{{count}}행 가져옴",
     "discardChanges": "저장하지 않은 변경 {{count}}건을 버릴까요?",
     "nullValue": "NULL",
@@ -140,7 +139,9 @@
     "showingFirst": "처음 {{count}}행만 표시",
     "planUnreadable": "이 엔진이 반환한 실행 계획은 Shelf가 읽지 못했습니다.",
     "explainHint": "데이터베이스가 이를 어떻게 실행하는지 보기",
-    "saveHint": "이 쿼리 저장"
+    "saveHint": "이 쿼리 저장",
+    "caret": "{{line}}행 {{column}}열 / 총 {{lines}}행",
+    "selected": "{{count}}자 선택됨"
   },
   "structure": {
     "columns": "열",
@@ -185,6 +186,12 @@
     "accentHelp": "모든 색은 그 위의 글자가 읽히도록 자동으로 조정됩니다.",
     "customHue": "사용자 지정 색상",
     "density": "밀도",
+    "materials": "재질",
+    "opacity": "불투명도",
+    "opacityHelp": "유리 패널이 얼마나 불투명한지. 1.00은 완전 불투명이며 가운데가 기본값입니다.",
+    "blur": "흐림",
+    "blurHelp": "표준 표면의 반경입니다. 더 두꺼운 표면은 이에 비례합니다. 0이면 유리 효과가 꺼집니다.",
+    "resetMaterials": "재질 초기화",
     "compact": "촘촘하게",
     "default": "기본",
     "comfortable": "여유롭게",
@@ -269,5 +276,47 @@
     "listHint": "a, b, c",
     "addCondition": "조건 추가",
     "removeRow": "조건 삭제"
+  },
+  "export": {
+    "title": "결과 내보내기",
+    "delivery": "대상",
+    "format": "형식",
+    "toFile": "파일",
+    "toClipboard": "클립보드",
+    "fileHint": "호스트가 디스크에 바로 기록하며, 전체 결과가 포함됩니다.",
+    "clipboardHint": "현재 불러온 {{count}}행을 복사합니다.",
+    "fileUnavailable": "먼저 쿼리를 실행하세요. 파일은 다시 실행하여 기록합니다.",
+    "copied": "{{count}}행을 복사했습니다.",
+    "written": "기록했습니다.",
+    "working": "처리 중…",
+    "run": "내보내기"
+  },
+  "grid": {
+    "oneBased": "1부터",
+    "zeroBased": "0부터",
+    "indexHint": "왼쪽 행 번호를 1과 0 중 어디에서 시작할지."
+  },
+  "activity": {
+    "working": "실행 중…",
+    "done": "완료되었습니다.",
+    "failed": "실패했습니다."
+  },
+  "menu": {
+    "copyName": "테이블 이름 복사",
+    "quickDocs": "빠른 문서",
+    "properties": "속성",
+    "exportData": "데이터를 파일로 내보내기…",
+    "actionsFor": "{{name}} 작업"
+  },
+  "properties": {
+    "rows": "행",
+    "data": "데이터",
+    "indexes": "인덱스",
+    "key": "키",
+    "required": "필수",
+    "noSchema": "스키마 없음",
+    "rowsCount": "{{count}}행",
+    "copySelect": "SELECT 복사",
+    "copied": "복사했습니다"
   }
 }

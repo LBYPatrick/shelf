@@ -20,6 +20,7 @@
     "clear": "消去",
     "discard": "破棄",
     "import": "インポート",
+    "filter": "フィルタ",
     "export": "エクスポート",
     "run": "実行",
     "runCurrent": "現在の文を実行",
@@ -101,7 +102,6 @@
     "noMatch": "条件に一致するものがありません。",
     "loadingColumns": "列を読み込み中…",
     "noColumns": "列がありません",
-    "structureOf": "{{name}} の構造",
     "disconnect": "{{version}} — クリックで切断",
     "readOnly": "読み取り専用",
     "disconnectHint": "クリックで切断"
@@ -114,7 +114,6 @@
     "previousPage": "前のページ",
     "nextPage": "次のページ",
     "lastPage": "最後のページ",
-    "exporting": "エクスポート中…",
     "imported": "{{count}} 行を取り込みました",
     "discardChanges": "未保存の変更 {{count}} 件を破棄しますか？",
     "nullValue": "NULL",
@@ -140,7 +139,9 @@
     "showingFirst": "先頭 {{count}} 行を表示",
     "planUnreadable": "このエンジンが返した実行計画は Shelf では読み取れませんでした。",
     "explainHint": "データベースがこれをどう実行するかを表示",
-    "saveHint": "このクエリを保存"
+    "saveHint": "このクエリを保存",
+    "caret": "{{line}} 行 {{column}} 列 / 全 {{lines}} 行",
+    "selected": "{{count}} 文字選択"
   },
   "structure": {
     "columns": "列",
@@ -185,6 +186,12 @@
     "accentHelp": "どの色も、その上の文字が読めるまで自動で調整されます。",
     "customHue": "アクセントの色相",
     "density": "表示密度",
+    "materials": "マテリアル",
+    "opacity": "不透明度",
+    "opacityHelp": "ガラスパネルの不透明さ。1.00 で完全に不透明、中央が初期設定です。",
+    "blur": "ぼかし",
+    "blurHelp": "標準的な面のぼかし半径。厚い面はこれに比例します。0 でガラスを無効化します。",
+    "resetMaterials": "マテリアルをリセット",
     "compact": "高密度",
     "default": "標準",
     "comfortable": "ゆったり",
@@ -269,5 +276,47 @@
     "listHint": "a, b, c",
     "addCondition": "条件を追加",
     "removeRow": "条件を削除"
+  },
+  "export": {
+    "title": "結果をエクスポート",
+    "delivery": "出力先",
+    "format": "形式",
+    "toFile": "ファイル",
+    "toClipboard": "クリップボード",
+    "fileHint": "ホストがディスクへ直接書き出します。結果全体が対象です。",
+    "clipboardHint": "読み込み済みの {{count}} 行をコピーします。",
+    "fileUnavailable": "先にクエリを実行してください。ファイルは再実行して書き出します。",
+    "copied": "{{count}} 行をコピーしました。",
+    "written": "書き出しました。",
+    "working": "処理中…",
+    "run": "エクスポート"
+  },
+  "grid": {
+    "oneBased": "1 始まり",
+    "zeroBased": "0 始まり",
+    "indexHint": "左の行番号を 1 と 0 のどちらから始めるか。"
+  },
+  "activity": {
+    "working": "実行中…",
+    "done": "完了しました。",
+    "failed": "失敗しました。"
+  },
+  "menu": {
+    "copyName": "テーブル名をコピー",
+    "quickDocs": "クイックドキュメント",
+    "properties": "プロパティ",
+    "exportData": "データをファイルに書き出す…",
+    "actionsFor": "{{name}} の操作"
+  },
+  "properties": {
+    "rows": "行数",
+    "data": "データ",
+    "indexes": "インデックス",
+    "key": "キー",
+    "required": "必須",
+    "noSchema": "スキーマなし",
+    "rowsCount": "{{count}} 行",
+    "copySelect": "SELECT をコピー",
+    "copied": "コピーしました"
   }
 }

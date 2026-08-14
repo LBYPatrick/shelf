@@ -20,6 +20,7 @@
     "clear": "Clear",
     "discard": "Discard",
     "import": "Import",
+    "filter": "Filter",
     "export": "Export",
     "run": "Run",
     "runCurrent": "Run current",
@@ -101,7 +102,6 @@
     "noMatch": "Nothing matches that filter.",
     "loadingColumns": "Loading columns…",
     "noColumns": "No columns",
-    "structureOf": "Structure of {{name}}",
     "disconnect": "{{version}} — click to disconnect",
     "readOnly": "read-only",
     "disconnectHint": "click to disconnect"
@@ -114,7 +114,6 @@
     "previousPage": "Previous page",
     "nextPage": "Next page",
     "lastPage": "Last page",
-    "exporting": "Exporting…",
     "imported": "{{count}} imported",
     "discardChanges": "Discard {{count}} unsaved changes?",
     "nullValue": "NULL",
@@ -140,7 +139,9 @@
     "showingFirst": "showing first {{count}}",
     "planUnreadable": "This engine returned a plan Shelf could not read.",
     "explainHint": "Show how the database would run this",
-    "saveHint": "Save this query"
+    "saveHint": "Save this query",
+    "caret": "Ln {{line}}, Col {{column}} of {{lines}}",
+    "selected": "{{count}} selected"
   },
   "structure": {
     "columns": "Columns",
@@ -185,6 +186,12 @@
     "accentHelp": "Every colour is adjusted until text on it stays readable.",
     "customHue": "Custom accent hue",
     "density": "Density",
+    "materials": "Materials",
+    "opacity": "Opacity",
+    "opacityHelp": "How solid the glass panels are. 1.00 is fully opaque; the middle is how the app ships.",
+    "blur": "Blur",
+    "blurHelp": "The radius of a standard surface. Heavier surfaces scale from it; 0 switches the glass off.",
+    "resetMaterials": "Reset materials",
     "compact": "Compact",
     "default": "Default",
     "comfortable": "Comfortable",
@@ -269,5 +276,47 @@
     "listHint": "a, b, c",
     "addCondition": "Add condition",
     "removeRow": "Remove condition"
+  },
+  "export": {
+    "title": "Export results",
+    "delivery": "Send to",
+    "format": "Format",
+    "toFile": "File",
+    "toClipboard": "Clipboard",
+    "fileHint": "Written by the host, streaming to disk — the whole result set, however large.",
+    "clipboardHint": "Copies the {{count}} rows currently loaded.",
+    "fileUnavailable": "Run a query first — a file is written by re-running it.",
+    "copied": "Copied {{count}} rows.",
+    "written": "Written.",
+    "working": "Working…",
+    "run": "Export"
+  },
+  "grid": {
+    "oneBased": "1-based",
+    "zeroBased": "0-based",
+    "indexHint": "Whether the row numbers down the left start at 1 or at 0."
+  },
+  "activity": {
+    "working": "Working…",
+    "done": "Finished.",
+    "failed": "Failed."
+  },
+  "menu": {
+    "copyName": "Copy table name",
+    "quickDocs": "Quick docs",
+    "properties": "Properties",
+    "exportData": "Export data to file…",
+    "actionsFor": "Actions for {{name}}"
+  },
+  "properties": {
+    "rows": "Rows",
+    "data": "Data",
+    "indexes": "Indexes",
+    "key": "KEY",
+    "required": "required",
+    "noSchema": "No schema",
+    "rowsCount": "{{count}} rows",
+    "copySelect": "Copy SELECT",
+    "copied": "Copied"
   }
 }

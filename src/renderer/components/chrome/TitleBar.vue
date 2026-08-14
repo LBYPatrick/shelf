@@ -153,7 +153,7 @@ onUnmounted(stopListening);
   height: var(--hit-min);
   padding-inline: 4px var(--gap);
   border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  border: 1px solid var(--separator);
   background: color-mix(in oklab, var(--color-base-100) 62%, transparent);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   backdrop-filter: blur(16px) saturate(180%);
@@ -231,11 +231,11 @@ onUnmounted(stopListening);
 @media (hover: hover) and (pointer: fine) {
   .pill:hover {
     background: color-mix(in oklab, var(--color-base-100) 85%, transparent);
-    border-color: color-mix(in oklab, var(--color-base-content) 18%, transparent);
+    border-color: var(--separator-strong);
   }
 
   .control:hover {
-    background: color-mix(in oklab, var(--color-base-content) 10%, transparent);
+    background: var(--fill-3);
     opacity: 1;
   }
 

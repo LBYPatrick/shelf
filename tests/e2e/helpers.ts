@@ -24,10 +24,40 @@ export async function createConnection(
   }
 }
 
-/** Types into the query editor, replacing whatever was there. */
+/**
+ * Opens a table from the sidebar, whatever depth it is at.
+ *
+ * Schemas are folders now and folders start shut, so a table in a database with
+ * more than one schema is not on screen until its schema is opened. Tests go
+ * through here rather than each knowing which engines group their tables and
+ * which do not — a SQLite file has one schema and hides the level entirely.
+ */
+export async function revealTables(page: Page): Promise<void> {
+  for (const folder of await page.locator('.row--schema').all()) {
+    const open = await folder.getAttribute('aria-expanded');
+    if (open === 'false') await folder.click();
+  }
+}
+
+export async function openTable(page: Page, name: string): Promise<void> {
+  const row = page.getByRole('treeitem', { name, exact: true }).first();
+  if (!(await row.isVisible().catch(() => false))) await revealTables(page);
+  await row.dblclick();
+}
+
+/**
+ * Types into the query editor, replacing whatever was there.
+ *
+ * Monaco paints the text itself and takes input through the EditContext API —
+ * there is no textarea and no contenteditable to address, so the click goes to
+ * the painted surface and the keystrokes go to the page. Every test goes
+ * through here rather than knowing that, which is what kept swapping the editor
+ * to a change in one function.
+ */
 export async function typeQuery(page: Page, sql: string): Promise<void> {
-  const editor = page.locator('.cm-content');
+  const editor = page.locator('.monaco-editor').first();
+  await editor.waitFor();
   await editor.click();
   await page.keyboard.press('ControlOrMeta+a');
-  await editor.pressSequentially(sql);
+  await page.keyboard.type(sql);
 }

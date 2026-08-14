@@ -44,39 +44,39 @@ const lastUsed = computed(() => {
 
 <template>
   <div
-    class="card"
-    :class="{ 'card--busy': busy }"
+    class="conn"
+    :class="{ 'conn--busy': busy }"
     :style="connection.labelColor ? { '--label': connection.labelColor } : undefined"
   >
     <button
       type="button"
-      class="card__open"
+      class="conn__open"
       :aria-label="$t('start.connectTo', { name: connection.name })"
       @click="$emit('open')"
     >
       <span
-        class="card__mark"
+        class="conn__mark"
         :style="{ '--engine-hue': engine.hue }"
         aria-hidden="true"
       >{{
         engine.mark
       }}</span>
 
-      <span class="card__text">
-        <span class="card__name">{{ connection.name }}</span>
-        <span class="card__where">{{ subtitle }} · {{ lastUsed }}</span>
+      <span class="conn__text">
+        <span class="conn__name">{{ connection.name }}</span>
+        <span class="conn__where">{{ subtitle }} · {{ lastUsed }}</span>
       </span>
 
       <span
         v-if="connection.readOnly"
-        class="card__flag"
+        class="conn__flag"
       >{{ $t('workspace.readOnly') }}</span>
     </button>
 
-    <div class="card__actions">
+    <div class="conn__actions">
       <button
         type="button"
-        class="card__action"
+        class="conn__action"
         :aria-label="$t('start.edit', { name: connection.name })"
         :title="$t('action.save')"
         @click.stop="$emit('edit')"
@@ -85,7 +85,7 @@ const lastUsed = computed(() => {
       </button>
       <button
         type="button"
-        class="card__action card__action--danger"
+        class="conn__action conn__action--danger"
         :aria-label="$t('start.remove', { name: connection.name })"
         :title="$t('action.delete')"
         @click.stop="$emit('remove')"
@@ -96,20 +96,20 @@ const lastUsed = computed(() => {
 
     <span
       v-if="busy"
-      class="card__progress"
+      class="conn__progress"
       aria-hidden="true"
     />
   </div>
 </template>
 
 <style scoped>
-.card {
+.conn {
   position: relative;
   border-radius: 1rem;
   background: color-mix(in oklab, var(--color-base-100) 72%, transparent);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid color-mix(in oklab, var(--color-base-content) 9%, transparent);
+  border: 1px solid var(--separator);
   box-shadow: 0 1px 2px oklch(0% 0 0 / 0.04);
   overflow: hidden;
   transition:
@@ -119,7 +119,7 @@ const lastUsed = computed(() => {
 }
 
 /* The connection's own colour, along the edge you read first. */
-.card::before {
+.conn::before {
   content: '';
   position: absolute;
   inset-block: 0;
@@ -128,7 +128,7 @@ const lastUsed = computed(() => {
   background: var(--label, transparent);
 }
 
-.card__open {
+.conn__open {
   display: flex;
   align-items: center;
   gap: var(--gap-loose);
@@ -137,7 +137,7 @@ const lastUsed = computed(() => {
   text-align: start;
 }
 
-.card__mark {
+.conn__mark {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -157,7 +157,7 @@ const lastUsed = computed(() => {
   transition: transform var(--t-hover) var(--ease-out);
 }
 
-.card__text {
+.conn__text {
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -165,7 +165,7 @@ const lastUsed = computed(() => {
   flex: 1;
 }
 
-.card__name {
+.conn__name {
   font-size: 0.875rem;
   font-weight: 550;
   letter-spacing: -0.006em;
@@ -174,7 +174,7 @@ const lastUsed = computed(() => {
   white-space: nowrap;
 }
 
-.card__where {
+.conn__where {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
@@ -183,7 +183,7 @@ const lastUsed = computed(() => {
   white-space: nowrap;
 }
 
-.card__flag {
+.conn__flag {
   flex: 0 0 auto;
   align-self: center;
   padding: 1px 6px;
@@ -194,7 +194,7 @@ const lastUsed = computed(() => {
   letter-spacing: 0.04em;
 }
 
-.card__actions {
+.conn__actions {
   position: absolute;
   top: var(--gap-tight);
   inset-inline-end: var(--gap-tight);
@@ -207,7 +207,7 @@ const lastUsed = computed(() => {
     transform var(--t-hover) var(--ease-out);
 }
 
-.card__action {
+.conn__action {
   display: grid;
   place-items: center;
   width: 1.375rem;
@@ -224,7 +224,7 @@ const lastUsed = computed(() => {
  * A one-pixel line that sweeps the card while the connection is opening. It
  * says "working" without taking any space or moving anything else.
  */
-.card__progress {
+.conn__progress {
   position: absolute;
   inset-block-end: 0;
   inset-inline: 0;
@@ -242,62 +242,62 @@ const lastUsed = computed(() => {
   }
 }
 
-.card--busy {
+.conn--busy {
   border-color: color-mix(in oklab, var(--color-primary) 40%, transparent);
 }
 
-.card:active:not(.card--busy) {
+.conn:active:not(.conn--busy) {
   transform: scale(0.985);
   transition-duration: var(--t-press);
 }
 
-.card:focus-within {
+.conn:focus-within {
   border-color: color-mix(in oklab, var(--color-primary) 50%, transparent);
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .card:hover {
+  .conn:hover {
     transform: translateY(-2px);
-    border-color: color-mix(in oklab, var(--color-base-content) 16%, transparent);
+    border-color: var(--separator);
     box-shadow:
       0 1px 2px oklch(0% 0 0 / 0.05),
       0 10px 30px oklch(0% 0 0 / 0.1);
   }
 
-  .card:hover .card__mark {
+  .conn:hover .conn__mark {
     transform: scale(1.06);
   }
 
-  .card:hover .card__actions,
-  .card:focus-within .card__actions {
+  .conn:hover .conn__actions,
+  .conn:focus-within .conn__actions {
     opacity: 1;
     transform: translateY(0);
   }
 
-  .card__action:hover {
-    background: color-mix(in oklab, var(--color-base-content) 12%, transparent);
+  .conn__action:hover {
+    background: var(--fill-2);
     color: var(--color-base-content);
   }
 
-  .card__action--danger:hover {
+  .conn__action--danger:hover {
     background: var(--color-error);
     color: var(--color-error-content);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card,
-  .card__mark,
-  .card__actions {
+  .conn,
+  .conn__mark,
+  .conn__actions {
     transition-duration: 120ms;
   }
 
-  .card:hover,
-  .card:active {
+  .conn:hover,
+  .conn:active {
     transform: none;
   }
 
-  .card__progress {
+  .conn__progress {
     animation: none;
     opacity: 0.6;
   }

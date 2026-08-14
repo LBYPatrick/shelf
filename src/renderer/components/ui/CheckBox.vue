@@ -90,7 +90,7 @@ const model = defineModel<boolean>({ required: true });
   height: 1rem;
   margin-top: 0.0625rem;
   border-radius: 0.3125rem;
-  border: 1.5px solid color-mix(in oklab, var(--color-base-content) 28%, transparent);
+  border: 1.5px solid var(--separator-strong);
   background: color-mix(in oklab, var(--color-base-100) 60%, transparent);
   color: var(--color-primary-content);
   transition:
@@ -145,7 +145,7 @@ const model = defineModel<boolean>({ required: true });
 
 @media (hover: hover) and (pointer: fine) {
   .check:hover .check__box {
-    border-color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+    border-color: var(--separator-strong);
   }
 
   .check:hover .check__input:checked + .check__box {

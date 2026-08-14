@@ -14,7 +14,7 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { fromIni } from '@aws-sdk/credential-providers';
 import { capabilities } from '../capabilities';
-import { encodeRows, tagFields } from '../transcode';
+import { encodeRows, tagFields, untagValue } from '../transcode';
 import type {
   ChangeSet,
   Column,
@@ -542,7 +542,7 @@ export class DynamodbClient implements DatabaseClient {
           // names are reserved words.
           UpdateExpression: 'SET #attribute = :value',
           ExpressionAttributeNames: { '#attribute': update.column },
-          ExpressionAttributeValues: { ':value': unwrap(update.value) },
+          ExpressionAttributeValues: { ':value': untagValue(update.value) },
         })
       );
     }
@@ -573,14 +573,14 @@ export class DynamodbClient implements DatabaseClient {
     }
     for (const update of changes.updates) {
       lines.push(
-        `UPDATE "${update.entity.name}" SET ${update.column} = ${JSON.stringify(unwrap(update.value))} ` +
-          `WHERE ${update.primaryKeys.map((k) => `${k.column} = ${JSON.stringify(unwrap(k.value))}`).join(' AND ')}`
+        `UPDATE "${update.entity.name}" SET ${update.column} = ${JSON.stringify(untagValue(update.value))} ` +
+          `WHERE ${update.primaryKeys.map((k) => `${k.column} = ${JSON.stringify(untagValue(k.value))}`).join(' AND ')}`
       );
     }
     for (const remove of changes.deletes) {
       lines.push(
         `DELETE FROM "${remove.entity.name}" ` +
-          `WHERE ${remove.primaryKeys.map((k) => `${k.column} = ${JSON.stringify(unwrap(k.value))}`).join(' AND ')}`
+          `WHERE ${remove.primaryKeys.map((k) => `${k.column} = ${JSON.stringify(untagValue(k.value))}`).join(' AND ')}`
       );
     }
 
@@ -607,14 +607,7 @@ export class DynamodbClient implements DatabaseClient {
 /** Deletes and updates need the whole key, partition and sort both. */
 function keyOf(keys: readonly { column: string; value: unknown }[]): Record<string, unknown> {
   if (keys.length === 0) throw new Error('Cannot address an item without its key.');
-  return Object.fromEntries(keys.map((key) => [key.column, unwrap(key.value)]));
-}
-
-function unwrap(value: unknown): unknown {
-  if (value && typeof value === 'object' && '$' in value) {
-    return (value as { data: unknown }).data;
-  }
-  return value;
+  return Object.fromEntries(keys.map((key) => [key.column, untagValue(key.value)]));
 }
 
 function attributeTypeName(code: string): string {

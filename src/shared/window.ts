@@ -7,6 +7,7 @@ export const WINDOW_CHANNELS = {
   isMaximized: 'window:is-maximized',
   maximizedChanged: 'window:maximized-changed',
   platformInfo: 'window:platform-info',
+  setAppearance: 'window:set-appearance',
 } as const;
 
 export const DIALOG_CHANNELS = {
@@ -45,10 +46,23 @@ export interface HostBridge {
   onUnavailable(listener: () => void): () => void;
 }
 
+/** `system` follows the OS; anything else overrides it. */
+export type Appearance = 'system' | 'light' | 'dark';
+
 export interface WindowApi {
   minimize(): void;
   toggleMaximize(): void;
   close(): void;
   isMaximized(): Promise<boolean>;
   onMaximizedChanged(listener: (maximized: boolean) => void): () => void;
+  /**
+   * Tells the OS which appearance the interface is wearing.
+   *
+   * The window's material is painted by the OS behind the page, so the OS has
+   * to be told — a `data-theme` attribute is invisible to it. Without this a
+   * dark interface on a light desktop got the *light* vibrancy material: a pale
+   * frosted sidebar and status bar against a near-black content pane, which is
+   * the exact inverse of the depth those panels are supposed to have.
+   */
+  setAppearance(appearance: Appearance): void;
 }

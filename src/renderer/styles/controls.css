@@ -31,8 +31,14 @@
   --fill-3: color-mix(in oklab, var(--fill-base) 12%, transparent);
   --fill-4: color-mix(in oklab, var(--fill-base) 8%, transparent);
 
-  /* Separators come from the label colour, which is where Apple draws them. */
-  --separator: color-mix(in oklab, var(--color-base-content) 29%, transparent);
+  /*
+   * Separators are mixed from the same neutral grey the fills use, never from
+   * the label colour. On the dark theme the label colour is near-white, so a
+   * "8% divider" was 8% white — which is how a hairline between two panels came
+   * out as a bright line across the window.
+   */
+  --separator: color-mix(in oklab, var(--fill-base) 26%, transparent);
+  --separator-strong: color-mix(in oklab, var(--fill-base) 40%, transparent);
 
   /* The raised part of a control: a segmented thumb, a switch knob. */
   --control-thumb: oklch(100% 0 0);
@@ -61,7 +67,15 @@
   --fill-2: color-mix(in oklab, var(--fill-base) 32%, transparent);
   --fill-3: color-mix(in oklab, var(--fill-base) 24%, transparent);
   --fill-4: color-mix(in oklab, var(--fill-base) 18%, transparent);
-  --separator: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  /*
+   * Far weaker than the light theme's, and measured rather than guessed. At
+   * 42% this composited to luminance 61 over a surface of 25 — two and a half
+   * times brighter than the panel it divided, which is a bright line across a
+   * near-black window, not a hairline. 16% lands at ~41: a visible step, and
+   * nothing more.
+   */
+  --separator: color-mix(in oklab, var(--fill-base) 16%, transparent);
+  --separator-strong: color-mix(in oklab, var(--fill-base) 28%, transparent);
 
   /* A switch knob stays white in the dark; a segmented thumb does not. Apple
      turns that one grey — lighter than its own track, but a white capsule on a
@@ -135,6 +149,88 @@
 }
 
 /* ---------------------------------------------------------------------------
+ * Fields.
+ *
+ * One recipe for anything you type or choose into. It was written out seven
+ * times — in `TextInput`, twice in the settings sheet, twice in the connection
+ * form, in the import sheet and twice in the filter bar — and the copies had
+ * already drifted: 80% base-100 in some, 70% in others, two different radii for
+ * the same shape sitting in the same sheet.
+ *
+ * The name matters as much as the rule, and twice over. daisyUI owns `.input`
+ * and `.select`, so a component of ours wearing either inherits its border, its
+ * fixed height and its width clamp on top of whatever we drew — which is what
+ * put a box inside a box with two chevrons in it. And `.field` was already
+ * taken *by us*, by the label-and-note group in `FormField`: naming this recipe
+ * that drew a bordered well around every label in the settings sheet.
+ * ------------------------------------------------------------------------- */
+.textfield {
+  height: var(--field-h);
+  min-width: 0;
+  padding-inline: var(--gap);
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-field);
+  background: color-mix(in oklab, var(--color-base-100) 80%, transparent);
+  color: var(--color-base-content);
+  font-size: 0.8125rem;
+  /* A hairline of inner shadow reads as a recess rather than a drawn outline. */
+  box-shadow: inset 0 1px 2px oklch(0% 0 0 / 0.05);
+  transition:
+    border-color var(--t-hover) var(--ease-out),
+    background-color var(--t-hover) var(--ease-out),
+    box-shadow var(--t-hover) var(--ease-out);
+}
+
+.textfield::placeholder {
+  color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
+}
+
+.textfield:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: var(--color-base-100);
+  /* The ring sits outside the recess, so focus reads as the field lifting. */
+  box-shadow:
+    inset 0 1px 2px oklch(0% 0 0 / 0.03),
+    0 0 0 3px color-mix(in oklab, var(--color-primary) 24%, transparent);
+}
+
+.textfield:disabled {
+  opacity: 0.5;
+}
+
+.textfield--mono {
+  font-family: var(--font-mono);
+}
+
+.textfield--invalid {
+  border-color: var(--color-error);
+}
+
+/*
+ * The quiet variant: a filled well with no drawn edge, for a field that sits
+ * inside a dense bar rather than in a form. Same height, same radius, same
+ * focus — only the resting weight differs.
+ */
+.textfield--quiet {
+  border-color: transparent;
+  border-radius: var(--control-radius);
+  background-color: var(--fill-3);
+  box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .textfield:hover:not(:disabled):not(:focus) {
+    border-color: var(--separator-strong);
+  }
+
+  .textfield--quiet:hover:not(:disabled):not(:focus) {
+    border-color: transparent;
+    background-color: var(--fill-2);
+  }
+}
+
+/* ---------------------------------------------------------------------------
  * Tab toolbars.
  *
  * Every tab has a bar of actions across its top, and each had grown its own:
@@ -195,6 +291,20 @@
   flex: 1;
 }
 
+/*
+ * Separates what acts on the thing from what acts on its result. A hairline
+ * rather than a gap, because the two groups belong to one bar — a gap alone
+ * reads as the row having been padded, not divided.
+ */
+.toolbar__rule {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 1px;
+  height: calc(var(--field-h) - var(--gap));
+  margin-inline: var(--gap-tight);
+  background: var(--separator);
+}
+
 @media (hover: hover) and (pointer: fine) {
   .toolbar__action:not(:disabled):hover,
   .toolbar__mode:not(.toolbar__mode--on):not(:disabled):hover {
@@ -204,61 +314,36 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Modal presentation: the scrim dims, the surface blurs.
+ * The status strip.
  *
- * Blurring both is the common mistake and it undoes the effect. A blurred scrim
- * already flattens everything behind it, so the glass on top has nothing left
- * to refract and reads as flat tint — the surface stops looking like a material
- * and starts looking like a grey rectangle. Worse, it is two full-screen
- * backdrop filters composited every frame for one visual result.
- *
- * So: the scrim is dim only, and the panel carries a *large* blur, which is
- * what makes it read as thick glass rather than a frosted pane. Bigger
- * surfaces read as thicker, so a sheet blurs harder than a popover, which
- * blurs harder than a menu.
+ * Every tab teleports a summary of itself into the status bar, and each one had
+ * grown its own copy of what that strip looks like — the same flex row, the same
+ * tabular figures, the same 62% label colour, written out three times. One
+ * definition, so a change to the strip is a change to the strip.
  * ------------------------------------------------------------------------- */
-.scrim {
-  background: oklch(0% 0 0 / 0.32);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
+.tabstatus {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-loose);
+  white-space: nowrap;
 }
 
-[data-theme='shelf-dark'] .scrim {
-  background: oklch(0% 0 0 / 0.5);
+.tabstatus__item {
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
 }
 
-/* The surfaces that sit on a scrim. */
-.surface-sheet {
-  -webkit-backdrop-filter: blur(48px) saturate(180%);
-  backdrop-filter: blur(48px) saturate(180%);
-  background-color: color-mix(in oklab, var(--color-base-100) 76%, transparent);
-  box-shadow: var(--elev-sheet);
-}
-
-[data-theme='shelf-dark'] .surface-sheet {
-  background-color: color-mix(in oklab, var(--color-base-100) 70%, transparent);
-}
-
-.surface-popover {
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  backdrop-filter: blur(28px) saturate(180%);
-  background-color: color-mix(in oklab, var(--color-base-100) 72%, transparent);
-  box-shadow: var(--elev-popover);
-}
-
-[data-theme='shelf-dark'] .surface-popover {
-  background-color: color-mix(in oklab, var(--color-base-100) 66%, transparent);
-}
-
-/*
- * Asked for less transparency: the surface becomes real and the scrim carries
- * the separation on its own.
- */
-@media (prefers-reduced-transparency: reduce) {
-  .surface-sheet,
-  .surface-popover {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    background-color: var(--color-base-100);
-  }
+/* A count of something still to be dealt with: unsaved edits, and nothing else. */
+.tabstatus__badge {
+  display: grid;
+  place-items: center;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding-inline: 0.25rem;
+  border-radius: 999px;
+  background: var(--color-warning);
+  color: var(--color-warning-content);
+  font-size: 0.625rem;
+  font-weight: 600;
 }

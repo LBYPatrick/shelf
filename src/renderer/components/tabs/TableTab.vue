@@ -21,18 +21,30 @@ import type {
 import { useTranslation } from 'i18next-vue';
 import { host } from '../../lib/host';
 import { useConnections } from '../../stores/connections';
+import { useSettings } from '../../stores/settings';
+import { useActivity } from '../../stores/activity';
+import { useHotkeys } from '../../composables/useHotkeys';
 import DataGrid from '../grid/DataGrid.vue';
+import ExportSheet from '../grid/ExportSheet.vue';
 import FilterBar from '../grid/FilterBar.vue';
+import RowIndexToggle from '../grid/RowIndexToggle.vue';
 import ImportSheet from './ImportSheet.vue';
 import AppIcon from '../ui/AppIcon.vue';
 import PressButton from '../ui/PressButton.vue';
+import { errorMessage } from '@shared/errors';
 
 const props = defineProps<{ entity: EntityRef; active: boolean }>();
 
 const connections = useConnections();
+const settings = useSettings();
+const activity = useActivity();
 const { t } = useTranslation();
 
-const PAGE_SIZE = 100;
+/*
+ * Read live rather than captured, so changing it in Settings takes effect on
+ * the next page rather than only in tabs opened afterwards.
+ */
+const pageSize = computed(() => settings.values.pageSize);
 
 const rows = ref<Row[]>([]);
 const fields = ref<Field[]>([]);
@@ -57,6 +69,7 @@ const editability = computed(() => {
   return columnPermissions.value;
 });
 const grid = ref<InstanceType<typeof DataGrid>>();
+const filterBar = ref<InstanceType<typeof FilterBar>>();
 
 /** Edits made but not yet written. */
 const pending = ref<ChangeSet>({ inserts: [], updates: [], deletes: [] });
@@ -68,40 +81,36 @@ const pendingCount = computed(
 const primaryKeys = ref<string[]>([]);
 
 const lastPage = computed(() =>
-  totalRows.value === null ? null : Math.max(0, Math.ceil(totalRows.value / PAGE_SIZE) - 1)
+  totalRows.value === null ? null : Math.max(0, Math.ceil(totalRows.value / pageSize.value) - 1)
 );
 
 const canSkipToEnd = computed(
   () => (connections.active?.capabilities.cheapCount ?? false) && lastPage.value !== null
 );
 
-function connectionId(): string {
-  const id = connections.active?.id;
-  if (!id) throw new Error('No open connection');
-  return id;
-}
-
 async function load(): Promise<void> {
   loading.value = true;
   error.value = null;
 
   try {
-    const result = await host.call('data/select', {
-      connectionId: connectionId(),
-      request: {
-        entity: props.entity,
-        offset: page.value * PAGE_SIZE,
-        limit: PAGE_SIZE,
-        ...(orderBy.value.length ? { orderBy: orderBy.value } : {}),
-        ...(appliedFilter.value ? { filters: appliedFilter.value } : {}),
-      },
-    });
+    const result = await activity.track(
+      host.call('data/select', {
+        connectionId: connections.requireId(),
+        request: {
+          entity: props.entity,
+          offset: page.value * pageSize.value,
+          limit: pageSize.value,
+          ...(orderBy.value.length ? { orderBy: orderBy.value } : {}),
+          ...(appliedFilter.value ? { filters: appliedFilter.value } : {}),
+        },
+      })
+    );
 
     rows.value = [...result.rows];
     fields.value = [...result.fields];
     if (result.totalRowCount !== undefined) totalRows.value = result.totalRowCount;
   } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : String(caught);
+    error.value = errorMessage(caught);
   } finally {
     loading.value = false;
   }
@@ -110,7 +119,7 @@ async function load(): Promise<void> {
 async function loadMetadata(): Promise<void> {
   try {
     const columns = await host.call('schema/columns', {
-      connectionId: connectionId(),
+      connectionId: connections.requireId(),
       entity: props.entity,
     });
 
@@ -140,7 +149,7 @@ async function loadMetadata(): Promise<void> {
 
     if (totalRows.value === null && connections.active?.capabilities.cheapCount) {
       totalRows.value = await host.call('data/count', {
-        connectionId: connectionId(),
+        connectionId: connections.requireId(),
         entity: props.entity,
         ...(appliedFilter.value ? { filters: appliedFilter.value } : {}),
       });
@@ -212,11 +221,14 @@ async function applyChanges(): Promise<void> {
   error.value = null;
 
   try {
-    await host.call('changes/apply', { connectionId: connectionId(), changes: pending.value });
+    await host.call('changes/apply', {
+      connectionId: connections.requireId(),
+      changes: pending.value,
+    });
     pending.value = { inserts: [], updates: [], deletes: [] };
     await load();
   } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : String(caught);
+    error.value = errorMessage(caught);
   } finally {
     loading.value = false;
   }
@@ -225,7 +237,7 @@ async function applyChanges(): Promise<void> {
 async function previewChanges(): Promise<void> {
   if (pendingCount.value === 0) return;
   const sql = await host.call('changes/preview', {
-    connectionId: connectionId(),
+    connectionId: connections.requireId(),
     changes: pending.value,
   });
   await navigator.clipboard.writeText(sql);
@@ -242,6 +254,22 @@ const editMode = ref(false);
 
 const exporting = ref(false);
 const importing = ref(false);
+
+/**
+ * The filter is asked for, not always present.
+ *
+ * It used to occupy a full row above every table whether or not anyone was
+ * filtering — a second band of chrome between the toolbar and the first row of
+ * data, on a screen whose entire job is showing rows. It opens by itself when
+ * a filter is in force, so it can never hide one.
+ */
+const filterOpen = ref(false);
+
+const filterCount = computed(() => {
+  const applied = appliedFilter.value;
+  if (!applied) return 0;
+  return applied.kind === 'builder' ? applied.filters.length : 1;
+});
 const allColumns = ref<Column[]>([]);
 const canImport = computed(
   () => (connections.active?.capabilities.ddl ?? false) && !connections.active?.readOnly
@@ -259,40 +287,27 @@ async function afterImport(inserted: number): Promise<void> {
 const imported = ref<number | null>(null);
 
 /**
- * Export writes in the connection host, straight to the chosen file — the rows
- * never come through this process, so the size of the table does not matter.
+ * Export goes through the same sheet the query tab uses, so the shape and the
+ * destination are chosen the same way in both places. Previously this tab
+ * inferred the format from whatever extension you happened to type into the
+ * save dialog, which silently fell back to CSV when you typed anything else.
+ *
+ * The host writes the file, so the whole table is exported rather than the
+ * hundred rows this page happens to hold.
  */
-async function exportView(): Promise<void> {
-  const path = await window.shelf.dialogs.saveFile({
-    title: `Export ${props.entity.name}`,
-    defaultPath: `${props.entity.name}.csv`,
-    extensions: ['csv', 'json', 'jsonl', 'sql'],
+async function writeTableToFile(
+  path: string,
+  format: 'csv' | 'json' | 'jsonl' | 'sql'
+): Promise<void> {
+  await host.call('export/run', {
+    connectionId: connections.requireId(),
+    path,
+    format,
+    entity: props.entity,
+    // The filter in force is exported too: what you are looking at is what
+    // you get, which is almost always what was meant.
+    ...(appliedFilter.value ? { filters: appliedFilter.value } : {}),
   });
-  if (!path) return;
-
-  const format = (path.split('.').pop() ?? 'csv').toLowerCase();
-  const chosen = ['csv', 'json', 'jsonl', 'sql'].includes(format)
-    ? (format as 'csv' | 'json' | 'jsonl' | 'sql')
-    : 'csv';
-
-  exporting.value = true;
-  error.value = null;
-
-  try {
-    await host.call('export/run', {
-      connectionId: connectionId(),
-      path,
-      format: chosen,
-      entity: props.entity,
-      // The filter in force is exported too: what you are looking at is what
-      // you get, which is almost always what was meant.
-      ...(appliedFilter.value ? { filters: appliedFilter.value } : {}),
-    });
-  } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : String(caught);
-  } finally {
-    exporting.value = false;
-  }
 }
 
 function toggleEditMode(): void {
@@ -309,6 +324,25 @@ function discard(): void {
   pending.value = { inserts: [], updates: [], deletes: [] };
   void load();
 }
+
+/*
+ * `data.filter` and `data.apply` were declared in the bindings table, listed in
+ * Settings and printed in the README, and nothing anywhere handled either of
+ * them. They belong to this tab rather than to the workspace, so they are
+ * registered here — and guarded on `active`, because every open tab stays
+ * mounted and would otherwise all answer the same keystroke.
+ */
+useHotkeys({
+  'data.filter': () => {
+    if (!props.active) return;
+    filterOpen.value = true;
+    filterBar.value?.focus();
+  },
+  'data.apply': () => {
+    if (!props.active || pendingCount.value === 0) return;
+    void applyChanges();
+  },
+});
 
 onMounted(async () => {
   await Promise.all([load(), loadMetadata()]);
@@ -360,6 +394,30 @@ watch(
       </button>
 
       <!--
+        Filtering is a mode too, and it wears the same surface Edit data does
+        while a filter is in force — so closing the bar cannot hide the fact
+        that what you are looking at is a subset.
+      -->
+      <button
+        type="button"
+        class="toolbar__mode focus-fill"
+        :class="{ 'toolbar__mode--on': filterCount > 0 }"
+        :aria-pressed="filterOpen"
+        :aria-expanded="filterOpen"
+        @click="filterOpen = !filterOpen"
+      >
+        <AppIcon
+          name="filter"
+          :size="12"
+        />
+        {{ $t('action.filter') }}
+        <span
+          v-if="filterCount > 0"
+          class="toolbar__count"
+        >{{ filterCount }}</span>
+      </button>
+
+      <!--
         The ledger only exists when there is something in it, and it carries its
         own count so "save" never has to be pressed to find out how much it is
         about to do.
@@ -401,6 +459,8 @@ watch(
         $t('table.imported', { count: imported })
       }}</span>
 
+      <RowIndexToggle />
+
       <button
         type="button"
         class="toolbar__action toolbar__action--icon focus-fill"
@@ -430,22 +490,29 @@ watch(
       <button
         type="button"
         class="toolbar__action focus-fill"
-        :disabled="exporting"
-        @click="exportView"
+        @click="exporting = true"
       >
         <AppIcon
           name="download"
           :size="12"
         />
-        {{ exporting ? $t('table.exporting') : $t('action.export') }}
+        {{ $t('action.export') }}
       </button>
     </div>
 
-    <FilterBar
-      :columns="allColumns"
-      :applied="appliedFilter"
-      @apply="onFilterApplied"
-    />
+    <div
+      class="table-tab__filter"
+      :class="{ 'table-tab__filter--open': filterOpen }"
+    >
+      <div class="table-tab__filter-inner">
+        <FilterBar
+          ref="filterBar"
+          :columns="allColumns"
+          :applied="appliedFilter"
+          @apply="onFilterApplied"
+        />
+      </div>
+    </div>
 
     <p
       v-if="error"
@@ -464,12 +531,20 @@ watch(
       @edit="recordEdit"
     />
 
+    <ExportSheet
+      v-model="exporting"
+      :fields="fields"
+      :rows="rows as readonly Record<string, CellValue>[]"
+      :name="entity.name"
+      :write-file="writeTableToFile"
+    />
+
     <ImportSheet
       v-if="canImport"
       v-model="importing"
       :entity="entity"
       :columns="allColumns"
-      :connection-id="connectionId()"
+      :connection-id="connections.requireId()"
       @done="afterImport"
     />
 
@@ -535,35 +610,13 @@ watch(
 }
 
 /*
- * One row, one rhythm. Everything in it is the same height and the same shape;
- * what differs is how loud each thing is — the edit switch carries a surface
- * when it is on, the actions stay quiet until reached for, and only a
- * destructive-or-committing action is ever filled.
+ * The row's shape, its heights and its hover come from `styles/controls.css`.
+ * They were copied here as well, which is exactly the drift that file exists to
+ * prevent — two definitions of one bar, kept in agreement by hand.
  */
-
-.toolbar__mode,
-.toolbar__action {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--gap-tight);
-  height: var(--field-h);
-  padding-inline: var(--gap);
-  border-radius: var(--control-radius);
-  color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
-  font-size: 0.75rem;
-  font-weight: 500;
-  white-space: nowrap;
-  transition:
-    background-color var(--t-hover) var(--ease-out),
-    color var(--t-hover) var(--ease-out);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .toolbar__action:not(:disabled):hover,
-  .toolbar__mode:not(.toolbar__mode--on):not(:disabled):hover {
-    background-color: var(--fill-4);
-    color: var(--color-base-content);
-  }
+.table-tab > .toolbar {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--separator);
 }
 
 .toolbar__pending {
@@ -572,7 +625,7 @@ watch(
   gap: var(--gap-hair);
   padding-inline-start: var(--gap);
   margin-inline-start: var(--gap-tight);
-  border-inline-start: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  border-inline-start: 1px solid var(--separator);
 }
 
 .toolbar__badge {
@@ -588,6 +641,55 @@ watch(
   font-weight: 600;
 }
 
+/*
+ * The ledger's badge is amber because unsaved writes are a thing to be warned
+ * about. A filter is not — it is a mode you chose — so its count borrows the
+ * mode's own colour rather than shouting in a colour that means "unsaved".
+ */
+.toolbar__count {
+  display: grid;
+  place-items: center;
+  min-width: 1rem;
+  height: 1rem;
+  padding-inline: 0.1875rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, currentColor 18%, transparent);
+  color: inherit;
+  font-size: 0.625rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The bar grows out of the toolbar it was summoned from rather than appearing
+ * whole, and the grid below slides by exactly the bar's height so the eye
+ * follows the rows it was reading instead of re-finding them.
+ *
+ * A `0fr` to `1fr` row track is what makes that animatable without anyone
+ * measuring the bar first — its natural height is whatever its conditions need,
+ * and a hardcoded max-height would either clip three conditions or coast
+ * through empty space on the way to one.
+ */
+.table-tab__filter {
+  display: grid;
+  grid-template-rows: 0fr;
+  flex: 0 0 auto;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--t-pop) var(--ease-out),
+    opacity var(--t-pop) var(--ease-out);
+}
+
+.table-tab__filter--open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.table-tab__filter-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
 .toolbar__done {
   font-size: 0.625rem;
   padding: 1px 7px;
@@ -601,14 +703,7 @@ watch(
   font-size: 0.75rem;
 }
 
-.tabstatus {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-loose);
-  white-space: nowrap;
-}
-
-.tabstatus__item,
+/* The page indicator reads as a status item; it just is not one structurally. */
 .tabstatus__page {
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
@@ -635,18 +730,5 @@ watch(
     opacity: 0;
     transform: translateY(3px);
   }
-}
-
-.tabstatus__badge {
-  display: grid;
-  place-items: center;
-  min-width: 1.125rem;
-  height: 1.125rem;
-  padding-inline: 0.25rem;
-  border-radius: 999px;
-  background: var(--color-warning);
-  color: var(--color-warning-content);
-  font-size: 0.625rem;
-  font-weight: 600;
 }
 </style>

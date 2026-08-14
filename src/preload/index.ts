@@ -12,6 +12,7 @@ import {
   DIALOG_CHANNELS,
   HOST_CHANNELS,
   WINDOW_CHANNELS,
+  type Appearance,
   type DialogApi,
   type HostBridge,
   type WindowApi,
@@ -26,6 +27,8 @@ const windowApi: WindowApi = {
   toggleMaximize: () => ipcRenderer.send(WINDOW_CHANNELS.toggleMaximize),
   close: () => ipcRenderer.send(WINDOW_CHANNELS.close),
   isMaximized: () => ipcRenderer.invoke(WINDOW_CHANNELS.isMaximized) as Promise<boolean>,
+  setAppearance: (appearance: Appearance) =>
+    ipcRenderer.send(WINDOW_CHANNELS.setAppearance, appearance),
   onMaximizedChanged: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, maximized: boolean) =>
       listener(maximized);

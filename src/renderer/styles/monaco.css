@@ -1,0 +1,238 @@
+/*
+ * Monaco's chrome, brought into the interface.
+ *
+ * The editor's *text* is themed through `monaco.editor.defineTheme`, which is
+ * plain colour data. Its widgets — find and replace, suggestions, the context
+ * menu, hovers — get their colours from there too but their *shape* from
+ * Monaco's own stylesheet: square corners, no shadow, its own hover fills. Left
+ * alone they read as a different application pasted into the pane.
+ *
+ * Global rather than scoped, and this is not a shortcut. The suggest widget,
+ * the context menu and hovers are appended to `document.body`, outside the
+ * component that created the editor, so a scoped rule cannot reach them.
+ */
+
+/*
+ * The editor draws its own focus, and nothing else may.
+ *
+ * Monaco takes input through a `div.native-edit-context` positioned over the
+ * caret's line and spanning the editor's width. It is focusable, so the app's
+ * global `:focus-visible` rule painted a two-pixel accent outline with a
+ * corner radius around it — a violet rounded box that appeared over the current
+ * line and followed the caret down the file. It read as a line highlight
+ * someone had drawn as an outline, which is exactly what it looked like and
+ * not at all what it was.
+ */
+.monaco-editor .native-edit-context,
+.monaco-editor textarea.ime-text-area,
+.monaco-editor textarea.inputarea,
+.monaco-editor .view-lines:focus-visible,
+.monaco-editor .monaco-scrollable-element:focus-visible {
+  outline: none !important;
+  border-radius: 0 !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Find and replace.
+ * ------------------------------------------------------------------------- */
+
+/*
+ * A floating bar, rounded on every corner.
+ *
+ * It was squared along the top and rounded along the bottom, which is the right
+ * shape for something attached to an edge — and Monaco does not attach it. It
+ * hangs a little below the top of the pane and a little in from the right, so
+ * two square corners sat in open space with nothing to be flush against, which
+ * reads as a clipping fault rather than as a decision.
+ *
+ * The width is capped because Monaco sizes it to the pane: at a wide window it
+ * became a mostly-empty slab with a field at one end and a count at the other.
+ */
+.monaco-editor .find-widget {
+  max-width: min(34rem, calc(100% - 2rem));
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-box);
+  box-shadow: var(--elev-popover);
+}
+
+/*
+ * No vertical padding here, however much it would like some.
+ *
+ * Monaco positions the collapse toggle absolutely against the widget's own box
+ * and lays the rest of the row out in flow. Padding moves one and not the
+ * other, so a four-pixel breathing space put the chevron three and a half
+ * pixels above every other control in the bar.
+ */
+
+/* Monaco marks the widget's left edge with a heavy bar; the shadow and the
+   border already separate it from the code behind. */
+.monaco-editor .find-widget .monaco-sash {
+  display: none;
+}
+
+/*
+ * The close button, centred.
+ *
+ * Monaco pins it with a hardcoded `top: 5px`, which lands two and a half pixels
+ * above the middle of the bar. Every other control in the row is centred
+ * exactly, so the one that is not is the one the eye goes to.
+ */
+.monaco-editor .find-widget > .button.codicon-widget-close {
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+}
+
+/*
+ * The text fields, wearing the shape every other field in the app has.
+ * Monaco draws its own 1px box and its own focus outline in the wrong blue.
+ */
+.monaco-editor .find-widget .monaco-inputbox {
+  border-radius: var(--radius-field);
+  background: color-mix(in oklab, var(--color-base-100) 80%, transparent);
+}
+
+.monaco-editor .find-widget .monaco-inputbox > .ibwrapper > .input {
+  font-size: 0.8125rem;
+}
+
+/*
+ * Focus lifts the field rather than drawing a hard rule around it — the same
+ * soft ring every other field in the app gets, instead of Monaco's 2px border
+ * in a blue of its own choosing.
+ */
+.monaco-editor .find-widget .monaco-inputbox.synthetic-focus,
+.monaco-editor .find-widget .monaco-inputbox:focus-within {
+  outline: none !important;
+  border: 1px solid var(--color-primary) !important;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 24%, transparent);
+}
+
+/*
+ * The toggles — case, whole word, regex — and the actions beside them. Quiet
+ * until reached for, a tonal surface when switched on: the same two states
+ * every other control in the app has.
+ */
+.monaco-editor .find-widget .monaco-custom-toggle,
+.monaco-editor .find-widget .button {
+  border: 0;
+  border-radius: var(--radius-field);
+}
+
+/*
+ * The in-field toggles, centred on the field rather than on Monaco's margins.
+ *
+ * Their container is pinned with a hardcoded `top: 3px` inside a 25px field
+ * holding a 20px control — half a pixel low, which is a whole one on a retina
+ * display and enough to see when everything beside it is exact.
+ */
+.monaco-editor .find-widget .monaco-findInput .controls {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/*
+ * The match count reads on the same line as the arrows beside it. Monaco pads
+ * it two pixels at the top and none at the bottom, so the box centred while the
+ * text inside it sat low.
+ */
+.monaco-editor .find-widget .matchesCount {
+  display: flex;
+  align-items: center;
+  padding-block: 0;
+}
+
+.monaco-editor .find-widget .monaco-custom-toggle:hover,
+.monaco-editor .find-widget .button:not(.disabled):hover {
+  background-color: var(--fill-4);
+}
+
+.monaco-editor .find-widget .monaco-custom-toggle.checked {
+  background-color: color-mix(in oklab, var(--color-primary) 16%, transparent);
+  color: var(--color-primary-text, var(--color-primary));
+}
+
+/*
+ * The collapse chevron, drawn rather than typed.
+ *
+ * Its codepoint is `.notdef` in the codicon build this version ships — every
+ * other icon in the widget resolves, that one renders as a filled box.
+ *
+ * Masked rather than bordered. A rotated corner is the cheaper way to draw a
+ * chevron, but the button's own rules reach the pseudo-element: a 16px radius
+ * turned it into a dot, and a four-sided border shorthand turned it into a
+ * diamond. A mask is immune to both — it takes its shape from the SVG and its
+ * colour from `currentColor`, and nothing upstream can round or outline it.
+ *
+ * The same path the app's own chevron icon uses, inline so it stays bundled.
+ */
+.monaco-editor .find-widget .button.codicon-find-collapsed::before,
+.monaco-editor .find-widget .button.codicon-find-expanded::before {
+  content: '';
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  background-color: currentColor;
+  -webkit-mask: var(--monaco-chevron) center / 0.625rem no-repeat;
+  mask: var(--monaco-chevron) center / 0.625rem no-repeat;
+  transition: transform var(--t-pop) var(--ease-out);
+}
+
+.monaco-editor .find-widget {
+  --monaco-chevron: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 3.5L10.5 8L6 12.5'/></svg>");
+}
+
+/* Pointing down once the replace row is open, because down is where it went. */
+.monaco-editor .find-widget .button.codicon-find-expanded::before {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .monaco-editor .find-widget .button.codicon-find-collapsed::before,
+  .monaco-editor .find-widget .button.codicon-find-expanded::before {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Suggestions, hovers and the context menu.
+ * ------------------------------------------------------------------------- */
+
+.monaco-editor .suggest-widget,
+.monaco-editor .monaco-hover,
+.monaco-menu-container {
+  border-radius: var(--radius-box);
+  border: 1px solid var(--separator);
+  box-shadow: var(--elev-popover);
+  overflow: hidden;
+}
+
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row {
+  border-radius: var(--radius-field);
+}
+
+.monaco-menu .monaco-action-bar.vertical .action-item .action-menu-item {
+  border-radius: var(--radius-field);
+}
+
+/* ---------------------------------------------------------------------------
+ * Scrollbars, matched to the ones everywhere else in the window.
+ * ------------------------------------------------------------------------- */
+
+.monaco-editor .scrollbar > .slider {
+  border-radius: 6px;
+}
+
+/*
+ * Monaco animates its widgets in and out with its own curves and durations.
+ * Reduced motion has to reach them too — the media query in `base.css` only
+ * covers transitions, and these are keyframe animations.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .monaco-editor .find-widget,
+  .monaco-editor .suggest-widget,
+  .monaco-editor .monaco-hover {
+    transition: none !important;
+    animation: none !important;
+  }
+}

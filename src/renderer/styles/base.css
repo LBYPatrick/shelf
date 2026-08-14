@@ -67,6 +67,32 @@ body {
   }
 }
 
+/*
+ * Custom properties that are animated have to declare their type, or the
+ * browser interpolates them as a discrete swap at the halfway point rather than
+ * sliding. Registered here rather than beside their use because `@property` is
+ * a document-level registration however deeply it is nested.
+ */
+@property --sheet-edge-top {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+/*
+ * Present to a screen reader, absent to everything else. A utility rather than
+ * a component's private rule: two components need it, and a third copy of four
+ * lines of clipping is how they drift.
+ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* The whole window is a drag surface except where we opt out. */
 .drag-region {
   -webkit-app-region: drag;

@@ -20,6 +20,7 @@
     "clear": "Xoá",
     "discard": "Bỏ",
     "import": "Nhập",
+    "filter": "Bộ lọc",
     "export": "Xuất",
     "run": "Chạy",
     "runCurrent": "Chạy câu hiện tại",
@@ -101,7 +102,6 @@
     "noMatch": "Không có gì khớp với bộ lọc.",
     "loadingColumns": "Đang tải các cột…",
     "noColumns": "Không có cột",
-    "structureOf": "Cấu trúc của {{name}}",
     "disconnect": "{{version}} — nhấp để ngắt kết nối",
     "readOnly": "chỉ đọc",
     "disconnectHint": "nhấp để ngắt kết nối"
@@ -114,7 +114,6 @@
     "previousPage": "Trang trước",
     "nextPage": "Trang sau",
     "lastPage": "Trang cuối",
-    "exporting": "Đang xuất…",
     "imported": "đã nhập {{count}} hàng",
     "discardChanges": "Bỏ {{count}} thay đổi chưa lưu?",
     "nullValue": "NULL",
@@ -140,7 +139,9 @@
     "showingFirst": "chỉ hiện {{count}} hàng đầu",
     "planUnreadable": "Shelf không đọc được kế hoạch mà engine này trả về.",
     "explainHint": "Xem cách cơ sở dữ liệu chạy truy vấn này",
-    "saveHint": "Lưu truy vấn này"
+    "saveHint": "Lưu truy vấn này",
+    "caret": "Dòng {{line}}, Cột {{column}} / {{lines}}",
+    "selected": "Đã chọn {{count}} ký tự"
   },
   "structure": {
     "columns": "Cột",
@@ -185,6 +186,12 @@
     "accentHelp": "Mỗi màu được điều chỉnh cho đến khi chữ trên nền đó vẫn đọc được.",
     "customHue": "Sắc độ tuỳ chọn",
     "density": "Mật độ",
+    "materials": "Vật liệu",
+    "opacity": "Độ đục",
+    "opacityHelp": "Các bảng kính đặc đến mức nào. 1.00 là đục hoàn toàn; ở giữa là mặc định.",
+    "blur": "Độ mờ",
+    "blurHelp": "Bán kính của bề mặt tiêu chuẩn. Bề mặt dày hơn sẽ nhân theo; 0 sẽ tắt hiệu ứng kính.",
+    "resetMaterials": "Đặt lại vật liệu",
     "compact": "Gọn",
     "default": "Mặc định",
     "comfortable": "Thoáng",
@@ -269,5 +276,47 @@
     "listHint": "a, b, c",
     "addCondition": "Thêm điều kiện",
     "removeRow": "Xóa điều kiện"
+  },
+  "export": {
+    "title": "Xuất kết quả",
+    "delivery": "Gửi tới",
+    "format": "Định dạng",
+    "toFile": "Tệp",
+    "toClipboard": "Bảng nhớ tạm",
+    "fileHint": "Máy chủ ghi thẳng ra đĩa — toàn bộ kết quả, dù lớn đến đâu.",
+    "clipboardHint": "Sao chép {{count}} hàng đang tải.",
+    "fileUnavailable": "Hãy chạy truy vấn trước — tệp được ghi bằng cách chạy lại.",
+    "copied": "Đã sao chép {{count}} hàng.",
+    "written": "Đã ghi.",
+    "working": "Đang xử lý…",
+    "run": "Xuất"
+  },
+  "grid": {
+    "oneBased": "Bắt đầu từ 1",
+    "zeroBased": "Bắt đầu từ 0",
+    "indexHint": "Số hàng bên trái bắt đầu từ 1 hay từ 0."
+  },
+  "activity": {
+    "working": "Đang chạy…",
+    "done": "Đã hoàn tất.",
+    "failed": "Đã thất bại."
+  },
+  "menu": {
+    "copyName": "Sao chép tên bảng",
+    "quickDocs": "Tài liệu nhanh",
+    "properties": "Thuộc tính",
+    "exportData": "Xuất dữ liệu ra tệp…",
+    "actionsFor": "Thao tác cho {{name}}"
+  },
+  "properties": {
+    "rows": "Số hàng",
+    "data": "Dữ liệu",
+    "indexes": "Chỉ mục",
+    "key": "KHOÁ",
+    "required": "bắt buộc",
+    "noSchema": "Không có schema",
+    "rowsCount": "{{count}} hàng",
+    "copySelect": "Sao chép SELECT",
+    "copied": "Đã sao chép"
   }
 }

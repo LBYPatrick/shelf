@@ -16,7 +16,6 @@ import HistoryList from '../components/sidebar/HistoryList.vue';
 import SavedQueryList from '../components/sidebar/SavedQueryList.vue';
 import ErdTab from '../components/tabs/ErdTab.vue';
 import QueryTab from '../components/tabs/QueryTab.vue';
-import StructureTab from '../components/tabs/StructureTab.vue';
 import TableTab from '../components/tabs/TableTab.vue';
 import SettingsSheet from '../components/settings/SettingsSheet.vue';
 import AppIcon from '../components/ui/AppIcon.vue';
@@ -216,7 +215,10 @@ onBeforeUnmount(() => stopPersisting?.());
         @collapse-toggle="sidebarCollapsed = true"
       />
 
-      <section class="content panel-content">
+      <section
+        class="content panel-content"
+        :class="{ 'content--under-controls': sidebarCollapsed }"
+      >
         <TabStrip />
 
         <div class="content__body">
@@ -237,11 +239,6 @@ onBeforeUnmount(() => stopPersisting?.());
                 v-else-if="tab.kind === 'query'"
                 v-model:text="tab.text!"
                 :tab-id="tab.id"
-                :active="tab.id === tabs.activeId"
-              />
-              <StructureTab
-                v-else-if="tab.kind === 'structure' && tab.entity"
-                :entity="tab.entity"
                 :active="tab.id === tabs.activeId"
               />
               <ErdTab
@@ -316,49 +313,61 @@ onBeforeUnmount(() => stopPersisting?.());
   align-items: center;
   gap: var(--gap-hair);
   width: var(--rail-w);
-  /* Clears the traffic lights, which float over this column on macOS. */
-  padding-top: var(--rail-top, var(--gap-tight));
   /*
-   * The window controls are wider than this column, so they overhang into the
-   * sidebar. Painting the rail's own darker shade all the way up puts a hard
-   * vertical edge straight through them — half of each control on one surface,
-   * half on another. One gradient with a hard stop gives the strip the
-   * sidebar's shade and the rest the rail's, without stacking a second
-   * translucent layer to do it.
+   * Clears the traffic lights, then centres the first icon in the same band the
+   * connection row beside it occupies. The two used to be positioned
+   * independently and landed four pixels apart — close enough to look like a
+   * mistake rather than a choice, which is exactly how it read.
    */
-  background-color: transparent;
-  background-image: linear-gradient(
-    to bottom,
-    var(--panel-strip) 0 var(--rail-top, 0px),
-    var(--mat-bg) var(--rail-top, 0px)
+  /* One source for where the column's contents begin, so the travelling
+     marker cannot end up on a different line from the icons it marks. */
+  --rail-content-top: calc(
+    var(--rail-top, var(--gap-tight)) + (var(--header-h) - var(--rail-item)) / 2
   );
+  padding-top: var(--rail-content-top);
+  /*
+   * No banding. The window controls are wider than this column and overhang the
+   * sidebar, so a strong shade difference here draws an edge straight through
+   * them — but giving the top a *different* shade to hide that only traded a
+   * vertical seam for a horizontal one, which then cut across the rail directly
+   * above the first icon.
+   *
+   * So the rail and the sidebar are near-neighbours in tone instead: enough of
+   * a step to read as a separate column, too little to draw a line under the
+   * traffic lights. The recession that matters is between the glass columns and
+   * the opaque content pane beside them.
+   *
+   * The background itself comes from `panel-recessed` in `materials.css`. It
+   * was restated here as well, which is how a scoped rule ended up outranking
+   * the material system it was only meant to agree with.
+   */
 }
 
 /*
- * The divider starts below the window controls. A full-height border would run
- * straight through them, which reads as the chrome being drawn over the OS.
+ * No divider. The rail, the sidebar and the content pane already differ in
+ * tone, and a line between two surfaces that are visibly different is a third
+ * value competing with both — on the dark theme it was the brightest thing in
+ * the window, brighter than either panel it separated. Surfaces that differ
+ * separate themselves; a hairline is for surfaces that do not.
  */
-.rail::after {
-  content: '';
-  position: absolute;
-  inset-block: var(--rail-top, var(--gap-tight)) 0;
-  inset-inline-end: 0;
-  width: 1px;
-  background: color-mix(in oklab, var(--color-base-content) 8%, transparent);
-}
 
 /* One marker for all three, moved rather than redrawn. */
 .rail__marker {
   position: absolute;
-  top: var(--rail-top, var(--gap-tight));
+  top: var(--rail-content-top);
   left: 50%;
   /* Matches the item exactly; a marker even a pixel larger reads as a stray
      highlight sitting behind the icon rather than as the icon being selected. */
-  margin-left: -1rem;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.5rem;
-  background: color-mix(in oklab, var(--color-base-content) 9%, transparent);
+  margin-left: calc(var(--rail-item) / -2);
+  width: var(--rail-item);
+  height: var(--rail-item);
+  border-radius: 0.6rem;
+  /*
+   * The marker is the whole indicator. The selected item used to paint its own
+   * surface as well, so there were two highlights for one selection — which is
+   * only invisible for as long as they line up exactly, and they did not.
+   */
+  background: color-mix(in oklab, var(--color-primary) 16%, transparent);
   transition: transform var(--t-pop) var(--ease-out);
 }
 
@@ -366,8 +375,8 @@ onBeforeUnmount(() => stopPersisting?.());
   position: relative;
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
+  width: var(--rail-item);
+  height: var(--rail-item);
   border-radius: 0.6rem;
   color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
   transition:
@@ -380,7 +389,7 @@ onBeforeUnmount(() => stopPersisting?.());
 }
 
 .rail__item:hover {
-  background: color-mix(in oklab, var(--color-base-content) 8%, transparent);
+  background: var(--fill-3);
   color: var(--color-base-content);
 }
 
@@ -391,7 +400,7 @@ onBeforeUnmount(() => stopPersisting?.());
 }
 
 .rail__item--on {
-  background: color-mix(in oklab, var(--color-primary) 18%, transparent);
+  /* The marker behind it supplies the surface. */
   color: var(--color-primary-text, var(--color-primary));
 }
 
@@ -436,15 +445,6 @@ onBeforeUnmount(() => stopPersisting?.());
   pointer-events: none;
 }
 
-.sidebar::after {
-  content: '';
-  position: absolute;
-  inset-block: var(--rail-top, var(--gap-tight)) 0;
-  inset-inline-end: 0;
-  width: 1px;
-  background: color-mix(in oklab, var(--color-base-content) 8%, transparent);
-}
-
 /*
  * The sidebar's own rows sit on the same rhythm as the tree beneath them. Two
  * different vertical scales in one column is what made the head, the counts and
@@ -465,7 +465,7 @@ onBeforeUnmount(() => stopPersisting?.());
   padding-inline: var(--gap);
   border-radius: var(--radius-field);
   border: 1px solid transparent;
-  background: color-mix(in oklab, var(--color-base-content) 6%, transparent);
+  background: var(--fill-4);
   color: var(--color-base-content);
   font-size: 0.75rem;
 }
@@ -502,6 +502,16 @@ onBeforeUnmount(() => stopPersisting?.());
 .sidebar__todo {
   padding: var(--gap-loose);
   color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+}
+
+/*
+ * With the sidebar collapsed the content pane reaches the window's leading
+ * edge, and the traffic lights float over it — which put the first tab
+ * underneath them, unreachable and overlapping. The strip keeps their width
+ * clear, less whatever the rail beside it already covers.
+ */
+.content--under-controls :deep(.strip) {
+  padding-inline-start: max(0px, calc(var(--controls-inset, 0px) - var(--rail-w)));
 }
 
 .content {

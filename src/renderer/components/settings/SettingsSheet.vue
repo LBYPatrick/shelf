@@ -12,9 +12,11 @@ import { LOCALES } from '../../i18n';
 import { useTranslation } from 'i18next-vue';
 import { useTheme } from '../../composables/useTheme';
 import { useSettings } from '../../stores/settings';
-import { oklch } from '../../styles/theme';
+import { DEFAULT_MATERIALS, MATERIAL_LIMITS, oklch } from '../../styles/theme';
+import CheckBox from '../ui/CheckBox.vue';
 import FormField from '../ui/FormField.vue';
 import PressButton from '../ui/PressButton.vue';
+import RangeSlider from '../ui/RangeSlider.vue';
 import SegmentedControl from '../ui/SegmentedControl.vue';
 import SelectMenu from '../ui/SelectMenu.vue';
 import Sheet from '../ui/Sheet.vue';
@@ -54,6 +56,32 @@ const encodings = computed(() => [
  * position on it lands on a shade of the one beside it. Eight decided colours
  * are a choice; three hundred and sixty are a chore.
  */
+/*
+ * The slider works in hundredths so it can step in twentieths without carrying
+ * floating-point dust into the store; the label puts the decimal back.
+ */
+const opacity = computed({
+  get: () => Math.round(theme.materials.opacity * 100),
+  set: (value: number) => {
+    theme.materials = { ...theme.materials, opacity: value / 100 };
+  },
+});
+
+const blur = computed({
+  get: () => theme.materials.blur,
+  set: (value: number) => {
+    theme.materials = { ...theme.materials, blur: value };
+  },
+});
+
+const OPACITY_FLOOR = Math.round(MATERIAL_LIMITS.opacity.min * 100);
+
+const materialsAreDefault = computed(
+  () =>
+    theme.materials.opacity === DEFAULT_MATERIALS.opacity &&
+    theme.materials.blur === DEFAULT_MATERIALS.blur
+);
+
 const groups = computed(() => [...new Set(BINDINGS.map((binding) => binding.group))]);
 const bindingsIn = (group: string) => BINDINGS.filter((binding) => binding.group === group);
 
@@ -110,6 +138,55 @@ const languageOptions = computed(() => [
       </FormField>
     </section>
 
+    <!--
+      Materials get their own section rather than sitting under Appearance.
+      They are the one pair of settings whose effect you can watch happen — this
+      sheet is itself a piece of glass — and burying them under the accent
+      swatches would put the demonstration off screen while you drag.
+    -->
+    <section class="section">
+      <h3 class="type-label section__title">
+        {{ $t('settings.materials') }}
+      </h3>
+
+      <FormField
+        :label="$t('settings.opacity')"
+        :help="$t('settings.opacityHelp')"
+      >
+        <RangeSlider
+          v-model="opacity"
+          :min="OPACITY_FLOOR"
+          :max="100"
+          :step="5"
+          :aria-label="$t('settings.opacity')"
+          :display="(opacity / 100).toFixed(2)"
+        />
+      </FormField>
+
+      <FormField
+        :label="$t('settings.blur')"
+        :help="$t('settings.blurHelp')"
+      >
+        <RangeSlider
+          v-model="blur"
+          :min="MATERIAL_LIMITS.blur.min"
+          :max="MATERIAL_LIMITS.blur.max"
+          :step="2"
+          :aria-label="$t('settings.blur')"
+          :display="`${blur}px`"
+        />
+      </FormField>
+
+      <PressButton
+        v-if="!materialsAreDefault"
+        class="section__reset"
+        size="sm"
+        @click="theme.resetMaterials"
+      >
+        {{ $t('settings.resetMaterials') }}
+      </PressButton>
+    </section>
+
     <section class="section">
       <h3 class="type-label section__title">
         {{ $t('settings.language') }}
@@ -141,7 +218,7 @@ const languageOptions = computed(() => [
         <input
           :id="id"
           v-model.number="settings.values.pageSize"
-          class="number"
+          class="textfield settings__number"
           type="number"
           min="10"
           max="1000"
@@ -157,7 +234,7 @@ const languageOptions = computed(() => [
         <input
           :id="id"
           v-model.number="settings.values.maxRows"
-          class="number"
+          class="textfield settings__number"
           type="number"
           min="1000"
           max="1000000"
@@ -194,7 +271,7 @@ const languageOptions = computed(() => [
         <input
           :id="id"
           v-model.number="settings.values.editorFontSize"
-          class="number"
+          class="textfield settings__number"
           type="number"
           min="10"
           max="24"
@@ -265,7 +342,12 @@ const languageOptions = computed(() => [
 }
 
 .section + .section {
-  border-top: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+  border-top: 1px solid var(--separator);
+}
+
+/* The section is a column, so a button in it stretches unless told not to. */
+.section__reset {
+  align-self: flex-start;
 }
 
 .section__title {
@@ -301,8 +383,8 @@ const languageOptions = computed(() => [
 .keys__combo kbd {
   padding: 1px 6px;
   border-radius: 4px;
-  border: 1px solid color-mix(in oklab, var(--color-base-content) 18%, transparent);
-  background: color-mix(in oklab, var(--color-base-content) 5%, transparent);
+  border: 1px solid var(--separator-strong);
+  background: var(--fill-4);
   font-family: var(--font-ui);
   font-size: 0.625rem;
 }
@@ -340,26 +422,9 @@ const languageOptions = computed(() => [
  * range rather than requiring you to guess what a number means.
  */
 
-.select {
-  min-width: 12rem;
-  height: var(--field-h);
-  padding-inline: var(--gap);
-  border-radius: var(--radius-field);
-  border: 1px solid color-mix(in oklab, var(--color-base-content) 14%, transparent);
-  background: color-mix(in oklab, var(--color-base-100) 80%, transparent);
-  color: var(--color-base-content);
-  font-size: 0.8125rem;
-}
-
-.number {
-  width: 8rem;
-  height: var(--field-h);
-  padding-inline: var(--gap);
-  border-radius: var(--radius-field);
-  border: 1px solid color-mix(in oklab, var(--color-base-content) 16%, transparent);
-  background: color-mix(in oklab, var(--color-base-100) 70%, transparent);
-  color: var(--color-base-content);
-  font-size: 0.8125rem;
+/* A row count is four digits. A field eight characters wide invites eight. */
+.settings__number {
+  width: 6rem;
 }
 
 .check {
@@ -367,15 +432,6 @@ const languageOptions = computed(() => [
   align-items: center;
   gap: var(--gap);
   font-size: 0.8125rem;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {

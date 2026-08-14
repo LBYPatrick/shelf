@@ -35,6 +35,20 @@ const PATHS: Record<string, string> = {
   // Import mirrors export: the same tray, the arrow going the other way.
   upload: 'M8 10.5v-7M5 6.5L8 3.5l3 3M3.5 13h9',
   pencil: 'M11.5 2.5l2 2-7.5 7.5-2.5.5.5-2.5zM10 4l2 2',
+  // A funnel: three rules narrowing to the stem, which is what a filter does.
+  filter: 'M2.5 3.5h11L9.5 8.5v4l-3 1.5v-5.5z',
+  // Three dots. Vertical, because it sits at the end of a row and a horizontal
+  // one would read as an ellipsis in the label rather than as a control.
+  more: 'M8 3.6v.1M8 8v.1M8 12.4v.1',
+  copy: 'M5.5 5.5h7v7h-7zM3.5 10.5v-7h7',
+  // A cylinder, seen from slightly above: the shape a database has had since
+  // before any of this, and the one nobody has to be taught.
+  database:
+    'M8 2.5c2.8 0 5 .8 5 1.8S10.8 6 8 6 3 5.2 3 4.2 5.2 2.5 8 2.5zM3 4.2v7.6c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4.2M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8',
+  // A tab and a body, which is what every folder has been for forty years.
+  folder:
+    'M2.5 5.5V4a1 1 0 0 1 1-1h2.3l1.2 1.5h5.5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z',
+  info: 'M8 7.5v4M8 4.6v.1M8 14a6 6 0 1 0 0-12 6 6 0 0 0 0 12z',
 };
 
 withDefaults(
