@@ -87,19 +87,41 @@ before considering a change finished.
   much fits on screen, it never shrinks a target below the floor. The grid is
   the single exception, documented where it is declared. iOS's 44pt was tried
   and is the wrong number for a pointer-driven app this dense.
-- **The rail and the sidebar are one surface.** The window controls are wider
-  than the rail and overhang the sidebar, so their boundary runs directly under
-  the traffic lights; any difference in tone draws a line through them. Matching
-  alphas does not help either — two surfaces sharing a tint but differing in
-  opacity diverge by an amount that depends on what is behind the window. The
-  depth comes from glass columns against the opaque content pane instead.
-- **Nothing may draw a boundary under the window controls.** They are wider than
-  the rail and overhang the sidebar, so a divider or a shade change at that seam
-  cuts each control in half. The rail wears the sidebar's shade for exactly the
-  height of the strip, via one gradient rather than a second stacked layer.
+- **One bar spans the window, and the window controls sit on it.** The tab strip
+  is a region of `.topbar`, not a band inside the content pane. This is what
+  makes the controls safe: they are wider than the rail and overhang the
+  sidebar, so while any column boundary reached the top edge it ran directly
+  under them, and every fix moved the seam rather than removing it. Nothing
+  below the bar may be positioned back over it, and no *region* of the bar may
+  carry a shade of its own — a tint across part of one bar is the same line
+  again. A control's own selected state is not a region; a track behind a group
+  of them is.
+- **The open tab is tonal, and one marker travels between them.** A raised thumb
+  is only legible as raised against the recessed track it came out of, and the
+  bar may not carry a track — so the elevation was a card hovering over nothing,
+  which is how it read. The marker is measured from the active tab's box rather
+  than stepped, because tabs are as wide as their titles.
+- **The rail and the sidebar are one surface.** They are near-neighbours in tone
+  by design; matching alphas does not achieve it, because two surfaces sharing a
+  tint but differing in opacity diverge by an amount that depends on what is
+  behind the window. The depth comes from glass columns against the opaque
+  content pane instead, and from the one rounded corner where the three meet.
 - **Sizes come from the density scale.** Use the `--gap-*`, `--row-h`,
   `--field-h` custom properties rather than fixed pixels, and express spacing in
   `rem` so a larger OS text size scales the layout instead of breaking it.
+- **Escape dismisses the top overlay, and only that one.** Overlays register
+  with `useDismiss` rather than listening themselves. Every one of them used to,
+  at the window and in the capture phase, each for the same good reason — a
+  panel that waits for the key to bubble out of itself stops closing the moment
+  focus lands elsewhere, which is when people reach for Escape. But listeners on
+  one node in one phase all run, and `stopPropagation` does not stop the
+  siblings beside it, so one press collapsed the whole pile.
+- **A pane that comes back the size it left needs no relayout.** The grid's
+  layout is `fitDataStretch`, so a full redraw measures the widest content in
+  every column across every loaded row. Hiding a tab takes its box to zero and
+  showing it brings back exactly the box it had, and the container's observer
+  fires on both edges — so the redraw is guarded on the geometry actually
+  changing, coalesced to one a frame, and only full when the *width* moved.
 - **Feedback lands on `pointerdown`,** not on click.
 - **Anything draggable tracks the pointer one to one,** preserves the grab
   offset, resists at its limits, and hands its release velocity to the spring

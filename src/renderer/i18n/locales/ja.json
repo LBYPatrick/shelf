@@ -88,11 +88,9 @@
     "entities": "オブジェクト",
     "savedQueries": "保存したクエリ",
     "history": "履歴",
-    "filterEntities": "{{noun}}を絞り込み",
     "filterSaved": "保存したクエリを絞り込み",
     "filterHistory": "履歴を絞り込み",
     "shown": "{{count}} 件表示",
-    "hidden": "{{count}} 件非表示",
     "nothingOpen": "何も開いていません",
     "nothingOpenHint": "サイドバーの{{noun}}をダブルクリックするとデータが開きます。クエリを開くこともできます。",
     "newQuery": "新しいクエリ",
@@ -104,7 +102,9 @@
     "noColumns": "列がありません",
     "disconnect": "{{version}} — クリックで切断",
     "readOnly": "読み取り専用",
-    "disconnectHint": "クリックで切断"
+    "disconnectHint": "クリックで切断",
+    "searchEntities": "テーブルを検索",
+    "toggleSidebar": "サイドバーの切り替え"
   },
   "table": {
     "filterPlaceholder": "絞り込み — 例: name like 'A%'",
@@ -119,7 +119,8 @@
     "nullValue": "NULL",
     "emptyValue": "空",
     "editData": "データを編集",
-    "editHint": "オンにするとグリッド上で値を変更できます"
+    "editHint": "オンにするとグリッド上で値を変更できます",
+    "sqlCopied": "{{count}} 件の変更の SQL をコピーしました。"
   },
   "query": {
     "manualCommit": "手動コミット",
@@ -213,7 +214,10 @@
     "wrapLines": "長い行を折り返す",
     "keyboard": "キーボード",
     "keyboardHelp": "ショートカットはデータとして定義されているため上書きできますが、変更用の画面はまだありません。",
-    "resetData": "データ設定をリセット"
+    "resetData": "データ設定をリセット",
+    "primaryRun": "主要な実行操作",
+    "runAll": "エディタ全体",
+    "runCurrent": "カーソル位置のステートメント"
   },
   "palette": {
     "placeholder": "テーブル・タブ・操作を検索…",
@@ -289,12 +293,14 @@
     "copied": "{{count}} 行をコピーしました。",
     "written": "書き出しました。",
     "working": "処理中…",
-    "run": "エクスポート"
+    "run": "エクスポート",
+    "wroteTo": "{{name}} に書き出しました。"
   },
   "grid": {
     "oneBased": "1 始まり",
     "zeroBased": "0 始まり",
-    "indexHint": "左の行番号を 1 と 0 のどちらから始めるか。"
+    "indexHint": "左の行番号を 1 と 0 のどちらから始めるか。",
+    "indexLabel": "行番号"
   },
   "activity": {
     "working": "実行中…",
@@ -306,7 +312,8 @@
     "quickDocs": "クイックドキュメント",
     "properties": "プロパティ",
     "exportData": "データをファイルに書き出す…",
-    "actionsFor": "{{name}} の操作"
+    "actionsFor": "{{name}} の操作",
+    "copiedName": "{{name}} をコピーしました。"
   },
   "properties": {
     "rows": "行数",
@@ -318,5 +325,26 @@
     "rowsCount": "{{count}} 行",
     "copySelect": "SELECT をコピー",
     "copied": "コピーしました"
+  },
+  "host": {
+    "restartedTitle": "接続を再起動しました",
+    "restarted": "データベースを保持していたプロセスが再起動しました。開いていた接続は失われました。再接続してください。",
+    "unavailableTitle": "接続ホストを利用できません",
+    "unavailable": "データベースを開くプロセスを起動できませんでした。Shelf を再起動してください。"
+  },
+  "commands": {
+    "wrapOn": "長い行を折り返す",
+    "wrapOff": "長い行を折り返さない",
+    "sectionCommands": "コマンド",
+    "sectionTables": "テーブル",
+    "sectionActions": "操作",
+    "placeholder": "テーブルを検索、/ でコマンド",
+    "commandPlaceholder": "コマンドを入力",
+    "openHint": "で開く",
+    "commandHint": "でコマンド",
+    "nothing": "一致するものがありません。",
+    "hintPath": "music.album のようなパス、または ^a.*t$ のようなパターン",
+    "someOf": "{{total}} 件中 {{shown}} 件",
+    "tryPath": "別のパスの下に見つかりました:"
   }
 }

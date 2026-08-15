@@ -24,11 +24,12 @@ export const usePlatform = defineStore('platform', () => {
       document.documentElement.dataset['translucency'] = 'none';
     }
 
-    // The traffic lights float over the interface, so the first column of
-    // controls has to start below them.
+    // How tall a band the traffic lights need. The top bar is at least this,
+    // whatever the density scale would otherwise make it, because the controls
+    // are drawn by the OS and do not shrink with the interface.
     document.documentElement.style.setProperty(
-      '--rail-top',
-      value.nativeWindowControls ? '2.5rem' : '0.5rem'
+      '--controls-h',
+      value.nativeWindowControls ? '2.5rem' : '0px'
     );
 
     // How far in from the window's leading edge the controls reach. Anything

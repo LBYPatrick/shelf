@@ -23,6 +23,7 @@ import { host } from '../../lib/host';
 import { useConnections } from '../../stores/connections';
 import { useSettings } from '../../stores/settings';
 import { useActivity } from '../../stores/activity';
+import { useToasts } from '../../stores/toasts';
 import { useHotkeys } from '../../composables/useHotkeys';
 import DataGrid from '../grid/DataGrid.vue';
 import ExportSheet from '../grid/ExportSheet.vue';
@@ -38,6 +39,7 @@ const props = defineProps<{ entity: EntityRef; active: boolean }>();
 const connections = useConnections();
 const settings = useSettings();
 const activity = useActivity();
+const toasts = useToasts();
 const { t } = useTranslation();
 
 /*
@@ -241,6 +243,12 @@ async function previewChanges(): Promise<void> {
     changes: pending.value,
   });
   await navigator.clipboard.writeText(sql);
+  // A clipboard write is invisible by nature: nothing on screen changes, so
+  // without this the button was indistinguishable from a dead one.
+  toasts.show({
+    tone: 'success',
+    message: t('table.sqlCopied', { count: pendingCount.value }),
+  });
 }
 
 /**
@@ -348,7 +356,12 @@ onMounted(async () => {
   await Promise.all([load(), loadMetadata()]);
 });
 
-// Becoming visible is the moment the grid can finally measure itself.
+/*
+ * Becoming visible is the moment the grid can finally measure itself. The
+ * container's own observer sees the same edge, so this is the belt to its
+ * braces — free now that a redraw against an unchanged box does nothing, and
+ * worth keeping because the alternative failure is a pane that never builds.
+ */
 watch(
   () => props.active,
   (isActive) => {

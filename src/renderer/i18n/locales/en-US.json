@@ -88,11 +88,9 @@
     "entities": "Entities",
     "savedQueries": "Saved queries",
     "history": "History",
-    "filterEntities": "Filter {{noun}}s",
     "filterSaved": "Filter saved queries",
     "filterHistory": "Filter history",
     "shown": "{{count}} shown",
-    "hidden": "{{count}} hidden",
     "nothingOpen": "Nothing open",
     "nothingOpenHint": "Double-click a {{noun}} in the sidebar to see its data, or open a query.",
     "newQuery": "New query",
@@ -104,7 +102,9 @@
     "noColumns": "No columns",
     "disconnect": "{{version}} — click to disconnect",
     "readOnly": "read-only",
-    "disconnectHint": "click to disconnect"
+    "disconnectHint": "click to disconnect",
+    "searchEntities": "Search tables",
+    "toggleSidebar": "Toggle sidebar"
   },
   "table": {
     "filterPlaceholder": "Filter — e.g. name like 'A%'",
@@ -119,7 +119,8 @@
     "nullValue": "NULL",
     "emptyValue": "empty",
     "editData": "Edit data",
-    "editHint": "Turn on to change values in the grid"
+    "editHint": "Turn on to change values in the grid",
+    "sqlCopied": "Copied the SQL for {{count}} changes."
   },
   "query": {
     "manualCommit": "Manual commit",
@@ -213,7 +214,10 @@
     "wrapLines": "Wrap long lines",
     "keyboard": "Keyboard",
     "keyboardHelp": "Shortcuts are defined as data, so they are already overridable — the editor for changing them is not built yet.",
-    "resetData": "Reset data settings"
+    "resetData": "Reset data settings",
+    "primaryRun": "Primary run action",
+    "runAll": "Whole editor",
+    "runCurrent": "Statement under the cursor"
   },
   "palette": {
     "placeholder": "Search tables, tabs and actions…",
@@ -289,12 +293,14 @@
     "copied": "Copied {{count}} rows.",
     "written": "Written.",
     "working": "Working…",
-    "run": "Export"
+    "run": "Export",
+    "wroteTo": "Wrote {{name}}."
   },
   "grid": {
     "oneBased": "1-based",
     "zeroBased": "0-based",
-    "indexHint": "Whether the row numbers down the left start at 1 or at 0."
+    "indexHint": "Whether the row numbers down the left start at 1 or at 0.",
+    "indexLabel": "Row numbers"
   },
   "activity": {
     "working": "Working…",
@@ -306,7 +312,8 @@
     "quickDocs": "Quick docs",
     "properties": "Properties",
     "exportData": "Export data to file…",
-    "actionsFor": "Actions for {{name}}"
+    "actionsFor": "Actions for {{name}}",
+    "copiedName": "Copied {{name}}."
   },
   "properties": {
     "rows": "Rows",
@@ -318,5 +325,26 @@
     "rowsCount": "{{count}} rows",
     "copySelect": "Copy SELECT",
     "copied": "Copied"
+  },
+  "host": {
+    "restartedTitle": "Connection restarted",
+    "restarted": "The process holding your databases restarted. Open connections were lost; reconnect to carry on.",
+    "unavailableTitle": "Connection host unavailable",
+    "unavailable": "The process that opens databases could not be started. Restart Shelf to try again."
+  },
+  "commands": {
+    "wrapOn": "Wrap long lines",
+    "wrapOff": "Do not wrap long lines",
+    "sectionCommands": "Commands",
+    "sectionTables": "Tables",
+    "sectionActions": "Actions",
+    "placeholder": "Search tables, or type / for commands",
+    "commandPlaceholder": "Type a command",
+    "openHint": "to open",
+    "commandHint": "for commands",
+    "nothing": "Nothing matches that.",
+    "hintPath": "Try a path like music.album, or a pattern like ^a.*t$",
+    "someOf": "{{shown}} of {{total}}",
+    "tryPath": "Found under a different path:"
   }
 }

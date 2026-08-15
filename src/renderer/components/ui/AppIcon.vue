@@ -25,6 +25,7 @@ const PATHS: Record<string, string> = {
   view: 'M2.5 3.5h11v9h-11zM2.5 6.5h11',
   routine: 'M6 12.5V5a2 2 0 0 1 2-2h1M4.5 7.5h5',
   query: 'M3.5 5L6 8l-2.5 3M8 11.5h4.5',
+  sidebar: 'M2.5 3.5h11v9h-11zM6.5 3.5v9',
   structure: 'M3.5 3.5h9v3h-9zM3.5 9.5h9v3h-9z',
   diagram: 'M3 3h4v4H3zM9 9h4v4H9zM7 5h2v4h4',
   download: 'M8 3v7M5 7.5L8 10.5l3-3M3.5 13h9',

@@ -88,11 +88,9 @@
     "entities": "对象",
     "savedQueries": "已保存的查询",
     "history": "历史",
-    "filterEntities": "筛选{{noun}}",
     "filterSaved": "筛选已保存的查询",
     "filterHistory": "筛选历史",
     "shown": "显示 {{count}} 项",
-    "hidden": "隐藏 {{count}} 项",
     "nothingOpen": "还没有打开任何内容",
     "nothingOpenHint": "双击侧栏中的{{noun}}即可查看数据，也可以新建查询。",
     "newQuery": "新建查询",
@@ -104,7 +102,9 @@
     "noColumns": "没有列",
     "disconnect": "{{version}} — 点击断开连接",
     "readOnly": "只读",
-    "disconnectHint": "点击断开连接"
+    "disconnectHint": "点击断开连接",
+    "searchEntities": "搜索表",
+    "toggleSidebar": "切换侧边栏"
   },
   "table": {
     "filterPlaceholder": "筛选 — 例如 name like 'A%'",
@@ -119,7 +119,8 @@
     "nullValue": "NULL",
     "emptyValue": "空",
     "editData": "编辑数据",
-    "editHint": "开启后可以在表格中修改值"
+    "editHint": "开启后可以在表格中修改值",
+    "sqlCopied": "已复制 {{count}} 项更改的 SQL。"
   },
   "query": {
     "manualCommit": "手动提交",
@@ -213,7 +214,10 @@
     "wrapLines": "自动换行",
     "keyboard": "键盘",
     "keyboardHelp": "快捷键以数据形式定义，因此可以覆盖，但修改界面尚未完成。",
-    "resetData": "重置数据设置"
+    "resetData": "重置数据设置",
+    "primaryRun": "主运行操作",
+    "runAll": "整个编辑器",
+    "runCurrent": "光标所在语句"
   },
   "palette": {
     "placeholder": "搜索表、标签页和操作…",
@@ -289,12 +293,14 @@
     "copied": "已复制 {{count}} 行。",
     "written": "已写出。",
     "working": "处理中…",
-    "run": "导出"
+    "run": "导出",
+    "wroteTo": "已写入 {{name}}。"
   },
   "grid": {
     "oneBased": "从 1 开始",
     "zeroBased": "从 0 开始",
-    "indexHint": "左侧行号从 1 还是从 0 开始。"
+    "indexHint": "左侧行号从 1 还是从 0 开始。",
+    "indexLabel": "行号"
   },
   "activity": {
     "working": "正在执行…",
@@ -306,7 +312,8 @@
     "quickDocs": "快速文档",
     "properties": "属性",
     "exportData": "导出数据到文件…",
-    "actionsFor": "{{name}} 的操作"
+    "actionsFor": "{{name}} 的操作",
+    "copiedName": "已复制 {{name}}。"
   },
   "properties": {
     "rows": "行数",
@@ -318,5 +325,26 @@
     "rowsCount": "{{count}} 行",
     "copySelect": "复制 SELECT",
     "copied": "已复制"
+  },
+  "host": {
+    "restartedTitle": "连接已重启",
+    "restarted": "持有数据库的进程已重启，已打开的连接均已断开。请重新连接以继续。",
+    "unavailableTitle": "连接主机不可用",
+    "unavailable": "无法启动用于打开数据库的进程。请重启 Shelf 后重试。"
+  },
+  "commands": {
+    "wrapOn": "自动换行",
+    "wrapOff": "不自动换行",
+    "sectionCommands": "命令",
+    "sectionTables": "表",
+    "sectionActions": "操作",
+    "placeholder": "搜索表，或输入 / 使用命令",
+    "commandPlaceholder": "输入命令",
+    "openHint": "打开",
+    "commandHint": "使用命令",
+    "nothing": "没有匹配项。",
+    "hintPath": "可用 music.album 这样的路径，或 ^a.*t$ 这样的表达式",
+    "someOf": "{{total}} 项中的 {{shown}} 项",
+    "tryPath": "在其他路径下找到:"
   }
 }

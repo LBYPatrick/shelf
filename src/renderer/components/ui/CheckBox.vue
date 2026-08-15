@@ -138,6 +138,11 @@ const model = defineModel<boolean>({ required: true });
   gap: 1px;
 }
 
+/* The line the hint is a footnote to, and the only one that has to be read. */
+.check__label {
+  line-height: 1.3;
+}
+
 .check__hint {
   font-size: 0.6875rem;
   color: color-mix(in oklab, var(--color-base-content) 52%, transparent);

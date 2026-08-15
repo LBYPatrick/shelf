@@ -25,6 +25,7 @@ import RowIndexToggle from '../grid/RowIndexToggle.vue';
 import SqlEditor, { type SchemaMap } from '../editor/SqlEditor.vue';
 import ExplainTree from '../viz/ExplainTree.vue';
 import PressButton from '../ui/PressButton.vue';
+import ProgressBar from '../ui/ProgressBar.vue';
 import ResizeHandle from '../ui/ResizeHandle.vue';
 import FormField from '../ui/FormField.vue';
 import Sheet from '../ui/Sheet.vue';
@@ -506,9 +507,12 @@ watch(
 
       <div
         v-else-if="running"
-        class="results__note"
+        class="results__running"
       >
-        {{ $t('query.running') }}
+        <ProgressBar />
+        <p class="results__note">
+          {{ $t('query.running') }}
+        </p>
       </div>
 
       <ExplainTree
@@ -725,6 +729,14 @@ watch(
   font-family: var(--font-mono);
   font-size: 0.75rem;
   white-space: pre-wrap;
+}
+
+/* The word alone did not read as motion; the bar above it does. */
+.results__running {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .results__note {

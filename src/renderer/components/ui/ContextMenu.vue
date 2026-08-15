@@ -2,6 +2,10 @@
 /**
  * A menu opened at a point.
  *
+ * The class is `popmenu`: daisyUI owns `.menu` and dresses its list items, so a
+ * component of ours taking that name inherits a second set of paddings and
+ * hovers on top of the ones it drew.
+ *
  * Anchored where it was summoned from rather than at a fixed corner: it scales
  * out of the pointer, so the relationship between what you clicked and what
  * appeared is stated by the motion instead of having to be inferred.
@@ -11,6 +15,7 @@
  * the very row it belongs to.
  */
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { useDismiss } from '../../composables/useDismiss';
 import AppIcon from './AppIcon.vue';
 
 export interface MenuItem {
@@ -91,22 +96,14 @@ function commit(): void {
  * Dismissal is handled at the window, in the capture phase. A menu that only
  * closes on its own click-outside handler stays up when the next click lands
  * inside a canvas, an iframe, or anything that stops propagation — which is
- * exactly when someone is trying to get rid of it.
+ * exactly when someone is trying to get rid of it. Escape is the same idea, and
+ * goes through the shared stack so a menu opened over a sheet closes itself and
+ * leaves the sheet standing.
  */
 function onWindowPointerDown(event: PointerEvent): void {
   if (!open.value) return;
   if (panel.value?.contains(event.target as Node)) return;
   open.value = false;
-}
-
-function onWindowKeydown(event: KeyboardEvent): void {
-  if (!open.value) return;
-
-  if (event.key === 'Escape') {
-    event.preventDefault();
-    event.stopPropagation();
-    open.value = false;
-  }
 }
 
 watch(open, async (isOpen) => {
@@ -120,12 +117,12 @@ watch(open, async (isOpen) => {
 
 watch(() => props.at, place);
 
+useDismiss(open);
+
 globalThis.addEventListener('pointerdown', onWindowPointerDown, true);
-globalThis.addEventListener('keydown', onWindowKeydown, true);
 
 onBeforeUnmount(() => {
   globalThis.removeEventListener('pointerdown', onWindowPointerDown, true);
-  globalThis.removeEventListener('keydown', onWindowKeydown, true);
 });
 </script>
 
@@ -135,7 +132,7 @@ onBeforeUnmount(() => {
       <div
         v-if="open"
         ref="panel"
-        class="menu surface-popover"
+        class="popmenu surface-popover"
         role="menu"
         tabindex="-1"
         :style="{
@@ -154,12 +151,12 @@ onBeforeUnmount(() => {
         >
           <hr
             v-if="item.startsGroup"
-            class="menu__rule"
+            class="popmenu__rule"
           >
           <button
             type="button"
-            class="menu__item"
-            :class="{ 'menu__item--active': enabled[active]?.id === item.id }"
+            class="popmenu__item"
+            :class="{ 'popmenu__item--active': enabled[active]?.id === item.id }"
             role="menuitem"
             :disabled="item.disabled"
             @pointerenter="
@@ -170,7 +167,7 @@ onBeforeUnmount(() => {
           >
             <AppIcon
               v-if="item.icon"
-              class="menu__icon"
+              class="popmenu__icon"
               :name="item.icon"
               :size="12"
             />
@@ -183,7 +180,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.menu {
+.popmenu {
   position: fixed;
   z-index: 200;
   min-width: 12rem;
@@ -192,7 +189,7 @@ onBeforeUnmount(() => {
   outline: none;
 }
 
-.menu__item {
+.popmenu__item {
   display: flex;
   align-items: center;
   gap: var(--gap);
@@ -210,21 +207,21 @@ onBeforeUnmount(() => {
  * and keyboard cannot both claim a row at once — two highlighted items is the
  * classic menu bug and it is entirely a question of having two states.
  */
-.menu__item--active:not(:disabled) {
+.popmenu__item--active:not(:disabled) {
   background-color: color-mix(in oklab, var(--color-primary) 16%, transparent);
   color: var(--color-primary-text, var(--color-primary));
 }
 
-.menu__item:disabled {
+.popmenu__item:disabled {
   opacity: 0.4;
 }
 
-.menu__icon {
+.popmenu__icon {
   flex: 0 0 auto;
   opacity: 0.7;
 }
 
-.menu__rule {
+.popmenu__rule {
   height: 1px;
   margin: var(--gap-tight) var(--gap);
   border: 0;

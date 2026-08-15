@@ -18,6 +18,7 @@
  * control it belongs to rather than appearing at the pointer.
  */
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { useDismiss } from '../../composables/useDismiss';
 import AppIcon from './AppIcon.vue';
 
 const props = defineProps<{
@@ -29,6 +30,13 @@ const props = defineProps<{
 const model = defineModel<T>({ required: true });
 
 const open = ref(false);
+
+/*
+ * Through the shared stack, so a select inside a sheet gives the sheet back
+ * rather than closing with it. Its own `@keydown.esc` only worked while the
+ * trigger had focus, which it does not once the list is up.
+ */
+useDismiss(open);
 const root = ref<HTMLElement>();
 const list = ref<HTMLElement>();
 /** Which option the keyboard is on, which is not yet which one is chosen. */
@@ -102,7 +110,6 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onPointerDown, t
       @keydown.up.prevent="move(-1)"
       @keydown.enter.prevent="open ? choose(active) : show()"
       @keydown.space.prevent="open ? choose(active) : show()"
-      @keydown.esc.prevent="open = false"
     >
       <span class="select__label">{{ label }}</span>
       <AppIcon

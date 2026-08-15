@@ -42,7 +42,7 @@ test('browses a table and reads its rows', async ({ page }) => {
   // An empty database still gives a usable workspace: the sidebar says so
   // rather than showing a spinner forever, and no tab is open.
   await expect(page.getByText('Nothing open')).toBeVisible();
-  await expect(page.getByPlaceholder(/Filter table/)).toBeVisible();
+  await expect(page.getByRole('button', { name: /Search tables/ })).toBeVisible();
   await expect(page.getByText('This database has no tables yet.')).toBeVisible();
 });
 
@@ -392,7 +392,7 @@ test('filters a table with the builder, without anyone writing SQL', async ({ pa
   await page.getByRole('button', { name: /Explore sample data/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
-  await page.locator('.sidebar__filter').first().fill('album');
+  await revealTables(page);
   await openTable(page, 'album');
   await expect(page.locator('.tabulator-row').first()).toBeVisible({ timeout: 15_000 });
 
@@ -458,6 +458,28 @@ test('the editor brings find and replace, and says where the caret is', async ({
 });
 
 /*
+ * Writing to the clipboard changes nothing on screen, so a button that does it
+ * and says nothing is indistinguishable from a broken one. Copying a table's
+ * name, copying pending SQL and writing an export file were all silent —
+ * the export's own confirmation was written onto the sheet it then closed.
+ */
+test('a clipboard write says so', async ({ page }) => {
+  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+
+  await revealTables(page);
+  await page.getByRole('treeitem', { name: 'album' }).first().click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Copy table name' }).click();
+
+  const notice = page.locator('.notices [role="status"]');
+  await expect(notice).toContainText('Copied music.album');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('music.album');
+
+  // And it leaves on its own rather than sitting there needing dismissal.
+  await expect(notice).toBeHidden({ timeout: 15_000 });
+});
+
+/*
  * The sidebar is an outline of folders, and folders start shut.
  *
  * Every schema used to be expanded on arrival, so opening a database with forty
@@ -490,15 +512,6 @@ test('the sidebar opens as folders, shut until asked', async ({ page }) => {
   await database.click();
   await expect(page.getByRole('treeitem', { name: 'music' })).toBeHidden();
   await database.click();
-
-  /*
-   * A filter opens what it matched. A search that finds the table and then
-   * leaves it inside a shut folder has answered the question and hidden the
-   * answer.
-   */
-  await page.locator('.sidebar__filter').first().fill('audit');
-  await expect(page.getByRole('treeitem', { name: 'audit_log' })).toBeVisible();
-  await page.locator('.sidebar__filter').first().fill('');
 
   /*
    * "Collapse all" shuts the folders, not the root they all hang from. Closing
@@ -595,7 +608,7 @@ test('the data shortcuts do what the shortcut list says they do', async ({ page 
   await page.getByRole('button', { name: /Explore sample data/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
-  await page.locator('.sidebar__filter').first().fill('album');
+  await revealTables(page);
   await openTable(page, 'album');
   await expect(page.locator('.tabulator-row').first()).toBeVisible({ timeout: 15_000 });
 
@@ -627,7 +640,7 @@ test('exports a table through the same sheet the query tab uses', async ({ page 
   await page.getByRole('button', { name: /Explore sample data/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
-  await page.locator('.sidebar__filter').first().fill('artist');
+  await revealTables(page);
   await openTable(page, 'artist');
   await expect(page.locator('.tabulator-row').first()).toBeVisible({ timeout: 15_000 });
 

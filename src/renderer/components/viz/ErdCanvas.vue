@@ -251,7 +251,8 @@ defineExpose({ fit });
       aria-label="Entity relationship diagram"
     >
       <g :transform="`translate(${transform.x},${transform.y}) scale(${transform.k})`">
-        <g class="erd__edges">
+        <!-- Grouped so the whole set transforms together with the canvas. -->
+        <g>
           <path
             v-for="edge in edgePaths"
             :key="edge.key"

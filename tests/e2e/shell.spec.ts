@@ -99,9 +99,35 @@ test('switching language translates the interface', async ({ page }) => {
   // And it reaches the workspace behind the sheet, not just the sheet itself.
   await page.keyboard.press('Escape');
   await expect(page.getByText('何も開いていません')).toBeVisible();
-  await expect(page.getByPlaceholder('テーブルを絞り込み')).toBeVisible();
+  await expect(page.getByRole('button', { name: /テーブルを検索/ })).toBeVisible();
 
   // And it survives a reload, because the choice is persisted.
   await page.reload();
   await expect(page.getByText('サンプルデータを試す')).toBeVisible({ timeout: 20_000 });
+});
+
+/*
+ * Every overlay used to listen for Escape itself, at the window and in the
+ * capture phase — and listeners on the same node in the same phase all run, so
+ * one press dismissed the whole pile. A select inside a sheet took the sheet
+ * with it.
+ */
+test('escape dismisses one overlay at a time, from the top', async ({ page }) => {
+  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+
+  await page.getByRole('button', { name: /settings/i }).click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet).toBeVisible();
+
+  await sheet.locator('.select__trigger').first().click();
+  const list = page.getByRole('listbox').first();
+  await expect(list).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(list).toBeHidden();
+  await expect(sheet).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
 });

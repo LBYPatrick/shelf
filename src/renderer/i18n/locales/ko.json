@@ -88,11 +88,9 @@
     "entities": "객체",
     "savedQueries": "저장한 쿼리",
     "history": "기록",
-    "filterEntities": "{{noun}} 필터",
     "filterSaved": "저장한 쿼리 필터",
     "filterHistory": "기록 필터",
     "shown": "{{count}}개 표시",
-    "hidden": "{{count}}개 숨김",
     "nothingOpen": "열려 있는 항목이 없습니다",
     "nothingOpenHint": "사이드바의 {{noun}}을(를) 더블클릭하면 데이터가 열립니다. 쿼리를 열 수도 있습니다.",
     "newQuery": "새 쿼리",
@@ -104,7 +102,9 @@
     "noColumns": "열 없음",
     "disconnect": "{{version}} — 클릭하면 연결 해제",
     "readOnly": "읽기 전용",
-    "disconnectHint": "클릭하면 연결 해제"
+    "disconnectHint": "클릭하면 연결 해제",
+    "searchEntities": "테이블 검색",
+    "toggleSidebar": "사이드바 전환"
   },
   "table": {
     "filterPlaceholder": "필터 — 예: name like 'A%'",
@@ -119,7 +119,8 @@
     "nullValue": "NULL",
     "emptyValue": "빈 값",
     "editData": "데이터 편집",
-    "editHint": "켜면 그리드에서 값을 바꿀 수 있습니다"
+    "editHint": "켜면 그리드에서 값을 바꿀 수 있습니다",
+    "sqlCopied": "변경 사항 {{count}}건의 SQL을 복사했습니다."
   },
   "query": {
     "manualCommit": "수동 커밋",
@@ -213,7 +214,10 @@
     "wrapLines": "긴 줄 줄바꿈",
     "keyboard": "키보드",
     "keyboardHelp": "단축키는 데이터로 정의되어 있어 덮어쓸 수 있지만, 바꾸는 화면은 아직 없습니다.",
-    "resetData": "데이터 설정 초기화"
+    "resetData": "데이터 설정 초기화",
+    "primaryRun": "기본 실행 동작",
+    "runAll": "편집기 전체",
+    "runCurrent": "커서 위치의 문장"
   },
   "palette": {
     "placeholder": "테이블, 탭, 동작 검색…",
@@ -289,12 +293,14 @@
     "copied": "{{count}}행을 복사했습니다.",
     "written": "기록했습니다.",
     "working": "처리 중…",
-    "run": "내보내기"
+    "run": "내보내기",
+    "wroteTo": "{{name}}에 기록했습니다."
   },
   "grid": {
     "oneBased": "1부터",
     "zeroBased": "0부터",
-    "indexHint": "왼쪽 행 번호를 1과 0 중 어디에서 시작할지."
+    "indexHint": "왼쪽 행 번호를 1과 0 중 어디에서 시작할지.",
+    "indexLabel": "행 번호"
   },
   "activity": {
     "working": "실행 중…",
@@ -306,7 +312,8 @@
     "quickDocs": "빠른 문서",
     "properties": "속성",
     "exportData": "데이터를 파일로 내보내기…",
-    "actionsFor": "{{name}} 작업"
+    "actionsFor": "{{name}} 작업",
+    "copiedName": "{{name}}을(를) 복사했습니다."
   },
   "properties": {
     "rows": "행",
@@ -318,5 +325,26 @@
     "rowsCount": "{{count}}행",
     "copySelect": "SELECT 복사",
     "copied": "복사했습니다"
+  },
+  "host": {
+    "restartedTitle": "연결이 다시 시작되었습니다",
+    "restarted": "데이터베이스를 유지하던 프로세스가 다시 시작되어 열려 있던 연결이 끊겼습니다. 다시 연결하세요.",
+    "unavailableTitle": "연결 호스트를 사용할 수 없습니다",
+    "unavailable": "데이터베이스를 여는 프로세스를 시작하지 못했습니다. Shelf를 다시 시작해 보세요."
+  },
+  "commands": {
+    "wrapOn": "긴 줄 줄바꿈",
+    "wrapOff": "긴 줄 줄바꿈 안 함",
+    "sectionCommands": "명령",
+    "sectionTables": "테이블",
+    "sectionActions": "동작",
+    "placeholder": "테이블 검색, 또는 / 로 명령",
+    "commandPlaceholder": "명령 입력",
+    "openHint": "열기",
+    "commandHint": "명령",
+    "nothing": "일치하는 항목이 없습니다.",
+    "hintPath": "music.album 같은 경로나 ^a.*t$ 같은 패턴을 쓸 수 있습니다",
+    "someOf": "{{total}}개 중 {{shown}}개",
+    "tryPath": "다른 경로에서 찾았습니다:"
   }
 }

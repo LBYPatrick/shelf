@@ -51,7 +51,7 @@ test.describe('layout', () => {
     await app.evaluate(({ BrowserWindow }) => {
       BrowserWindow.getAllWindows()[0]?.setSize(880, 560);
     });
-    await sample.locator('.sidebar__filter').first().fill('daily_metrics');
+    await revealTables(sample);
     await openTable(sample, 'daily_metrics');
     await sample.locator('.tabulator-row').first().waitFor({ timeout: 20_000 });
 
@@ -90,16 +90,43 @@ test.describe('layout', () => {
 
     expect(rows.icon).not.toBeNull();
     expect(Math.abs(rows.icon! - rows.connection!)).toBeLessThanOrEqual(1);
-    // The traffic lights sit at y=14 and are about 12px tall; anything starting
-    // above ~30 would be under them.
-    expect(rows.top).toBeGreaterThanOrEqual(32);
+  });
+
+  test('the columns begin below the bar the window controls sit on', async ({ sample }) => {
+    // The clearance used to be padding inside the rail and the connection row,
+    // measured separately and kept in agreement by hand. It is the bar's height
+    // now, which is one number, but only for as long as nothing below the bar
+    // is positioned back over it.
+    const geometry = await sample.evaluate(() => {
+      const bar = document.querySelector('.topbar')!.getBoundingClientRect();
+      const box = (selector: string) =>
+        document.querySelector(selector)!.getBoundingClientRect();
+      return {
+        barBottom: bar.bottom,
+        barLeft: bar.left,
+        rail: box('.rail').top,
+        sidebar: box('.sidebar').top,
+        controls: Number.parseFloat(
+          getComputedStyle(document.documentElement).getPropertyValue('--controls-inset')
+        ),
+      };
+    });
+
+    expect(geometry.barLeft).toBe(0);
+    // The controls need the bar to be tall enough to hold them, whatever the
+    // density scale would make a row of tabs on its own.
+    if (geometry.controls > 0) expect(geometry.barBottom).toBeGreaterThanOrEqual(38);
+    expect(geometry.rail).toBeGreaterThanOrEqual(geometry.barBottom - 1);
+    expect(geometry.sidebar).toBeGreaterThanOrEqual(geometry.barBottom - 1);
   });
 
   test('nothing sits under the window controls, collapsed or not', async ({ sample }) => {
     /*
-     * With the sidebar collapsed the content pane reaches the window's leading
-     * edge and the traffic lights float over it, which put the first tab
-     * underneath them — overlapping and unclickable.
+     * The strip used to live inside the content pane, so collapsing the sidebar
+     * brought its leading edge to the window edge and put the first tab under
+     * the traffic lights — overlapping and unclickable. The bar spans the
+     * window now and pads its own start, so the tabs are clear at either state;
+     * the collapsed one is checked because it is the one that broke.
      */
     await sample
       .getByRole('button', { name: /new query/i })
@@ -120,6 +147,74 @@ test.describe('layout', () => {
     expect(geometry.tabLeft).toBeGreaterThanOrEqual(geometry.inset);
   });
 
+  test('the panes meet, with no column of layout for a divider to paint', async ({
+    sample,
+  }) => {
+    /*
+     * The resize handle used to take a pixel of layout between the sidebar and
+     * the content, and that pixel had to be painted or the window's own backdrop
+     * came up through it as a bright line down the full height. Painting it the
+     * content pane's colour worked only while the pane's leading edge was
+     * straight: once the pane took a rounded corner, the strip carried on past
+     * the curve and stood clear of it as a light stub.
+     */
+    const gap = await sample.evaluate(() => {
+      const sidebar = document.querySelector('.sidebar')!.getBoundingClientRect();
+      const content = document.querySelector('.content')!.getBoundingClientRect();
+      return content.left - sidebar.right;
+    });
+
+    expect(Math.abs(gap)).toBeLessThanOrEqual(0.5);
+  });
+
+  test('one selection travels between the tabs, and none of them is raised', async ({
+    sample,
+  }) => {
+    /*
+     * The open tab used to be the raised white thumb of a segmented control,
+     * and a thumb is only legible as raised against the recessed track it came
+     * out of. There is no track on the top bar and there may not be one, so the
+     * thumb was a card hovering over nothing — which is how it read.
+     *
+     * The measurement is the other half. The marker is positioned from the
+     * active tab's own box, and it is a sibling of the tabs in the same list,
+     * so counting children rather than tabs puts it one place to the left.
+     */
+    const strip = sample.locator('.strip');
+    await strip.getByRole('button', { name: /new query tab/i }).click();
+    await strip.getByRole('button', { name: /new query tab/i }).click();
+    await expect(sample.locator('.striptab')).toHaveCount(2);
+
+    const aligned = async () =>
+      sample.evaluate(() => {
+        const marker = document.querySelector('.strip__marker')!.getBoundingClientRect();
+        const open = document
+          .querySelector('.striptab[aria-selected="true"]')!
+          .getBoundingClientRect();
+        return {
+          dx: Math.abs(marker.left - open.left),
+          dw: Math.abs(marker.width - open.width),
+        };
+      });
+
+    // Settled, not mid-travel: the marker springs to a new tab and takes its
+    // width with it, and both are in flight for a few hundred milliseconds.
+    await sample.waitForTimeout(400);
+    expect(await aligned()).toEqual({ dx: 0, dw: 0 });
+
+    await sample.locator('.striptab').first().click();
+    await sample.waitForTimeout(400);
+    expect(await aligned()).toEqual({ dx: 0, dw: 0 });
+
+    const raised = await sample.evaluate(() =>
+      [...document.querySelectorAll('.striptab')].map((el) => ({
+        cls: el.className,
+        shadow: getComputedStyle(el).boxShadow,
+      }))
+    );
+    expect(raised.filter((tab) => tab.shadow !== 'none')).toEqual([]);
+  });
+
   test('the window can be dragged by its top row', async ({ sample }) => {
     // Everything along the top edge that is not itself a control should move
     // the window; the tabs opt out because they drag to reorder.
@@ -134,9 +229,16 @@ test.describe('layout', () => {
         const el = document.querySelector<HTMLElement>(selector);
         return el ? getComputedStyle(el).webkitAppRegion : null;
       };
-      return { strip: region('.strip'), tab: region('.striptab') };
+      return {
+        bar: region('.topbar'),
+        strip: region('.strip'),
+        tab: region('.striptab'),
+        toggle: region('.topbar__toggle'),
+      };
     });
 
+    expect(regions.bar).toBe('drag');
+    expect(regions.toggle).toBe('no-drag');
     expect(regions.strip).toBe('drag');
     expect(regions.tab).toBe('no-drag');
   });
@@ -166,7 +268,7 @@ test.describe('layout', () => {
      * off the column it named, and an 11px label over 13px values read as a
      * different kind of thing rather than as that column's name.
      */
-    await sample.locator('.sidebar__filter').first().fill('artist');
+    await revealTables(sample);
     await openTable(sample, 'artist');
     await sample.locator('.tabulator-row').first().waitFor({ timeout: 20_000 });
 
@@ -200,7 +302,7 @@ test.describe('layout', () => {
      * colours. So the overlay laid out in normal flow instead of over the
      * cells, and appeared as an empty outlined box below the last row.
      */
-    await sample.locator('.sidebar__filter').first().fill('artist');
+    await revealTables(sample);
     await openTable(sample, 'artist');
     await sample.locator('.tabulator-row').first().waitFor({ timeout: 20_000 });
 
@@ -250,7 +352,7 @@ test.describe('layout', () => {
     // Shipped broken, and the reason the whole gate exists: on any table wider
     // than the pane every column label sat over the wrong column, by exactly
     // the scroll distance.
-    await sample.locator('.sidebar__filter').first().fill('daily_metrics');
+    await revealTables(sample);
     await openTable(sample, 'daily_metrics');
     await sample.locator('.tabulator-row').first().waitFor({ timeout: 20_000 });
 
@@ -307,6 +409,12 @@ test.describe('materials', () => {
    * merged into the rule below it, which handed the rail the *content* pane's
    * opaque colour while the sidebar beside it stayed pale glass — a hard seam
    * straight under the traffic lights, on the one theme nothing checked.
+   *
+   * The top bar spans the window now, so no column boundary reaches the
+   * controls by construction — which is the point of the arrangement and
+   * exactly the kind of thing that regresses the moment someone puts a shade
+   * back inside that bar. The sweep is across the bar's whole width rather than
+   * at one boundary, so it also catches the tab strip reclaiming a tint.
    */
   for (const appearance of ['light', 'dark'] as const) {
     test(`no surface boundary reads under the window controls (${appearance})`, async ({
@@ -320,16 +428,12 @@ test.describe('materials', () => {
       await page.locator('.workspace').waitFor({ timeout: 30_000 });
 
       /*
-       * The controls are wider than the rail and overhang the sidebar, so a
-       * shade change at that seam cuts each one in half.
-       *
-       * This used to demand the two sides be *identical*, which they were —
-       * achieved with a banded gradient that gave the rail the sidebar's tone
-       * for the height of the controls. That removed the vertical seam and
-       * introduced a horizontal one directly above the first rail icon. The
-       * rail is uniform again and the two columns are near-neighbours in tone
-       * instead, so what matters is that the step is too small to read, not
-       * that it is absent.
+       * This used to demand the rail and the sidebar be *identical*, which they
+       * were — achieved with a banded gradient that gave the rail the sidebar's
+       * tone for the height of the controls, which removed a vertical seam and
+       * introduced a horizontal one directly above the first rail icon. The bar
+       * replaced the whole argument: there is one surface under the controls,
+       * and what is checked is that it stays one.
        */
       const step = await page.evaluate(() => {
         const canvas = document.createElement('canvas');
@@ -345,11 +449,8 @@ test.describe('materials', () => {
           return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
         };
 
-        const strip = Number.parseFloat(
-          getComputedStyle(document.documentElement).getPropertyValue('--rail-top')
-        );
-        const y = Math.max(2, strip / 2);
-        const railWidth = document.querySelector('.rail')!.getBoundingClientRect().width;
+        const bar = document.querySelector('.topbar')!.getBoundingClientRect();
+        const y = bar.top + bar.height / 2;
 
         const sample_ = (x: number) => {
           for (const el of document.elementsFromPoint(x, y)) {
@@ -359,7 +460,21 @@ test.describe('materials', () => {
           return 0;
         };
 
-        return Math.abs(sample_(railWidth - 4) - sample_(railWidth + 4));
+        // Every fourth pixel across the bar, skipping the raised tab that marks
+        // which one is open — it is meant to be a different shade.
+        let worst = 0;
+        let previous: number | undefined;
+        for (let x = 2; x < bar.width - 2; x += 4) {
+          if (document.elementFromPoint(x, y)?.closest('.striptab')) {
+            previous = undefined;
+            continue;
+          }
+          const here = sample_(x);
+          if (previous !== undefined) worst = Math.max(worst, Math.abs(here - previous));
+          previous = here;
+        }
+
+        return worst;
       });
 
       // A few points of luminance is a change in surface; more is a drawn line.
@@ -788,7 +903,17 @@ test.describe('controls', () => {
      * the bare workspace, so `.input` in the text field, `.select` in the
      * settings and connection forms and `.card` on a connection tile all sat
      * there passing — every one of them inside something modal.
+     *
+     * A toast has to be *raised* for the same reason, and it is the case that
+     * proves the point: a component called `.toast` inherited daisyUI's fixed
+     * position and column layout, and no amount of looking at a workspace with
+     * no toast in it would have found that.
      */
+    await revealTables(sample);
+    await sample.getByRole('treeitem', { name: 'album' }).first().click({ button: 'right' });
+    await sample.getByRole('menuitem', { name: 'Copy table name' }).click();
+    await expect(sample.locator('.notices [role="status"]')).toBeVisible();
+
     await sample.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(sample.getByRole('dialog')).toBeVisible();
 
@@ -1092,3 +1217,34 @@ async function contrastFailures(page: Page): Promise<string[]> {
     return [...new Set(bad)].slice(0, 10);
   });
 }
+
+test.describe('cost', () => {
+  test('switching back to a tab does not lay its grid out again', async ({ sample }) => {
+    /*
+     * The layout is `fitDataStretch`, so a full redraw measures the widest
+     * content in every column across every loaded row. Hiding a pane takes its
+     * box to zero and showing it brings back exactly the box it had, and the
+     * container's observer fired on both edges — so returning to a tab did that
+     * measurement over the whole table, twice, having changed nothing. On a
+     * table with a lot of data in it the window stopped for as long as it took.
+     */
+    await openTable(sample, 'album');
+    await sample.locator('.tabulator-row').first().waitFor();
+
+    const relayouts = () => sample.locator('.grid').first().getAttribute('data-relayouts');
+
+    const before = await relayouts();
+    expect(Number(before)).toBeGreaterThan(0);
+
+    await sample
+      .locator('.strip')
+      .getByRole('button', { name: /new query tab/i })
+      .click();
+    await sample.locator('.monaco-editor').waitFor();
+    await sample.locator('.striptab').first().click();
+    await sample.locator('.tabulator-row').first().waitFor();
+    await sample.waitForTimeout(400);
+
+    expect(await relayouts()).toBe(before);
+  });
+});

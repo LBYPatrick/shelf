@@ -1,8 +1,9 @@
 import { createPinia } from 'pinia';
 import { createApp } from 'vue';
 import App from './App.vue';
-import { resolveLocale, setupI18n } from './i18n';
+import { i18next, resolveLocale, setupI18n } from './i18n';
 import { connectToHost } from './lib/bootstrap';
+import { useToasts } from './stores/toasts';
 import './styles/tailwind.css';
 
 /**
@@ -25,8 +26,21 @@ async function start(): Promise<void> {
 
   app.mount('#app');
 
+  /*
+   * The process that holds every open database can die, and until now the only
+   * sign was a line in a console nobody has open. The interface simply stopped
+   * answering.
+   */
+  const toasts = useToasts();
+
   connectToHost((permanent) => {
-    console.error(permanent ? 'Connection host unavailable' : 'Connection host restarted');
+    toasts.show({
+      id: 'host-lost',
+      tone: permanent ? 'error' : 'warning',
+      title: i18next.t(permanent ? 'host.unavailableTitle' : 'host.restartedTitle'),
+      message: i18next.t(permanent ? 'host.unavailable' : 'host.restarted'),
+      ...(permanent ? {} : { expire: 8000 }),
+    });
   });
 }
 

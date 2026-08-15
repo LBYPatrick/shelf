@@ -1,190 +1,348 @@
 <script setup lang="ts">
 /**
- * The command palette.
+ * The quick action bar.
  *
- * It opens on recent tabs rather than an empty list, because the most likely
- * thing you want is something you were just looking at. Matching is subsequence
- * rather than substring, so "albsum" finds "album_summary" — the way people
- * actually type when they are aiming rather than reading.
+ * One field with two modes, and the glyph at its left says which. Typed at
+ * plainly it finds tables; a leading `/` turns it into a command list. That was
+ * the sibling project's idea and its best detail is the glyph: without it the
+ * field looked identical in both modes while behaving nothing alike.
+ *
+ * Finding a table takes a path or a pattern — `music.album`, `^a.*t$` — which
+ * is why the sidebar no longer carries a filter box. Narrowing a tree in place
+ * only ever showed you what you already had open; this reaches the whole
+ * database and opens what you pick.
  */
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { useDismiss } from '../../composables/useDismiss';
 import type { Entity } from '@drivers/types';
+import { qualifiedPath, scoreEntity, parseQuery, leafOf } from '@shared/entitySearch';
+import { useTranslation } from 'i18next-vue';
+import { buildCommands, matchSlash, type Command } from '../../lib/commands';
 import { useConnections } from '../../stores/connections';
 import { useEntities } from '../../stores/entities';
+import { useSettings } from '../../stores/settings';
 import { useTabs } from '../../stores/tabs';
-import { useTranslation } from 'i18next-vue';
+import { useTheme } from '../../composables/useTheme';
+import AppIcon from '../ui/AppIcon.vue';
 
 const open = defineModel<boolean>({ required: true });
 const emit = defineEmits<{ openSettings: [] }>();
 
 const connections = useConnections();
 const entities = useEntities();
+const settings = useSettings();
 const tabs = useTabs();
+const theme = useTheme();
 const { t } = useTranslation();
-
-interface Command {
-  readonly id: string;
-  readonly label: string;
-  readonly detail?: string;
-  readonly group: string;
-  readonly run: () => void;
-}
 
 const query = ref('');
 const selected = ref(0);
 const input = ref<HTMLInputElement>();
+const list = ref<HTMLElement>();
 
-const actions = computed<Command[]>(() => [
+/** A leading slash is the mode switch, and the only one. */
+const commandMode = computed(() => query.value.startsWith('/'));
+
+/* ------------------------------------------------------------- what it can do */
+
+const navigation = computed<Command[]>(() => [
   {
-    id: 'action:new-query',
-    label: t('palette.newQuery'),
-    group: t('palette.actions'),
-    detail: '⌘T',
+    id: 'nav.new-query',
+    section: 'navigation',
+    icon: 'query',
+    title: t('palette.newQuery'),
+    slash: '/query new',
+    keywords: 'tab editor sql',
     run: () => tabs.openQuery(),
   },
   {
-    id: 'action:erd',
-    label: t('palette.openDiagram'),
-    group: t('palette.actions'),
+    id: 'nav.diagram',
+    section: 'navigation',
+    icon: 'diagram',
+    title: t('palette.openDiagram'),
+    slash: '/diagram',
+    keywords: 'erd relationships',
     run: () => tabs.openErd(),
   },
   {
-    id: 'action:refresh',
-    label: t('palette.refreshSchema'),
-    group: t('palette.actions'),
-    detail: 'F5',
+    id: 'nav.refresh',
+    section: 'navigation',
+    icon: 'refresh',
+    title: t('palette.refreshSchema'),
+    slash: '/refresh',
+    keywords: 'reload schema tables',
     run: () => void entities.refresh(),
   },
   {
-    id: 'action:settings',
-    label: t('action.settings'),
-    group: t('palette.actions'),
-    detail: '⌘,',
+    id: 'nav.settings',
+    section: 'navigation',
+    icon: 'settings',
+    title: t('action.settings'),
+    slash: '/settings',
+    keywords: 'preferences options',
     run: () => emit('openSettings'),
   },
   {
-    id: 'action:disconnect',
-    label: t('palette.disconnectFrom', { name: connections.active?.name ?? '' }),
-    group: t('palette.actions'),
+    id: 'nav.collapse',
+    section: 'navigation',
+    icon: 'tables',
+    title: t('action.collapseAll'),
+    slash: '/collapse',
+    keywords: 'sidebar tree folders',
+    run: () => entities.collapseAll(),
+  },
+  {
+    id: 'nav.disconnect',
+    section: 'navigation',
+    icon: 'close',
+    title: t('palette.disconnectFrom', { name: connections.active?.name ?? '' }),
+    slash: '/disconnect',
+    keywords: 'close connection',
     run: () => void connections.disconnect(),
   },
 ]);
 
-function entityCommands(entity: Entity): Command[] {
-  const ref_ = { name: entity.name, ...(entity.schema ? { schema: entity.schema } : {}) };
-  const key = entity.schema ? `${entity.schema}.${entity.name}` : entity.name;
+const commands = computed(() =>
+  buildCommands({ theme, settings, navigation: navigation.value })
+);
 
-  return [
-    {
-      id: `data:${key}`,
-      label: entity.name,
-      detail: entity.schema ?? entity.kind,
-      group: connections.active?.capabilities.nouns.entity ?? 'Tables',
-      run: () => tabs.openEntity('table', ref_),
-    },
-  ];
-}
-
-const candidates = computed<Command[]>(() => [
-  ...tabs.tabs.map((tab) => ({
-    id: `tab:${tab.id}`,
-    label: tab.title,
-    detail: tab.subtitle ?? tab.kind,
-    group: t('palette.openTabs'),
-    run: () => tabs.focus(tab.id),
-  })),
-  ...entities.entities.flatMap(entityCommands),
-  ...actions.value,
-]);
-
-/** Subsequence match, scored so earlier and tighter matches rank higher. */
-function score(text: string, needle: string): number | null {
-  if (!needle) return 0;
-
-  const haystack = text.toLowerCase();
-  const pattern = needle.toLowerCase();
-
-  let index = 0;
-  let previous = -1;
-  let points = 0;
-
-  for (const char of pattern) {
-    const found = haystack.indexOf(char, index);
-    if (found === -1) return null;
-
-    // Adjacent characters are worth more than scattered ones, and a match at a
-    // word boundary is worth more than one in the middle.
-    if (found === previous + 1) points += 3;
-    if (found === 0 || /[\s_.-]/.test(haystack[found - 1] ?? '')) points += 2;
-
-    previous = found;
-    index = found + 1;
+/**
+ * Commands, matched by the mode the field is in.
+ *
+ * `/` gives the whole registry, matched against the typed forms. Plain text
+ * matches them too, by title and keywords, because "settings" was findable by
+ * typing "sett" long before there was a slash mode — a palette that quietly
+ * stops answering the words people already use has got worse, not stricter.
+ */
+const matchedCommands = computed(() => {
+  if (commandMode.value) {
+    return commands.value.filter((command) => matchSlash(command, query.value));
   }
 
-  // Shorter targets win ties: "album" should beat "album_summary" for "album".
-  return points - haystack.length * 0.01;
+  const needle = query.value.trim().toLowerCase();
+  if (needle === '') return [];
+
+  return commands.value.filter((command) =>
+    `${command.title} ${command.keywords ?? ''}`.toLowerCase().includes(needle)
+  );
+});
+
+/* ---------------------------------------------------------------- the tables */
+
+interface Hit {
+  readonly entity: Entity;
+  readonly path: string;
+  readonly score: number;
 }
 
-const matches = computed(() => {
-  const needle = query.value.trim();
+const database = computed(() => connections.active?.database ?? undefined);
 
-  if (!needle) {
-    // Empty means "where was I", not "everything".
-    return candidates.value
-      .filter((command) => command.group === t('palette.openTabs'))
-      .slice(0, 8);
+const matchedTables = computed<Hit[]>(() => {
+  if (commandMode.value) return [];
+
+  const parsed = parseQuery(query.value);
+  const hits: Hit[] = [];
+
+  for (const entity of entities.entities) {
+    const searchable = {
+      name: entity.name,
+      schema: entity.schema,
+      database: database.value,
+    };
+    const score = scoreEntity(searchable, parsed);
+    if (score === null) continue;
+    hits.push({ entity, path: qualifiedPath(searchable), score });
   }
 
-  return candidates.value
-    .map((command) => ({ command, points: score(command.label, needle) }))
-    .filter((entry): entry is { command: Command; points: number } => entry.points !== null)
-    .sort((a, b) => b.points - a.points)
-    .slice(0, 40)
-    .map((entry) => entry.command);
+  return hits.sort((a, b) => b.score - a.score);
 });
 
 /**
- * The same list, in sections.
+ * How many rows are drawn, and how many were found.
  *
- * Every row used to carry its own group name on the right — "OPEN TABS" printed
- * once per row, five times over, for a heading that changes twice in the list.
- * The sections keep the flat `matches` array as the source of truth for
- * selection and keyboard movement, so the index a row reports is still its
- * index in that array.
+ * A cap is needed — a schema of fifty thousand tables is one `v-for` away from
+ * a locked window — but it has to be stated. It was a silent `slice(0, 40)`
+ * under a heading that then counted the survivors, so a database of a hundred
+ * and eighty tables opened the palette and announced it had forty.
+ */
+const RENDER_LIMIT = 200;
+
+const shownTables = computed(() => matchedTables.value.slice(0, RENDER_LIMIT));
+const truncated = computed(() => matchedTables.value.length - shownTables.value.length);
+
+/**
+ * Where the table actually is, when the path given for it was wrong.
+ *
+ * `orders` finding a table and `warehouse.public.orders` finding nothing is a
+ * confusing pair to be handed with no explanation — the obvious reading is that
+ * dot notation is broken, when what has happened is that one of the levels
+ * above is not spelt the way it was guessed. So when a path query comes back
+ * empty, the leaf is searched on its own and the results are offered as the
+ * paths that do exist. It answers the question the empty state raises.
+ */
+const elsewhere = computed<string[]>(() => {
+  if (matchedTables.value.length > 0) return [];
+
+  const leaf = leafOf(parseQuery(query.value));
+  if (leaf === undefined) return [];
+
+  const alone = parseQuery(leaf);
+  const paths: string[] = [];
+
+  for (const entity of entities.entities) {
+    const searchable = {
+      name: entity.name,
+      schema: entity.schema,
+      database: database.value,
+    };
+    if (scoreEntity(searchable, alone) === null) continue;
+    paths.push(qualifiedPath(searchable));
+    if (paths.length === 5) break;
+  }
+
+  return paths;
+});
+
+/*
+ * Open tabs, offered only on an empty query. "Where was I" is the useful answer
+ * to a palette that has just been opened and the useless one to a palette that
+ * has been typed into.
+ */
+const openTabs = computed(() =>
+  query.value.trim() === ''
+    ? tabs.tabs.map((tab) => ({ id: tab.id, title: tab.title, subtitle: tab.subtitle }))
+    : []
+);
+
+/**
+ * Every row, in the order they are drawn.
+ *
+ * One flat list behind the sections, so the arrow keys move through the palette
+ * rather than through whichever group they happen to be in.
+ */
+type Row =
+  | { kind: 'command'; command: Command }
+  | { kind: 'table'; hit: Hit }
+  | { kind: 'tab'; id: string; title: string; subtitle?: string | undefined };
+
+/*
+ * Tables first when they were what was asked for. The field's plain mode is a
+ * table search that also answers command words, not a command list that happens
+ * to include tables, and the first row is the one Enter runs.
+ */
+const rows = computed<Row[]>(() =>
+  commandMode.value
+    ? matchedCommands.value.map((command) => ({ kind: 'command' as const, command }))
+    : [
+        ...openTabs.value.map((tab) => ({ kind: 'tab' as const, ...tab })),
+        ...shownTables.value.map((hit) => ({ kind: 'table' as const, hit })),
+        ...matchedCommands.value.map((command) => ({ kind: 'command' as const, command })),
+      ]
+);
+
+/**
+ * The same rows, grouped for display.
+ *
+ * Sections are derived from the flat list rather than rendered from three
+ * separate arrays, so a row's position in the keyboard order is the position it
+ * reports. Each section computing its own offset is a sum that was already
+ * wrong once, the moment the order stopped being fixed.
  */
 const sections = computed(() => {
-  const groups: { group: string; items: { command: Command; index: number }[] }[] = [];
+  const groups: { key: string; label: string; items: { row: Row; index: number }[] }[] = [];
 
-  matches.value.forEach((command, index) => {
+  rows.value.forEach((row, index) => {
+    const key = row.kind === 'table' ? 'tables' : row.kind === 'tab' ? 'tabs' : 'commands';
     const last = groups[groups.length - 1];
-    if (last?.group === command.group) last.items.push({ command, index });
-    else groups.push({ group: command.group, items: [{ command, index }] });
+    if (last?.key === key) last.items.push({ row, index });
+    else
+      groups.push({
+        key,
+        label:
+          key === 'tables'
+            ? t('commands.sectionTables')
+            : key === 'tabs'
+              ? t('palette.openTabs')
+              : t('commands.sectionCommands'),
+        items: [{ row, index }],
+      });
   });
 
   return groups;
 });
 
-watch(matches, () => (selected.value = 0));
+watch(rows, () => (selected.value = 0));
+
+/**
+ * Keeps the caret in the field for as long as the palette is up.
+ *
+ * A modal that does not hold focus is worse than no modal: the palette was over
+ * the query editor and the editor still had the caret, so what was typed went
+ * into the SQL behind it and the list never moved. Focusing once on open was
+ * not enough, because Monaco takes focus back — it re-focuses itself on layout,
+ * and its edit context keeps routing keystrokes until something else genuinely
+ * holds the caret.
+ *
+ * So the guard is a capture listener rather than a single call: any key that
+ * arrives anywhere but inside the palette is a key the palette should have had,
+ * and it is stopped and the field re-focused rather than delivered to whatever
+ * is underneath.
+ */
+useDismiss(open);
+
+function guardKey(event: KeyboardEvent): void {
+  const field = input.value;
+  if (!field || event.target === field) return;
+  if (field.contains(event.target as Node)) return;
+
+  event.stopPropagation();
+  field.focus();
+}
 
 watch(open, async (isOpen) => {
-  if (!isOpen) return;
+  if (!isOpen) {
+    window.removeEventListener('keydown', guardKey, true);
+    return;
+  }
+
   query.value = '';
   selected.value = 0;
   await nextTick();
   input.value?.focus();
+  window.addEventListener('keydown', guardKey, true);
 });
 
+onBeforeUnmount(() => window.removeEventListener('keydown', guardKey, true));
+
 function move(delta: number): void {
-  const count = matches.value.length;
+  const count = rows.value.length;
   if (count === 0) return;
   selected.value = (selected.value + delta + count) % count;
+
+  void nextTick(() => {
+    list.value
+      ?.querySelector(`[data-index="${selected.value}"]`)
+      ?.scrollIntoView({ block: 'nearest' });
+  });
+}
+
+function choose(row: Row): void {
+  open.value = false;
+
+  if (row.kind === 'command') row.command.run();
+  else if (row.kind === 'tab') tabs.focus(row.id);
+  else {
+    const entity = row.hit.entity;
+    tabs.openEntity('table', {
+      name: entity.name,
+      ...(entity.schema ? { schema: entity.schema } : {}),
+    });
+  }
 }
 
 function commit(): void {
-  const command = matches.value[selected.value];
-  if (!command) return;
-  open.value = false;
-  command.run();
+  const row = rows.value[selected.value];
+  if (row) choose(row);
 }
 </script>
 
@@ -200,74 +358,174 @@ function commit(): void {
         @click.self="open = false"
       >
         <div class="palette surface-sheet mat-edge-top">
-          <input
-            ref="input"
-            v-model="query"
-            class="palette__input"
-            type="text"
-            :placeholder="$t('palette.placeholder')"
-            spellcheck="false"
-            autocomplete="off"
-            role="combobox"
-            :aria-expanded="matches.length > 0"
-            :aria-controls="matches.length ? 'palette-results' : undefined"
-            :aria-activedescendant="matches.length ? `palette-option-${selected}` : undefined"
-            @keydown.down.prevent="move(1)"
-            @keydown.up.prevent="move(-1)"
-            @keydown.enter.prevent="commit"
-            @keydown.esc.prevent="open = false"
-          >
+          <div class="palette__field">
+            <!--
+              The glyph is the mode. A chevron for commands, a magnifier for
+              tables — drawn in the same stroke weight, because the field has
+              not become a different control, only a different mode of one.
+            -->
+            <AppIcon
+              class="palette__glyph"
+              :class="{ 'palette__glyph--command': commandMode }"
+              :name="commandMode ? 'chevron' : 'search'"
+              :size="15"
+            />
 
-          <!--
-            The list is only in the DOM when it has something in it, so the
-            input's `aria-controls` and `aria-activedescendant` have to come and
-            go with it — pointing either at an element that does not exist is
-            what a screen reader reports as a broken control.
-          -->
+            <input
+              ref="input"
+              v-model="query"
+              class="palette__input"
+              type="text"
+              :placeholder="
+                commandMode ? $t('commands.commandPlaceholder') : $t('commands.placeholder')
+              "
+              spellcheck="false"
+              autocomplete="off"
+              role="combobox"
+              aria-controls="palette-results"
+              aria-autocomplete="list"
+              :aria-expanded="rows.length > 0"
+              :aria-activedescendant="rows.length ? `palette-option-${selected}` : undefined"
+              @keydown.down.prevent="move(1)"
+              @keydown.up.prevent="move(-1)"
+              @keydown.enter.prevent="commit"
+            >
+
+            <button
+              v-if="query"
+              type="button"
+              class="palette__clear focus-fill"
+              :aria-label="$t('action.clear')"
+              @click="
+                query = '';
+                input?.focus();
+              "
+            >
+              <AppIcon
+                name="close"
+                :size="11"
+              />
+            </button>
+
+            <kbd class="palette__key">esc</kbd>
+          </div>
+
           <div
-            v-if="matches.length"
+            v-if="rows.length"
             id="palette-results"
+            ref="list"
             class="palette__list"
             role="listbox"
           >
             <template
               v-for="section in sections"
-              :key="section.group"
+              :key="section.key"
             >
-              <p
-                class="palette__section type-label"
-                role="presentation"
-              >
-                {{ section.group }}
+              <p class="palette__section type-label">
+                {{ section.label }} ·
+                {{
+                  section.key === 'tables' && truncated > 0
+                    ? $t('commands.someOf', {
+                      shown: section.items.length,
+                      total: matchedTables.length,
+                    })
+                    : section.items.length
+                }}
               </p>
+
               <div
                 v-for="entry in section.items"
                 :id="`palette-option-${entry.index}`"
-                :key="entry.command.id"
-                class="palette__item"
-                :class="{ 'palette__item--on': entry.index === selected }"
+                :key="entry.index"
+                class="palette__row"
+                :class="{ 'palette__row--on': entry.index === selected }"
+                :data-index="entry.index"
                 role="option"
                 :aria-selected="entry.index === selected"
                 @mouseenter="selected = entry.index"
-                @click="commit()"
+                @click="choose(entry.row)"
               >
-                <span class="palette__label">{{ entry.command.label }}</span>
-                <span
-                  v-if="entry.command.detail"
-                  class="palette__detail"
-                >{{
-                  entry.command.detail
-                }}</span>
+                <template v-if="entry.row.kind === 'command'">
+                  <span
+                    v-if="entry.row.command.swatch"
+                    class="palette__swatch"
+                    :style="{ background: entry.row.command.swatch }"
+                  />
+                  <AppIcon
+                    v-else
+                    class="palette__icon"
+                    :name="entry.row.command.icon"
+                    :size="13"
+                  />
+                  <span class="palette__label">{{ entry.row.command.title }}</span>
+                  <span class="palette__slash">{{ entry.row.command.slash }}</span>
+                </template>
+
+                <template v-else-if="entry.row.kind === 'tab'">
+                  <AppIcon
+                    class="palette__icon"
+                    name="query"
+                    :size="13"
+                  />
+                  <span class="palette__label">{{ entry.row.title }}</span>
+                  <span class="palette__slash">{{ entry.row.subtitle }}</span>
+                </template>
+
+                <template v-else>
+                  <AppIcon
+                    class="palette__icon"
+                    name="table"
+                    :size="13"
+                  />
+                  <!-- The qualifier is dimmed and the name is not: the path is
+                       there to disambiguate, not to be read. -->
+                  <span class="palette__label">
+                    <span class="palette__qualifier">{{
+                      entry.row.hit.path.slice(
+                        0,
+                        entry.row.hit.path.length - entry.row.hit.entity.name.length
+                      )
+                    }}</span>{{ entry.row.hit.entity.name }}
+                  </span>
+                  <span class="palette__slash">{{ entry.row.hit.entity.kind }}</span>
+                </template>
               </div>
             </template>
           </div>
 
-          <p
+          <div
             v-else
             class="palette__empty"
           >
-            {{ query ? $t('palette.nothingMatches') : $t('palette.openSomething') }}
-          </p>
+            <p>{{ query ? $t('commands.nothing') : $t('palette.openSomething') }}</p>
+
+            <!-- The path was wrong, not the search. Here is the right one. -->
+            <template v-if="elsewhere.length > 0">
+              <p class="palette__aside">
+                {{ $t('commands.tryPath') }}
+              </p>
+              <ul class="palette__paths">
+                <li
+                  v-for="path of elsewhere"
+                  :key="path"
+                >
+                  <button
+                    type="button"
+                    class="palette__path"
+                    @click="query = path"
+                  >
+                    {{ path }}
+                  </button>
+                </li>
+              </ul>
+            </template>
+          </div>
+
+          <div class="palette__foot type-label">
+            <span><kbd class="palette__key">↵</kbd> {{ $t('commands.openHint') }}</span>
+            <span><kbd class="palette__key">/</kbd> {{ $t('commands.commandHint') }}</span>
+            <span class="palette__hint">{{ $t('commands.hintPath') }}</span>
+          </div>
         </div>
       </div>
     </Transition>
@@ -285,7 +543,7 @@ function commit(): void {
 }
 
 .palette {
-  width: min(34rem, calc(100vw - 4rem));
+  width: min(38rem, calc(100vw - 4rem));
   border-radius: 1rem;
   overflow: hidden;
   box-shadow:
@@ -293,23 +551,35 @@ function commit(): void {
     0 24px 64px oklch(0% 0 0 / 0.28);
 }
 
-.palette__input {
-  width: 100%;
+.palette__field {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  padding-inline: var(--gap-loose);
   height: 3rem;
-  padding-inline: var(--gap-section);
+}
+
+.palette__glyph {
+  flex: 0 0 auto;
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  transition: color var(--t-hover) var(--ease-out);
+}
+
+.palette__glyph--command {
+  color: var(--color-primary-text, var(--color-primary));
+}
+
+.palette__input {
+  flex: 1;
+  min-width: 0;
   border: 0;
   background: transparent;
   color: var(--color-base-content);
   font-size: 0.9375rem;
 }
 
-/*
- * No ring. The input is focused the instant the palette opens and is the only
- * thing in it that can take focus, so the global focus outline had nothing to
- * distinguish — and being clipped by the panel's own `overflow: hidden` it drew
- * as a single accent line across the palette rather than a ring around
- * anything.
- */
+/* The field is the only focusable thing here and the ring would be clipped by
+   the panel's own rounding, drawing as a line across it. */
 .palette__input:focus-visible {
   outline: none;
 }
@@ -318,9 +588,28 @@ function commit(): void {
   color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
 }
 
+.palette__clear {
+  display: grid;
+  place-items: center;
+  width: var(--hit-min);
+  height: var(--hit-min);
+  border-radius: 999px;
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+}
+
+.palette__key {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--fill-4);
+  font-family: var(--font-ui);
+  font-size: 0.625rem;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
 .palette__list {
-  max-height: 22rem;
+  max-height: 24rem;
   overflow-y: auto;
+  overscroll-behavior: contain;
   border-top: 1px solid var(--separator);
   padding: var(--gap-tight) var(--gap-tight) var(--gap);
 }
@@ -335,7 +624,7 @@ function commit(): void {
   padding-top: var(--gap-tight);
 }
 
-.palette__item {
+.palette__row {
   display: flex;
   align-items: center;
   gap: var(--gap);
@@ -345,31 +634,66 @@ function commit(): void {
   font-size: 0.8125rem;
 }
 
-/*
- * A tint, not the accent at full strength.
- *
- * A saturated bar across a glass panel is the loudest thing on screen for a
- * row you are merely hovering past, and it takes the sub-label down with it:
- * the detail is drawn at 0.6 opacity, which over white-on-accent lands well
- * under the contrast floor. The tonal surface is the same one a selected row
- * wears everywhere else in the app.
- */
-.palette__item--on {
+.palette__row--on {
   background: color-mix(in oklab, var(--color-primary) 16%, transparent);
   color: var(--color-primary-text, var(--color-primary));
 }
 
+.palette__icon {
+  flex: 0 0 auto;
+  opacity: 0.65;
+}
+
+.palette__swatch {
+  flex: 0 0 auto;
+  width: 0.8125rem;
+  height: 0.8125rem;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px oklch(0% 0 0 / 0.15);
+}
+
 .palette__label {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.palette__detail {
-  margin-inline-start: auto;
+.palette__qualifier {
+  color: color-mix(in oklab, currentColor 45%, transparent);
+}
+
+.palette__slash {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
   font-size: 0.6875rem;
-  font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, currentColor 60%, transparent);
+  color: color-mix(in oklab, currentColor 45%, transparent);
+}
+
+.palette__aside {
+  margin-block-start: var(--gap-tight);
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+}
+
+.palette__paths {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-block-start: var(--gap-tight);
+}
+
+.palette__path {
+  padding: 2px var(--gap-tight);
+  border-radius: var(--radius-field);
+  color: var(--color-primary-text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.palette__path:hover {
+  background: var(--fill-1);
 }
 
 .palette__empty {
@@ -378,6 +702,29 @@ function commit(): void {
   font-size: 0.75rem;
   color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
   border-top: 1px solid var(--separator);
+}
+
+/*
+ * The footer says what the field can do before it has been used. A palette
+ * whose second mode is only discoverable by accidentally typing a slash has a
+ * second mode nobody finds.
+ */
+.palette__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-loose);
+  padding: var(--gap-tight) var(--gap-loose);
+  border-top: 1px solid var(--separator);
+  background: var(--fill-4);
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+}
+
+.palette__hint {
+  margin-inline-start: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
 }
 
 .palette-enter-active,

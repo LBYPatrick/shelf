@@ -7,6 +7,7 @@
  * the rows in view exist in the DOM; expansion state lives in the store rather
  * than in the row components, which are destroyed as they scroll away.
  */
+import ProgressBar from '../ui/ProgressBar.vue';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import type { CellValue, Entity, EntityRef, Field } from '@drivers/types';
 import { useTranslation } from 'i18next-vue';
@@ -19,10 +20,12 @@ import { host } from '../../lib/host';
 import { useConnections } from '../../stores/connections';
 import { useEntities, type TreeRow } from '../../stores/entities';
 import { useTabs } from '../../stores/tabs';
+import { useToasts } from '../../stores/toasts';
 
 const entities = useEntities();
 const connections = useConnections();
 const tabs = useTabs();
+const toasts = useToasts();
 const { t } = useTranslation();
 
 const viewport = ref<HTMLElement>();
@@ -158,7 +161,9 @@ function onChoose(id: string): void {
   const ref_ = refOf(entity);
 
   if (id === 'copy') {
-    void navigator.clipboard.writeText(qualified(entity));
+    const name = qualified(entity);
+    void navigator.clipboard.writeText(name);
+    toasts.show({ tone: 'success', message: t('menu.copiedName', { name }) });
     return;
   }
   if (id === 'docs') {
@@ -224,12 +229,12 @@ const KIND_ICON: Record<string, string> = {
       aria-hidden="true"
     />
 
-    <p
-      v-if="entities.loading"
-      class="tree__note type-label"
-    >
-      {{ $t('workspace.loading') }}
-    </p>
+    <template v-if="entities.loading">
+      <ProgressBar class="tree__progress" />
+      <p class="tree__note type-label">
+        {{ $t('workspace.loading') }}
+      </p>
+    </template>
     <p
       v-else-if="entities.error"
       class="tree__note tree__note--error type-label"
@@ -387,6 +392,11 @@ const KIND_ICON: Record<string, string> = {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+/* Fetching a schema over a slow link is the case the word alone did not cover. */
+.tree__progress {
+  margin-block: var(--gap-tight);
 }
 
 .tree__note {

@@ -88,11 +88,9 @@
     "entities": "Đối tượng",
     "savedQueries": "Truy vấn đã lưu",
     "history": "Lịch sử",
-    "filterEntities": "Lọc {{noun}}",
     "filterSaved": "Lọc truy vấn đã lưu",
     "filterHistory": "Lọc lịch sử",
     "shown": "hiển thị {{count}}",
-    "hidden": "ẩn {{count}}",
     "nothingOpen": "Chưa mở gì cả",
     "nothingOpenHint": "Nhấp đúp vào một {{noun}} ở thanh bên để xem dữ liệu, hoặc mở một truy vấn.",
     "newQuery": "Truy vấn mới",
@@ -104,7 +102,9 @@
     "noColumns": "Không có cột",
     "disconnect": "{{version}} — nhấp để ngắt kết nối",
     "readOnly": "chỉ đọc",
-    "disconnectHint": "nhấp để ngắt kết nối"
+    "disconnectHint": "nhấp để ngắt kết nối",
+    "searchEntities": "Tìm bảng",
+    "toggleSidebar": "Bật/tắt thanh bên"
   },
   "table": {
     "filterPlaceholder": "Lọc — ví dụ name like 'A%'",
@@ -119,7 +119,8 @@
     "nullValue": "NULL",
     "emptyValue": "rỗng",
     "editData": "Sửa dữ liệu",
-    "editHint": "Bật để thay đổi giá trị trong bảng"
+    "editHint": "Bật để thay đổi giá trị trong bảng",
+    "sqlCopied": "Đã sao chép SQL cho {{count}} thay đổi."
   },
   "query": {
     "manualCommit": "Commit thủ công",
@@ -213,7 +214,10 @@
     "wrapLines": "Ngắt dòng dài",
     "keyboard": "Bàn phím",
     "keyboardHelp": "Phím tắt được định nghĩa dưới dạng dữ liệu nên có thể ghi đè — nhưng màn hình để sửa thì chưa có.",
-    "resetData": "Đặt lại cài đặt dữ liệu"
+    "resetData": "Đặt lại cài đặt dữ liệu",
+    "primaryRun": "Hành động chạy chính",
+    "runAll": "Toàn bộ trình soạn thảo",
+    "runCurrent": "Câu lệnh tại con trỏ"
   },
   "palette": {
     "placeholder": "Tìm bảng, thẻ và thao tác…",
@@ -289,12 +293,14 @@
     "copied": "Đã sao chép {{count}} hàng.",
     "written": "Đã ghi.",
     "working": "Đang xử lý…",
-    "run": "Xuất"
+    "run": "Xuất",
+    "wroteTo": "Đã ghi {{name}}."
   },
   "grid": {
     "oneBased": "Bắt đầu từ 1",
     "zeroBased": "Bắt đầu từ 0",
-    "indexHint": "Số hàng bên trái bắt đầu từ 1 hay từ 0."
+    "indexHint": "Số hàng bên trái bắt đầu từ 1 hay từ 0.",
+    "indexLabel": "Số hàng"
   },
   "activity": {
     "working": "Đang chạy…",
@@ -306,7 +312,8 @@
     "quickDocs": "Tài liệu nhanh",
     "properties": "Thuộc tính",
     "exportData": "Xuất dữ liệu ra tệp…",
-    "actionsFor": "Thao tác cho {{name}}"
+    "actionsFor": "Thao tác cho {{name}}",
+    "copiedName": "Đã sao chép {{name}}."
   },
   "properties": {
     "rows": "Số hàng",
@@ -318,5 +325,26 @@
     "rowsCount": "{{count}} hàng",
     "copySelect": "Sao chép SELECT",
     "copied": "Đã sao chép"
+  },
+  "host": {
+    "restartedTitle": "Kết nối đã khởi động lại",
+    "restarted": "Tiến trình giữ các cơ sở dữ liệu đã khởi động lại. Các kết nối đang mở đã mất; hãy kết nối lại để tiếp tục.",
+    "unavailableTitle": "Không dùng được máy chủ kết nối",
+    "unavailable": "Không thể khởi động tiến trình mở cơ sở dữ liệu. Hãy khởi động lại Shelf và thử lại."
+  },
+  "commands": {
+    "wrapOn": "Ngắt dòng dài",
+    "wrapOff": "Không ngắt dòng dài",
+    "sectionCommands": "Lệnh",
+    "sectionTables": "Bảng",
+    "sectionActions": "Hành động",
+    "placeholder": "Tìm bảng, hoặc gõ / để dùng lệnh",
+    "commandPlaceholder": "Nhập một lệnh",
+    "openHint": "để mở",
+    "commandHint": "để dùng lệnh",
+    "nothing": "Không có kết quả nào.",
+    "hintPath": "Thử đường dẫn như music.album, hoặc mẫu như ^a.*t$",
+    "someOf": "{{shown}} trong {{total}}",
+    "tryPath": "Tìm thấy ở đường dẫn khác:"
   }
 }

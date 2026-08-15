@@ -32,6 +32,15 @@ export interface Settings {
   language: LanguagePreference;
 }
 
+/**
+ * Exported so a test can enumerate the preferences that exist.
+ *
+ * The palette has a command for each of them, and the parity test uses this to
+ * prove it — a preference added here and nowhere else would otherwise simply be
+ * unreachable, with nothing to say so.
+ */
+export const DEFAULTS_FOR_TEST = () => DEFAULTS;
+
 const DEFAULTS: Settings = {
   pageSize: 100,
   maxRows: 50_000,

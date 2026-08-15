@@ -26,6 +26,7 @@ import { useEntities } from '../stores/entities';
 import { useQueries } from '../stores/queries';
 import { useTabs } from '../stores/tabs';
 import { useHotkeys } from '../composables/useHotkeys';
+import { shortcutLabel } from '../lib/keybindings';
 import { useTranslation } from 'i18next-vue';
 
 const connections = useConnections();
@@ -112,6 +113,36 @@ onBeforeUnmount(() => stopPersisting?.());
 
 <template>
   <div class="workspace">
+    <!--
+      One bar across the whole window, and the traffic lights sit on it.
+      
+      The strip used to live inside the content pane, which put its leading edge
+      at the sidebar's trailing edge — so with the sidebar open the tabs had a
+      window's width less a sidebar to work with, and with it shut they ran
+      under the window controls and had to be padded out of the way. Worse, the
+      controls are wider than the rail and overhung the sidebar, so the seam
+      between those two columns ran directly beneath them and every attempt to
+      hide it moved it somewhere else. Spanning the bar removes both problems at
+      once rather than managing them: the controls have one surface under them,
+      the tabs get the window, and the columns below start under a clean edge.
+    -->
+    <header
+      class="topbar mat-regular panel-sidebar drag-region"
+      :style="{ paddingInlineStart: `max(var(--gap-tight), var(--controls-inset, 0px))` }"
+    >
+      <button
+        class="topbar__toggle no-drag"
+        :aria-label="$t('workspace.toggleSidebar')"
+        :aria-pressed="!sidebarCollapsed"
+        :title="`${t('workspace.toggleSidebar')} — ${shortcutLabel('sidebar.toggle')}`"
+        @click="sidebarCollapsed = !sidebarCollapsed"
+      >
+        <AppIcon name="sidebar" />
+      </button>
+
+      <TabStrip />
+    </header>
+
     <div class="workspace__main">
       <nav
         class="rail mat-regular panel-recessed"
@@ -156,14 +187,26 @@ onBeforeUnmount(() => stopPersisting?.());
         <ConnectionSwitcher />
 
         <div class="sidebar__head">
-          <input
+          <!--
+            Not a filter box. Narrowing the tree in place could only ever show
+            what was already loaded into it, and it competed with a palette that
+            reaches the whole database, takes a path or a pattern, and opens
+            what you pick. The affordance stays — a search field nobody can find
+            is a search nobody uses — but pressing it opens that.
+          -->
+          <button
             v-if="rail === 'entities'"
-            v-model="entities.filter"
-            class="sidebar__filter"
-            type="search"
-            :placeholder="$t('workspace.filterEntities', { noun: entityNoun })"
-            spellcheck="false"
+            type="button"
+            class="sidebar__search focus-fill"
+            @click="paletteOpen = true"
           >
+            <AppIcon
+              name="search"
+              :size="13"
+            />
+            <span class="sidebar__search-label">{{ $t('workspace.searchEntities') }}</span>
+            <kbd class="sidebar__search-key">{{ shortcutLabel('palette.open') }}</kbd>
+          </button>
           <input
             v-else
             v-model="queries.filter"
@@ -189,10 +232,7 @@ onBeforeUnmount(() => stopPersisting?.());
           v-if="rail === 'entities'"
           class="sidebar__counts type-label"
         >
-          <span>{{ $t('workspace.shown', { count: entities.visibleEntities.length }) }}</span>
-          <span v-if="entities.hiddenCount > 0">{{
-            $t('workspace.hidden', { count: entities.hiddenCount })
-          }}</span>
+          <span>{{ $t('workspace.shown', { count: entities.entities.length }) }}</span>
           <button
             class="sidebar__collapse"
             @click="entities.collapseAll()"
@@ -215,12 +255,7 @@ onBeforeUnmount(() => stopPersisting?.());
         @collapse-toggle="sidebarCollapsed = true"
       />
 
-      <section
-        class="content panel-content"
-        :class="{ 'content--under-controls': sidebarCollapsed }"
-      >
-        <TabStrip />
-
+      <section class="content panel-content">
         <div class="content__body">
           <template
             v-for="tab in tabs.tabs"
@@ -298,6 +333,49 @@ onBeforeUnmount(() => stopPersisting?.());
   min-height: 0;
 }
 
+/*
+ * At least as tall as the window controls, whatever the density scale says.
+ * They are drawn by the OS and do not shrink with the interface, so a compact
+ * density would otherwise crop them.
+ */
+.topbar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--gap-tight);
+  height: max(var(--tab-h), var(--controls-h, 0px));
+  padding-inline-end: var(--gap-tight);
+}
+
+.topbar__toggle {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: var(--hit-min);
+  height: var(--hit-min);
+  border-radius: var(--control-radius);
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  transition:
+    color var(--t-hover) var(--ease-out),
+    background-color var(--t-hover) var(--ease-out),
+    transform var(--t-press) var(--ease-out);
+}
+
+.topbar__toggle:hover {
+  background: var(--fill-3);
+  color: var(--color-base-content);
+}
+
+.topbar__toggle:active {
+  transform: scale(0.92);
+}
+
+/* Pressed means the sidebar is showing — the same tonal "this mode is on" the
+   tab toolbars use, rather than a second kind of selected state. */
+.topbar__toggle[aria-pressed='true'] {
+  color: var(--color-base-content);
+}
+
 .workspace__main {
   display: flex;
   flex: 1;
@@ -321,9 +399,7 @@ onBeforeUnmount(() => stopPersisting?.());
    */
   /* One source for where the column's contents begin, so the travelling
      marker cannot end up on a different line from the icons it marks. */
-  --rail-content-top: calc(
-    var(--rail-top, var(--gap-tight)) + (var(--header-h) - var(--rail-item)) / 2
-  );
+  --rail-content-top: calc(var(--gap-tight) + (var(--header-h) - var(--rail-item)) / 2);
   padding-top: var(--rail-content-top);
   /*
    * No banding. The window controls are wider than this column and overhang the
@@ -458,6 +534,51 @@ onBeforeUnmount(() => stopPersisting?.());
   padding: var(--gap) var(--gap-tight) var(--gap) var(--gap);
 }
 
+/*
+ * Shaped like the field it replaced, because it stands where one stood and does
+ * what one would have done. A button that looks like a button here would read
+ * as an action on the sidebar rather than a way into it.
+ */
+.sidebar__search {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--gap-tight);
+  min-width: 0;
+  height: var(--field-h);
+  padding-inline: var(--gap) var(--gap-tight);
+  border-radius: var(--control-radius);
+  background-color: var(--fill-4);
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  font-size: 0.8125rem;
+  transition: background-color var(--t-hover) var(--ease-out);
+}
+
+.sidebar__search-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: start;
+}
+
+.sidebar__search-key {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--fill-3);
+  font-family: var(--font-ui);
+  font-size: 0.625rem;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sidebar__search:hover {
+    background-color: var(--fill-3);
+    color: var(--color-base-content);
+  }
+}
+
 .sidebar__filter {
   flex: 1;
   min-width: 0;
@@ -505,21 +626,23 @@ onBeforeUnmount(() => stopPersisting?.());
 }
 
 /*
- * With the sidebar collapsed the content pane reaches the window's leading
- * edge, and the traffic lights float over it — which put the first tab
- * underneath them, unreachable and overlapping. The strip keeps their width
- * clear, less whatever the rail beside it already covers.
+ * One rounded corner, where the opaque pane meets the two glass edges.
+ *
+ * The other three are the window's own. This one had nothing to soften it and
+ * the pane butted into the bar above and the column beside it as a hard right
+ * angle, which read as the content being clipped by the chrome rather than
+ * sitting in front of it. The glass shows through the notch, which is the
+ * whole point — it is the only place the depth between the two is visible.
  */
-.content--under-controls :deep(.strip) {
-  padding-inline-start: max(0px, calc(var(--controls-inset, 0px) - var(--rail-w)));
-}
-
 .content {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  border-start-start-radius: var(--radius-box);
+  /* The grid and the editor both paint to their own edges. */
+  overflow: hidden;
 }
 
 .content__body {

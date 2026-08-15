@@ -9,11 +9,9 @@
  */
 import { computed } from 'vue';
 import { engineDescriptor } from '@shared/engines';
-import { usePlatform } from '../../composables/usePlatform';
 import { useConnections } from '../../stores/connections';
 import AppIcon from '../ui/AppIcon.vue';
 
-const platform = usePlatform();
 const connections = useConnections();
 
 const engine = computed(() =>
@@ -32,12 +30,7 @@ const subtitle = computed(() => {
 </script>
 
 <template>
-  <div
-    class="switcher drag-region"
-    :style="{
-      paddingTop: platform.info.nativeWindowControls ? 'var(--rail-top)' : 'var(--gap-tight)',
-    }"
-  >
+  <div class="switcher drag-region">
     <button
       v-if="connections.active"
       class="switcher__button no-drag"
@@ -78,10 +71,14 @@ const subtitle = computed(() => {
 </template>
 
 <style scoped>
+/*
+ * No clearance for the window controls any more. They sit on the top bar, which
+ * spans the window above this column rather than floating over it, so the
+ * connection row starts where every other row in the sidebar does.
+ */
 .switcher {
   flex: 0 0 auto;
-  padding-inline: var(--gap-tight);
-  padding-bottom: var(--gap-tight);
+  padding: var(--gap-tight) var(--gap-tight) var(--gap-tight);
 }
 
 .switcher__button {

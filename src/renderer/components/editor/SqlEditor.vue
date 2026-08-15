@@ -351,6 +351,20 @@ onMounted(() => {
     fontSize: settings.values.editorFontSize,
     wordWrap: settings.values.wrapLines ? 'on' : 'off',
     minimap: { enabled: false },
+    /*
+     * Sticky scroll, off.
+     *
+     * It pins the enclosing scope to the top of the viewport, and it has to
+     * occlude the text scrolling underneath to do that. This editor's
+     * background is deliberately translucent — the surface behind it is the
+     * material the OS paints outside the window, which nothing in the page can
+     * sample, so the well keeps its alpha and lets the compositor resolve it.
+     * A widget with nothing to paint over the scroll with draws straight
+     * through it: line one appeared over line seven, both legible, neither
+     * readable. And what it would be pinning here is the word SELECT, which is
+     * not the kind of context a nested block needs it for.
+     */
+    stickyScroll: { enabled: false },
     // The tab already has a status bar; a second one inside the editor would
     // say the same things twice.
     scrollBeyondLastLine: false,

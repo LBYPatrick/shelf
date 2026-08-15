@@ -10,7 +10,8 @@
  * Focus is trapped while it is open and returned to whatever had it before,
  * which is what keeps it usable without a mouse.
  */
-import { nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
+import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
+import { useDismiss } from '../../composables/useDismiss';
 
 const props = defineProps<{ title: string; wide?: boolean }>();
 const open = defineModel<boolean>({ required: true });
@@ -32,18 +33,12 @@ function focusables(): HTMLElement[] {
   ];
 }
 
-/**
- * Escape is handled at the window rather than on the panel. Relying on the
- * event bubbling from inside means the sheet stops closing the moment focus
- * lands anywhere else — inside a CodeMirror instance, on the body after a
- * click, in an iframe — which is exactly when a user reaches for Escape.
+/*
+ * Escape goes through the shared stack rather than a listener of this sheet's
+ * own. Every overlay had one, at the window and in the capture phase, and they
+ * all fired: a sheet opened from a sheet closed both at once.
  */
-function onWindowKeydown(event: KeyboardEvent): void {
-  if (!open.value || event.key !== 'Escape') return;
-  event.stopPropagation();
-  event.preventDefault();
-  open.value = false;
-}
+useDismiss(open);
 
 function onKeydown(event: KeyboardEvent): void {
   if (event.key !== 'Tab') return;
@@ -76,12 +71,7 @@ watch(open, async (isOpen) => {
   }
 });
 
-onMounted(() => window.addEventListener('keydown', onWindowKeydown, true));
-
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onWindowKeydown, true);
-  previouslyFocused?.focus();
-});
+onBeforeUnmount(() => previouslyFocused?.focus());
 
 void props;
 </script>

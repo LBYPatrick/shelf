@@ -4,8 +4,9 @@
  *
  * It tracks the pointer one-to-one and resists at its limits instead of
  * stopping dead, so dragging a sidebar to its minimum feels like reaching the
- * end of something physical rather than hitting a bug. The hit area is wider
- * than the visible line, because a 1px target is a 1px target.
+ * end of something physical rather than hitting a bug. It draws nothing until
+ * the pointer is on it: the panes meet directly, and the handle is a target
+ * straddling that meeting rather than a rule drawn between them.
  */
 import { computed } from 'vue';
 import { useDrag } from '../../composables/useDrag';
@@ -79,49 +80,49 @@ function nudge(delta: number): void {
   touch-action: none;
 }
 
+/*
+ * Seven pixels of target over zero pixels of layout: the negative margins
+ * cancel the width exactly, so the two panes meet with nothing between them and
+ * the handle overhangs them equally. A one-pixel target is a one-pixel target,
+ * which is why the box is not simply narrowed to nothing.
+ */
 .handle--vertical {
   width: 7px;
-  margin-inline: -3px;
+  margin-inline: -3.5px;
   cursor: col-resize;
 }
 
 .handle--horizontal {
   height: 7px;
-  margin-block: -3px;
+  margin-block: -3.5px;
   cursor: row-resize;
 }
 
 /*
- * The handle occupies a one-pixel column of layout between the two panes, and
- * that column has to be painted. Left transparent it was a gap in the page
- * through which the window's own backdrop showed — a bright vertical line down
- * the full height of the window over any light desktop, in either theme, which
- * no amount of adjusting the panels' colours could remove because the line was
- * not being drawn by the page at all.
+ * Nothing painted. The handle straddles the boundary rather than occupying a
+ * column of it, so there is no gap between the panes for anything to show
+ * through and nothing for the handle to fill.
  *
- * It wears the content pane's surface, so the seam reads as the content
- * starting a pixel earlier rather than as a rule between two panels.
+ * It used to take one pixel of layout, and that pixel had to be painted: left
+ * transparent it was a hole in the page through which the window's own backdrop
+ * came up, as a bright vertical line down the full height over any light
+ * desktop. Painting it the content pane's surface hid that for as long as the
+ * pane's leading edge was straight — and stopped the moment the pane took a
+ * rounded corner, because the strip carried on straight up past the curve and
+ * stood clear of it as a light stub. Cancelling the width with the margins
+ * removes the hole instead of covering it.
  */
 .handle__line {
   position: absolute;
   inset: 0;
-  background-color: var(--color-base-100);
-  transition: background-color 160ms ease-out;
-}
-
-.handle--vertical .handle__line {
-  inset-inline: 3px;
-}
-
-.handle--horizontal .handle__line {
-  inset-block: 3px;
 }
 
 /*
- * A grabber rather than a bare line: a 1px rule that changes colour on hover is
- * a hint that something might be draggable, where a thumb that grows under the
- * pointer says it plainly. It appears on hover and takes the accent while held,
- * so the drag reads as engaged rather than merely hovered.
+ * A grabber, and it is the whole indicator. A 1px rule that changes colour on
+ * hover is a hint that something might be draggable, where a thumb that grows
+ * under the pointer says it plainly — and with no rule to change, the thumb is
+ * all there is. It appears on hover and takes the accent while held, so the
+ * drag reads as engaged rather than merely hovered.
  */
 .handle__line::after {
   content: '';
@@ -131,7 +132,7 @@ function nudge(delta: number): void {
   width: 3px;
   height: 2.25rem;
   border-radius: 999px;
-  background: color-mix(in oklab, var(--color-base-content) 40%, var(--color-base-100));
+  background: color-mix(in oklab, var(--color-base-content) 40%, transparent);
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.6);
   transition:
@@ -143,12 +144,6 @@ function nudge(delta: number): void {
 .handle--horizontal .handle__line::after {
   width: 2.25rem;
   height: 3px;
-}
-
-.handle:hover .handle__line,
-.handle--dragging .handle__line,
-.handle:focus-visible .handle__line {
-  background: var(--fill-2);
 }
 
 .handle:hover .handle__line::after,
@@ -183,9 +178,5 @@ function nudge(delta: number): void {
   .handle--dragging .handle__line::after {
     transform: translate(-50%, -50%);
   }
-}
-
-.handle--dragging .handle__line {
-  transition: none;
 }
 </style>

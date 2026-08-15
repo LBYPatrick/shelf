@@ -59,7 +59,6 @@ export const useEntities = defineStore('entities', () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
-  const filter = ref('');
   const showTables = ref(true);
   const showViews = ref(true);
   const showRoutines = ref(true);
@@ -153,10 +152,13 @@ export const useEntities = defineStore('entities', () => {
     collapsedDatabases.value = new Set();
   }
 
-  const visibleEntities = computed(() => {
-    const needle = filter.value.trim().toLowerCase();
-
-    return entities.value.filter((entity) => {
+  /*
+   * The kind filters remain; the name filter does not. Narrowing the tree by
+   * typing moved into the palette, which searches the whole database by path or
+   * by pattern instead of hiding rows in the one view of it.
+   */
+  const visibleEntities = computed(() =>
+    entities.value.filter((entity) => {
       if (entity.kind === 'routine' && !showRoutines.value) return false;
       if ((entity.kind === 'view' || entity.kind === 'materialized-view') && !showViews.value) {
         return false;
@@ -164,11 +166,9 @@ export const useEntities = defineStore('entities', () => {
       if ((entity.kind === 'table' || entity.kind === 'collection') && !showTables.value) {
         return false;
       }
-      return needle === '' || entity.name.toLowerCase().includes(needle);
-    });
-  });
-
-  const hiddenCount = computed(() => entities.value.length - visibleEntities.value.length);
+      return true;
+    })
+  );
 
   /**
    * The tree, flattened to the rows that are actually visible.
@@ -180,9 +180,6 @@ export const useEntities = defineStore('entities', () => {
    * also why a lone schema disappears rather than being drawn as a branch with
    * everything hanging off it.
    *
-   * A filter opens what it matched. Typing a table name and being shown a list
-   * of shut folders that contain it is a search that has answered the question
-   * and then hidden the answer.
    */
   const rows = computed<TreeRow[]>(() => {
     const grouped = new Map<string, Entity[]>();
@@ -193,12 +190,11 @@ export const useEntities = defineStore('entities', () => {
       else grouped.set(schema, [entity]);
     }
 
-    const filtering = filter.value.trim() !== '';
     const useSchemas = grouped.size > 1;
 
     const database = connections.active?.database ?? null;
     const dbKey = database ? databaseKey(database) : null;
-    const dbOpen = !dbKey || filtering || !collapsedDatabases.value.has(dbKey);
+    const dbOpen = !dbKey || !collapsedDatabases.value.has(dbKey);
 
     const result: TreeRow[] = [];
 
@@ -277,7 +273,7 @@ export const useEntities = defineStore('entities', () => {
       a.localeCompare(b)
     )) {
       const key = schemaKey(schema);
-      const open = filtering || expanded.value.has(key);
+      const open = expanded.value.has(key);
 
       result.push({
         key,
@@ -301,7 +297,6 @@ export const useEntities = defineStore('entities', () => {
     columns.value = new Map();
     expanded.value = new Set();
     collapsedDatabases.value = new Set();
-    filter.value = '';
     error.value = null;
   }
 
@@ -312,12 +307,10 @@ export const useEntities = defineStore('entities', () => {
     expanded,
     loading,
     error,
-    filter,
     showTables,
     showViews,
     showRoutines,
     visibleEntities,
-    hiddenCount,
     rows,
     refresh,
     loadColumns,

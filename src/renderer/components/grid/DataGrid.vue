@@ -13,6 +13,7 @@
  * reactive.
  */
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
+import ProgressBar from '../ui/ProgressBar.vue';
 import ValueSheet from './ValueSheet.vue';
 import {
   TabulatorFull as Tabulator,
@@ -257,13 +258,63 @@ function visible(): boolean {
   return !!box && box.height > 0 && box.width > 0;
 }
 
+/**
+ * The box the table was last laid out against.
+ *
+ * `redraw(true)` recomputes column widths, and the layout is `fitDataStretch` —
+ * so it measures the widest content in every column across every loaded row.
+ * That is the right price for a pane that changed shape and an absurd one for a
+ * pane that did not, which is what a tab switch is: hiding a pane takes its box
+ * to zero and showing it again brings back exactly the box it had. The observer
+ * fired on both edges and the tab did a full relayout on the way back in, twice
+ * over with the tab's own watch, and a table with a lot of data in it stopped
+ * the window for as long as that took.
+ */
+let laidOutAt: { width: number; height: number } | undefined;
+let queued = 0;
+
 function redraw(): void {
-  if (!visible()) return;
+  const box = container.value?.getBoundingClientRect();
+  if (!box || box.height === 0 || box.width === 0) return;
+
   // Construction is deferred rather than corrected: a table built against a
   // zero-size box lays its rows out against that, and redrawing afterwards does
   // not fully recover.
-  if (!table.value) build();
-  else table.value.redraw(true);
+  if (!table.value) {
+    build();
+    laidOutAt = { width: box.width, height: box.height };
+    if (container.value) container.value.dataset['relayouts'] = '1';
+    return;
+  }
+
+  const wider = !laidOutAt || Math.abs(laidOutAt.width - box.width) >= 0.5;
+  const taller = !laidOutAt || Math.abs(laidOutAt.height - box.height) >= 0.5;
+  if (!wider && !taller) return;
+
+  laidOutAt = { width: box.width, height: box.height };
+
+  /*
+   * Coalesced to one per frame, and only the full form when the width moved.
+   * Dragging the sidebar resizes this pane on every pointer move; the height
+   * alone needs no more than the rows that fit being re-rendered, and the
+   * observer can report several times before the browser paints once.
+   */
+  cancelAnimationFrame(queued);
+  queued = requestAnimationFrame(() => {
+    if (!table.value) return;
+    table.value.redraw(wider);
+
+    /*
+     * Counted where a test can see it. How often the expensive relayout runs is
+     * the whole point of the guard above and is otherwise invisible — the grid
+     * looks identical whether it ran once or twenty times, and the only symptom
+     * is a window that stops for a moment.
+     */
+    if (wider && container.value) {
+      const at = container.value.dataset;
+      at['relayouts'] = String(Number(at['relayouts'] ?? 0) + 1);
+    }
+  });
 }
 
 onMounted(() => {
@@ -275,6 +326,7 @@ onMounted(() => {
 
 /** Drops the table and everything bound to it, leaving the container empty. */
 function teardown(): void {
+  laidOutAt = undefined;
   if (scroller && syncHeader) scroller.removeEventListener('scroll', syncHeader);
   scroller = undefined;
   syncHeader = undefined;
@@ -283,6 +335,7 @@ function teardown(): void {
 }
 
 onBeforeUnmount(() => {
+  cancelAnimationFrame(queued);
   teardown();
   observer?.disconnect();
   observer = undefined;
@@ -336,6 +389,17 @@ watch(
       ref="container"
       class="grid"
     />
+    <!--
+      A veil alone said nothing. It dimmed the previous page by a few per cent
+      and left the window looking exactly like one that had finished, so a slow
+      query was indistinguishable from a finished one. The bar is the part that
+      says work is happening; the veil is only what stops the stale rows reading
+      as the new ones.
+    -->
+    <ProgressBar
+      v-if="loading"
+      class="grid__progress"
+    />
     <div
       v-if="loading"
       class="grid__veil"
@@ -367,6 +431,14 @@ watch(
  * previous page visible while the next one loads means the eye stays where it
  * was instead of being sent back to an empty box.
  */
+/* Over the header, where the eye already is when a page is being fetched. */
+.grid__progress {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  z-index: 4;
+}
+
 .grid__veil {
   position: absolute;
   inset: 0;

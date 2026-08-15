@@ -16,6 +16,7 @@ import { computed, ref, watch } from 'vue';
 import { useTranslation } from 'i18next-vue';
 import type { CellValue, Field } from '@drivers/types';
 import { toDelimited, toJson, toMarkdown } from '@shared/tabular';
+import { useToasts } from '../../stores/toasts';
 import PressButton from '../ui/PressButton.vue';
 import SegmentedControl from '../ui/SegmentedControl.vue';
 import Sheet from '../ui/Sheet.vue';
@@ -38,6 +39,7 @@ const props = defineProps<{
 }>();
 
 const open = defineModel<boolean>({ required: true });
+const toasts = useToasts();
 const { t } = useTranslation();
 
 type Delivery = 'file' | 'clipboard';
@@ -116,8 +118,16 @@ async function run(): Promise<void> {
     if (!path) return;
 
     await props.writeFile!(path, format.value as 'csv' | 'json' | 'jsonl' | 'sql');
-    done.value = t('export.written');
+    /*
+     * The confirmation goes to a toast because the sheet holding it closes in
+     * the next statement. It set `done` and then dismissed the surface the
+     * message was written on, so a successful export said nothing at all.
+     */
     open.value = false;
+    toasts.show({
+      tone: 'success',
+      message: t('export.wroteTo', { name: path.split(/[\\/]/).pop() ?? path }),
+    });
   } catch (caught) {
     error.value = errorMessage(caught);
   } finally {

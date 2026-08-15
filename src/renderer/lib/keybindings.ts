@@ -12,19 +12,55 @@ export interface Binding {
   readonly group: string;
   /** Accelerators in `mod+shift+key` form; the first is the one displayed. */
   readonly keys: readonly string[];
+  /**
+   * Handled before the focused widget rather than after it.
+   *
+   * The default is after, which is right for anything an editor or a grid could
+   * reasonably claim: ⌘F inside the query editor should open *its* find widget,
+   * not jump to the grid's filter. It is wrong for the window's own chrome. ⌘K
+   * is a chord prefix in Monaco's keymap — the start of ⌘K ⌘C and a dozen
+   * others — so Monaco stopped the event dead and the palette never opened
+   * while the editor had focus. Nothing a widget does should be able to take
+   * away the way out of it.
+   */
+  readonly global?: boolean;
 }
 
 export const BINDINGS: readonly Binding[] = [
-  { id: 'palette.open', label: 'Command palette', group: 'General', keys: ['mod+k', 'mod+p'] },
-  { id: 'settings.open', label: 'Settings', group: 'General', keys: ['mod+,'] },
+  {
+    id: 'palette.open',
+    label: 'Command palette',
+    group: 'General',
+    keys: ['mod+k', 'mod+p'],
+    global: true,
+  },
+  { id: 'settings.open', label: 'Settings', group: 'General', keys: ['mod+,'], global: true },
   { id: 'schema.refresh', label: 'Refresh schema', group: 'General', keys: ['f5'] },
-  { id: 'sidebar.toggle', label: 'Toggle sidebar', group: 'General', keys: ['mod+b'] },
+  {
+    id: 'sidebar.toggle',
+    label: 'Toggle sidebar',
+    group: 'General',
+    keys: ['mod+b'],
+    global: true,
+  },
 
-  { id: 'tab.new', label: 'New query tab', group: 'Tabs', keys: ['mod+t'] },
-  { id: 'tab.close', label: 'Close tab', group: 'Tabs', keys: ['mod+w'] },
-  { id: 'tab.reopen', label: 'Reopen last closed tab', group: 'Tabs', keys: ['mod+shift+t'] },
-  { id: 'tab.next', label: 'Next tab', group: 'Tabs', keys: ['ctrl+tab'] },
-  { id: 'tab.previous', label: 'Previous tab', group: 'Tabs', keys: ['ctrl+shift+tab'] },
+  { id: 'tab.new', label: 'New query tab', group: 'Tabs', keys: ['mod+t'], global: true },
+  { id: 'tab.close', label: 'Close tab', group: 'Tabs', keys: ['mod+w'], global: true },
+  {
+    id: 'tab.reopen',
+    label: 'Reopen last closed tab',
+    group: 'Tabs',
+    keys: ['mod+shift+t'],
+    global: true,
+  },
+  { id: 'tab.next', label: 'Next tab', group: 'Tabs', keys: ['ctrl+tab'], global: true },
+  {
+    id: 'tab.previous',
+    label: 'Previous tab',
+    group: 'Tabs',
+    keys: ['ctrl+shift+tab'],
+    global: true,
+  },
 
   { id: 'query.run', label: 'Run', group: 'Query', keys: ['mod+enter'] },
   {
