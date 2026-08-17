@@ -398,6 +398,35 @@ function buildTables(): MockTable[] {
   ];
 }
 
+/**
+ * Two of these share a name, and that is the point.
+ *
+ * Postgres overloads a function by its signature, so a schema routinely holds
+ * several routines called the same thing — pgcrypto ships seven
+ * `pgp_pub_decrypt` and two `hmac`. Nothing in the sample had a repeated name,
+ * so the sidebar keyed its rows by path and nothing caught it until a real
+ * database did: rows vanished while scrolling, the list would not reach its
+ * end, and an expanded table put its columns somewhere other than under itself.
+ */
+const ROUTINES: readonly Entity[] = [
+  { name: 'listener_growth', schema: 'ops', kind: 'routine', routineType: 'function' },
+  { name: 'listener_growth', schema: 'ops', kind: 'routine', routineType: 'function' },
+  { name: 'refresh_charts', schema: 'ops', kind: 'routine', routineType: 'procedure' },
+  /*
+   * And enough of them to have to scroll. A tree that fits in its pane never
+   * exercises the virtualiser, which is the part with the interesting failures:
+   * rows recycled under a browser that is also adjusting the scroll position
+   * for them, a window measured from a stale height, an offset that drifts from
+   * the spacer. Every one of those looks fine on nine rows.
+   */
+  ...Array.from({ length: 48 }, (_, index) => ({
+    name: `report_${String(index + 1).padStart(2, '0')}`,
+    schema: 'ops' as const,
+    kind: 'routine' as const,
+    routineType: 'function' as const,
+  })),
+];
+
 export class MockClient implements DatabaseClient {
   readonly engine = 'mock' as const;
   readonly capabilities = MOCK_CAPABILITIES;
@@ -437,9 +466,12 @@ export class MockClient implements DatabaseClient {
   }
 
   async listEntities(schema?: string): Promise<readonly Entity[]> {
-    return this.tables
-      .filter((table) => !schema || table.schema === schema)
-      .map((table) => ({ name: table.name, schema: table.schema, kind: table.kind }));
+    return [
+      ...this.tables
+        .filter((table) => !schema || table.schema === schema)
+        .map((table) => ({ name: table.name, schema: table.schema, kind: table.kind })),
+      ...ROUTINES.filter((routine) => !schema || routine.schema === schema),
+    ];
   }
 
   async listColumns(entity: EntityRef): Promise<readonly Column[]> {

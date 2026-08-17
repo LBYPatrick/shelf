@@ -24,6 +24,34 @@ export function entityKey(entity: EntityRef): string {
 }
 
 /**
+ * A key per entity, where `entityKey` is a key per *name*.
+ *
+ * Postgres overloads share a name inside a schema — pgcrypto alone ships seven
+ * `pgp_pub_decrypt` and two `hmac` — so the path is the same string for every
+ * one of them. That string was the `v-for` key, and duplicate keys let Vue
+ * patch rows into each other's slots: items vanished while scrolling, the list
+ * would not reach its end, and a table expanded its columns somewhere other
+ * than under itself. It was also the key for what is expanded and for the
+ * loaded columns, so one overload standing in for all of them.
+ *
+ * The ordinal is taken from the driver's own order, which is stable for a given
+ * schema, so an expanded row stays expanded across a refresh.
+ */
+function identify(list: readonly Entity[]): Map<Entity, string> {
+  const seen = new Map<string, number>();
+  const ids = new Map<Entity, string>();
+
+  for (const entity of list) {
+    const path = entityKey(entity);
+    const nth = seen.get(path) ?? 0;
+    seen.set(path, nth + 1);
+    ids.set(entity, nth === 0 ? path : `${path}#${nth}`);
+  }
+
+  return ids;
+}
+
+/**
  * Keys are prefixed by what they name.
  *
  * A database and a schema can share a name — on MySQL they are the same word —
@@ -89,7 +117,7 @@ export const useEntities = defineStore('entities', () => {
   }
 
   async function loadColumns(entity: Entity): Promise<void> {
-    const key = entityKey(entity);
+    const key = idOf(entity);
     if (columns.value.has(key) || loadingColumns.value.has(key)) return;
 
     loadingColumns.value = new Set(loadingColumns.value).add(key);
@@ -111,7 +139,7 @@ export const useEntities = defineStore('entities', () => {
   }
 
   function toggle(entity: Entity): void {
-    const key = entityKey(entity);
+    const key = idOf(entity);
     const next = new Set(expanded.value);
 
     if (next.has(key)) next.delete(key);
@@ -157,6 +185,12 @@ export const useEntities = defineStore('entities', () => {
    * typing moved into the palette, which searches the whole database by path or
    * by pattern instead of hiding rows in the one view of it.
    */
+  /* Computed from the whole list, so an entity's identity does not change when
+     a kind is filtered out from under it. */
+  const identities = computed(() => identify(entities.value));
+
+  const idOf = (entity: Entity): string => identities.value.get(entity) ?? entityKey(entity);
+
   const visibleEntities = computed(() =>
     entities.value.filter((entity) => {
       if (entity.kind === 'routine' && !showRoutines.value) return false;
@@ -216,7 +250,7 @@ export const useEntities = defineStore('entities', () => {
 
     const appendEntities = (list: readonly Entity[], depth: number): void => {
       for (const entity of list) {
-        const key = entityKey(entity);
+        const key = idOf(entity);
         const isExpanded = expanded.value.has(key);
 
         result.push({

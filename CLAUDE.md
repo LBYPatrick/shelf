@@ -109,6 +109,10 @@ before considering a change finished.
 - **Sizes come from the density scale.** Use the `--gap-*`, `--row-h`,
   `--field-h` custom properties rather than fixed pixels, and express spacing in
   `rem` so a larger OS text size scales the layout instead of breaking it.
+- **A virtualised list turns off scroll anchoring.** The browser holds a scroll
+  position steady by adjusting `scrollTop` when content above the anchor changes
+  size — which is a good default and the exact opposite of what a recycler
+  wants, because every scroll *is* that content changing.
 - **Escape dismisses the top overlay, and only that one.** Overlays register
   with `useDismiss` rather than listening themselves. Every one of them used to,
   at the window and in the capture phase, each for the same good reason — a
@@ -116,6 +120,26 @@ before considering a change finished.
   focus lands elsewhere, which is when people reach for Escape. But listeners on
   one node in one phase all run, and `stopPropagation` does not stop the
   siblings beside it, so one press collapsed the whole pile.
+- **A rounded clip over a composited child is a `clip-path`, not `overflow`.**
+  Chromium does not apply an ancestor's rounded overflow clip to a descendant
+  promoted to its own layer — the clip degrades to a rectangle. Monaco promotes
+  itself, so the content pane's corner was cut on a table tab and square on a
+  query tab. Sixty-four pixels is far under the snapshot diff threshold, which
+  is why it has its own clipped screenshot rather than relying on the full one.
+- **The grid's column widths are measured in a canvas, never by the layout.**
+  Tabulator's `fitData` family sizes a column by clearing its width and reading
+  `offsetWidth` off every cell — a forced reflow each — and `fitDataStretch`
+  does it for every column on *every* layout rather than only when asked. Widths
+  come from text metrics over a sample of rows instead, and the mode is plain
+  `fitData` so nothing refits behind our back.
+- **A width change does not redraw the grid; a height change does.** The rows do
+  not depend on how wide the pane is — the columns carry their own widths and
+  the pane simply shows more or less of them, so all a wider pane needs is the
+  last column taking up the slack. The virtual renderer decides how many rows to
+  draw from the height it has, so that one has to be answered. Either way it is
+  answered once the size stops changing, not on every frame of a panel
+  animation, and Tabulator's own `autoResize` observer is off because it was a
+  second observer answering the same frames.
 - **A pane that comes back the size it left needs no relayout.** The grid's
   layout is `fitDataStretch`, so a full redraw measures the widest content in
   every column across every loaded row. Hiding a tab takes its box to zero and

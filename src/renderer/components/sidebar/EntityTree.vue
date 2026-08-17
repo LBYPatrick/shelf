@@ -47,8 +47,16 @@ const scrollTop = ref(0);
  */
 const rowHeight = ref(28);
 const probe = ref<HTMLElement>();
-/** Rows rendered beyond the viewport, so fast scrolling does not show gaps. */
-const OVERSCAN = 8;
+/**
+ * Rows rendered beyond the viewport, so fast scrolling does not show gaps.
+ *
+ * The window is recomputed from a scroll event, and the scroll itself happens
+ * on the compositor — so on a frame the main thread is busy with, the container
+ * has already moved and the rows have not. Overscan is how much of that the
+ * reader never sees. Eight rows is a third of a screen and was not enough while
+ * a large grid was relaying itself out beside it.
+ */
+const OVERSCAN = 24;
 
 const total = computed(() => entities.rows.length);
 
@@ -386,12 +394,20 @@ const KIND_ICON: Record<string, string> = {
 </template>
 
 <style scoped>
+/*
+ * Scroll anchoring off. The browser keeps a scroll position steady by watching
+ * an element in the flow and adjusting `scrollTop` when the content above it
+ * changes size — which is a fine default and the exact opposite of what a
+ * virtualised list wants, because every scroll *is* the content above changing.
+ * The two push against each other and the list refuses to reach its end.
+ */
 .tree {
   position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  overflow-anchor: none;
 }
 
 /* Fetching a schema over a slow link is the case the word alone did not cover. */

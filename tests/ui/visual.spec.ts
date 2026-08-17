@@ -79,3 +79,52 @@ test.describe('density', () => {
     });
   }
 });
+
+/*
+ * The corner, on its own, at the size it actually is.
+ *
+ * A full-window snapshot cannot guard it: sixty-four pixels is far under the
+ * diff threshold, so the corner can go square without a single test noticing —
+ * which is how it went square over the editor and stayed that way. Monaco is
+ * the case that matters, because a composited descendant is what defeats a
+ * rounded overflow clip.
+ */
+test.describe('corners', () => {
+  test('the content pane is cut where it meets the glass, over the editor too', async ({
+    sample,
+  }) => {
+    await sample
+      .getByRole('button', { name: /new query/i })
+      .first()
+      .click();
+    await sample.locator('.monaco-editor').waitFor();
+    await stabilize(sample);
+
+    const box = (await sample.locator('.content').boundingBox())!;
+    await expect(sample).toHaveScreenshot('corner-editor.png', {
+      clip: { x: box.x - 16, y: box.y - 16, width: 48, height: 48 },
+    });
+  });
+
+  // `setAppearance` reloads, so the connection is made after it rather than by
+  // the fixture that the reload would have dropped.
+  test('the same corner on the dark theme', async ({ page }) => {
+    await setAppearance(page, 'dark');
+    await page
+      .getByRole('button', { name: /sample/i })
+      .first()
+      .click();
+    await page.locator('.workspace').waitFor({ timeout: 30_000 });
+    await page
+      .locator('.strip')
+      .getByRole('button', { name: /new query tab/i })
+      .click();
+    await page.locator('.monaco-editor').waitFor();
+    await stabilize(page);
+
+    const box = (await page.locator('.content').boundingBox())!;
+    await expect(page).toHaveScreenshot('corner-editor-dark.png', {
+      clip: { x: box.x - 16, y: box.y - 16, width: 48, height: 48 },
+    });
+  });
+});

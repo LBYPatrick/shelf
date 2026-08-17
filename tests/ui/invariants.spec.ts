@@ -1219,7 +1219,7 @@ async function contrastFailures(page: Page): Promise<string[]> {
 }
 
 test.describe('cost', () => {
-  test('switching back to a tab does not lay its grid out again', async ({ sample }) => {
+  test('switching back to a tab does not redraw its grid', async ({ sample }) => {
     /*
      * The layout is `fitDataStretch`, so a full redraw measures the widest
      * content in every column across every loaded row. Hiding a pane takes its
@@ -1231,9 +1231,27 @@ test.describe('cost', () => {
     await openTable(sample, 'album');
     await sample.locator('.tabulator-row').first().waitFor();
 
-    const relayouts = () => sample.locator('.grid').first().getAttribute('data-relayouts');
+    const redraws = () => sample.locator('.grid').first().getAttribute('data-redraws');
 
-    const before = await relayouts();
+    /*
+     * Settled first, and settled means several reads apart rather than two in a
+     * row: the pane is still finding its size for a moment after the first rows
+     * arrive, and one matching pair during that is a coin toss, not quiet.
+     */
+    let before = '';
+    let quiet = 0;
+    await expect
+      .poll(
+        async () => {
+          const now = (await redraws()) ?? '';
+          quiet = now === before ? quiet + 1 : 0;
+          before = now;
+          return quiet;
+        },
+        { timeout: 10_000 }
+      )
+      .toBeGreaterThanOrEqual(3);
+
     expect(Number(before)).toBeGreaterThan(0);
 
     await sample
@@ -1245,6 +1263,123 @@ test.describe('cost', () => {
     await sample.locator('.tabulator-row').first().waitFor();
     await sample.waitForTimeout(400);
 
-    expect(await relayouts()).toBe(before);
+    expect(await redraws()).toBe(before);
+  });
+});
+
+test.describe('cost', () => {
+  test('collapsing the sidebar does not stall the window', async ({ sample }) => {
+    /*
+     * The panel animates a width for a quarter of a second, and every frame of
+     * it resizes the pane the grid is in. Three things answered each of those
+     * frames: Tabulator's own resize observer, ours, and a forced redraw that
+     * refits every column by clearing its width and reading `offsetWidth` back
+     * off every cell. On the widest sample table that came to about a fifth of
+     * a second per frame — sixteen frames drawn in seven hundred milliseconds,
+     * which is what "janky" means when it is measured.
+     *
+     * The number below has a lot of room in it. It is not a frame-rate target,
+     * it is the difference between answering a resize and sitting it out.
+     */
+    await openTable(sample, 'daily_metrics');
+    await sample.locator('.tabulator-row').first().waitFor();
+    await sample.waitForTimeout(600);
+
+    const redraws = () => sample.locator('.grid').first().getAttribute('data-redraws');
+    const before = await redraws();
+
+    const frames = await sample.evaluate(async () => {
+      let count = 0;
+      let running = true;
+      const tick = () => {
+        count += 1;
+        if (running) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+
+      document.querySelector<HTMLElement>('.topbar__toggle')!.click();
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      running = false;
+      return count;
+    });
+
+    expect(frames).toBeGreaterThan(40);
+    // Nothing at all: the pane came back the width it left, and a width is the
+    // only thing a collapse changes.
+    expect(await redraws()).toBe(before);
+  });
+});
+
+test.describe('corner', () => {
+  test('the notch is backed by the same surface as the column beside it', async ({
+    sample,
+  }) => {
+    /*
+     * The content pane cuts a corner out of itself where it meets the glass,
+     * and nothing under it painted anything — so the arc showed the material
+     * the OS draws outside the window, raw, while the sidebar beside it showed
+     * that material blurred, saturated and tinted. Two surfaces meeting along
+     * an eight-pixel curve is exactly where a difference reads as a drawn edge.
+     *
+     * Compared rather than photographed: a test window has no vibrancy behind
+     * it, so both sides come out identical however wrong they are.
+     */
+    const corner = await sample.evaluate(() => {
+      const surface = (selector: string) => {
+        const style = getComputedStyle(document.querySelector(selector)!);
+        return { bg: style.backgroundColor, filter: style.backdropFilter };
+      };
+
+      const notch = document.querySelector('.notch')!.getBoundingClientRect();
+      const pane = document.querySelector('.content')!;
+      const content = pane.getBoundingClientRect();
+      const radius = Number.parseFloat(getComputedStyle(pane).borderStartStartRadius);
+
+      return {
+        notch: surface('.notch'),
+        sidebar: surface('.sidebar'),
+        // Under the arc, or it is backing nothing.
+        covers:
+          Math.abs(notch.left - content.left) < 1 &&
+          Math.abs(notch.top - content.top) < 1 &&
+          notch.width >= radius &&
+          notch.height >= radius,
+      };
+    });
+
+    expect(corner.covers).toBe(true);
+    expect(corner.notch).toEqual(corner.sidebar);
+  });
+});
+
+test.describe('tree', () => {
+  test('two entities that share a name expand independently', async ({ sample }) => {
+    /*
+     * Postgres overloads a function by its signature, so a schema holds several
+     * routines called the same thing — pgcrypto ships seven `pgp_pub_decrypt`.
+     * The sidebar keyed a row by its path, which is the same string for every
+     * one of them, so expanding either twin expanded both, they shared one set
+     * of loaded columns, and Vue was handed a list with duplicate keys.
+     */
+    await revealTables(sample);
+
+    const twins = sample.getByRole('treeitem', { name: 'listener_growth', exact: true });
+    await expect(twins).toHaveCount(2);
+
+    await twins.first().click();
+    await expect(twins.first()).toHaveAttribute('aria-expanded', 'true');
+    await expect(twins.nth(1)).toHaveAttribute('aria-expanded', 'false');
+
+    // And a table still puts its columns directly beneath itself.
+    await sample.getByRole('treeitem', { name: 'audit_log', exact: true }).click();
+    await expect(sample.getByRole('treeitem', { name: /^actor/ })).toBeVisible();
+
+    const below = await sample.evaluate(() => {
+      const rows = [...document.querySelectorAll<HTMLElement>('.row')];
+      const at = rows.findIndex((row) => row.getAttribute('aria-label') === 'audit_log');
+      return rows.slice(at + 1, at + 3).map((row) => row.className);
+    });
+
+    expect(below.every((cls) => cls.includes('row--column'))).toBe(true);
   });
 });

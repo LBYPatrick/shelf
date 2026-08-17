@@ -144,6 +144,28 @@ onBeforeUnmount(() => stopPersisting?.());
     </header>
 
     <div class="workspace__main">
+      <!--
+        The corner the content pane cuts out of itself, backed by the same
+        surface as the column beside it.
+        
+        The notch was a hole. Nothing under the content pane paints anything, so
+        the arc showed the material the OS draws outside the window — raw,
+        unblurred and untinted — while the sidebar an eighth of an inch away
+        showed that material blurred, saturated and tinted. Two surfaces meeting
+        along an eight-pixel curve is precisely where a difference reads as a
+        drawn edge, which is what it looked like, worst on the dark theme where
+        the tint carries most of the tone. It is invisible to a test with no
+        vibrancy behind the window, which is why the invariant compares it to
+        the sidebar rather than looking at it.
+      -->
+      <span
+        class="notch mat-regular panel-sidebar"
+        :style="{
+          insetInlineStart: `calc(var(--rail-w) + ${sidebarCollapsed ? 0 : sidebarWidth}px)`,
+        }"
+        aria-hidden="true"
+      />
+
       <nav
         class="rail mat-regular panel-recessed"
         :aria-label="$t('workspace.entities')"
@@ -377,10 +399,38 @@ onBeforeUnmount(() => stopPersisting?.());
 }
 
 .workspace__main {
+  position: relative;
   display: flex;
   flex: 1;
   min-height: 0;
   min-width: 0;
+}
+
+/*
+ * Exactly the corner, and no more: the rest of it is under the opaque pane and
+ * never seen. Travels with the sidebar on the same curve, so the collapse does
+ * not leave it behind.
+ */
+/*
+ * Behind the pane, said explicitly. A positioned element paints above an
+ * in-flow one whatever the source order, so the notch was drawn *over* the
+ * content rather than under its cut corner — a tinted square sitting on the
+ * grid instead of a surface showing through it.
+ */
+.notch {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  width: var(--radius-box);
+  height: var(--radius-box);
+  pointer-events: none;
+  transition: inset-inline-start 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notch {
+    transition: none;
+  }
 }
 
 .rail {
@@ -635,6 +685,8 @@ onBeforeUnmount(() => stopPersisting?.());
  * whole point — it is the only place the depth between the two is visible.
  */
 .content {
+  position: relative;
+  z-index: 1;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -643,6 +695,17 @@ onBeforeUnmount(() => stopPersisting?.());
   border-start-start-radius: var(--radius-box);
   /* The grid and the editor both paint to their own edges. */
   overflow: hidden;
+  /*
+   * The clip is a path, not the rounded overflow above it.
+   *
+   * Chromium does not apply an ancestor's rounded overflow clip to a descendant
+   * that has been promoted to its own compositing layer — the clip degrades to
+   * a rectangle. Monaco promotes itself, so the corner was cut on a table tab
+   * and square on a query tab, with a white wedge in it where the pane's own
+   * rounded background showed behind the editor painting straight over it. A
+   * clip path is applied as a mask and reaches the composited layer.
+   */
+  clip-path: inset(0 round var(--radius-box) 0 0 0);
 }
 
 .content__body {

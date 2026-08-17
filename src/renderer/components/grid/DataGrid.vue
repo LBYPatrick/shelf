@@ -23,6 +23,7 @@ import {
 import type { CellValue, Field, Row } from '@drivers/types';
 import { displayValue } from '@shared/values';
 import { isNumericType } from '@shared/columnTypes';
+import { columnWidths, fontOf, stretchLast } from '../../lib/columnWidths';
 import { useSettings } from '../../stores/settings';
 
 const props = defineProps<{
@@ -40,7 +41,11 @@ const emit = defineEmits<{
 
 const settings = useSettings();
 
+/** The row-number gutter, which is frozen and never sized from its data. */
+const GUTTER = 56;
+
 const container = ref<HTMLElement>();
+const probe = ref<HTMLElement>();
 const table = shallowRef<Tabulator>();
 
 /** The cell being examined in full, opened with Shift+Enter or a click. */
@@ -77,7 +82,94 @@ function formatCellOf(field: Field) {
   };
 }
 
-function columnsFor(fields: readonly Field[]): ColumnDefinition[] {
+/**
+ * What a cell will show, as text — the same answer the formatter gives, minus
+ * the markup. Widths are measured from this rather than from the raw value: a
+ * buffer renders as hex and a date as a shortened instant, and neither is the
+ * width of what came off the wire.
+ */
+function cellText(row: Row, field: Field): string {
+  const value = row[field.name];
+  if (value === null || value === undefined) return 'NULL';
+
+  const text = displayValue(value as CellValue, {
+    encoding: settings.values.binaryEncoding,
+    ...(field.dataType === undefined ? {} : { dataType: field.dataType }),
+  });
+  return text === '' ? 'empty' : text;
+}
+
+/**
+ * Widths, measured once, in a canvas.
+ *
+ * Tabulator's `fitDataStretch` re-measured every cell of every column on every
+ * layout by clearing the width and reading `offsetWidth` back — a forced reflow
+ * each time, and it ran on every resize of the pane. Handing it explicit widths
+ * and the plain `fitData` mode means it never does that: the numbers are worked
+ * out from text metrics, which cost no layout at all.
+ */
+/** The widths the data asked for, before the last column took up the slack. */
+let natural = new Map<string, number>();
+
+function measureColumns(fields: readonly Field[], rows: readonly Row[]): Map<string, number> {
+  const host = container.value;
+  const glyphs = probe.value;
+  if (!host || !glyphs) return new Map();
+
+  const widths = columnWidths(
+    fields.map((field) => field.name),
+    rows,
+    (row, name) => {
+      const field = fields.find((candidate) => candidate.name === name);
+      return field ? cellText(row, field) : '';
+    },
+    /*
+     * From a probe wearing the cell's own declarations, not from the container.
+     * The container carries the interface face and the cells are monospace at
+     * weight 500, which is wider per character — measured against the wrong one,
+     * every column came out short and the headers were the first to be cut.
+     */
+    { font: fontOf(glyphs), min: 64, max: 420 }
+  );
+
+  natural = new Map(widths);
+
+  // The gutter is fixed, so the slack is whatever the data columns leave.
+  stretchLast(
+    widths,
+    fields.map((field) => field.name),
+    host.clientWidth - GUTTER
+  );
+
+  return widths;
+}
+
+/**
+ * Gives the last column the room a wider pane just made, without re-measuring.
+ *
+ * This is all a resize actually needs. Tabulator's own answer is `redraw(true)`,
+ * which force-fits *every* column — clearing each width and reading
+ * `offsetWidth` back off every cell — and it does that even in `fitData` mode,
+ * so the explicit widths bought nothing on a resize. Three of those ran during
+ * one sidebar collapse, at about a fifth of a second each.
+ */
+function restretch(): void {
+  const instance = table.value;
+  const host = container.value;
+  if (!instance || !host || natural.size === 0) return;
+
+  const wanted = new Map(natural);
+  stretchLast(wanted, [...natural.keys()], host.clientWidth - GUTTER);
+
+  const last = [...natural.keys()].pop();
+  if (last === undefined) return;
+
+  const width = wanted.get(last);
+  const column = instance.getColumn(last);
+  if (width !== undefined && column && column.getWidth() !== width) column.setWidth(width);
+}
+
+function columnsFor(fields: readonly Field[], widths: Map<string, number>): ColumnDefinition[] {
   return fields.map((field) => {
     const permission = props.editable?.get(field.name);
     return {
@@ -87,6 +179,7 @@ function columnsFor(fields: readonly Field[]): ColumnDefinition[] {
       headerTooltip: field.dataType ?? field.name,
       resizable: true,
       minWidth: 64,
+      ...(widths.has(field.name) ? { width: widths.get(field.name) } : {}),
       /*
        * Numbers align on their last digit, the way every spreadsheet and every
        * printed table does: it is what lets you compare magnitudes down a
@@ -110,13 +203,32 @@ function columnsFor(fields: readonly Field[]): ColumnDefinition[] {
   });
 }
 
+/**
+ * Every time the table is built or redrawn, where a test can see it.
+ *
+ * How often this happens is the whole point of the guards above and is
+ * otherwise invisible: the grid looks identical whether it drew once or twenty
+ * times, and the only symptom is a window that stops for a moment.
+ */
+function countRedraw(): void {
+  const at = container.value?.dataset;
+  if (at) at['redraws'] = String(Number(at['redraws'] ?? 0) + 1);
+}
+
 function build(): void {
   if (!container.value || table.value) return;
 
   const instance = new Tabulator(container.value, {
     data: props.rows as Row[],
-    columns: columnsFor(props.fields),
-    layout: 'fitDataStretch',
+    columns: columnsFor(props.fields, measureColumns(props.fields, props.rows as Row[])),
+    /*
+     * `fitData`, not `fitDataStretch`. The stretch mode re-fits every column on
+     * every layout — see `columnWidths` — and the widths are ours now anyway.
+     * Plain `fitData` only refits when a layout is explicitly forced, which is
+     * never, because nothing about a wider pane changes how wide a column's
+     * contents are.
+     */
+    layout: 'fitData',
     height: '100%',
     renderVertical: 'virtual',
     // Horizontal virtual rendering positions columns itself and does not scroll
@@ -147,7 +259,7 @@ function build(): void {
       headerSort: false,
       resizable: false,
       frozen: true,
-      width: 56,
+      width: GUTTER,
       minWidth: 44,
       hozAlign: 'right',
       cssClass: 'col-rownum',
@@ -158,10 +270,26 @@ function build(): void {
         return String(settings.values.rowIndexBase === 0 ? position - 1 : position);
       },
     },
+    /*
+     * Resizing is ours. Tabulator installs a resize observer of its own and
+     * redraws the table from it, so a sidebar collapse had two observers each
+     * answering every frame of a quarter-second animation — and ours already
+     * knows to wait for the size to stop changing and to leave the columns
+     * alone when it does.
+     */
+    autoResize: false,
     editTriggerEvent: settings.values.editTrigger,
     columnDefaults: { headerSortTristate: true },
     history: true,
   });
+
+  /*
+   * Counted where a test can see it. How often the expensive relayout runs is
+   * the whole point of the guard in `redraw`, and it is otherwise invisible:
+   * the grid looks identical whether it ran once or twenty times, and the only
+   * symptom is a window that stops for a moment.
+   */
+  countRedraw();
 
   instance.on('cellEdited', (cell: CellComponent) => {
     emit('edit', {
@@ -261,17 +389,16 @@ function visible(): boolean {
 /**
  * The box the table was last laid out against.
  *
- * `redraw(true)` recomputes column widths, and the layout is `fitDataStretch` —
- * so it measures the widest content in every column across every loaded row.
- * That is the right price for a pane that changed shape and an absurd one for a
- * pane that did not, which is what a tab switch is: hiding a pane takes its box
- * to zero and showing it again brings back exactly the box it had. The observer
- * fired on both edges and the tab did a full relayout on the way back in, twice
- * over with the tab's own watch, and a table with a lot of data in it stopped
- * the window for as long as that took.
+ * Even a cheap redraw is a re-render of every visible row, and a tab switch
+ * asked for one for nothing: hiding a pane takes its box to zero and showing it
+ * again brings back exactly the box it had, the observer fired on both edges,
+ * and the tab's own watch asked a second time. Nothing had changed either time.
  */
 let laidOutAt: { width: number; height: number } | undefined;
 let queued = 0;
+
+/** Long enough to sit out a panel transition, short enough not to be noticed. */
+const SETTLE = 90;
 
 function redraw(): void {
   const box = container.value?.getBoundingClientRect();
@@ -283,7 +410,6 @@ function redraw(): void {
   if (!table.value) {
     build();
     laidOutAt = { width: box.width, height: box.height };
-    if (container.value) container.value.dataset['relayouts'] = '1';
     return;
   }
 
@@ -294,27 +420,37 @@ function redraw(): void {
   laidOutAt = { width: box.width, height: box.height };
 
   /*
-   * Coalesced to one per frame, and only the full form when the width moved.
-   * Dragging the sidebar resizes this pane on every pointer move; the height
-   * alone needs no more than the rows that fit being re-rendered, and the
-   * observer can report several times before the browser paints once.
+   * Deferred to the end of the run, not done on every frame of it.
+   *
+   * Collapsing the sidebar animates a width for a quarter of a second, and the
+   * observer reports every frame of it. Answering each one dropped the window
+   * to about five frames a second. Nothing in that quarter second is worth
+   * looking at — the reader is watching a panel move — so the work waits until
+   * the size stops changing and then happens once.
+   *
+   * And it is no longer a relayout. Columns keep the widths they were measured
+   * at; a wider pane only means the last one has more room to take.
    */
-  cancelAnimationFrame(queued);
-  queued = requestAnimationFrame(() => {
+  clearTimeout(queued);
+  queued = window.setTimeout(() => {
     if (!table.value) return;
-    table.value.redraw(wider);
+    if (wider) restretch();
 
     /*
-     * Counted where a test can see it. How often the expensive relayout runs is
-     * the whole point of the guard above and is otherwise invisible — the grid
-     * looks identical whether it ran once or twenty times, and the only symptom
-     * is a window that stops for a moment.
+     * A width change needs no redraw at all. The rows do not depend on how wide
+     * the pane is — the columns carry their own widths and the pane simply
+     * shows more or less of them — so the only thing a wider pane changes is
+     * how much slack the last column can take, which `restretch` sets directly.
+     *
+     * Height is different: the virtual renderer decides how many rows to draw
+     * from the height it has, so a taller pane has to be given the rows that
+     * now fit in it.
      */
-    if (wider && container.value) {
-      const at = container.value.dataset;
-      at['relayouts'] = String(Number(at['relayouts'] ?? 0) + 1);
+    if (taller) {
+      table.value.redraw(false);
+      countRedraw();
     }
-  });
+  }, SETTLE);
 }
 
 onMounted(() => {
@@ -335,7 +471,7 @@ function teardown(): void {
 }
 
 onBeforeUnmount(() => {
-  cancelAnimationFrame(queued);
+  clearTimeout(queued);
   teardown();
   observer?.disconnect();
   observer = undefined;
@@ -355,10 +491,14 @@ watch(
   }
 );
 
-/* The gutter's formatter reads the base, so this only has to re-run it. */
+/* The gutter's formatter reads the base, so this only has to re-run it — which
+   is what a plain redraw does. The forced one would refit every column. */
 watch(
   () => settings.values.rowIndexBase,
-  () => table.value?.redraw(true)
+  () => {
+    table.value?.redraw(false);
+    countRedraw();
+  }
 );
 
 defineExpose({ redraw });
@@ -371,7 +511,11 @@ defineExpose({ redraw });
 watch(
   () => props.fields,
   (fields) => {
-    void table.value?.setColumns(columnsFor(fields));
+    // A new shape is a new measurement; the same shape keeps whatever widths
+    // the reader has dragged the columns to.
+    void table.value?.setColumns(
+      columnsFor(fields, measureColumns(fields, props.rows as Row[]))
+    );
   }
 );
 
@@ -385,6 +529,13 @@ watch(
 
 <template>
   <div class="grid-wrap">
+    <!-- One span whose only job is to be the shape of a cell's text. -->
+    <span
+      ref="probe"
+      class="grid__probe"
+      aria-hidden="true"
+    />
+
     <div
       ref="container"
       class="grid"
@@ -432,6 +583,23 @@ watch(
  * was instead of being sent back to an empty box.
  */
 /* Over the header, where the eye already is when a page is being fetched. */
+/*
+ * Wears what a cell wears, so the width measurement is taken against the face
+ * that will actually draw the text. Density and a larger OS text size come
+ * along for free, which is the point of measuring rather than assuming.
+ */
+.grid__probe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: pre;
+  font-family: var(--font-mono);
+  font-size: var(--grid-font);
+  font-weight: 500;
+}
+
 .grid__progress {
   position: absolute;
   inset-inline: 0;

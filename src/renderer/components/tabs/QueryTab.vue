@@ -53,7 +53,30 @@ const editorStats = computed(
 );
 const grid = ref<InstanceType<typeof DataGrid>>();
 
+/**
+ * The split, as a share of the tab rather than a number of pixels.
+ *
+ * It was a flat 240, which is a third of a tall window and most of a short one,
+ * and it left the editor smaller than the empty results pane below it on every
+ * screen this is actually used on. Writing is the part of a query tab that
+ * takes room — the results have a pager and a scrollbar and the editor has
+ * neither — so it opens at seven tenths and the handle is there for anyone who
+ * disagrees. Measured once, on mount: after that the reader owns it.
+ */
+const EDITOR_SHARE = 0.7;
+
+const split = ref<HTMLElement>();
 const editorHeight = ref(240);
+
+/* Always leaves room for the toolbar and a row or two of results. */
+const maxEditorHeight = ref(700);
+
+onMounted(() => {
+  const height = split.value?.clientHeight ?? 0;
+  if (height <= 0) return;
+  maxEditorHeight.value = Math.max(120, height - 160);
+  editorHeight.value = Math.min(maxEditorHeight.value, Math.round(height * EDITOR_SHARE));
+});
 const running = ref(false);
 const error = ref<string | null>(null);
 const results = ref<ResultSet[]>([]);
@@ -321,7 +344,10 @@ watch(
 </script>
 
 <template>
-  <div class="query">
+  <div
+    ref="split"
+    class="query"
+  >
     <div
       class="editor-pane"
       :style="{ height: `${editorHeight}px` }"
@@ -340,7 +366,7 @@ watch(
       v-model:size="editorHeight"
       orientation="horizontal"
       :min="80"
-      :max="700"
+      :max="maxEditorHeight"
       aria-label="Resize editor"
     />
 
