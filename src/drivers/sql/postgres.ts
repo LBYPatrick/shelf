@@ -6,6 +6,8 @@ import type {
   ChangeSet,
   Column,
   ConnectionConfig,
+  ContainerProperties,
+  ContainerRef,
   Cursor as DriverCursor,
   DatabaseClient,
   Entity,
@@ -18,9 +20,13 @@ import type {
   Page,
   Partition,
   QueryOptions,
+  Metric,
   Relation,
   ResultSet,
   SelectRequest,
+  ServerMetrics,
+  StatementReport,
+  StatementStat,
   StreamRequest,
   Trigger,
 } from '../types';
@@ -44,10 +50,23 @@ const PG_DIALECT: Dialect = {
 
 const PG_CAPABILITIES = capabilities({
   partitions: true,
+  statistics: true,
   // A COUNT(*) on a large Postgres table is a sequential scan over the heap,
   // which is far too slow to run on every page of the grid.
   cheapCount: false,
 });
+
+/**
+ * `pg_constraint` stores the referential actions as one-letter codes. Showing
+ * the letter is showing the reader the catalogue rather than the schema.
+ */
+const REFERENTIAL_ACTIONS: Readonly<Record<string, string>> = {
+  a: 'NO ACTION',
+  r: 'RESTRICT',
+  c: 'CASCADE',
+  n: 'SET NULL',
+  d: 'SET DEFAULT',
+};
 
 /**
  * PostgreSQL, over `pg`.
@@ -273,7 +292,7 @@ export class PostgresClient implements DatabaseClient {
       method: string;
     }>(
       `SELECT i.relname AS name,
-              array_agg(a.attname ORDER BY k.ord) AS columns,
+              array_agg(a.attname::text ORDER BY k.ord) AS columns,
               ix.indisunique AS is_unique,
               ix.indisprimary AS is_primary,
               am.amname AS method
@@ -292,7 +311,7 @@ export class PostgresClient implements DatabaseClient {
 
     return result.rows.map((row) => ({
       name: row.name,
-      columns: row.columns,
+      columns: row.columns ?? [],
       unique: row.is_unique,
       primary: row.is_primary,
       type: row.method,
@@ -317,12 +336,12 @@ export class PostgresClient implements DatabaseClient {
        )
        SELECT con.conname AS name,
               CASE WHEN con.conrelid = (SELECT oid FROM target) THEN 'outgoing' ELSE 'incoming' END AS direction,
-              (SELECT array_agg(a.attname ORDER BY k.ord)
+              (SELECT array_agg(a.attname::text ORDER BY k.ord)
                  FROM unnest(con.conkey) WITH ORDINALITY AS k(attnum, ord)
                  JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = k.attnum) AS columns,
               rn.nspname AS ref_schema,
               rc.relname AS ref_table,
-              (SELECT array_agg(a.attname ORDER BY k.ord)
+              (SELECT array_agg(a.attname::text ORDER BY k.ord)
                  FROM unnest(con.confkey) WITH ORDINALITY AS k(attnum, ord)
                  JOIN pg_attribute a ON a.attrelid = con.confrelid AND a.attnum = k.attnum) AS ref_columns,
               con.confupdtype::text AS on_update,
@@ -341,8 +360,8 @@ export class PostgresClient implements DatabaseClient {
       columns: row.columns ?? [],
       referencedTable: { name: row.ref_table, schema: row.ref_schema },
       referencedColumns: row.ref_columns ?? [],
-      onUpdate: row.on_update,
-      onDelete: row.on_delete,
+      onUpdate: REFERENTIAL_ACTIONS[row.on_update] ?? row.on_update,
+      onDelete: REFERENTIAL_ACTIONS[row.on_delete] ?? row.on_delete,
     }));
   }
 
@@ -406,6 +425,380 @@ export class PostgresClient implements DatabaseClient {
       dataSizeBytes: Number(row.data_size),
       indexSizeBytes: Number(row.index_size),
       ...(row.comment ? { comment: row.comment } : {}),
+    };
+  }
+
+  async getContainerProperties(target: ContainerRef): Promise<ContainerProperties> {
+    return target.kind === 'database'
+      ? this.describeDatabase(target.name)
+      : this.describeSchema(target.name);
+  }
+
+  private async describeDatabase(name: string): Promise<ContainerProperties> {
+    const result = await this.run<{
+      owner: string;
+      encoding: string;
+      collation: string;
+      ctype: string;
+      size: string;
+      comment: string | null;
+      schema_count: string;
+      table_count: string;
+      connections: string;
+      connection_limit: number;
+    }>(
+      `SELECT pg_get_userbyid(d.datdba) AS owner,
+              pg_encoding_to_char(d.encoding) AS encoding,
+              d.datcollate AS collation,
+              d.datctype AS ctype,
+              pg_database_size(d.oid)::text AS size,
+              shobj_description(d.oid, 'pg_database') AS comment,
+              d.datconnlimit AS connection_limit,
+              (SELECT count(*)::text FROM pg_namespace n
+                WHERE n.nspname NOT LIKE 'pg\\_%' AND n.nspname <> 'information_schema')
+                AS schema_count,
+              (SELECT count(*)::text FROM pg_class c
+                 JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE c.relkind IN ('r', 'p')
+                  AND n.nspname NOT LIKE 'pg\\_%' AND n.nspname <> 'information_schema')
+                AS table_count,
+              (SELECT count(*)::text FROM pg_stat_activity a WHERE a.datname = d.datname)
+                AS connections
+         FROM pg_database d
+        WHERE d.datname = $1`,
+      [name]
+    );
+
+    const row = result.rows[0];
+    if (!row) return { facts: [] };
+
+    return {
+      ...(row.comment ? { comment: row.comment } : {}),
+      facts: [
+        { key: 'size', bytes: Number(row.size) },
+        { key: 'owner', text: row.owner },
+        { key: 'encoding', text: row.encoding },
+        { key: 'collation', text: row.collation },
+        { key: 'schemas', count: Number(row.schema_count) },
+        { key: 'tables', count: Number(row.table_count) },
+        { key: 'connections', count: Number(row.connections) },
+        ...(row.connection_limit >= 0
+          ? [{ key: 'connectionLimit', count: row.connection_limit }]
+          : []),
+      ],
+      largest: await this.largestTables(),
+    };
+  }
+
+  private async describeSchema(name: string): Promise<ContainerProperties> {
+    const result = await this.run<{
+      owner: string;
+      comment: string | null;
+      size: string;
+      table_count: string;
+      view_count: string;
+      routine_count: string;
+    }>(
+      `SELECT pg_get_userbyid(n.nspowner) AS owner,
+              obj_description(n.oid, 'pg_namespace') AS comment,
+              COALESCE((SELECT sum(pg_total_relation_size(c.oid))
+                          FROM pg_class c
+                         WHERE c.relnamespace = n.oid AND c.relkind IN ('r', 'p', 'm')), 0)::text
+                AS size,
+              (SELECT count(*)::text FROM pg_class c
+                WHERE c.relnamespace = n.oid AND c.relkind IN ('r', 'p')) AS table_count,
+              (SELECT count(*)::text FROM pg_class c
+                WHERE c.relnamespace = n.oid AND c.relkind IN ('v', 'm')) AS view_count,
+              (SELECT count(*)::text FROM pg_proc p WHERE p.pronamespace = n.oid)
+                AS routine_count
+         FROM pg_namespace n
+        WHERE n.nspname = $1`,
+      [name]
+    );
+
+    const row = result.rows[0];
+    if (!row) return { facts: [] };
+
+    return {
+      ...(row.comment ? { comment: row.comment } : {}),
+      facts: [
+        { key: 'size', bytes: Number(row.size) },
+        { key: 'owner', text: row.owner },
+        { key: 'tables', count: Number(row.table_count) },
+        { key: 'views', count: Number(row.view_count) },
+        { key: 'routines', count: Number(row.routine_count) },
+      ],
+      largest: await this.largestTables(name),
+    };
+  }
+
+  private async largestTables(
+    schema?: string
+  ): Promise<readonly { entity: EntityRef; bytes: number }[]> {
+    const result = await this.run<{ schema: string; name: string; bytes: string }>(
+      `SELECT n.nspname AS schema, c.relname AS name,
+              pg_total_relation_size(c.oid)::text AS bytes
+         FROM pg_class c
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE c.relkind IN ('r', 'p', 'm')
+          AND ($1::text IS NULL OR n.nspname = $1)
+          AND n.nspname NOT LIKE 'pg\\_%' AND n.nspname <> 'information_schema'
+        ORDER BY pg_total_relation_size(c.oid) DESC
+        LIMIT 8`,
+      [schema ?? null]
+    );
+
+    return result.rows.map((row) => ({
+      entity: { name: row.name, schema: row.schema },
+      bytes: Number(row.bytes),
+    }));
+  }
+
+  /* ------------------------------------------------------------ statistics */
+
+  /**
+   * Per-statement timings, from `pg_stat_statements`.
+   *
+   * The extension is not installed by default and needs a line in
+   * `shared_preload_libraries` to work at all, so its absence is the normal
+   * case rather than an error — it comes back as a stated problem the interface
+   * can explain, along with the two commands that fix it.
+   *
+   * The columns were renamed in Postgres 13 (`total_time` became
+   * `total_exec_time`), so the shape of the view is read before it is queried
+   * rather than guessed from the server version, which is wrong for anything
+   * that ships a backported build.
+   */
+  async readStatements(): Promise<StatementReport> {
+    const columns = await this.run<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'pg_stat_statements'`
+    );
+
+    const available = new Set(columns.rows.map((row) => row.column_name));
+    if (available.size === 0) {
+      return {
+        ok: false,
+        problem: 'not-installed',
+        detail: 'pg_stat_statements is not available on this server.',
+      };
+    }
+
+    const totalColumn = available.has('total_exec_time') ? 'total_exec_time' : 'total_time';
+    const meanColumn = available.has('mean_exec_time') ? 'mean_exec_time' : 'mean_time';
+    const minColumn = available.has('min_exec_time') ? 'min_exec_time' : 'min_time';
+    const maxColumn = available.has('max_exec_time') ? 'max_exec_time' : 'max_time';
+
+    try {
+      const [statements, info] = await Promise.all([
+        this.run<{
+          id: string;
+          text: string;
+          calls: string;
+          total_ms: string;
+          mean_ms: string;
+          min_ms: string;
+          max_ms: string;
+          rows: string;
+          hit: string;
+          read: string;
+        }>(
+          `SELECT s.queryid::text AS id,
+                  s.query AS text,
+                  s.calls::text AS calls,
+                  s.${totalColumn}::text AS total_ms,
+                  s.${meanColumn}::text AS mean_ms,
+                  s.${minColumn}::text AS min_ms,
+                  s.${maxColumn}::text AS max_ms,
+                  s.rows::text AS rows,
+                  s.shared_blks_hit::text AS hit,
+                  s.shared_blks_read::text AS read
+             FROM pg_stat_statements s
+            WHERE s.queryid IS NOT NULL
+            ORDER BY s.${totalColumn} DESC
+            LIMIT 500`
+        ),
+        // Present from Postgres 14 onward; older servers simply have no reset
+        // time to report, which the interface already handles.
+        this.run<{ stats_reset: string | null }>(
+          `SELECT stats_reset::text FROM pg_stat_statements_info`
+        ).catch(() => ({ rows: [] as { stats_reset: string | null }[] })),
+      ]);
+
+      const resetText = info.rows[0]?.stats_reset;
+      const resetAt = resetText ? Date.parse(resetText) : Number.NaN;
+
+      const rows: StatementStat[] = statements.rows.map((row) => {
+        const hit = Number(row.hit);
+        const read = Number(row.read);
+        const blocks = hit + read;
+        return {
+          id: row.id,
+          text: row.text,
+          calls: Number(row.calls),
+          totalMs: Number(row.total_ms),
+          meanMs: Number(row.mean_ms),
+          minMs: Number(row.min_ms),
+          maxMs: Number(row.max_ms),
+          rows: Number(row.rows),
+          ...(blocks > 0 ? { cacheHitRatio: hit / blocks } : {}),
+        };
+      });
+
+      return {
+        ok: true,
+        sample: {
+          takenAt: Date.now(),
+          ...(Number.isFinite(resetAt) ? { resetAt } : {}),
+          statements: rows,
+        },
+      };
+    } catch (error) {
+      // The view exists but this role cannot read it, which is a different
+      // problem with a different fix.
+      return {
+        ok: false,
+        problem: 'not-permitted',
+        detail: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  async readMetrics(): Promise<ServerMetrics> {
+    const [database, activity, tables, indexes] = await Promise.all([
+      this.run<{
+        size: string;
+        hit: string;
+        read: string;
+        commits: string;
+        rollbacks: string;
+        deadlocks: string;
+        conflicts: string;
+        temp_bytes: string;
+        blk_read_ms: string;
+        blk_write_ms: string;
+        uptime: string;
+        max_connections: string;
+      }>(
+        `SELECT pg_database_size(current_database())::text AS size,
+                COALESCE(d.blks_hit, 0)::text AS hit,
+                COALESCE(d.blks_read, 0)::text AS read,
+                COALESCE(d.xact_commit, 0)::text AS commits,
+                COALESCE(d.xact_rollback, 0)::text AS rollbacks,
+                COALESCE(d.deadlocks, 0)::text AS deadlocks,
+                COALESCE(d.conflicts, 0)::text AS conflicts,
+                COALESCE(d.temp_bytes, 0)::text AS temp_bytes,
+                COALESCE(d.blk_read_time, 0)::text AS blk_read_ms,
+                COALESCE(d.blk_write_time, 0)::text AS blk_write_ms,
+                EXTRACT(epoch FROM now() - pg_postmaster_start_time())::text AS uptime,
+                current_setting('max_connections') AS max_connections
+           FROM pg_stat_database d
+          WHERE d.datname = current_database()`
+      ),
+      this.run<{ state: string; count: string }>(
+        `SELECT COALESCE(state, 'unknown') AS state, count(*)::text AS count
+           FROM pg_stat_activity
+          WHERE datname = current_database()
+          GROUP BY 1
+          ORDER BY 2 DESC`
+      ),
+      this.run<{
+        schema: string;
+        name: string;
+        total: string;
+        live: string;
+        dead: string;
+      }>(
+        `SELECT n.nspname AS schema, c.relname AS name,
+                pg_total_relation_size(c.oid)::text AS total,
+                COALESCE(s.n_live_tup, 0)::text AS live,
+                COALESCE(s.n_dead_tup, 0)::text AS dead
+           FROM pg_class c
+           JOIN pg_namespace n ON n.oid = c.relnamespace
+           LEFT JOIN pg_stat_user_tables s ON s.relid = c.oid
+          WHERE c.relkind IN ('r', 'p')
+            AND n.nspname NOT LIKE 'pg\\_%' AND n.nspname <> 'information_schema'
+          ORDER BY pg_total_relation_size(c.oid) DESC
+          LIMIT 12`
+      ),
+      this.run<{ schema: string; table: string; name: string; size: string }>(
+        `SELECT s.schemaname AS schema, s.relname AS table, s.indexrelname AS name,
+                pg_relation_size(s.indexrelid)::text AS size
+           FROM pg_stat_user_indexes s
+           JOIN pg_index i ON i.indexrelid = s.indexrelid
+          WHERE s.idx_scan = 0 AND NOT i.indisprimary AND NOT i.indisunique
+          ORDER BY pg_relation_size(s.indexrelid) DESC
+          LIMIT 12`
+      ),
+    ]);
+
+    const row = database.rows[0];
+    const hit = Number(row?.hit ?? 0);
+    const read = Number(row?.read ?? 0);
+    const blocks = hit + read;
+    const commits = Number(row?.commits ?? 0);
+    const rollbacks = Number(row?.rollbacks ?? 0);
+    const uptime = Math.max(1, Number(row?.uptime ?? 1));
+    const open = activity.rows.reduce((sum, entry) => sum + Number(entry.count), 0);
+    const limit = Number(row?.max_connections ?? 0);
+
+    const gauges: Metric[] = [
+      { key: 'databaseSize', value: Number(row?.size ?? 0), unit: 'bytes' },
+      /* The single most useful number a Postgres server reports: below about
+         0.99 the working set no longer fits in shared buffers and every miss is
+         a trip to the disk. */
+      {
+        key: 'cacheHitRatio',
+        value: blocks > 0 ? hit / blocks : 1,
+        unit: 'ratio',
+        warnBelow: 0.99,
+      },
+      { key: 'transactionRate', value: (commits + rollbacks) / uptime, unit: 'perSecond' },
+      {
+        key: 'rollbackRatio',
+        value: commits + rollbacks > 0 ? rollbacks / (commits + rollbacks) : 0,
+        unit: 'ratio',
+        warnAbove: 0.05,
+      },
+      {
+        key: 'connections',
+        value: open,
+        unit: 'count',
+        ...(limit ? { warnAbove: limit * 0.8 } : {}),
+      },
+      { key: 'connectionLimit', value: limit, unit: 'count' },
+      { key: 'deadlocks', value: Number(row?.deadlocks ?? 0), unit: 'count', warnAbove: 0 },
+      { key: 'conflicts', value: Number(row?.conflicts ?? 0), unit: 'count', warnAbove: 0 },
+      { key: 'tempBytes', value: Number(row?.temp_bytes ?? 0), unit: 'bytes' },
+      {
+        key: 'ioTime',
+        value: Number(row?.blk_read_ms ?? 0) + Number(row?.blk_write_ms ?? 0),
+        unit: 'ms',
+      },
+      { key: 'uptime', value: uptime, unit: 'seconds' },
+    ];
+
+    return {
+      gauges,
+      largestTables: tables.rows.map((table) => {
+        const live = Number(table.live);
+        const dead = Number(table.dead);
+        return {
+          entity: { name: table.name, schema: table.schema },
+          totalBytes: Number(table.total),
+          rowEstimate: live,
+          ...(live + dead > 0 ? { deadRatio: dead / (live + dead) } : {}),
+        };
+      }),
+      activity: activity.rows.map((entry) => ({
+        state: entry.state,
+        count: Number(entry.count),
+      })),
+      unusedIndexes: indexes.rows.map((index) => ({
+        entity: { name: index.table, schema: index.schema },
+        name: index.name,
+        sizeBytes: Number(index.size),
+      })),
     };
   }
 

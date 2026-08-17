@@ -52,6 +52,8 @@ const REDIS_CAPABILITIES = capabilities({
   cheapCount: false,
   streaming: true,
   nativeShell: true,
+  // A Redis database is a numbered slot, not a thing with an owner and a size.
+  containers: false,
   nouns: { database: 'database', entity: 'keyspace', row: 'key', column: 'field' },
 });
 

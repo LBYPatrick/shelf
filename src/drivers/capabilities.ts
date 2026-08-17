@@ -35,6 +35,10 @@ export const SQL_BASELINE: Capabilities = {
   streaming: true,
   sshTunnel: true,
   nativeShell: false,
+  containers: true,
+  /* Off by default: per-statement timings need machinery most engines do not
+     have, and an Analyze tab with nothing in it is worse than no tab. */
+  statistics: false,
   nouns: RELATIONAL_NOUNS,
 };
 

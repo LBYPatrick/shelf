@@ -43,9 +43,11 @@
   height: var(--row-h);
   min-height: var(--row-h);
   box-sizing: border-box;
-  background: color-mix(in oklab, var(--color-base-200) 82%, transparent);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  backdrop-filter: blur(16px) saturate(180%);
+  /* Opaque, and no filter. This is a header that rows scroll under, inside a
+     pane that is itself the most solid surface in the window — there was
+     nothing behind it but a flat fill, so the blur was a full-screen
+     compositing pass a frame for a result identical to not running it. */
+  background: var(--color-base-200);
   border-bottom: 1px solid var(--separator);
   font-weight: 500;
   white-space: nowrap;

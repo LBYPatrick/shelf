@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import type { EntityRef } from '@drivers/types';
+import { saveSetting } from '../lib/settings';
 import { entityKey } from './entities';
 
 /*
@@ -209,7 +210,7 @@ export const useTabs = defineStore('tabs', () => {
       () => {
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => {
-          void window.shelf.db.setSetting(sessionKey(connectionId), {
+          void saveSetting(sessionKey(connectionId), {
             tabs: tabs.value.map(({ unsaved: _unsaved, ...rest }) => rest),
             activeId: activeId.value,
           } satisfies StoredSession);

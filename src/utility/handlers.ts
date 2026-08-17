@@ -72,6 +72,28 @@ export const handlers: Registry = {
     session.require(connectionId).listPartitions(entity),
   'schema/properties': (session, { connectionId, entity }) =>
     session.require(connectionId).getProperties(entity),
+  'schema/container': async (session, { connectionId, target }) => {
+    const client = session.require(connectionId);
+    // The capability is the declaration; this is the same answer stated in the
+    // type system, for a driver that has one without the other.
+    return client.getContainerProperties?.(target) ?? { facts: [] };
+  },
+
+  'stats/statements': async (session, { connectionId }) => {
+    const client = session.require(connectionId);
+    return client.readStatements?.() ?? { ok: false as const, problem: 'unsupported' as const };
+  },
+  'stats/metrics': async (session, { connectionId }) => {
+    const client = session.require(connectionId);
+    return (
+      client.readMetrics?.() ?? {
+        gauges: [],
+        largestTables: [],
+        activity: [],
+        unusedIndexes: [],
+      }
+    );
+  },
 
   'data/select': (session, { connectionId, request }) =>
     session.require(connectionId).selectTop(request),

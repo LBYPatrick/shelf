@@ -310,11 +310,27 @@ defineExpose({ focus });
  * three full-width controls stretched across the pane with a mode switch and an
  * Apply button stacked above them, for what is usually `column = value`.
  */
+/*
+ * The row carries the height, not the bar's padding.
+ *
+ * Everything here is a `--field-h` control except the segmented switch, which
+ * is that plus its own track padding — and the track cannot shrink, because the
+ * option inside it is a pointer target and 28px is the floor. So the bar was
+ * taller than most of what it held, and `align-items: flex-start` pinned the
+ * short controls to the top and dropped the whole surplus at the bottom: four
+ * pixels of air above the fields and eleven below them.
+ *
+ * Giving the row a minimum height and letting it centre its own contents makes
+ * the air even whatever the tallest control turns out to be. Flex-start stays,
+ * because with several conditions the rows stack and the label and the actions
+ * belong beside the *first* of them rather than centred on the pile.
+ */
 .filterbar {
+  --filterbar-row-h: calc(var(--field-h) + var(--gap));
   display: flex;
   align-items: flex-start;
   gap: var(--gap);
-  padding: var(--gap-tight) var(--gap);
+  padding: var(--gap-hair) var(--gap);
   border-bottom: 1px solid var(--separator);
 }
 
@@ -332,6 +348,7 @@ defineExpose({ focus });
   align-items: center;
   gap: var(--gap-tight);
   min-width: 0;
+  min-height: var(--filterbar-row-h);
 }
 
 /*
@@ -407,6 +424,7 @@ span.filterbar__lead {
   flex: 0 0 auto;
   align-items: center;
   gap: var(--gap-tight);
+  min-height: var(--filterbar-row-h);
   margin-inline-start: auto;
 }
 

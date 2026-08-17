@@ -693,3 +693,33 @@ test('exports query results, choosing a format and a destination', async ({ page
   expect(copied).toContain('| name');
   expect(copied).toContain('Talk Talk');
 });
+
+/*
+ * A block of code is printed so it can be run somewhere else, and one you have
+ * to retype is one that gets retyped wrong. The setup commands for
+ * `pg_stat_statements` are the case that matters — the reader is looking at
+ * them precisely because the server cannot answer yet.
+ */
+test('a snippet can be selected and copied, and says so', async ({ page }) => {
+  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+
+  await page.locator('.row--database').first().click({ button: 'right' });
+  await page.getByRole('menuitem', { name: /Analyze/ }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+
+  const row = page.locator('.stats tbody tr').first();
+  await expect(row).toBeVisible({ timeout: 15_000 });
+  await row.click();
+
+  const snippet = page.locator('.snippet').first();
+  await expect(snippet).toBeVisible();
+  // Selectable, so the reader can take part of it rather than all of it.
+  await expect(snippet.locator('pre')).toHaveCSS('user-select', 'text');
+
+  await snippet.getByRole('button', { name: 'Copy' }).click();
+  await expect(page.locator('.notices [role="status"]')).toContainText('Copied', {
+    timeout: 10_000,
+  });
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('SELECT');
+});

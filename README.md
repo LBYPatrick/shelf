@@ -52,8 +52,16 @@ is ever tied to a licence, because there is no licence.**
 - **Query** — CodeMirror 6 with schema-aware completion, the statement under the
   cursor highlighted, run-all or run-current, cancellation that reaches the
   server, multiple result sets, and manual transactions.
-- **Inspect** — columns, indexes, relations, triggers and partitions, each shown
+- **Inspect** — columns with their descriptions, indexes, relations, triggers and
+  partitions, each shown
   only where the engine has them.
+- **Analyze** — for engines that keep statement statistics, the slowest queries
+  over the last hour, six hours, day, week, month or all time, with calls, total
+  and mean time and each statement's share of the window; plus cache hit ratio,
+  transaction rate, connections by state, the largest tables with their dead-row
+  bloat, and indexes the planner has never chosen. No engine keeps a history, so
+  the app records its own readings and differences them, and says so when a
+  window is wider than the history behind it.
 - **Diagram** — a D3 force-directed ERD with draggable, position-remembering
   nodes and relationship highlighting.
 - **Change the shape** — add, rename and drop columns and indexes, with the
@@ -79,8 +87,11 @@ is ever tied to a licence, because there is no licence.**
   surfaces, which is what makes a new accent feel like a new theme rather than a
   repainted button. Any accent is guaranteed readable: the derivation walks the
   lightness until it clears 3:1 against the page and can carry 4.5:1 text.
-- **Translucent materials in four weights**, from tooltips to modal sheets, with
-  real window vibrancy on macOS and acrylic on Windows.
+- **The window is the material.** Real vibrancy on macOS and acrylic on Windows,
+  with the three columns tinted to different depths over it and one dial that
+  thins them together without closing the distance between them. What appears
+  *in front* of the window — menus, sheets — is opaque, because glass on glass
+  is unreadable and an in-page blur cannot reach the desktop anyway.
 - **Three density modes** driven by a single factor, so nothing drifts out of
   proportion.
 - **Springs, not keyframes.** Anything you can grab tracks the pointer one to

@@ -29,7 +29,8 @@
     "update": "Update",
     "settings": "Settings",
     "collapseAll": "Collapse all",
-    "resetView": "Reset view"
+    "resetView": "Reset view",
+    "copied": "Copied to the clipboard."
   },
   "start": {
     "search": "Paste a connection URL, or search your connections",
@@ -61,7 +62,6 @@
     "file": "Database file",
     "name": "Name",
     "nameHelp": "Leave blank to use “{{suggested}}”.",
-    "passwordHelp": "Leave blank to keep the saved password.",
     "advanced": "Advanced",
     "useSsl": "Use SSL/TLS",
     "useSsh": "Connect through an SSH tunnel",
@@ -152,11 +152,8 @@
     "partitions": "Partitions",
     "name": "Name",
     "type": "Type",
-    "null": "Null",
     "default": "Default",
-    "key": "Key",
     "unique": "Unique",
-    "direction": "Direction",
     "references": "References",
     "onDelete": "On delete",
     "timing": "Timing",
@@ -174,7 +171,18 @@
     "whatWillRun": "What will run",
     "typeToConfirm": "Type the name to confirm",
     "typeToConfirmHelp": "Enter “{{name}}” to enable the button.",
-    "applying": "Applying…"
+    "applying": "Applying…",
+    "sections": "Sections",
+    "filter": "Filter…",
+    "nullable": "Nullable",
+    "notNull": "NOT NULL",
+    "yes": "yes",
+    "pk": "PK",
+    "generated": "generated",
+    "actions": "Actions",
+    "noMatch": "Nothing matches that.",
+    "outgoing": "outgoing",
+    "incoming": "incoming"
   },
   "settings": {
     "title": "Settings",
@@ -189,9 +197,7 @@
     "density": "Density",
     "materials": "Materials",
     "opacity": "Opacity",
-    "opacityHelp": "How solid the glass panels are. 1.00 is fully opaque; the middle is how the app ships.",
-    "blur": "Blur",
-    "blurHelp": "The radius of a standard surface. Heavier surfaces scale from it; 0 switches the glass off.",
+    "opacityHelp": "How solid the window’s panels are. The working pane lands on this number; the columns beside it stay as much thinner as they were designed to be. Menus and sheets are solid, so they are not affected.",
     "resetMaterials": "Reset materials",
     "compact": "Compact",
     "default": "Default",
@@ -313,7 +319,8 @@
     "properties": "Properties",
     "exportData": "Export data to file…",
     "actionsFor": "Actions for {{name}}",
-    "copiedName": "Copied {{name}}."
+    "copiedName": "Copied {{name}}.",
+    "analyze": "Analyze performance"
   },
   "properties": {
     "rows": "Rows",
@@ -346,5 +353,92 @@
     "hintPath": "Try a path like music.album, or a pattern like ^a.*t$",
     "someOf": "{{shown}} of {{total}}",
     "tryPath": "Found under a different path:"
+  },
+  "container": {
+    "size": "Size",
+    "dataSize": "Data",
+    "indexSize": "Indexes",
+    "owner": "Owner",
+    "encoding": "Encoding",
+    "charset": "Character set",
+    "collation": "Collation",
+    "schemas": "Schemas",
+    "tables": "Tables",
+    "views": "Views",
+    "routines": "Routines",
+    "indexes": "Indexes",
+    "rows": "Rows",
+    "connections": "Connections",
+    "connectionLimit": "Connection limit",
+    "collections": "Collections",
+    "documents": "Documents",
+    "file": "File",
+    "pageSize": "Page size",
+    "journalMode": "Journal mode",
+    "largest": "Largest tables",
+    "overview": "Overview"
+  },
+  "metric": {
+    "databaseSize": "Database size",
+    "cacheHitRatio": "Cache hit",
+    "transactionRate": "Transactions",
+    "rollbackRatio": "Rollbacks",
+    "connections": "Connections",
+    "connectionLimit": "Connection limit",
+    "deadlocks": "Deadlocks",
+    "conflicts": "Conflicts",
+    "tempBytes": "Temp written",
+    "ioTime": "Disk time",
+    "uptime": "Uptime",
+    "slowQueries": "Slow queries",
+    "tempDiskTables": "Temp disk tables"
+  },
+  "analyze": {
+    "queries": "Queries",
+    "server": "Server",
+    "sections": "What to analyze",
+    "windowLabel": "Time range",
+    "reading": "Reading…",
+    "slowest": "Where the time went",
+    "trend": "Statement time per second",
+    "statement": "Statement",
+    "calls": "Calls",
+    "totalTime": "Total",
+    "meanTime": "Mean",
+    "maxTime": "Slowest",
+    "share": "Share",
+    "new": "new",
+    "quiet": "Nothing ran in this window.",
+    "openInEditor": "Open in editor",
+    "activity": "Connections by state",
+    "largestTables": "Largest tables",
+    "deadRows": "The darker part of each bar is space held by dead rows.",
+    "unusedIndexes": "Indexes never used",
+    "unusedHint": "Each one still costs a write on every insert and update."
+  },
+  "analyzeWindow": {
+    "hour": "Hour",
+    "sixHours": "6 hours",
+    "day": "Day",
+    "week": "Week",
+    "month": "Month",
+    "all": "All time"
+  },
+  "analyzeCaveat": {
+    "short": "The recorded history is shorter than this range, so this is everything since the first reading.",
+    "cumulative": "This is the server’s running total, not a range — leave this tab open and ranges will fill in.",
+    "reset": "The server reset its counters inside this range, so earlier readings were discarded."
+  },
+  "analyzeSpan": {
+    "single": "one reading",
+    "minutes": "over {{count}} min",
+    "hours": "over {{count}} h",
+    "days": "over {{count}} days"
+  },
+  "analyzeProblem": {
+    "unsupported": "This engine does not keep statement statistics.",
+    "not-installed": "The statistics extension is not installed on this server.",
+    "not-permitted": "This account cannot read the statistics view.",
+    "hint": "On PostgreSQL, add the library to the server configuration, restart, then create the extension:"
   }
 }

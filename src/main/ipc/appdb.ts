@@ -45,6 +45,16 @@ export function registerAppDbHandlers(
 
   ipcMain.handle(APPDB_CHANNELS.secretsAvailable, () => secrets.available);
 
+  ipcMain.handle(APPDB_CHANNELS.revealSecrets, (_event, id: string) => {
+    // Only what a form can edit, and only for a connection that exists.
+    const config = connections.resolveConfig(id);
+    return {
+      ...(config.password ? { password: config.password } : {}),
+      ...(config.ssh?.password ? { sshPassword: config.ssh.password } : {}),
+      ...(config.ssh?.passphrase ? { sshPassphrase: config.ssh.passphrase } : {}),
+    };
+  });
+
   const queries = new QueryRepository(db);
 
   ipcMain.handle(APPDB_CHANNELS.recordHistory, (_event, entry: HistoryInput) =>

@@ -29,7 +29,8 @@
     "update": "업데이트",
     "settings": "설정",
     "collapseAll": "모두 접기",
-    "resetView": "보기 초기화"
+    "resetView": "보기 초기화",
+    "copied": "클립보드에 복사했습니다."
   },
   "start": {
     "search": "연결 URL을 붙여넣거나 저장된 연결을 검색하세요",
@@ -61,7 +62,6 @@
     "file": "데이터베이스 파일",
     "name": "이름",
     "nameHelp": "비워 두면 “{{suggested}}”을(를) 사용합니다.",
-    "passwordHelp": "비워 두면 저장된 비밀번호를 그대로 씁니다.",
     "advanced": "고급",
     "useSsl": "SSL/TLS 사용",
     "useSsh": "SSH 터널로 연결",
@@ -152,11 +152,8 @@
     "partitions": "파티션",
     "name": "이름",
     "type": "타입",
-    "null": "널 허용",
     "default": "기본값",
-    "key": "키",
     "unique": "고유",
-    "direction": "방향",
     "references": "참조",
     "onDelete": "삭제 시",
     "timing": "시점",
@@ -174,7 +171,18 @@
     "whatWillRun": "실행될 문",
     "typeToConfirm": "확인을 위해 이름을 입력",
     "typeToConfirmHelp": "“{{name}}”을(를) 입력하면 버튼이 활성화됩니다.",
-    "applying": "적용 중…"
+    "applying": "적용 중…",
+    "sections": "섹션",
+    "filter": "필터…",
+    "nullable": "NULL 허용",
+    "notNull": "NOT NULL",
+    "yes": "예",
+    "pk": "PK",
+    "generated": "생성 열",
+    "actions": "작업",
+    "noMatch": "일치하는 항목이 없습니다.",
+    "outgoing": "나가는",
+    "incoming": "들어오는"
   },
   "settings": {
     "title": "설정",
@@ -189,9 +197,7 @@
     "density": "밀도",
     "materials": "재질",
     "opacity": "불투명도",
-    "opacityHelp": "유리 패널이 얼마나 불투명한지. 1.00은 완전 불투명이며 가운데가 기본값입니다.",
-    "blur": "흐림",
-    "blurHelp": "표준 표면의 반경입니다. 더 두꺼운 표면은 이에 비례합니다. 0이면 유리 효과가 꺼집니다.",
+    "opacityHelp": "창 패널이 얼마나 불투명한지. 작업 창은 이 값이 되고, 옆의 열은 설계된 만큼 계속 더 얇습니다. 메뉴와 시트는 불투명하므로 영향을 받지 않습니다.",
     "resetMaterials": "재질 초기화",
     "compact": "촘촘하게",
     "default": "기본",
@@ -313,7 +319,8 @@
     "properties": "속성",
     "exportData": "데이터를 파일로 내보내기…",
     "actionsFor": "{{name}} 작업",
-    "copiedName": "{{name}}을(를) 복사했습니다."
+    "copiedName": "{{name}}을(를) 복사했습니다.",
+    "analyze": "성능 분석"
   },
   "properties": {
     "rows": "행",
@@ -346,5 +353,92 @@
     "hintPath": "music.album 같은 경로나 ^a.*t$ 같은 패턴을 쓸 수 있습니다",
     "someOf": "{{total}}개 중 {{shown}}개",
     "tryPath": "다른 경로에서 찾았습니다:"
+  },
+  "container": {
+    "size": "크기",
+    "dataSize": "데이터",
+    "indexSize": "인덱스",
+    "owner": "소유자",
+    "encoding": "인코딩",
+    "charset": "문자 집합",
+    "collation": "데이터 정렬",
+    "schemas": "스키마",
+    "tables": "테이블",
+    "views": "뷰",
+    "routines": "루틴",
+    "indexes": "인덱스",
+    "rows": "행",
+    "connections": "연결",
+    "connectionLimit": "연결 한도",
+    "collections": "컬렉션",
+    "documents": "문서",
+    "file": "파일",
+    "pageSize": "페이지 크기",
+    "journalMode": "저널 모드",
+    "largest": "가장 큰 테이블",
+    "overview": "개요"
+  },
+  "metric": {
+    "databaseSize": "데이터베이스 크기",
+    "cacheHitRatio": "캐시 적중",
+    "transactionRate": "트랜잭션",
+    "rollbackRatio": "롤백",
+    "connections": "연결",
+    "connectionLimit": "연결 한도",
+    "deadlocks": "교착 상태",
+    "conflicts": "충돌",
+    "tempBytes": "임시 기록",
+    "ioTime": "디스크 시간",
+    "uptime": "가동 시간",
+    "slowQueries": "느린 쿼리",
+    "tempDiskTables": "임시 디스크 테이블"
+  },
+  "analyze": {
+    "queries": "쿼리",
+    "server": "서버",
+    "sections": "분석 대상",
+    "windowLabel": "기간",
+    "reading": "읽는 중…",
+    "slowest": "시간이 쓰인 곳",
+    "trend": "초당 문장 시간",
+    "statement": "문장",
+    "calls": "호출",
+    "totalTime": "합계",
+    "meanTime": "평균",
+    "maxTime": "가장 느림",
+    "share": "비율",
+    "new": "신규",
+    "quiet": "이 기간에 실행된 문장이 없습니다.",
+    "openInEditor": "편집기에서 열기",
+    "activity": "상태별 연결",
+    "largestTables": "가장 큰 테이블",
+    "deadRows": "각 막대의 짙은 부분은 데드 튜플이 차지한 공간입니다.",
+    "unusedIndexes": "한 번도 쓰이지 않은 인덱스",
+    "unusedHint": "삽입과 갱신마다 쓰기 비용이 계속 발생합니다."
+  },
+  "analyzeWindow": {
+    "hour": "1시간",
+    "sixHours": "6시간",
+    "day": "1일",
+    "week": "1주",
+    "month": "1개월",
+    "all": "전체 기간"
+  },
+  "analyzeCaveat": {
+    "short": "기록된 이력이 이 기간보다 짧아 첫 판독 이후의 전부를 보여 줍니다.",
+    "cumulative": "서버의 누적 값이며 기간이 아닙니다. 이 탭을 열어 두면 기간별 값이 채워집니다.",
+    "reset": "이 기간에 서버가 카운터를 초기화하여 이전 판독값을 버렸습니다."
+  },
+  "analyzeSpan": {
+    "single": "판독 1회",
+    "minutes": "{{count}}분 동안",
+    "hours": "{{count}}시간 동안",
+    "days": "{{count}}일 동안"
+  },
+  "analyzeProblem": {
+    "unsupported": "이 엔진은 문장 통계를 보관하지 않습니다.",
+    "not-installed": "이 서버에는 통계 확장이 설치되어 있지 않습니다.",
+    "not-permitted": "이 계정은 통계 뷰를 읽을 수 없습니다.",
+    "hint": "PostgreSQL에서는 서버 설정에 라이브러리를 추가하고 재시작한 뒤 확장을 만듭니다:"
   }
 }

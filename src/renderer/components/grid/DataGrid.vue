@@ -532,13 +532,21 @@ watch(
     <!-- One span whose only job is to be the shape of a cell's text. -->
     <span
       ref="probe"
-      class="grid__probe"
+      class="datagrid__probe"
       aria-hidden="true"
     />
 
+    <!--
+      "No rows" is a fact about the table, and it is only true once the table
+      has answered. Tabulator draws its placeholder the moment it has no rows,
+      which is also the whole of the first load — so an empty grid mid-fetch
+      announced that the table was empty, dimmed by the veil on top of it. The
+      flag lets the stylesheet withhold it until there is something to say.
+    -->
     <div
       ref="container"
-      class="grid"
+      class="datagrid"
+      :data-loading="loading ? '' : undefined"
     />
     <!--
       A veil alone said nothing. It dimmed the previous page by a few per cent
@@ -549,11 +557,11 @@ watch(
     -->
     <ProgressBar
       v-if="loading"
-      class="grid__progress"
+      class="datagrid__progress"
     />
     <div
       v-if="loading"
-      class="grid__veil"
+      class="datagrid__veil"
       aria-hidden="true"
     />
 
@@ -573,7 +581,7 @@ watch(
   min-height: 0;
 }
 
-.grid {
+.datagrid {
   height: 100%;
 }
 
@@ -588,7 +596,7 @@ watch(
  * that will actually draw the text. Density and a larger OS text size come
  * along for free, which is the point of measuring rather than assuming.
  */
-.grid__probe {
+.datagrid__probe {
   position: absolute;
   top: 0;
   left: 0;
@@ -600,14 +608,22 @@ watch(
   font-weight: 500;
 }
 
-.grid__progress {
+.datagrid__progress {
   position: absolute;
   inset-inline: 0;
   top: 0;
   z-index: 4;
 }
 
-.grid__veil {
+/*
+ * Deep, because Tabulator owns the placeholder element and it is not compiled
+ * with this component's scope attribute.
+ */
+.datagrid[data-loading] :deep(.tabulator-placeholder) {
+  visibility: hidden;
+}
+
+.datagrid__veil {
   position: absolute;
   inset: 0;
   background: color-mix(in oklab, var(--color-base-100) 45%, transparent);

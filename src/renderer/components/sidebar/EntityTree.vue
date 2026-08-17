@@ -9,13 +9,15 @@
  */
 import ProgressBar from '../ui/ProgressBar.vue';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import type { CellValue, Entity, EntityRef, Field } from '@drivers/types';
+import type { CellValue, ContainerRef, Entity, EntityRef, Field } from '@drivers/types';
 import { useTranslation } from 'i18next-vue';
 import AppIcon from '../ui/AppIcon.vue';
 import ContextMenu, { type MenuItem } from '../ui/ContextMenu.vue';
 import ExportSheet from '../grid/ExportSheet.vue';
 import QuickDocsSheet from '../tabs/QuickDocsSheet.vue';
+import ContainerPropertiesSheet from '../tabs/ContainerPropertiesSheet.vue';
 import TablePropertiesSheet from '../tabs/TablePropertiesSheet.vue';
+import { slugify } from '@shared/fileNames';
 import { host } from '../../lib/host';
 import { useConnections } from '../../stores/connections';
 import { useEntities, type TreeRow } from '../../stores/entities';
@@ -135,26 +137,75 @@ function open(entity: Entity): void {
  */
 const menuOpen = ref(false);
 const menuAt = ref({ x: 0, y: 0 });
-const menuEntity = ref<Entity | null>(null);
+/**
+ * What the menu was opened on, whichever level of the tree it was.
+ *
+ * A folder used to have no menu at all — the handler took an `Entity` and
+ * returned early without one — so right-clicking a schema did nothing, which
+ * reads as the app being broken rather than as the folder having no actions.
+ */
+const menuOn = ref<{ entity: Entity } | { container: ContainerRef } | null>(null);
 
 const propertiesOf = ref<EntityRef | null>(null);
 const propertiesOpen = ref(false);
+const containerOf = ref<ContainerRef | null>(null);
+const containerOpen = ref(false);
+/** Which section of the container popup the chosen menu item asked for. */
+const containerStart = ref<'overview' | 'queries'>('overview');
 const docsOf = ref<EntityRef | null>(null);
 const docsOpen = ref(false);
 const exportOf = ref<EntityRef | null>(null);
 const exportOpen = ref(false);
 
-const menuItems = computed<MenuItem[]>(() => [
-  { id: 'copy', label: t('menu.copyName'), icon: 'copy' },
-  { id: 'docs', label: t('menu.quickDocs'), icon: 'info', startsGroup: true },
-  { id: 'properties', label: t('menu.properties'), icon: 'structure' },
-  { id: 'export', label: t('menu.exportData'), icon: 'download', startsGroup: true },
-]);
+const canDescribeContainers = computed(
+  () => connections.active?.capabilities.containers ?? false
+);
+const canAnalyse = computed(() => connections.active?.capabilities.statistics ?? false);
 
-function openMenu(event: MouseEvent, entity: Entity | undefined): void {
-  if (!entity) return;
+const menuItems = computed<MenuItem[]>(() => {
+  const on = menuOn.value;
+  if (on && 'container' in on) {
+    return [
+      { id: 'copy', label: t('menu.copyName'), icon: 'copy' },
+      {
+        id: 'container',
+        label: t('menu.properties'),
+        icon: 'structure',
+        startsGroup: true,
+        disabled: !canDescribeContainers.value,
+      },
+      ...(on.container.kind === 'database' && canAnalyse.value
+        ? [{ id: 'analyze', label: t('menu.analyze'), icon: 'chart', startsGroup: true }]
+        : []),
+    ];
+  }
+
+  return [
+    { id: 'copy', label: t('menu.copyName'), icon: 'copy' },
+    { id: 'docs', label: t('menu.quickDocs'), icon: 'info', startsGroup: true },
+    { id: 'properties', label: t('menu.properties'), icon: 'structure' },
+    { id: 'export', label: t('menu.exportData'), icon: 'download', startsGroup: true },
+  ];
+});
+
+/** The folder rows carry their kind and their name, which is all a container is. */
+function containerFor(row: TreeRow): ContainerRef | null {
+  if (row.kind === 'database') return { kind: 'database', name: row.label };
+  if (row.kind === 'schema') return { kind: 'schema', name: row.label };
+  return null;
+}
+
+function openMenu(event: MouseEvent, row: TreeRow): void {
+  const target = row.entity
+    ? ({ entity: row.entity } as const)
+    : (() => {
+        const container = containerFor(row);
+        return container ? ({ container } as const) : null;
+      })();
+  if (!target) return;
+
   event.preventDefault();
-  menuEntity.value = entity;
+  menuOn.value = target;
   menuAt.value = { x: event.clientX, y: event.clientY };
   menuOpen.value = true;
 }
@@ -163,15 +214,29 @@ function qualified(entity: Entity): string {
   return entity.schema ? `${entity.schema}.${entity.name}` : entity.name;
 }
 
+function copyName(name: string): void {
+  void navigator.clipboard.writeText(name);
+  toasts.show({ tone: 'success', message: t('menu.copiedName', { name }) });
+}
+
 function onChoose(id: string): void {
-  const entity = menuEntity.value;
-  if (!entity) return;
-  const ref_ = refOf(entity);
+  const on = menuOn.value;
+  if (!on) return;
+
+  if ('container' in on) {
+    if (id === 'copy') copyName(on.container.name);
+    else if (id === 'container' || id === 'analyze') {
+      containerStart.value = id === 'analyze' ? 'queries' : 'overview';
+      containerOf.value = on.container;
+      containerOpen.value = true;
+    }
+    return;
+  }
+
+  const ref_ = refOf(on.entity);
 
   if (id === 'copy') {
-    const name = qualified(entity);
-    void navigator.clipboard.writeText(name);
-    toasts.show({ tone: 'success', message: t('menu.copiedName', { name }) });
+    copyName(qualified(on.entity));
     return;
   }
   if (id === 'docs') {
@@ -294,7 +359,7 @@ const KIND_ICON: Record<string, string> = {
           :aria-expanded="opens(row) ? row.expanded : undefined"
           :tabindex="opens(row) ? 0 : -1"
           @click="activate(row)"
-          @contextmenu="openMenu($event, row.entity)"
+          @contextmenu="openMenu($event, row)"
           @dblclick="row.entity && open(row.entity)"
           @keydown.enter="row.entity ? open(row.entity) : activate(row)"
           @keydown.right.prevent="!row.expanded && activate(row)"
@@ -322,6 +387,18 @@ const KIND_ICON: Record<string, string> = {
               :class="`row__label--${row.kind}`"
             >{{ row.label }}</span>
             <span class="row__count">{{ row.detail }}</span>
+            <button
+              class="row__action"
+              :aria-label="$t('menu.actionsFor', { name: row.label })"
+              :title="$t('menu.actionsFor', { name: row.label })"
+              @pointerdown.stop
+              @click.stop="openMenu($event, row)"
+            >
+              <AppIcon
+                name="more"
+                :size="14"
+              />
+            </button>
           </template>
 
           <template v-else-if="row.kind === 'entity'">
@@ -342,7 +419,7 @@ const KIND_ICON: Record<string, string> = {
               :aria-label="$t('menu.actionsFor', { name: row.label })"
               :title="$t('menu.actionsFor', { name: row.label })"
               @pointerdown.stop
-              @click.stop="openMenu($event, row.entity)"
+              @click.stop="openMenu($event, row)"
             >
               <AppIcon
                 name="more"
@@ -382,12 +459,19 @@ const KIND_ICON: Record<string, string> = {
       :entity="propertiesOf"
     />
 
+    <ContainerPropertiesSheet
+      v-if="containerOf"
+      v-model="containerOpen"
+      :target="containerOf"
+      :start="containerStart"
+    />
+
     <ExportSheet
       v-if="exportOf"
       v-model="exportOpen"
       :fields="NO_FIELDS"
       :rows="NO_ROWS"
-      :name="exportOf.name"
+      :name="slugify(exportOf.name)"
       :write-file="writeEntityToFile"
     />
   </div>
@@ -541,6 +625,8 @@ const KIND_ICON: Record<string, string> = {
 }
 
 .row--entity:hover .row__action,
+.row--schema:hover .row__action,
+.row--database:hover .row__action,
 .row__action:focus-visible {
   opacity: 1;
 }

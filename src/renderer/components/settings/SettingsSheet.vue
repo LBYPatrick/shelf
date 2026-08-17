@@ -67,19 +67,10 @@ const opacity = computed({
   },
 });
 
-const blur = computed({
-  get: () => theme.materials.blur,
-  set: (value: number) => {
-    theme.materials = { ...theme.materials, blur: value };
-  },
-});
-
 const OPACITY_FLOOR = Math.round(MATERIAL_LIMITS.opacity.min * 100);
 
 const materialsAreDefault = computed(
-  () =>
-    theme.materials.opacity === DEFAULT_MATERIALS.opacity &&
-    theme.materials.blur === DEFAULT_MATERIALS.blur
+  () => theme.materials.opacity === DEFAULT_MATERIALS.opacity
 );
 
 const groups = computed(() => [...new Set(BINDINGS.map((binding) => binding.group))]);
@@ -160,20 +151,6 @@ const languageOptions = computed(() => [
           :step="5"
           :aria-label="$t('settings.opacity')"
           :display="(opacity / 100).toFixed(2)"
-        />
-      </FormField>
-
-      <FormField
-        :label="$t('settings.blur')"
-        :help="$t('settings.blurHelp')"
-      >
-        <RangeSlider
-          v-model="blur"
-          :min="MATERIAL_LIMITS.blur.min"
-          :max="MATERIAL_LIMITS.blur.max"
-          :step="2"
-          :aria-label="$t('settings.blur')"
-          :display="`${blur}px`"
         />
       </FormField>
 

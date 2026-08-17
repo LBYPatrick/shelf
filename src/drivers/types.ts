@@ -61,6 +61,18 @@ export interface Capabilities {
   readonly sshTunnel: boolean;
   /** The engine has its own console, shown instead of or beside the SQL editor. */
   readonly nativeShell: boolean;
+  /**
+   * A database or a schema can describe itself, not just a table. False for
+   * stores where the container is a namespace and nothing more.
+   */
+  readonly containers: boolean;
+  /**
+   * The server keeps per-statement timings and server-wide counters we can
+   * read. Declared rather than discovered because the answer is a property of
+   * the engine; whether the *extension* that provides them is installed on this
+   * particular server is a separate question the driver answers at run time.
+   */
+  readonly statistics: boolean;
   /** What this engine calls its top-level container, for UI labels. */
   readonly nouns: EngineNouns;
 }
@@ -192,6 +204,127 @@ export interface EntityProperties {
   readonly dataSizeBytes?: number;
   readonly indexSizeBytes?: number;
   readonly comment?: string;
+}
+
+/** A database or a schema — the two things a table lives inside. */
+export interface ContainerRef {
+  readonly kind: 'database' | 'schema';
+  readonly name: string;
+}
+
+/**
+ * One thing an engine wants to say about a container.
+ *
+ * Free-form rather than a fixed record because the interesting facts differ by
+ * engine and pretending otherwise produces a form with half its fields empty:
+ * Postgres has an owner, a collation and a tablespace, SQLite has a page size
+ * and a journal mode, and neither has the other's.
+ *
+ * `key` names the fact for translation and falls back to itself, so a driver
+ * can state something the interface has never heard of without it disappearing.
+ * Exactly one of the three value fields is set, which is what lets the
+ * interface format a size as a size and a count as a count.
+ */
+export interface ContainerFact {
+  readonly key: string;
+  readonly text?: string;
+  readonly bytes?: number;
+  readonly count?: number;
+}
+
+export interface ContainerProperties {
+  readonly comment?: string;
+  readonly facts: readonly ContainerFact[];
+  /** The biggest tables inside it, largest first. */
+  readonly largest?: readonly { readonly entity: EntityRef; readonly bytes: number }[];
+}
+
+// ---------------------------------------------------------------------------
+// Statistics
+// ---------------------------------------------------------------------------
+
+/**
+ * One statement, as the server's own statistics describe it.
+ *
+ * Every counter is cumulative since the server last reset them, which is the
+ * only form the engines offer. Turning that into "the last hour" is the
+ * interface's job and is done by differencing two readings — see
+ * `shared/queryStats.ts`.
+ */
+export interface StatementStat {
+  /**
+   * The server's own identity for the statement, stable across readings. Two
+   * readings of the same statement have to be recognisable as the same one or
+   * there is nothing to difference.
+   */
+  readonly id: string;
+  /** The normalised text, with literals replaced by placeholders. */
+  readonly text: string;
+  readonly calls: number;
+  readonly totalMs: number;
+  readonly meanMs: number;
+  readonly minMs?: number;
+  readonly maxMs?: number;
+  readonly rows?: number;
+  /** Shared-buffer hits over hits plus reads, 0 to 1, where it is tracked. */
+  readonly cacheHitRatio?: number;
+}
+
+/** Every counter as it stood at one moment. */
+export interface StatementSample {
+  /** When the counters were read, by our clock. */
+  readonly takenAt: number;
+  /**
+   * When the server last reset them. A reset makes every earlier reading
+   * useless for differencing, and without this the difference would come out
+   * negative and be silently treated as a very fast hour.
+   */
+  readonly resetAt?: number;
+  readonly statements: readonly StatementStat[];
+}
+
+/** Why the server cannot report statement statistics at the moment. */
+export type StatisticsProblem = 'unsupported' | 'not-installed' | 'not-permitted';
+
+export type StatementReport =
+  | { readonly ok: true; readonly sample: StatementSample }
+  | {
+      readonly ok: false;
+      readonly problem: StatisticsProblem;
+      /** The server's own words, when it had any. */
+      readonly detail?: string;
+    };
+
+/** A single named measurement of the server as a whole. */
+export interface Metric {
+  readonly key: string;
+  readonly value: number;
+  readonly unit: 'count' | 'bytes' | 'ms' | 'seconds' | 'ratio' | 'perSecond';
+  /** Above this the number is a problem rather than a fact. */
+  readonly warnAbove?: number;
+  /** Below this the number is a problem rather than a fact. */
+  readonly warnBelow?: number;
+}
+
+export interface ServerMetrics {
+  /** Headline numbers, in the order the engine wants them read. */
+  readonly gauges: readonly Metric[];
+  /** What the tables cost, largest first. */
+  readonly largestTables: readonly {
+    readonly entity: EntityRef;
+    readonly totalBytes: number;
+    readonly rowEstimate?: number;
+    /** Dead tuples over live ones, which is bloat before it is anything else. */
+    readonly deadRatio?: number;
+  }[];
+  /** Connections, grouped by what they are doing. */
+  readonly activity: readonly { readonly state: string; readonly count: number }[];
+  /** Indexes the planner has never chosen: cost without benefit. */
+  readonly unusedIndexes: readonly {
+    readonly entity: EntityRef;
+    readonly name: string;
+    readonly sizeBytes: number;
+  }[];
 }
 
 // ---------------------------------------------------------------------------
@@ -391,6 +524,12 @@ export interface DatabaseClient {
   listTriggers(entity: EntityRef): Promise<readonly Trigger[]>;
   listPartitions(entity: EntityRef): Promise<readonly Partition[]>;
   getProperties(entity: EntityRef): Promise<EntityProperties>;
+  /** Present exactly when `capabilities.containers` is true. */
+  getContainerProperties?(target: ContainerRef): Promise<ContainerProperties>;
+
+  /** Both present exactly when `capabilities.statistics` is true. */
+  readStatements?(): Promise<StatementReport>;
+  readMetrics?(): Promise<ServerMetrics>;
 
   selectTop(request: SelectRequest): Promise<Page>;
   /** The same read, as text, so the user can see and copy what we would run. */

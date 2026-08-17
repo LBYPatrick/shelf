@@ -424,6 +424,29 @@ onBeforeUnmount(() => stopPersisting?.());
   width: var(--radius-box);
   height: var(--radius-box);
   pointer-events: none;
+  /*
+   * Only the wedge, never the disc.
+   *
+   * It was a full square sitting behind the pane's cut corner, and the pane is
+   * glass — so across the quarter-disc the two surfaces stacked and composited
+   * to a shade darker than either, which read as a small dark rectangle pinned
+   * to the corner. Masking the disc away leaves the notch filling exactly the
+   * area the clip removed and nothing else. The half-pixel of overlap is
+   * deliberate: the mask and the pane's `clip-path` antialias independently,
+   * and a gap between them shows the window's backdrop as a bright hairline
+   * along the arc, which is the defect this element exists to prevent.
+   */
+  --notch-cut: calc(100% - 0.5px);
+  -webkit-mask-image: radial-gradient(
+    circle var(--radius-box) at 100% 100%,
+    transparent 0 var(--notch-cut),
+    #000 var(--notch-cut)
+  );
+  mask-image: radial-gradient(
+    circle var(--radius-box) at 100% 100%,
+    transparent 0 var(--notch-cut),
+    #000 var(--notch-cut)
+  );
   transition: inset-inline-start 260ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 

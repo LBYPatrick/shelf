@@ -2,6 +2,8 @@ import type {
   Capabilities,
   ChangeSet,
   Column,
+  ContainerProperties,
+  ContainerRef,
   Entity,
   EntityProperties,
   EntityRef,
@@ -15,6 +17,8 @@ import type {
   Relation,
   ResultSet,
   SelectRequest,
+  ServerMetrics,
+  StatementReport,
   Trigger,
 } from '../drivers/types';
 
@@ -73,6 +77,18 @@ export interface HostContract {
     payload: { connectionId: string; entity: EntityRef };
     result: EntityProperties;
   };
+  'schema/container': {
+    payload: { connectionId: string; target: ContainerRef };
+    result: ContainerProperties;
+  };
+
+  /**
+   * The server's own statistics, exactly as it keeps them: cumulative since it
+   * last reset the counters. Turning a pair of readings into "the last hour"
+   * happens in the interface, where the history lives.
+   */
+  'stats/statements': { payload: { connectionId: string }; result: StatementReport };
+  'stats/metrics': { payload: { connectionId: string }; result: ServerMetrics };
 
   'data/select': { payload: { connectionId: string; request: SelectRequest }; result: Page };
   'data/selectSql': {

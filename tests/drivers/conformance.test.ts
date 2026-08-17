@@ -238,16 +238,33 @@ for (const target of TARGETS) {
       expect(seen).toBeGreaterThanOrEqual(3);
     });
 
+    /*
+     * The column list is an array, not something that prints like one.
+     *
+     * Postgres returns `array_agg(name)` as OID 1003, which `pg` has no parser
+     * for and hands back verbatim as the string `{id,name}`. Everything type-
+     * checked, everything crossed the process boundary intact, and the first
+     * `.join()` in the interface took the whole structure view down with it.
+     * The shape is what the interface relies on, so the shape is what is
+     * asserted.
+     */
     it('lists indexes, or declares it has none', async () => {
       if (!client.capabilities.indexes) return;
       const indexes = await client.listIndexes({ name: target.table });
       expect(Array.isArray(indexes)).toBe(true);
+      for (const index of indexes) {
+        expect(Array.isArray(index.columns), `${index.name}.columns`).toBe(true);
+      }
     });
 
     it('lists relations, or declares it has none', async () => {
       if (!client.capabilities.relations) return;
       const relations = await client.listRelations({ name: target.table });
       expect(Array.isArray(relations)).toBe(true);
+      for (const relation of relations) {
+        expect(Array.isArray(relation.columns), `${relation.name}.columns`).toBe(true);
+        expect(Array.isArray(relation.referencedColumns)).toBe(true);
+      }
     });
 
     it('reports properties', async () => {

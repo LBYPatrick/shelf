@@ -199,7 +199,7 @@ function draftFor(input: SaveConnectionInput): void {
 
       <section
         v-if="!empty"
-        class="grid"
+        class="tiles"
       >
         <TransitionGroup name="card">
           <ConnectionCard
@@ -208,7 +208,7 @@ function draftFor(input: SaveConnectionInput): void {
             :connection="connection"
             :busy="opening === connection.id"
             :style="{ '--index': index }"
-            class="grid__item"
+            class="tiles__item"
             @open="open(connection)"
             @edit="
               seed = undefined;
@@ -233,7 +233,7 @@ function draftFor(input: SaveConnectionInput): void {
 
       <section
         v-else
-        class="grid"
+        class="tiles"
       >
         <button
           class="tile"
@@ -517,7 +517,7 @@ function draftFor(input: SaveConnectionInput): void {
   font-size: 0.75rem;
 }
 
-.grid {
+.tiles {
   display: grid;
   /* Three across on a wide window, so two connections do not stretch into
      banners the width of the screen. */
@@ -529,7 +529,7 @@ function draftFor(input: SaveConnectionInput): void {
  * Cards cascade in rather than appearing together. The delay is capped so a
  * long list never makes the screen feel slow to settle.
  */
-.grid__item {
+.tiles__item {
   animation: rise-in 320ms var(--ease-out) backwards;
   animation-delay: calc(min(var(--index) * 40ms, 320ms));
 }
@@ -668,7 +668,7 @@ function draftFor(input: SaveConnectionInput): void {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .grid__item {
+  .tiles__item {
     animation: none;
   }
 

@@ -29,7 +29,8 @@
     "update": "更新",
     "settings": "设置",
     "collapseAll": "全部折叠",
-    "resetView": "重置视图"
+    "resetView": "重置视图",
+    "copied": "已复制到剪贴板。"
   },
   "start": {
     "search": "粘贴连接 URL，或搜索已保存的连接",
@@ -61,7 +62,6 @@
     "file": "数据库文件",
     "name": "名称",
     "nameHelp": "留空则使用“{{suggested}}”。",
-    "passwordHelp": "留空则沿用已保存的密码。",
     "advanced": "高级",
     "useSsl": "使用 SSL/TLS",
     "useSsh": "通过 SSH 隧道连接",
@@ -152,11 +152,8 @@
     "partitions": "分区",
     "name": "名称",
     "type": "类型",
-    "null": "可空",
     "default": "默认值",
-    "key": "键",
     "unique": "唯一",
-    "direction": "方向",
     "references": "引用",
     "onDelete": "删除时",
     "timing": "时机",
@@ -174,7 +171,18 @@
     "whatWillRun": "将要执行的语句",
     "typeToConfirm": "输入名称以确认",
     "typeToConfirmHelp": "输入“{{name}}”后按钮才会启用。",
-    "applying": "应用中…"
+    "applying": "应用中…",
+    "sections": "结构分组",
+    "filter": "筛选…",
+    "nullable": "可空",
+    "notNull": "NOT NULL",
+    "yes": "是",
+    "pk": "PK",
+    "generated": "生成列",
+    "actions": "操作",
+    "noMatch": "没有匹配项。",
+    "outgoing": "外向",
+    "incoming": "内向"
   },
   "settings": {
     "title": "设置",
@@ -189,9 +197,7 @@
     "density": "密度",
     "materials": "材质",
     "opacity": "不透明度",
-    "opacityHelp": "玻璃面板的实心程度。1.00 为完全不透明，中间为出厂设置。",
-    "blur": "模糊",
-    "blurHelp": "标准表面的模糊半径。更厚的表面按比例放大；为 0 时关闭玻璃效果。",
+    "opacityHelp": "窗口面板的实心程度。工作区正好落在该数值上，旁边的列则保持设计好的更薄程度。菜单和面板是不透明的，因此不受影响。",
     "resetMaterials": "重置材质",
     "compact": "紧凑",
     "default": "标准",
@@ -313,7 +319,8 @@
     "properties": "属性",
     "exportData": "导出数据到文件…",
     "actionsFor": "{{name}} 的操作",
-    "copiedName": "已复制 {{name}}。"
+    "copiedName": "已复制 {{name}}。",
+    "analyze": "分析性能"
   },
   "properties": {
     "rows": "行数",
@@ -346,5 +353,92 @@
     "hintPath": "可用 music.album 这样的路径，或 ^a.*t$ 这样的表达式",
     "someOf": "{{total}} 项中的 {{shown}} 项",
     "tryPath": "在其他路径下找到:"
+  },
+  "container": {
+    "size": "大小",
+    "dataSize": "数据",
+    "indexSize": "索引",
+    "owner": "所有者",
+    "encoding": "编码",
+    "charset": "字符集",
+    "collation": "排序规则",
+    "schemas": "模式",
+    "tables": "表",
+    "views": "视图",
+    "routines": "例程",
+    "indexes": "索引",
+    "rows": "行数",
+    "connections": "连接",
+    "connectionLimit": "连接上限",
+    "collections": "集合",
+    "documents": "文档",
+    "file": "文件",
+    "pageSize": "页大小",
+    "journalMode": "日志模式",
+    "largest": "最大的表",
+    "overview": "概览"
+  },
+  "metric": {
+    "databaseSize": "数据库大小",
+    "cacheHitRatio": "缓存命中",
+    "transactionRate": "事务",
+    "rollbackRatio": "回滚",
+    "connections": "连接",
+    "connectionLimit": "连接上限",
+    "deadlocks": "死锁",
+    "conflicts": "冲突",
+    "tempBytes": "临时写入",
+    "ioTime": "磁盘耗时",
+    "uptime": "运行时间",
+    "slowQueries": "慢查询",
+    "tempDiskTables": "临时磁盘表"
+  },
+  "analyze": {
+    "queries": "查询",
+    "server": "服务器",
+    "sections": "分析对象",
+    "windowLabel": "时间范围",
+    "reading": "读取中…",
+    "slowest": "时间去向",
+    "trend": "每秒语句耗时",
+    "statement": "语句",
+    "calls": "调用",
+    "totalTime": "总计",
+    "meanTime": "平均",
+    "maxTime": "最慢",
+    "share": "占比",
+    "new": "新增",
+    "quiet": "此时间范围内没有执行任何语句。",
+    "openInEditor": "在编辑器中打开",
+    "activity": "按状态划分的连接",
+    "largestTables": "最大的表",
+    "deadRows": "每根条形中较深的部分是死元组占用的空间。",
+    "unusedIndexes": "从未使用的索引",
+    "unusedHint": "它们在每次插入和更新时仍会产生写入开销。"
+  },
+  "analyzeWindow": {
+    "hour": "1 小时",
+    "sixHours": "6 小时",
+    "day": "1 天",
+    "week": "1 周",
+    "month": "1 个月",
+    "all": "全部时间"
+  },
+  "analyzeCaveat": {
+    "short": "记录的历史短于该范围，因此显示的是自首次读取以来的全部数据。",
+    "cumulative": "这是服务器的累计值而非区间数据 — 保持此标签页打开，区间数据会逐渐积累。",
+    "reset": "服务器在此区间内重置了计数器，因此较早的读取已被丢弃。"
+  },
+  "analyzeSpan": {
+    "single": "仅一次读取",
+    "minutes": "跨 {{count}} 分钟",
+    "hours": "跨 {{count}} 小时",
+    "days": "跨 {{count}} 天"
+  },
+  "analyzeProblem": {
+    "unsupported": "此引擎不保留语句统计信息。",
+    "not-installed": "此服务器未安装统计扩展。",
+    "not-permitted": "此账户无法读取统计视图。",
+    "hint": "在 PostgreSQL 上，将该库加入服务器配置并重启，然后创建扩展："
   }
 }

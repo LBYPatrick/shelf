@@ -72,6 +72,8 @@ const appDb: AppDbApi = {
   prepareConnection: (request: PrepareConnectionRequest) =>
     ipcRenderer.invoke(APPDB_CHANNELS.prepareConnection, request),
   secretsAvailable: () => ipcRenderer.invoke(APPDB_CHANNELS.secretsAvailable),
+  revealSecrets: (connectionId: string) =>
+    ipcRenderer.invoke(APPDB_CHANNELS.revealSecrets, connectionId),
   recordHistory: (entry: HistoryInput) =>
     ipcRenderer.invoke(APPDB_CHANNELS.recordHistory, entry),
   listHistory: (connectionId: string | null) =>

@@ -5,6 +5,8 @@ import type {
   ChangeSet,
   Column,
   ConnectionConfig,
+  ContainerProperties,
+  ContainerRef,
   Cursor,
   DatabaseClient,
   EngineId,
@@ -21,6 +23,8 @@ import type {
   Relation,
   ResultSet,
   SelectRequest,
+  ServerMetrics,
+  StatementReport,
   StreamRequest,
   Trigger,
 } from '../types';
@@ -49,7 +53,14 @@ const MYSQL_CAPABILITIES = capabilities({
   schemas: false,
   partitions: true,
   cheapCount: false,
+  // `performance_schema` is compiled in and on by default, but it can be built
+  // out or switched off — which the driver reports as a stated problem rather
+  // than an empty tab.
+  statistics: true,
 });
+
+/** `performance_schema` counts in picoseconds; everything else here is in ms. */
+const PICOSECONDS_PER_MS = 1e9;
 
 /**
  * MySQL, over `mysql2`.
@@ -388,6 +399,234 @@ export class MysqlClient implements DatabaseClient {
       ...(row.data_size !== null ? { dataSizeBytes: row.data_size } : {}),
       ...(row.index_size !== null ? { indexSizeBytes: row.index_size } : {}),
       ...(row.comment ? { comment: row.comment } : {}),
+    };
+  }
+
+  /**
+   * MySQL has no schemas: a schema *is* a database, and `information_schema`
+   * uses the two words interchangeably. Both kinds resolve to the same query
+   * rather than the interface having to know that.
+   */
+  async getContainerProperties(target: ContainerRef): Promise<ContainerProperties> {
+    const [meta] = await this.run<RowDataPacket & { charset: string; collation: string }>(
+      `SELECT default_character_set_name AS charset, default_collation_name AS collation
+         FROM information_schema.schemata WHERE schema_name = ?`,
+      [target.name]
+    );
+    if (!meta) return { facts: [] };
+
+    const [totals] = await this.run<
+      RowDataPacket & {
+        data_size: number | null;
+        index_size: number | null;
+        tables: number;
+        rows: number | null;
+      }
+    >(
+      `SELECT SUM(data_length) AS data_size, SUM(index_length) AS index_size,
+              COUNT(*) AS tables, SUM(table_rows) AS rows
+         FROM information_schema.tables
+        WHERE table_schema = ? AND table_type = 'BASE TABLE'`,
+      [target.name]
+    );
+
+    const [views] = await this.run<RowDataPacket & { views: number }>(
+      `SELECT COUNT(*) AS views FROM information_schema.views WHERE table_schema = ?`,
+      [target.name]
+    );
+
+    const largest = await this.run<RowDataPacket & { name: string; bytes: number | null }>(
+      `SELECT table_name AS name, (data_length + index_length) AS bytes
+         FROM information_schema.tables
+        WHERE table_schema = ? AND table_type = 'BASE TABLE'
+        ORDER BY bytes DESC LIMIT 8`,
+      [target.name]
+    );
+
+    return {
+      facts: [
+        {
+          key: 'size',
+          bytes: Number(totals?.data_size ?? 0) + Number(totals?.index_size ?? 0),
+        },
+        { key: 'charset', text: meta.charset },
+        { key: 'collation', text: meta.collation },
+        { key: 'tables', count: Number(totals?.tables ?? 0) },
+        { key: 'views', count: Number(views?.views ?? 0) },
+        // Estimates on InnoDB, and labelled as such wherever they are shown.
+        { key: 'rows', count: Number(totals?.rows ?? 0) },
+      ],
+      largest: largest.map((table) => ({
+        entity: { name: table.name, schema: target.name },
+        bytes: Number(table.bytes ?? 0),
+      })),
+    };
+  }
+
+  /* ------------------------------------------------------------ statistics */
+
+  /**
+   * Per-statement timings, from `performance_schema`.
+   *
+   * There is no reset timestamp to report: the digest table is cleared by
+   * truncating it, and the server keeps no record of when that happened. So a
+   * window computed from these readings is trustworthy and "all time" is
+   * whatever has accumulated since someone last truncated — which is what the
+   * interface says rather than implying a start date it does not have.
+   */
+  async readStatements(): Promise<StatementReport> {
+    try {
+      const rows = await this.run<
+        RowDataPacket & {
+          id: string;
+          text: string | null;
+          calls: string;
+          total: string;
+          min: string;
+          max: string;
+          rows: string;
+        }
+      >(
+        `SELECT DIGEST AS id, DIGEST_TEXT AS text, COUNT_STAR AS calls,
+                SUM_TIMER_WAIT AS total, MIN_TIMER_WAIT AS min, MAX_TIMER_WAIT AS max,
+                SUM_ROWS_SENT AS \`rows\`
+           FROM performance_schema.events_statements_summary_by_digest
+          WHERE DIGEST IS NOT NULL AND SCHEMA_NAME = COALESCE(?, DATABASE())
+          ORDER BY SUM_TIMER_WAIT DESC
+          LIMIT 500`,
+        [this.database ?? null]
+      );
+
+      return {
+        ok: true,
+        sample: {
+          takenAt: Date.now(),
+          statements: rows.map((row) => {
+            const calls = Number(row.calls);
+            const totalMs = Number(row.total) / PICOSECONDS_PER_MS;
+            return {
+              id: row.id,
+              text: row.text ?? '',
+              calls,
+              totalMs,
+              meanMs: calls > 0 ? totalMs / calls : 0,
+              minMs: Number(row.min) / PICOSECONDS_PER_MS,
+              maxMs: Number(row.max) / PICOSECONDS_PER_MS,
+              rows: Number(row.rows),
+            };
+          }),
+        },
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        ok: false,
+        // A missing table means the schema is not there; anything else at this
+        // point is the grant, and the two have different fixes.
+        problem: /doesn.t exist|Unknown table/i.test(message)
+          ? 'not-installed'
+          : 'not-permitted',
+        detail: message,
+      };
+    }
+  }
+
+  async readMetrics(): Promise<ServerMetrics> {
+    const status = await this.run<RowDataPacket & { name: string; value: string }>(
+      `SHOW GLOBAL STATUS`
+    ).then(
+      (rows) =>
+        new Map(
+          rows.map((row) => [
+            String(row['Variable_name'] ?? row.name),
+            row['Value'] ?? row.value,
+          ])
+        )
+    );
+
+    const number = (key: string) => Number(status.get(key) ?? 0);
+
+    const [limit] = await this.run<RowDataPacket & { value: string }>(
+      `SELECT @@max_connections AS value`
+    );
+
+    const tables = await this.run<
+      RowDataPacket & { name: string; total: number | null; rows: number | null }
+    >(
+      `SELECT table_name AS name, (data_length + index_length) AS total, table_rows AS \`rows\`
+         FROM information_schema.tables
+        WHERE table_schema = COALESCE(?, DATABASE()) AND table_type = 'BASE TABLE'
+        ORDER BY total DESC
+        LIMIT 12`,
+      [this.database ?? null]
+    );
+
+    // Ships with MySQL 8 and is absent on older servers and on some forks, so
+    // its absence is "nothing to report" rather than a failed refresh.
+    const unused = await this.run<
+      RowDataPacket & { schema: string; table: string; index: string }
+    >(
+      `SELECT object_schema AS \`schema\`, object_name AS \`table\`, index_name AS \`index\`
+         FROM sys.schema_unused_indexes
+        WHERE object_schema = COALESCE(?, DATABASE())
+        LIMIT 12`,
+      [this.database ?? null]
+    ).catch(() => []);
+
+    const reads = number('Innodb_buffer_pool_reads');
+    const requests = number('Innodb_buffer_pool_read_requests');
+    const commits = number('Com_commit');
+    const rollbacks = number('Com_rollback');
+    const uptime = Math.max(1, number('Uptime'));
+    const connections = number('Threads_connected');
+    const maxConnections = Number(limit?.value ?? 0);
+    const size = tables.reduce((sum, table) => sum + Number(table.total ?? 0), 0);
+
+    return {
+      gauges: [
+        { key: 'databaseSize', value: size, unit: 'bytes' },
+        {
+          key: 'cacheHitRatio',
+          value: requests > 0 ? 1 - reads / requests : 1,
+          unit: 'ratio',
+          warnBelow: 0.99,
+        },
+        { key: 'transactionRate', value: (commits + rollbacks) / uptime, unit: 'perSecond' },
+        {
+          key: 'rollbackRatio',
+          value: commits + rollbacks > 0 ? rollbacks / (commits + rollbacks) : 0,
+          unit: 'ratio',
+          warnAbove: 0.05,
+        },
+        {
+          key: 'connections',
+          value: connections,
+          unit: 'count',
+          ...(maxConnections ? { warnAbove: maxConnections * 0.8 } : {}),
+        },
+        { key: 'connectionLimit', value: maxConnections, unit: 'count' },
+        { key: 'slowQueries', value: number('Slow_queries'), unit: 'count', warnAbove: 0 },
+        {
+          key: 'tempDiskTables',
+          value: number('Created_tmp_disk_tables'),
+          unit: 'count',
+        },
+        { key: 'uptime', value: uptime, unit: 'seconds' },
+      ],
+      largestTables: tables.map((table) => ({
+        entity: { name: table.name },
+        totalBytes: Number(table.total ?? 0),
+        rowEstimate: Number(table.rows ?? 0),
+      })),
+      activity: [
+        { state: 'connected', count: connections },
+        { state: 'running', count: number('Threads_running') },
+      ],
+      unusedIndexes: unused.map((index) => ({
+        entity: { name: index.table },
+        name: index.index,
+        sizeBytes: 0,
+      })),
     };
   }
 

@@ -51,6 +51,12 @@ type Section = 'columns' | 'indexes' | 'relations' | 'triggers' | 'partitions';
 const section = ref<Section>('columns');
 const loading = ref(false);
 const error = ref<string | null>(null);
+/*
+ * A table with two hundred columns is a list you scroll looking for one name.
+ * The box narrows whichever section is showing rather than being a search of
+ * its own, so there is one thing to learn and it works everywhere.
+ */
+const filter = ref('');
 
 const columns = ref<readonly Column[]>([]);
 const indexes = ref<readonly Index[]>([]);
@@ -115,16 +121,57 @@ async function load(): Promise<void> {
   }
 }
 
-const isEmpty = computed(() => {
+/**
+ * Matches anything the row shows, so a search for a type or a referenced table
+ * works as well as a search for a name — the reader should not have to know
+ * which column the word they remember lives in.
+ */
+function matches(...parts: readonly (string | undefined)[]): boolean {
+  const needle = filter.value.trim().toLowerCase();
+  if (!needle) return true;
+  return parts.some((part) => part?.toLowerCase().includes(needle));
+}
+
+const shownColumns = computed(() =>
+  columns.value.filter((column) =>
+    matches(column.name, column.dataType, column.defaultValue, column.comment)
+  )
+);
+const shownIndexes = computed(() =>
+  indexes.value.filter((index) => matches(index.name, index.columns.join(' '), index.type))
+);
+const shownRelations = computed(() =>
+  relations.value.filter((relation) =>
+    matches(
+      relation.name,
+      relation.columns.join(' '),
+      relation.referencedTable.name,
+      relation.referencedColumns.join(' ')
+    )
+  )
+);
+const shownTriggers = computed(() =>
+  triggers.value.filter((trigger) => matches(trigger.name, trigger.timing, trigger.event))
+);
+const shownPartitions = computed(() =>
+  partitions.value.filter((partition) => matches(partition.name, partition.expression))
+);
+
+const shownCount = computed(() => {
   const counts: Record<Section, number> = {
-    columns: columns.value.length,
-    indexes: indexes.value.length,
-    relations: relations.value.length,
-    triggers: triggers.value.length,
-    partitions: partitions.value.length,
+    columns: shownColumns.value.length,
+    indexes: shownIndexes.value.length,
+    relations: shownRelations.value.length,
+    triggers: shownTriggers.value.length,
+    partitions: shownPartitions.value.length,
   };
-  return counts[section.value] === 0;
+  return counts[section.value];
 });
+
+const isEmpty = computed(() => shownCount.value === 0);
+/** Empty because nothing matched is a different message from empty because
+    there is nothing — one is the reader's doing and can be undone. */
+const isFiltered = computed(() => filter.value.trim().length > 0);
 
 /* ---------------------------------------------------------------- editing */
 
@@ -211,14 +258,29 @@ watch(() => props.entity, load);
 
 <template>
   <div class="structure">
-    <div class="structure__head mat-thin">
+    <div class="structure__head">
       <SegmentedControl
         v-model="section"
         :options="sections"
-        :aria-label="$t('structure.columns')"
+        :aria-label="$t('structure.sections')"
       />
 
       <span class="structure__spacer" />
+
+      <label class="structure__find">
+        <AppIcon
+          name="search"
+          :size="12"
+        />
+        <input
+          v-model="filter"
+          type="search"
+          class="structure__find-input"
+          spellcheck="false"
+          :aria-label="$t('structure.filter')"
+          :placeholder="$t('structure.filter')"
+        >
+      </label>
 
       <PressButton
         v-if="canEdit && section === 'columns'"
@@ -265,52 +327,113 @@ watch(() => props.entity, load);
       v-else
       class="structure__body"
     >
+      <!--
+        Every section states its own column widths in a `colgroup`.
+
+        The widths used to be `nth-child` rules shared by all five tables, which
+        meant the two-column partitions list wore the six-column layout and left
+        half its width empty. A `colgroup` is also the only place a width can be
+        declared once for a header cell and its body cells together — declared
+        on the cells, they are two sets of numbers that have to agree, and the
+        header and the body are exactly the two things that must never disagree.
+      -->
       <table
         v-if="section === 'columns'"
-        class="grid"
+        class="rows"
       >
+        <colgroup>
+          <col
+            span="1"
+            style="width: 34%"
+          >
+          <col
+            span="1"
+            style="width: 26%"
+          >
+          <col
+            span="1"
+            style="width: 12%"
+          >
+          <col
+            span="1"
+            style="width: 22%"
+          >
+          <col
+            span="1"
+            style="width: 6%"
+          >
+        </colgroup>
         <thead>
           <tr>
             <th>{{ $t('structure.name') }}</th>
             <th>{{ $t('structure.type') }}</th>
-            <th>{{ $t('structure.null') }}</th>
+            <th>{{ $t('structure.nullable') }}</th>
             <th>{{ $t('structure.default') }}</th>
-            <th>{{ $t('structure.key') }}</th>
-            <th />
+            <th>
+              <span class="sr-only">{{ $t('structure.actions') }}</span>
+            </th>
           </tr>
         </thead>
         <tbody>
           <tr
-            v-for="column in columns"
-            :key="column.name"
+            v-for="column in shownColumns"
+            :key="column.ordinal"
           >
-            <td class="grid__name">
-              {{ column.name }}
+            <!--
+              The description goes under the name rather than in a column of its
+              own. A sentence needs the width of a sentence, and giving it one
+              across five sections would have squeezed every other value in the
+              table to make room for a field most rows leave empty.
+            -->
+            <td class="rows__lead">
+              <span class="rows__name">
+                {{ column.name }}
+                <span
+                  v-if="column.primaryKey"
+                  class="chip chip--key"
+                >{{
+                  $t('structure.pk')
+                }}</span>
+                <span
+                  v-else-if="column.generated"
+                  class="chip"
+                >{{
+                  $t('structure.generated')
+                }}</span>
+              </span>
+              <span
+                v-if="column.comment"
+                class="rows__note"
+                :title="column.comment"
+              >{{
+                column.comment
+              }}</span>
             </td>
-            <td class="grid__type">
+            <td class="rows__code">
               {{ column.dataType }}
-            </td>
-            <td>{{ column.nullable ? 'yes' : 'no' }}</td>
-            <td class="grid__type">
-              {{ column.defaultValue ?? '—' }}
             </td>
             <td>
               <span
-                v-if="column.primaryKey"
-                class="chip chip--key"
-              >PK</span>
+                v-if="!column.nullable"
+                class="chip chip--strict"
+              >{{
+                $t('structure.notNull')
+              }}</span>
               <span
-                v-else-if="column.generated"
-                class="chip"
-              >generated</span>
+                v-else
+                class="rows__muted"
+              >{{ $t('structure.yes') }}</span>
             </td>
-            <td class="grid__actions">
+            <td class="rows__code">
+              {{ column.defaultValue ?? '—' }}
+            </td>
+            <td class="rows__actions">
               <button
                 v-if="canEdit && !column.primaryKey"
                 type="button"
-                class="grid__drop"
+                class="rows__drop"
                 :aria-label="$t('structure.dropColumn', { name: column.name })"
-                title="Drop column"
+                :title="$t('structure.dropColumn', { name: column.name })"
                 @click="propose({ kind: 'drop-column', entity: entity, name: column.name })"
               >
                 <AppIcon
@@ -325,43 +448,71 @@ watch(() => props.entity, load);
 
       <table
         v-else-if="section === 'indexes'"
-        class="grid"
+        class="rows"
       >
+        <colgroup>
+          <col
+            span="1"
+            style="width: 36%"
+          >
+          <col
+            span="1"
+            style="width: 36%"
+          >
+          <col
+            span="1"
+            style="width: 22%"
+          >
+          <col
+            span="1"
+            style="width: 6%"
+          >
+        </colgroup>
         <thead>
           <tr>
             <th>{{ $t('structure.name') }}</th>
             <th>{{ $t('import.columns') }}</th>
-            <th>{{ $t('structure.unique') }}</th>
             <th>{{ $t('structure.type') }}</th>
-            <th />
+            <th>
+              <span class="sr-only">{{ $t('structure.actions') }}</span>
+            </th>
           </tr>
         </thead>
         <tbody>
           <tr
-            v-for="index in indexes"
+            v-for="index in shownIndexes"
             :key="index.name"
           >
-            <td class="grid__name">
-              {{ index.name }}
+            <td class="rows__lead">
+              <span class="rows__name">
+                {{ index.name }}
+                <span
+                  v-if="index.primary"
+                  class="chip chip--key"
+                >{{
+                  $t('structure.pk')
+                }}</span>
+                <span
+                  v-else-if="index.unique"
+                  class="chip chip--strict"
+                >{{
+                  $t('structure.unique')
+                }}</span>
+              </span>
             </td>
-            <td class="grid__type">
+            <td class="rows__code">
               {{ index.columns.join(', ') }}
             </td>
-            <td>{{ index.unique ? 'yes' : 'no' }}</td>
-            <td>
-              <span
-                v-if="index.primary"
-                class="chip chip--key"
-              >primary</span>
-              <span v-else>{{ index.type ?? '—' }}</span>
+            <td class="rows__muted">
+              {{ index.type ?? '—' }}
             </td>
-            <td class="grid__actions">
+            <td class="rows__actions">
               <button
                 v-if="canEdit && !index.primary"
                 type="button"
-                class="grid__drop"
+                class="rows__drop"
                 :aria-label="$t('structure.dropIndex', { name: index.name })"
-                title="Drop index"
+                :title="$t('structure.dropIndex', { name: index.name })"
                 @click="propose({ kind: 'drop-index', entity: entity, name: index.name })"
               >
                 <AppIcon
@@ -376,12 +527,29 @@ watch(() => props.entity, load);
 
       <table
         v-else-if="section === 'relations'"
-        class="grid"
+        class="rows"
       >
+        <colgroup>
+          <col
+            span="1"
+            style="width: 30%"
+          >
+          <col
+            span="1"
+            style="width: 22%"
+          >
+          <col
+            span="1"
+            style="width: 30%"
+          >
+          <col
+            span="1"
+            style="width: 18%"
+          >
+        </colgroup>
         <thead>
           <tr>
             <th>{{ $t('structure.name') }}</th>
-            <th>{{ $t('structure.direction') }}</th>
             <th>{{ $t('import.columns') }}</th>
             <th>{{ $t('structure.references') }}</th>
             <th>{{ $t('structure.onDelete') }}</th>
@@ -389,30 +557,56 @@ watch(() => props.entity, load);
         </thead>
         <tbody>
           <tr
-            v-for="relation in relations"
+            v-for="relation in shownRelations"
             :key="`${relation.name}-${relation.direction}`"
           >
-            <td class="grid__name">
-              {{ relation.name }}
+            <td class="rows__lead">
+              <span class="rows__name">
+                {{ relation.name }}
+                <!--
+                  Which way the key points is a property of the relation, not a
+                  column of its own: it was a whole column carrying one of two
+                  words, next to a name that had nowhere to wrap.
+                -->
+                <span
+                  class="chip"
+                  :class="`chip--${relation.direction}`"
+                >{{
+                  $t(`structure.${relation.direction}`)
+                }}</span>
+              </span>
             </td>
-            <td>
-              <span class="chip">{{ relation.direction }}</span>
-            </td>
-            <td class="grid__type">
+            <td class="rows__code">
               {{ relation.columns.join(', ') }}
             </td>
-            <td class="grid__type">
+            <td class="rows__code">
               {{ relation.referencedTable.name }}({{ relation.referencedColumns.join(', ') }})
             </td>
-            <td>{{ relation.onDelete ?? '—' }}</td>
+            <td class="rows__muted">
+              {{ relation.onDelete ?? '—' }}
+            </td>
           </tr>
         </tbody>
       </table>
 
       <table
         v-else-if="section === 'triggers'"
-        class="grid"
+        class="rows"
       >
+        <colgroup>
+          <col
+            span="1"
+            style="width: 46%"
+          >
+          <col
+            span="1"
+            style="width: 27%"
+          >
+          <col
+            span="1"
+            style="width: 27%"
+          >
+        </colgroup>
         <thead>
           <tr>
             <th>{{ $t('structure.name') }}</th>
@@ -422,22 +616,36 @@ watch(() => props.entity, load);
         </thead>
         <tbody>
           <tr
-            v-for="trigger in triggers"
+            v-for="trigger in shownTriggers"
             :key="trigger.name"
           >
-            <td class="grid__name">
-              {{ trigger.name }}
+            <td class="rows__lead">
+              <span class="rows__name">{{ trigger.name }}</span>
             </td>
-            <td>{{ trigger.timing }}</td>
-            <td>{{ trigger.event }}</td>
+            <td class="rows__muted">
+              {{ trigger.timing }}
+            </td>
+            <td class="rows__muted">
+              {{ trigger.event }}
+            </td>
           </tr>
         </tbody>
       </table>
 
       <table
         v-else
-        class="grid"
+        class="rows"
       >
+        <colgroup>
+          <col
+            span="1"
+            style="width: 40%"
+          >
+          <col
+            span="1"
+            style="width: 60%"
+          >
+        </colgroup>
         <thead>
           <tr>
             <th>{{ $t('structure.name') }}</th>
@@ -446,13 +654,13 @@ watch(() => props.entity, load);
         </thead>
         <tbody>
           <tr
-            v-for="partition in partitions"
+            v-for="partition in shownPartitions"
             :key="partition.name"
           >
-            <td class="grid__name">
-              {{ partition.name }}
+            <td class="rows__lead">
+              <span class="rows__name">{{ partition.name }}</span>
             </td>
-            <td class="grid__type">
+            <td class="rows__code">
               {{ partition.expression ?? '—' }}
             </td>
           </tr>
@@ -463,7 +671,7 @@ watch(() => props.entity, load);
         v-if="isEmpty"
         class="structure__note"
       >
-        {{ $t('structure.nothingHere') }}
+        {{ isFiltered ? $t('structure.noMatch') : $t('structure.nothingHere') }}
       </p>
     </div>
 
@@ -471,7 +679,7 @@ watch(() => props.entity, load);
       v-model="adding"
       :title="$t('structure.addColumn')"
     >
-      <div class="stack">
+      <div class="fields">
         <FormField
           v-slot="{ id }"
           label="Name"
@@ -534,7 +742,7 @@ watch(() => props.entity, load);
       v-model="addingIndex"
       :title="$t('structure.addIndex')"
     >
-      <div class="stack">
+      <div class="fields">
         <FormField
           v-slot="{ id }"
           label="Name"
@@ -609,12 +817,57 @@ watch(() => props.entity, load);
   min-height: 0;
 }
 
+/*
+ * No material here.
+ *
+ * The bar wore `mat-thin`, which put a `backdrop-filter` on a strip sitting
+ * inside a sheet — and an ancestor carrying a backdrop filter is the backdrop
+ * root for everything in it, so this was blurring the sheet's own flat fill.
+ * A compositing pass a frame, for a grey rectangle. A tonal fill states the
+ * same thing and costs nothing.
+ */
 .structure__head {
   display: flex;
   align-items: center;
   gap: var(--gap);
   padding: var(--gap-tight) var(--gap);
   border-bottom: 1px solid var(--separator);
+  background: var(--fill-4);
+}
+
+.structure__spacer {
+  flex: 1;
+}
+
+.structure__find {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-tight);
+  width: 9rem;
+  height: var(--hit-min);
+  padding-inline: var(--gap);
+  border-radius: var(--control-radius);
+  background: var(--fill-3);
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+}
+
+.structure__find:focus-within {
+  background-image: linear-gradient(var(--focus-fill), var(--focus-fill));
+  color: var(--color-base-content);
+}
+
+.structure__find-input {
+  min-width: 0;
+  flex: 1;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--color-base-content);
+  font-size: 0.75rem;
+}
+
+.structure__find-input::-webkit-search-cancel-button {
+  appearance: none;
 }
 
 .structure__body {
@@ -638,46 +891,25 @@ watch(() => props.entity, load);
   color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
 }
 
-.grid {
+/*
+ * `rows`, not `grid`.
+ *
+ * Tailwind ships `.grid { display: grid }`, and a scoped rule that sets width
+ * and `table-layout` but never `display` does not outrank it — so this table
+ * was a grid container. Its head and body were blockified into two *separate*
+ * anonymous tables, each sizing its own columns from its own content, which is
+ * why the header sat at two thirds of the width of the rows beneath it. Taking
+ * a framework's class name is the whole of that bug.
+ */
+.rows {
+  display: table;
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.8125rem;
 }
 
-/*
- * Proportions rather than content-sizing: left to itself the table bunched
- * every column against the left edge and left the rest of the pane empty.
- * Names get the room, the yes/no columns stay narrow.
- */
-.grid th:first-child,
-.grid td:first-child {
-  width: 26%;
-  padding-inline-start: var(--gap-loose);
-}
-
-.grid th:nth-child(2),
-.grid td:nth-child(2) {
-  width: 22%;
-}
-
-.grid th:nth-child(3),
-.grid td:nth-child(3) {
-  width: 8%;
-}
-
-.grid th:nth-child(4),
-.grid td:nth-child(4) {
-  width: 22%;
-}
-
-.grid td,
-.grid th {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.grid th {
+.rows th {
   position: sticky;
   top: 0;
   z-index: 1;
@@ -686,42 +918,78 @@ watch(() => props.entity, load);
   text-align: start;
   font-size: 0.6875rem;
   font-weight: 500;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
-  background: color-mix(in oklab, var(--color-base-200) 92%, transparent);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  /* Opaque, because it is a header that scrolling content passes under. A
+     translucent one over moving rows is unreadable exactly when it matters. */
+  background: var(--color-base-200);
   border-bottom: 1px solid var(--separator);
 }
 
-.grid td {
-  padding: 0 var(--gap);
-  /* Matches the data grid and the sidebar, so the three panes share a rhythm. */
+.rows th:first-child,
+.rows td:first-child {
+  padding-inline-start: var(--gap-loose);
+}
+
+.rows th:last-child,
+.rows td:last-child {
+  padding-inline-end: var(--gap-loose);
+}
+
+.rows td {
+  padding: var(--gap-hair) var(--gap);
   height: calc(var(--row-h) * 1.15);
   border-bottom: 1px solid var(--separator);
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.grid tbody tr:hover {
+.rows tbody tr:hover {
   background: color-mix(in oklab, var(--color-primary) 7%, transparent);
 }
 
-.structure__spacer {
-  flex: 1;
+/* The one cell allowed two lines: a name and, under it, what it is for. */
+.rows__lead {
+  white-space: normal;
 }
 
-.stack {
+.rows__name {
   display: flex;
-  flex-direction: column;
-  gap: var(--gap-loose);
-  padding-block: var(--gap);
+  align-items: center;
+  gap: var(--gap-tight);
+  font-weight: 500;
+  overflow: hidden;
 }
 
-.grid__actions {
-  width: 2rem;
+.rows__note {
+  display: block;
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+}
+
+.rows__code {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+}
+
+.rows__muted {
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+}
+
+.rows__actions {
   text-align: end;
 }
 
-.grid__drop {
+.rows__drop {
   padding: 3px;
   border-radius: 0.3rem;
   opacity: 0;
@@ -733,28 +1001,25 @@ watch(() => props.entity, load);
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .grid tbody tr:hover .grid__drop {
+  .rows tbody tr:hover .rows__drop {
     opacity: 1;
   }
 
-  .grid__drop:hover {
+  .rows__drop:hover {
     background: var(--color-error);
     color: var(--color-error-content);
   }
 }
 
-.grid__drop:focus-visible {
+.rows__drop:focus-visible {
   opacity: 1;
 }
 
-.grid__name {
-  font-weight: 500;
-}
-
-.grid__type {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-loose);
+  padding-block: var(--gap);
 }
 
 /*
@@ -765,12 +1030,15 @@ watch(() => props.entity, load);
  */
 .chip {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   padding: 1px 7px;
   border-radius: 999px;
   background-color: var(--fill-3);
   font-size: 0.625rem;
+  font-weight: 500;
   letter-spacing: 0.01em;
+  color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
 }
 
 /*
@@ -781,5 +1049,15 @@ watch(() => props.entity, load);
 .chip--key {
   background-color: color-mix(in oklab, var(--color-primary) 14%, transparent);
   color: var(--color-primary-text, var(--color-primary));
+}
+
+/* A constraint, not a category: the same tonal chip, at the text weight the
+   rest of the row uses, so it reads as a fact about the column. */
+.chip--strict {
+  color: var(--color-base-content);
+}
+
+.chip--incoming {
+  background-color: color-mix(in oklab, var(--color-primary) 10%, transparent);
 }
 </style>

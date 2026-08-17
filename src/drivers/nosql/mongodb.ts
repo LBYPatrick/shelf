@@ -5,6 +5,7 @@ import type {
   ChangeSet,
   Column,
   ConnectionConfig,
+  ContainerProperties,
   Cursor,
   DatabaseClient,
   Entity,
@@ -212,6 +213,46 @@ export class MongodbClient implements DatabaseClient {
     } catch {
       return { rowCount: await this.collection(entity).estimatedDocumentCount() };
     }
+  }
+
+  /**
+   * `dbStats` is the whole answer here, and it is the reason MongoDB keeps the
+   * capability where Redis and DynamoDB do not: a Mongo database is a real
+   * container with a size, an object count and an index footprint.
+   */
+  async getContainerProperties(): Promise<ContainerProperties> {
+    const stats = (await this.db().command({ dbStats: 1, scale: 1 })) as Document;
+
+    const collections = await this.db().listCollections().toArray();
+    const largest: { entity: EntityRef; bytes: number }[] = [];
+
+    for (const collection of collections) {
+      try {
+        const info = (await this.db().command({
+          collStats: collection.name,
+        })) as Document;
+        largest.push({
+          entity: { name: collection.name },
+          bytes: Number(info['storageSize'] ?? 0),
+        });
+      } catch {
+        // A view has no storage of its own; leaving it out is the truth.
+      }
+    }
+
+    largest.sort((a, b) => b.bytes - a.bytes);
+
+    return {
+      facts: [
+        { key: 'size', bytes: Number(stats['storageSize'] ?? 0) },
+        { key: 'dataSize', bytes: Number(stats['dataSize'] ?? 0) },
+        { key: 'indexSize', bytes: Number(stats['indexSize'] ?? 0) },
+        { key: 'collections', count: Number(stats['collections'] ?? 0) },
+        { key: 'documents', count: Number(stats['objects'] ?? 0) },
+        { key: 'indexes', count: Number(stats['indexes'] ?? 0) },
+      ],
+      largest: largest.slice(0, 8),
+    };
   }
 
   /** Turns the shared filter model into a Mongo query document. */

@@ -33,6 +33,7 @@ import ImportSheet from './ImportSheet.vue';
 import AppIcon from '../ui/AppIcon.vue';
 import PressButton from '../ui/PressButton.vue';
 import { errorMessage } from '@shared/errors';
+import { slugify } from '@shared/fileNames';
 
 const props = defineProps<{ entity: EntityRef; active: boolean }>();
 
@@ -548,7 +549,7 @@ watch(
       v-model="exporting"
       :fields="fields"
       :rows="rows as readonly Record<string, CellValue>[]"
-      :name="entity.name"
+      :name="slugify(entity.name)"
       :write-file="writeTableToFile"
     />
 

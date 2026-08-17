@@ -13,7 +13,7 @@
 import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
 import { useDismiss } from '../../composables/useDismiss';
 
-const props = defineProps<{ title: string; wide?: boolean }>();
+const props = defineProps<{ title: string; subtitle?: string; wide?: boolean }>();
 const open = defineModel<boolean>({ required: true });
 
 const panel = ref<HTMLElement>();
@@ -94,12 +94,40 @@ void props;
           :aria-labelledby="titleId"
         >
           <header class="panel__head">
-            <h2
-              :id="titleId"
-              class="type-title"
+            <!--
+              A stacked label: what this thing belongs to, then what it is. The
+              subtitle goes *above* rather than below because it is the wider
+              context — you read inward, and a title followed by something
+              broader reads as an afterthought.
+            -->
+            <div class="panel__titles">
+              <p
+                v-if="subtitle"
+                class="panel__eyebrow"
+              >
+                {{ subtitle }}
+              </p>
+              <h2
+                :id="titleId"
+                class="type-title"
+              >
+                {{ title }}
+              </h2>
+            </div>
+
+            <!--
+              Controls that switch what the sheet is showing belong on the same
+              row as its name, not on one of their own. A row containing a
+              single switcher is a row of chrome, and the sheet has only so many
+              of them before the content starts below the fold.
+            -->
+            <div
+              v-if="$slots.header"
+              class="panel__tools"
             >
-              {{ title }}
-            </h2>
+              <slot name="header" />
+            </div>
+
             <button
               type="button"
               class="panel__close"
@@ -152,12 +180,51 @@ void props;
 .panel__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--gap-loose);
   padding: var(--gap-loose) var(--gap-section);
+}
+
+.panel__titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.panel__eyebrow {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
+}
+
+.panel__titles .type-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Pushed to the trailing end, and never squeezed: the switcher is sized to its
+   options, so a long title truncates before the controls do. */
+.panel__tools {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--gap);
+  margin-inline-start: auto;
+}
+
+.panel__tools ~ .panel__close {
+  margin-inline-start: 0;
 }
 
 .panel__close {
   display: grid;
+  flex: 0 0 auto;
+  margin-inline-start: auto;
   place-items: center;
   width: var(--hit-min);
   height: var(--hit-min);

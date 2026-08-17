@@ -60,6 +60,7 @@ const SCYLLA_CAPABILITIES = capabilities({
   sortPushdown: 'partial',
   filterPushdown: 'partial',
   cheapCount: false,
+  containers: false,
   nouns: { database: 'keyspace', entity: 'table', row: 'row', column: 'column' },
 });
 

@@ -55,6 +55,7 @@ export const APPDB_CHANNELS = {
   markConnectionUsed: 'appdb:connections:mark-used',
   prepareConnection: 'appdb:connections:prepare',
   secretsAvailable: 'appdb:secrets:available',
+  revealSecrets: 'appdb:secrets:reveal',
   recordHistory: 'appdb:history:record',
   listHistory: 'appdb:history:list',
   clearHistory: 'appdb:history:clear',
@@ -78,6 +79,18 @@ export interface AppDbApi {
    */
   prepareConnection(request: PrepareConnectionRequest): Promise<string>;
   secretsAvailable(): Promise<boolean>;
+  /**
+   * The secrets of a connection the user has opened for editing.
+   *
+   * The general rule is that credentials go keyring → main → host and the
+   * interface never sees them. This is the one deliberate exception: a form
+   * that will not show you what it already holds forces you to retype a
+   * password to change a port, and "leave blank to keep the saved one" is a
+   * rule the reader has to be told and then remember. The exception is narrow —
+   * one connection, named, only while its editor is open — and it reveals
+   * nothing the user could not read out of the OS keychain themselves.
+   */
+  revealSecrets(connectionId: string): Promise<Readonly<Record<string, string>>>;
 
   recordHistory(entry: HistoryInput): Promise<void>;
   listHistory(connectionId: string | null): Promise<HistoryEntry[]>;

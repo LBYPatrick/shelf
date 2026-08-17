@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { saveSetting } from '../lib/settings';
 import { ref, watch } from 'vue';
 import { changeLocale, resolveLocale, type LanguagePreference } from '../i18n';
 import { usePlatform } from '../composables/usePlatform';
@@ -74,7 +75,7 @@ export const useSettings = defineStore('settings', () => {
       // Nothing is written until the stored values have been read, or the first
       // save would overwrite them with defaults.
       if (!loaded.value) return;
-      void window.shelf.db.setSetting('preferences', { ...next });
+      void saveSetting('preferences', { ...next });
       void changeLocale(resolveLocale(next.language, platform.info.locale));
     },
     { deep: true }

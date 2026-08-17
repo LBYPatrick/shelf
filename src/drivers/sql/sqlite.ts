@@ -5,6 +5,7 @@ import type {
   ChangeSet,
   Column,
   ConnectionConfig,
+  ContainerProperties,
   Cursor,
   DatabaseClient,
   Entity,
@@ -289,6 +290,41 @@ export class SqliteClient implements DatabaseClient {
 
   async getProperties(entity: EntityRef): Promise<EntityProperties> {
     return { rowCount: await this.count(entity) };
+  }
+
+  /**
+   * A SQLite database is a file, so what it has to say about itself is what the
+   * file is: how big, what page size, which journal mode. The pragmas are read
+   * rather than the file stat'ed, because a database in WAL mode has its recent
+   * pages in a sibling file the size on disk would not account for.
+   */
+  async getContainerProperties(): Promise<ContainerProperties> {
+    const db = this.require();
+    const pragma = <T>(name: string): T => db.pragma(name, { simple: true }) as T;
+
+    const pageSize = pragma<number>('page_size');
+    const pageCount = pragma<number>('page_count');
+
+    const counts = db
+      .prepare(
+        `SELECT type, count(*) AS n FROM sqlite_master
+          WHERE name NOT LIKE 'sqlite_%' GROUP BY type`
+      )
+      .all() as { type: string; n: number }[];
+    const countOf = (type: string) => counts.find((row) => row.type === type)?.n ?? 0;
+
+    return {
+      facts: [
+        { key: 'size', bytes: pageSize * pageCount },
+        { key: 'file', text: this.config.filePath ?? ':memory:' },
+        { key: 'pageSize', bytes: pageSize },
+        { key: 'journalMode', text: String(pragma<string>('journal_mode')) },
+        { key: 'encoding', text: String(pragma<string>('encoding')) },
+        { key: 'tables', count: countOf('table') },
+        { key: 'indexes', count: countOf('index') },
+        { key: 'views', count: countOf('view') },
+      ],
+    };
   }
 
   async selectTop(request: SelectRequest): Promise<Page> {

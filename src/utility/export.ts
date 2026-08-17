@@ -89,7 +89,6 @@ export async function runExport(
   signal?: AbortSignal
 ): Promise<void> {
   const stream = createWriteStream(request.path, { encoding: 'utf8' });
-  const fields = cursor.fields;
 
   let written = 0;
   let first = true;
@@ -99,18 +98,25 @@ export async function runExport(
   }
 
   try {
+    /*
+     * The first batch is read *before* anything is written, because a cursor
+     * does not know the shape of its result until the server has answered one.
+     * Reading `cursor.fields` up front got an empty array from every driver
+     * that learns its columns from the first batch — so the CSV header was a
+     * blank line and every row rendered as `fields.map(...)` over nothing. The
+     * export "succeeded", reported its row count, and wrote a file of empty
+     * lines.
+     */
+    let chunk = await cursor.read();
+    const fields = cursor.fields;
+
     if (request.format === 'csv') {
       await write(`${fields.map((field) => csvCell(field.name)).join(',')}\n`);
     } else if (request.format === 'json') {
       await write('[\n');
     }
 
-    for (;;) {
-      if (signal?.aborted) break;
-
-      const chunk = await cursor.read();
-      if (chunk.length === 0) break;
-
+    while (chunk.length > 0) {
       for (const row of chunk) {
         await write(renderRow(row, fields, request, first));
         first = false;
@@ -118,6 +124,8 @@ export async function runExport(
       }
 
       onProgress({ rowsWritten: written, done: false });
+      if (signal?.aborted) break;
+      chunk = await cursor.read();
     }
 
     if (request.format === 'json') await write('\n]\n');

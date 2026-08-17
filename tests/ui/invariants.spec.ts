@@ -348,6 +348,125 @@ test.describe('layout', () => {
     expect(geometry!.spacer).toBeCloseTo(geometry!.rows * geometry!.rowHeight, 0);
   });
 
+  test('every properties section renders, and its header sits over its data', async ({
+    sample,
+  }) => {
+    /*
+     * Three defects in one popup, and one cause between two of them.
+     *
+     * The table wore `class="grid"`, which Tailwind owns — a scoped rule that
+     * set its width and `table-layout` but never its `display` did not outrank
+     * `display: grid`, so head and body were blockified into two separate
+     * anonymous tables that each sized their own columns. Every header label
+     * sat a third of the pane away from the values under it.
+     *
+     * And switching to Indexes or Relations took the whole view down: the
+     * Postgres driver returned `array_agg(name)` as the string `{id,name}`,
+     * because `pg` has no parser for that type, and the first `.join()` in the
+     * render threw. Both are checked here by walking every section, because a
+     * section nobody opens is a section nobody sees break.
+     */
+    await revealTables(sample);
+    await sample.getByRole('treeitem', { name: 'album' }).first().click({ button: 'right' });
+    await sample.getByRole('menuitem', { name: 'Properties' }).click();
+    await expect(sample.locator('.structure')).toBeVisible();
+
+    const segments = sample.locator('.structure .segmented__option');
+    const count = await segments.count();
+    expect(count, 'the properties popup has no sections').toBeGreaterThan(1);
+
+    for (let index = 0; index < count; index += 1) {
+      const name = (await segments.nth(index).textContent())?.trim() ?? `${index}`;
+      await segments.nth(index).click();
+
+      // Responding to the click at all: the switcher itself used to vanish with
+      // the rest of the view when the section behind it threw.
+      await expect(
+        sample.locator('.structure .segmented__option').nth(index),
+        `${name} did not take the selection`
+      ).toHaveAttribute('aria-checked', 'true');
+
+      const drift = await sample.evaluate(() => {
+        const table = document.querySelector('.structure table');
+        if (!table) return { columns: -1, worst: 0 };
+
+        const headers = [...table.querySelectorAll('thead th')];
+        const cells = [...(table.querySelector('tbody tr')?.querySelectorAll('td') ?? [])];
+        if (cells.length === 0) return { columns: 0, worst: 0 };
+        if (cells.length !== headers.length) return { columns: -1, worst: 0 };
+
+        return {
+          columns: headers.length,
+          worst: Math.max(
+            ...headers.map((header, index) =>
+              Math.abs(
+                header.getBoundingClientRect().x - cells[index]!.getBoundingClientRect().x
+              )
+            )
+          ),
+        };
+      });
+
+      expect(drift.columns, `${name} has a header row of a different width`).not.toBe(-1);
+      expect(drift.worst, `${name} has a label off its column`).toBeLessThanOrEqual(1);
+    }
+
+    await sample.keyboard.press('Escape');
+  });
+
+  test('the properties popup holds its height', async ({ sample }) => {
+    /*
+     * The sections are wildly different heights — six facts, or a chart and a
+     * table of five hundred statements — and the popup was sized by whichever
+     * was showing, so every switch resized the window and every arriving fetch
+     * nudged it again. A modal that moves while you are reading it is the thing
+     * to fix; a transition between two moving heights would only have made the
+     * movement smoother.
+     */
+    await sample.locator('.row--database').first().click({ button: 'right' });
+    await sample.getByRole('menuitem', { name: 'Properties' }).click();
+    const dialog = sample.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    const height = async () => Math.round((await dialog.boundingBox())!.height);
+
+    // Measured before the fetch lands as well: the overview going from one line
+    // of "Loading…" to six facts was a jump of its own.
+    const heights = [await height()];
+    await expect(sample.locator('.facts__item').first()).toBeVisible();
+    heights.push(await height());
+
+    for (const name of ['Queries', 'Server', 'Overview']) {
+      await dialog.locator('.segmented__option', { hasText: name }).click();
+      await sample.waitForTimeout(400);
+      heights.push(await height());
+    }
+
+    expect(new Set(heights), `the popup resized: ${heights.join(', ')}`).toHaveProperty(
+      'size',
+      1
+    );
+    await sample.keyboard.press('Escape');
+  });
+
+  test('a schema and a database can describe themselves', async ({ sample }) => {
+    // Tables had a Properties item and the folders above them did not, so
+    // right-clicking a schema did nothing at all — which reads as the app being
+    // broken rather than as a folder having no actions.
+    await sample.locator('.row--database').first().click({ button: 'right' });
+    await sample.getByRole('menuitem', { name: 'Properties' }).click();
+    await expect(sample.getByRole('dialog')).toBeVisible();
+    await expect(sample.locator('.facts__item').first()).toBeVisible();
+    await sample.keyboard.press('Escape');
+
+    await revealTables(sample);
+    await sample.locator('.row--schema').first().click({ button: 'right' });
+    await sample.getByRole('menuitem', { name: 'Properties' }).click();
+    await expect(sample.getByRole('dialog')).toBeVisible();
+    await expect(sample.locator('.facts__item').first()).toBeVisible();
+    await sample.keyboard.press('Escape');
+  });
+
   test('the grid header stays aligned with its body when scrolled', async ({ sample }) => {
     // Shipped broken, and the reason the whole gate exists: on any table wider
     // than the pane every column label sat over the wrong column, by exactly
@@ -482,27 +601,26 @@ test.describe('materials', () => {
     });
   }
 
-  test('the material sliders reach every glass surface', async ({ sample }) => {
+  test('the opacity dial paints the number it shows', async ({ sample }) => {
     /*
-     * Two settings, one job: make every translucent surface in the window go
-     * solid, and switch the blur off. The point of the test is *coverage* —
-     * the modal surfaces used to carry their own hardcoded alpha and blur in a
-     * different stylesheet, so they were the two the sliders could not move.
+     * One setting, one job: move every translucent surface the *window* is made
+     * of. It used to sit at 0.5 for "as designed", which made every reading of
+     * it a lie — the content pane is designed at 90%, so a slider showing 20%
+     * painted 36%, and over the material the OS puts behind the window that
+     * reads as better than half.
+     *
+     * And it *scaled*, which closes the gaps between the surfaces as it thins
+     * them: at the bottom of the range the working pane and the glass columns
+     * beside it converged on one colour and the window read as a single flat
+     * sheet. It subtracts a constant now.
      */
-    const surfaces = ['.rail', '.sidebar', '.statusbar', '.surface-sheet'];
-    /*
-     * Everything takes the dial upward; only the window's own materials take it
-     * down. A sheet thinned to a quarter came within a few points of the window
-     * behind it and lost its edge entirely — at which point it is no longer
-     * separating anything, which is the one thing a sheet is for.
-     */
-    const thinnable = ['.rail', '.sidebar', '.statusbar'];
+    const windowSurfaces = ['.rail', '.sidebar', '.statusbar', '.content'];
 
     await sample.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(sample.getByRole('dialog')).toBeVisible();
 
-    const read = () =>
-      sample.evaluate((selectors) => {
+    const read = (selectors: string[]) =>
+      sample.evaluate((list) => {
         const alphaOf = (colour: string) => {
           const parts = colour.match(/[\d.]+/g) ?? [];
           // `rgba(r g b / a)` and `oklab(l a b / a)` both put alpha last, and a
@@ -512,53 +630,54 @@ test.describe('materials', () => {
             : 1;
         };
 
-        return selectors.map((selector) => {
+        return list.map((selector) => {
           const element = document.querySelector(selector);
-          if (!element) return { selector, found: false, alpha: 0, blurred: false };
-          const style = getComputedStyle(element);
-          const filter = style.backdropFilter || style.webkitBackdropFilter;
+          if (!element) return { selector, found: false, alpha: 0 };
           return {
             selector,
             found: true,
-            alpha: alphaOf(style.backgroundColor),
-            blurred: /blur\((?!0px)/.test(filter),
+            alpha: alphaOf(getComputedStyle(element).backgroundColor),
           };
         });
-      }, surfaces);
+      }, selectors);
 
-    for (const surface of await read()) {
+    for (const surface of await read(windowSurfaces)) {
       expect(surface.found, `${surface.selector} is missing`).toBe(true);
       expect(surface.alpha, `${surface.selector} starts opaque`).toBeLessThan(0.95);
-      expect(surface.blurred, `${surface.selector} starts unblurred`).toBe(true);
     }
 
     await sample.getByLabel('Opacity').fill('100');
-    await sample.getByLabel('Blur', { exact: true }).fill('0');
-
-    for (const surface of await read()) {
+    for (const surface of await read(windowSurfaces)) {
       expect(surface.alpha, `${surface.selector} did not go solid`).toBeGreaterThan(0.99);
-      expect(surface.blurred, `${surface.selector} kept its blur`).toBe(false);
     }
 
-    // And the other way: the floor has to still be glass, or it is not a floor.
     await sample.getByLabel('Opacity').fill('20');
+    for (const surface of await read(windowSurfaces)) {
+      expect(surface.alpha, `${surface.selector} did not thin out`).toBeLessThan(0.4);
+    }
 
-    for (const surface of await read()) {
-      if (thinnable.includes(surface.selector)) {
-        expect(surface.alpha, `${surface.selector} did not thin out`).toBeLessThan(0.6);
-      } else {
-        expect(surface.alpha, `${surface.selector} thinned past its floor`).toBeGreaterThan(
-          0.6
-        );
-      }
+    /*
+     * At the floor the working surface is at the floor's own number, and the
+     * columns beside it are still visibly thinner.
+     */
+    const [pane, sidebar] = await read(['.content', '.sidebar']);
+    expect(pane!.alpha, 'the pane at the floor').toBeCloseTo(0.2, 2);
+    expect(pane!.alpha - sidebar!.alpha, 'the pane and the sidebar converged').toBeGreaterThan(
+      0.1
+    );
+
+    // The sheet the slider is on has not moved through any of it: a menu is not
+    // part of the window's material, it is a thing that appears in front of it.
+    for (const position of [20, 50, 100]) {
+      await sample.getByLabel('Opacity').fill(String(position));
+      const [sheet] = await read(['.panel.surface-sheet']);
+      expect(sheet!.alpha, `the sheet at ${position}%`).toBeGreaterThan(0.99);
     }
 
     // And back, so the setting is a preference rather than a one-way door.
     await sample.getByRole('button', { name: 'Reset materials' }).click();
-
-    for (const surface of await read()) {
+    for (const surface of await read(windowSurfaces)) {
       expect(surface.alpha, `${surface.selector} did not come back`).toBeLessThan(0.95);
-      expect(surface.blurred, `${surface.selector} did not get its blur back`).toBe(true);
     }
 
     await sample.keyboard.press('Escape');
@@ -762,6 +881,13 @@ test.describe('materials', () => {
      * to 88% opacity to stop the sidebar photographing as washed-out grey, which
      * was an artifact of the screenshot compositing against white rather than
      * anything visible on screen — and it took the glass with it.
+     *
+     * The blur is not asserted here and belongs to a different surface. The
+     * panels have nothing painted behind them — the root is transparent, and
+     * the blurred desktop is the OS's own material behind the whole window,
+     * which no in-page filter can reach — so a `backdrop-filter` on a panel is
+     * a full-screen compositing pass a frame producing exactly what not running
+     * it produces.
      */
     const panels = await sample.evaluate(() =>
       ['.rail', '.sidebar'].map((selector) => {
@@ -778,7 +904,7 @@ test.describe('materials', () => {
 
     for (const panel of panels) {
       expect(panel.alpha, `${panel.selector} is opaque`).toBeLessThan(0.9);
-      expect(panel.blurred, `${panel.selector} has no blur`).toBe(true);
+      expect(panel.blurred, `${panel.selector} blurs nothing, expensively`).toBe(false);
     }
   });
 
@@ -799,12 +925,58 @@ test.describe('materials', () => {
     expect(content).not.toBe(sidebar);
   });
 
-  test('a scrim dims and the surface on it blurs, never both', async ({ sample }) => {
+  test('a menu and a sheet are solid, whatever the window is made of', async ({ sample }) => {
     /*
-     * Blurring the scrim as well undoes the effect it is there for: a blurred
-     * backdrop has already flattened everything behind it, so the glass on top
-     * has nothing left to refract and reads as flat tint. It is also two
-     * full-screen backdrop filters composited every frame for one result.
+     * The material rule at the top of `materials.css` taken to its conclusion:
+     * a menu opens over the sidebar and a sheet over the workspace, and both of
+     * those are glass — so a translucent menu is one glass surface on another.
+     *
+     * It is also the only honest answer to what a blur could do here.
+     * `backdrop-filter` filters what the *page* has painted, and the app's own
+     * glass is the OS's material behind the whole window, which no in-page
+     * filter can reach. Measured on screen the filter ran correctly and the
+     * result was invisible — a full-screen compositing pass a frame for a
+     * surface that still read as flat. Asserted rather than described, because
+     * "let's put a little glass back on the menu" is a one-line change.
+     */
+    await revealTables(sample);
+    await sample.getByRole('treeitem', { name: 'album' }).first().click({ button: 'right' });
+    await expect(sample.locator('.popmenu')).toBeVisible();
+
+    await sample.getByRole('menuitem', { name: 'Properties' }).click();
+    await expect(sample.getByRole('dialog')).toBeVisible();
+
+    const surfaces = await sample.evaluate(() =>
+      ['.popmenu', '.panel.surface-sheet'].map((selector) => {
+        const element = document.querySelector(selector);
+        if (!element) return { selector, found: false, alpha: 0, blurred: true };
+        const style = getComputedStyle(element);
+        const parts = style.backgroundColor.match(/[\d.]+/g) ?? [];
+        const alpha =
+          style.backgroundColor.includes('/') || parts.length === 4
+            ? Number(parts[parts.length - 1])
+            : 1;
+        const filter = style.backdropFilter || style.webkitBackdropFilter;
+        return { selector, found: true, alpha, blurred: /blur\((?!0px)/.test(filter) };
+      })
+    );
+
+    for (const surface of surfaces) {
+      expect(surface.found, `${surface.selector} is missing`).toBe(true);
+      expect(surface.alpha, `${surface.selector} is translucent`).toBeGreaterThan(0.99);
+      expect(surface.blurred, `${surface.selector} blurs nothing, expensively`).toBe(false);
+    }
+
+    await sample.keyboard.press('Escape');
+  });
+
+  test('the scrim dims, and nothing anywhere blurs it', async ({ sample }) => {
+    /*
+     * The scrim carries all of the separation between a modal and the window
+     * now, so it has to be a dimming rather than a wash — and it must not be
+     * blurred itself. Blurring a scrim flattens everything behind it, which is
+     * a full-screen compositing pass a frame in exchange for making the window
+     * unrecognisable as the thing you will return to.
      */
     await sample.keyboard.press('Meta+k');
     await sample.getByRole('dialog').waitFor();
@@ -826,9 +998,7 @@ test.describe('materials', () => {
     expect(surfaces.panel, 'the panel must exist').not.toBeNull();
     expect(surfaces.scrim!.blur).toBe('none');
     expect(surfaces.scrim!.background).not.toBe('rgba(0, 0, 0, 0)');
-    // Big enough to read as thick glass rather than a frosted pane.
-    const radius = Number.parseFloat(surfaces.panel!.blur.replace(/^\D*/, ''));
-    expect(radius).toBeGreaterThanOrEqual(24);
+    expect(surfaces.panel!.blur, 'the surface on the scrim blurs nothing').toBe('none');
   });
 
   test('no translucent surface is stacked directly on another', async ({ sample }) => {
@@ -977,9 +1147,38 @@ test.describe('controls', () => {
         'toast',
         'toggle',
         'tooltip',
+        'stack',
         'validator',
       ];
-      return OWNED.filter((name) => document.querySelector(`.${name}`) !== null);
+
+      /*
+       * Tailwind's own utilities, which are not components and bite harder for
+       * it. `.grid` is one declaration — `display: grid` — so a scoped rule
+       * that sets a table's width and `table-layout` but never its `display`
+       * does not outrank it: the structure view's table was a grid container,
+       * its head and body were blockified into two separate anonymous tables,
+       * and each sized its own columns. The header sat at two thirds the width
+       * of the rows under it for as long as this list held only daisyUI's names.
+       */
+      const UTILITIES = [
+        'block',
+        'contents',
+        'flex',
+        'grid',
+        'hidden',
+        'inline',
+        'isolate',
+        'relative',
+        'absolute',
+        'fixed',
+        'sticky',
+        'static',
+        'visible',
+      ];
+
+      return [...OWNED, ...UTILITIES].filter(
+        (name) => document.querySelector(`.${name}`) !== null
+      );
     });
     expect(collisions).toEqual([]);
     await sample.keyboard.press('Escape');
@@ -1231,7 +1430,7 @@ test.describe('cost', () => {
     await openTable(sample, 'album');
     await sample.locator('.tabulator-row').first().waitFor();
 
-    const redraws = () => sample.locator('.grid').first().getAttribute('data-redraws');
+    const redraws = () => sample.locator('.datagrid').first().getAttribute('data-redraws');
 
     /*
      * Settled first, and settled means several reads apart rather than two in a
@@ -1285,7 +1484,7 @@ test.describe('cost', () => {
     await sample.locator('.tabulator-row').first().waitFor();
     await sample.waitForTimeout(600);
 
-    const redraws = () => sample.locator('.grid').first().getAttribute('data-redraws');
+    const redraws = () => sample.locator('.datagrid').first().getAttribute('data-redraws');
     const before = await redraws();
 
     const frames = await sample.evaluate(async () => {
@@ -1311,6 +1510,35 @@ test.describe('cost', () => {
 });
 
 test.describe('corner', () => {
+  test('the notch fills the cut corner and nothing behind the pane', async ({ sample }) => {
+    /*
+     * It was a full square sitting behind the pane's cut corner, and the pane is
+     * glass — so across the quarter-disc the two surfaces stacked and
+     * composited to a shade darker than either. A small dark rectangle pinned
+     * to the corner of the working pane, on every theme, for as long as the
+     * element has existed.
+     *
+     * Asserted by hiding the notch and comparing the pixels rather than by
+     * looking at the mask, because the mask is one way to fix it and the rule
+     * is that the notch contributes nothing where the pane is drawn. The corner
+     * is eight pixels across, which is far under the screenshot threshold —
+     * this is invisible to the snapshot that exists to guard this very corner.
+     */
+    const box = (await sample.locator('.content').boundingBox())!;
+    // Inside the pane and inside the arc: comfortably within the square the
+    // notch occupies, and comfortably covered by the pane.
+    const clip = { x: box.x + 4, y: box.y + 4, width: 4, height: 4 };
+
+    const withNotch = await sample.screenshot({ clip });
+    await sample.addStyleTag({ content: '.notch { display: none !important }' });
+    const without = await sample.screenshot({ clip });
+
+    expect(
+      withNotch.equals(without),
+      'the notch is painting under the content pane and darkening it'
+    ).toBe(true);
+  });
+
   test('the notch is backed by the same surface as the column beside it', async ({
     sample,
   }) => {
@@ -1353,6 +1581,39 @@ test.describe('corner', () => {
 });
 
 test.describe('tree', () => {
+  test('the open tabs are actually written to the session', async ({ sample }) => {
+    /*
+     * They did not, and nothing said so. The session is assembled from Vue
+     * state, and a tab's entity reference is a reactive Proxy — which the
+     * context bridge refuses to clone, asynchronously, into a promise nobody
+     * awaited. Every launch opened an empty workspace and every write failed in
+     * silence, which is why this asserts the round trip rather than the call.
+     */
+    await revealTables(sample);
+    await openTable(sample, 'album');
+    await expect(sample.locator('.striptab')).toHaveCount(1);
+
+    // Read back out of the application database rather than reloading the
+    // window: a reload also drops the connection, which would fail this for a
+    // reason that has nothing to do with what it is asking.
+    await expect
+      .poll(
+        async () =>
+          sample.evaluate(async () => {
+            const keys = ['sample', 'mock'];
+            for (const key of keys) {
+              const session = await window.shelf.db.getSetting<{
+                tabs?: { title?: string }[];
+              } | null>(`session:${key}`, null);
+              if (session?.tabs?.length) return session.tabs.map((tab) => tab.title).join(',');
+            }
+            return '';
+          }),
+        { timeout: 10_000, message: 'the session was never written' }
+      )
+      .toContain('album');
+  });
+
   test('two entities that share a name expand independently', async ({ sample }) => {
     /*
      * Postgres overloads a function by its signature, so a schema holds several

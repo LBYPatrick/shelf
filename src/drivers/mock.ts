@@ -4,6 +4,8 @@ import type {
   ChangeSet,
   Column,
   ConnectionConfig,
+  ContainerProperties,
+  ContainerRef,
   Cursor,
   DatabaseClient,
   Entity,
@@ -18,7 +20,10 @@ import type {
   QueryOptions,
   Relation,
   ResultSet,
+  Row,
   SelectRequest,
+  ServerMetrics,
+  StatementReport,
   StreamRequest,
   Trigger,
 } from './types';
@@ -42,7 +47,96 @@ const MOCK_CAPABILITIES = capabilities({
   partitions: false,
   cheapCount: true,
   sshTunnel: false,
+  // The sample database exists so the interface can be explored, reviewed and
+  // photographed with nothing installed — which includes the Analyze tab.
+  statistics: true,
 });
+
+/**
+ * A plausible statement workload, fixed rather than generated.
+ *
+ * Every number here is deterministic on purpose: the sample database is what
+ * the visual gate photographs, and a chart whose bars are a different height
+ * on every run is a screenshot test that can only be regenerated.
+ */
+const SAMPLE_STATEMENTS: readonly {
+  text: string;
+  calls: number;
+  totalMs: number;
+  rows: number;
+  hit: number;
+}[] = [
+  {
+    text: 'SELECT t.id, t.title, a.name FROM track t JOIN album a ON a.id = t.album_id WHERE a.artist_id = $1 ORDER BY t.disc, t.position',
+    calls: 184_302,
+    totalMs: 921_500,
+    rows: 2_951_800,
+    hit: 0.982,
+  },
+  {
+    text: 'SELECT count(*) FROM daily_metrics WHERE captured_at >= $1',
+    calls: 12_940,
+    totalMs: 604_200,
+    rows: 12_940,
+    hit: 0.741,
+  },
+  {
+    text: 'UPDATE catalogue SET listeners = $1, updated_at = now() WHERE id = $2',
+    calls: 903_112,
+    totalMs: 451_600,
+    rows: 903_112,
+    hit: 0.997,
+  },
+  {
+    text: 'INSERT INTO audit_log (actor, action, payload) VALUES ($1, $2, $3)',
+    calls: 1_204_880,
+    totalMs: 289_100,
+    rows: 1_204_880,
+    hit: 0.999,
+  },
+  {
+    text: 'SELECT * FROM artist WHERE lower(name) LIKE $1',
+    calls: 44_180,
+    totalMs: 233_700,
+    rows: 512_400,
+    hit: 0.612,
+  },
+  {
+    text: 'DELETE FROM audit_log WHERE captured_at < now() - interval $1',
+    calls: 720,
+    totalMs: 188_400,
+    rows: 4_812_000,
+    hit: 0.884,
+  },
+  {
+    text: 'SELECT a.id, a.title, count(t.id) AS tracks FROM album a LEFT JOIN track t ON t.album_id = a.id GROUP BY a.id, a.title',
+    calls: 3_902,
+    totalMs: 141_900,
+    rows: 1_248_640,
+    hit: 0.955,
+  },
+  {
+    text: 'SELECT * FROM listener_growth($1, $2)',
+    calls: 21_744,
+    totalMs: 96_300,
+    rows: 652_320,
+    hit: 0.931,
+  },
+  {
+    text: 'SELECT id, name, country FROM artist WHERE verified = $1 ORDER BY name LIMIT $2',
+    calls: 88_220,
+    totalMs: 62_100,
+    rows: 4_411_000,
+    hit: 0.998,
+  },
+  {
+    text: 'REFRESH MATERIALIZED VIEW catalogue',
+    calls: 96,
+    totalMs: 58_800,
+    rows: 0,
+    hit: 0.402,
+  },
+];
 
 interface MockTable {
   readonly name: string;
@@ -503,6 +597,127 @@ export class MockClient implements DatabaseClient {
     };
   }
 
+  async getContainerProperties(target: ContainerRef): Promise<ContainerProperties> {
+    const tables = this.tables.filter(
+      (table) => target.kind === 'database' || table.schema === target.name
+    );
+    const bytesOf = (table: MockTable) =>
+      table.rows.length * 320 + (table.indexes?.length ?? 0) * 8192;
+
+    return {
+      facts: [
+        { key: 'size', bytes: tables.reduce((sum, table) => sum + bytesOf(table), 0) },
+        { key: 'owner', text: 'shelf' },
+        { key: 'encoding', text: 'UTF8' },
+        { key: 'tables', count: tables.filter((table) => table.kind === 'table').length },
+        { key: 'views', count: tables.filter((table) => table.kind === 'view').length },
+        {
+          key: 'rows',
+          count: tables.reduce((sum, table) => sum + table.rows.length, 0),
+        },
+      ],
+      largest: [...tables]
+        .sort((a, b) => bytesOf(b) - bytesOf(a))
+        .slice(0, 8)
+        .map((table) => ({
+          entity: { name: table.name, schema: table.schema },
+          bytes: bytesOf(table),
+        })),
+    };
+  }
+
+  /**
+   * The counters advance a little on every reading.
+   *
+   * They used to be frozen, which made every window after the first one empty:
+   * a window is the difference between two readings, and two identical readings
+   * differ by nothing. The sample database exists so the interface can be
+   * explored without installing anything, and a feature that reads "nothing ran
+   * in this window" the second time you look at it has not been exercised.
+   *
+   * Deterministic all the same — the step is a function of the reading's
+   * number, not of the clock — so a given sequence of readings is the same one
+   * on every machine.
+   */
+  private readings = 0;
+
+  async readStatements(): Promise<StatementReport> {
+    const tick = ++this.readings;
+
+    return {
+      ok: true,
+      sample: {
+        takenAt: Date.now(),
+        statements: SAMPLE_STATEMENTS.map((statement, index) => {
+          const calls = statement.calls + tick * Math.max(1, Math.round(statement.calls / 400));
+          const totalMs = statement.totalMs + tick * (statement.totalMs / 400);
+          return {
+            id: `sample-${index}`,
+            text: statement.text,
+            calls,
+            totalMs,
+            meanMs: totalMs / calls,
+            minMs: (totalMs / calls) * 0.21,
+            maxMs: (totalMs / calls) * 14.4,
+            rows: statement.rows + tick * Math.round(statement.rows / 400),
+            cacheHitRatio: statement.hit,
+          };
+        }),
+      },
+    };
+  }
+
+  async readMetrics(): Promise<ServerMetrics> {
+    const tables = [...this.tables]
+      .map((table) => ({
+        entity: { name: table.name, schema: table.schema },
+        totalBytes: table.rows.length * 320 + (table.indexes?.length ?? 0) * 8192,
+        rowEstimate: table.rows.length,
+        deadRatio: (table.name.length % 7) / 40,
+      }))
+      .sort((a, b) => b.totalBytes - a.totalBytes)
+      .slice(0, 12);
+
+    return {
+      gauges: [
+        {
+          key: 'databaseSize',
+          value: tables.reduce((sum, table) => sum + table.totalBytes, 0),
+          unit: 'bytes',
+        },
+        { key: 'cacheHitRatio', value: 0.9942, unit: 'ratio', warnBelow: 0.99 },
+        { key: 'transactionRate', value: 418.6, unit: 'perSecond' },
+        { key: 'rollbackRatio', value: 0.014, unit: 'ratio', warnAbove: 0.05 },
+        { key: 'connections', value: 23, unit: 'count', warnAbove: 80 },
+        { key: 'connectionLimit', value: 100, unit: 'count' },
+        { key: 'deadlocks', value: 0, unit: 'count', warnAbove: 0 },
+        { key: 'conflicts', value: 0, unit: 'count', warnAbove: 0 },
+        { key: 'tempBytes', value: 41_943_040, unit: 'bytes' },
+        { key: 'ioTime', value: 92_140, unit: 'ms' },
+        { key: 'uptime', value: 1_209_600, unit: 'seconds' },
+      ],
+      largestTables: tables,
+      activity: [
+        { state: 'active', count: 4 },
+        { state: 'idle', count: 15 },
+        { state: 'idle in transaction', count: 3 },
+        { state: 'waiting', count: 1 },
+      ],
+      unusedIndexes: [
+        {
+          entity: { name: 'track', schema: 'music' },
+          name: 'track_isrc_idx',
+          sizeBytes: 245_760,
+        },
+        {
+          entity: { name: 'audit_log', schema: 'ops' },
+          name: 'audit_log_actor_idx',
+          sizeBytes: 131_072,
+        },
+      ],
+    };
+  }
+
   /** Applies the raw filter as a case-insensitive match across every column. */
   private filtered(table: MockTable, filters?: Filters): readonly Record<string, unknown>[] {
     if (!filters) return table.rows;
@@ -613,14 +828,24 @@ export class MockClient implements DatabaseClient {
   }
 
   async stream(request: StreamRequest): Promise<Cursor> {
-    const table = this.find(request.entity!);
-    const rows = this.filtered(table, request.filters);
+    /*
+     * A stream request carries an entity *or* a query, and this only ever read
+     * the entity — so exporting a query's results to a file threw on
+     * `undefined.name` before a byte was written. The sample database is the
+     * one every screenshot and every gate run uses, so "the file export is
+     * broken" was reproducible in the one place nothing was looking.
+     */
+    const [result] = request.query
+      ? await this.query(request.query, { maxRows: Number.MAX_SAFE_INTEGER })
+      : [];
+
+    const table = request.query ? null : this.find(request.entity!);
+    const rows = table ? this.filtered(table, request.filters) : (result?.rows ?? []);
     let offset = 0;
 
-    const fields: Field[] = table.columns.map((column) => ({
-      name: column.name,
-      dataType: column.dataType,
-    }));
+    const fields: Field[] = table
+      ? table.columns.map((column) => ({ name: column.name, dataType: column.dataType }))
+      : [...(result?.fields ?? [])];
 
     return {
       fields,
@@ -628,7 +853,11 @@ export class MockClient implements DatabaseClient {
         if (offset >= rows.length) return [];
         const chunk = rows.slice(offset, offset + request.chunkSize);
         offset += chunk.length;
-        return encodeRows(chunk);
+        // A query's rows have already crossed the transcoder; a table's have
+        // not, and encoding an encoded row would double-tag every value.
+        return request.query
+          ? (chunk as Row[])
+          : encodeRows(chunk as Record<string, unknown>[]);
       },
       async close() {
         offset = rows.length;

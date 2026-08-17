@@ -50,6 +50,13 @@ const PATHS: Record<string, string> = {
   folder:
     'M2.5 5.5V4a1 1 0 0 1 1-1h2.3l1.2 1.5h5.5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z',
   info: 'M8 7.5v4M8 4.6v.1M8 14a6 6 0 1 0 0-12 6 6 0 0 0 0 12z',
+  // Bars on a baseline: the shape of the thing the Analyze tab opens onto.
+  chart: 'M2.5 13.5h11M4.5 13.5v-4M7.5 13.5v-8M10.5 13.5v-5.5M13 13.5v-9',
+  // An eye, and the same eye struck through: revealing a secret and hiding it
+  // again are one control, so they are one shape with one difference.
+  eye: 'M1.8 8s2.5-4 6.2-4 6.2 4 6.2 4-2.5 4-6.2 4-6.2-4-6.2-4zM8 9.9a1.9 1.9 0 1 0 0-3.8 1.9 1.9 0 0 0 0 3.8z',
+  eyeOff:
+    'M1.8 8s2.5-4 6.2-4c1 0 1.9.3 2.7.7M14.2 8s-2.5 4-6.2 4c-1 0-1.9-.3-2.7-.7M6.7 6.7a1.9 1.9 0 0 0 2.6 2.6M2.5 2.5l11 11',
 };
 
 withDefaults(

@@ -67,6 +67,8 @@ const DYNAMO_CAPABILITIES = capabilities({
   filterPushdown: 'partial',
   cheapCount: false,
   sshTunnel: false,
+  // A region is where tables are, not something that can be described.
+  containers: false,
   nouns: { database: 'region', entity: 'table', row: 'item', column: 'attribute' },
 });
 

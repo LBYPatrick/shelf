@@ -5,6 +5,8 @@ import type {
   ChangeSet,
   Column,
   ConnectionConfig,
+  ContainerProperties,
+  ContainerRef,
   Cursor,
   DatabaseClient,
   Entity,
@@ -263,6 +265,27 @@ export class DuckdbClient implements DatabaseClient {
 
   async getProperties(entity: EntityRef): Promise<EntityProperties> {
     return { rowCount: await this.count(entity) };
+  }
+
+  async getContainerProperties(target: ContainerRef): Promise<ContainerProperties> {
+    const { rows } = await this.run(
+      `SELECT table_type AS kind, count(*) AS n
+         FROM information_schema.tables
+        WHERE ?::VARCHAR IS NULL OR table_schema = ?
+        GROUP BY 1`,
+      target.kind === 'schema' ? [target.name, target.name] : [null, null]
+    );
+
+    const countOf = (kind: string) =>
+      Number(rows.find((row) => String(row['kind']) === kind)?.['n'] ?? 0);
+
+    return {
+      facts: [
+        { key: 'file', text: this.config.filePath ?? ':memory:' },
+        { key: 'tables', count: countOf('BASE TABLE') },
+        { key: 'views', count: countOf('VIEW') },
+      ],
+    };
   }
 
   private buildSelect(request: SelectRequest): { sql: string; params: unknown[] } {

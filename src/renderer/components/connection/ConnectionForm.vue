@@ -16,6 +16,7 @@ import CheckBox from '../ui/CheckBox.vue';
 import DisclosureGroup from '../ui/DisclosureGroup.vue';
 import FormField from '../ui/FormField.vue';
 import PressButton from '../ui/PressButton.vue';
+import AppIcon from '../ui/AppIcon.vue';
 import TextInput from '../ui/TextInput.vue';
 import EnginePicker from './EnginePicker.vue';
 
@@ -88,6 +89,8 @@ function emptyDraft(): Draft {
 
 const draft = reactive<Draft>(emptyDraft());
 const showAdvanced = ref(false);
+/** Off every time the sheet opens: revealing is a deliberate act, not a mode. */
+const revealed = ref(false);
 
 const descriptor = computed(() => (draft.engine ? engineDescriptor(draft.engine) : null));
 const shows = (field: string) => descriptor.value?.fields.includes(field as never) ?? false;
@@ -138,6 +141,30 @@ watch(
     draft.options = Object.fromEntries(
       Object.entries(config.options ?? {}).map(([key, value]) => [key, String(value ?? '')])
     );
+
+    /*
+     * And the secrets, so the form shows what it already holds.
+     *
+     * It used to leave the password field empty and explain, in help text, that
+     * blank meant "keep the saved one" — a rule the reader has to be told and
+     * then remember, and one that makes changing a *port* an act of
+     * remembering a password. The keyring is asked for them and they are filled
+     * in like any other field; there is no longer a state where the form is
+     * lying about what will be saved.
+     */
+    const id = connection.id;
+    void window.shelf.db
+      .revealSecrets(id)
+      .then((secrets) => {
+        // The sheet may have moved on to another connection while this was in
+        // flight, and filling that one's form with these would be worse than
+        // showing nothing.
+        if (props.editing?.id !== id) return;
+        draft.password = secrets['password'] ?? '';
+        draft.sshPassword = secrets['sshPassword'] ?? '';
+        draft.sshPassphrase = secrets['sshPassphrase'] ?? '';
+      })
+      .catch(() => undefined);
   },
   { immediate: true }
 );
@@ -281,7 +308,7 @@ async function pickFile(): Promise<void> {
     </FormField>
 
     <template v-if="descriptor">
-      <div class="grid">
+      <div class="pairs">
         <FormField
           v-if="shows('file')"
           v-slot="{ id }"
@@ -346,15 +373,32 @@ async function pickFile(): Promise<void> {
           v-if="shows('password')"
           v-slot="{ id }"
           label="Password"
-          :help="
-            editing && !draft.password ? 'Leave blank to keep the saved password.' : undefined
-          "
         >
-          <TextInput
-            :id="id"
-            v-model="draft.password"
-            type="password"
-          />
+          <!--
+            Masked until asked, but present: a field that hides what it holds
+            *and* declines to hold it is a field you cannot check against the
+            thing you are debugging.
+          -->
+          <div class="secret">
+            <TextInput
+              :id="id"
+              v-model="draft.password"
+              :type="revealed ? 'text' : 'password'"
+            />
+            <button
+              type="button"
+              class="secret__reveal"
+              :aria-pressed="revealed"
+              :aria-label="revealed ? 'Hide password' : 'Show password'"
+              :title="revealed ? 'Hide password' : 'Show password'"
+              @click="revealed = !revealed"
+            >
+              <AppIcon
+                :name="revealed ? 'eyeOff' : 'eye'"
+                :size="13"
+              />
+            </button>
+          </div>
         </FormField>
 
         <FormField
@@ -418,7 +462,7 @@ async function pickFile(): Promise<void> {
 
           <div
             v-if="draft.sshEnabled"
-            class="grid"
+            class="pairs"
           >
             <FormField
               v-slot="{ id }"
@@ -559,7 +603,41 @@ async function pickFile(): Promise<void> {
   min-width: 0;
 }
 
-.grid {
+/*
+ * The reveal sits inside the field's trailing edge rather than beside it: a
+ * button in a column of its own would take that width from the value, and the
+ * value is what is being checked.
+ */
+.secret {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.secret :deep(.textfield) {
+  flex: 1;
+  min-width: 0;
+  padding-inline-end: calc(var(--hit-min) + var(--gap-tight));
+}
+
+.secret__reveal {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block: 0;
+  display: grid;
+  place-items: center;
+  width: var(--hit-min);
+  border-radius: var(--radius-field);
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  transition: color var(--t-hover) var(--ease-out);
+}
+
+.secret__reveal[aria-pressed='true'],
+.secret__reveal:hover {
+  color: var(--color-base-content);
+}
+
+.pairs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--gap-loose);

@@ -13,6 +13,7 @@ import type { CellValue, Field, ResultSet, Row } from '@drivers/types';
 import type { Statement } from '@shared/sqlText';
 import { explainStatement, parsePlan, type PlanNode } from '@shared/explain';
 import { RpcCancelled } from '@shared/rpc';
+import { exportName as buildExportName } from '@shared/fileNames';
 import { host } from '../../lib/host';
 import { useConnections } from '../../stores/connections';
 import { useEntities } from '../../stores/entities';
@@ -296,6 +297,24 @@ async function finishTransaction(action: 'commit' | 'rollback'): Promise<void> {
 
 const exporting = ref(false);
 const lastRunText = ref('');
+
+/**
+ * Stamped when the sheet opens rather than computed from the clock on every
+ * render — the name has to hold still while the save dialog is up, and two
+ * exports taken a minute apart have to differ.
+ */
+const exportName = ref('');
+
+watch(exporting, (open) => {
+  if (open) {
+    exportName.value = buildExportName(
+      savedName.value.trim() || undefined,
+      'query',
+      new Date(),
+      Math.random()
+    );
+  }
+});
 
 /**
  * Writing a file re-runs the statement in the host so it streams to disk in
@@ -605,7 +624,7 @@ watch(
       v-model="exporting"
       :fields="fields"
       :rows="rows as readonly Record<string, CellValue>[]"
-      :name="savedName.trim() || 'query-results'"
+      :name="exportName"
       :write-file="lastRunText ? writeResultsToFile : undefined"
     />
 

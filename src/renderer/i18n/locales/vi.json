@@ -29,7 +29,8 @@
     "update": "Cập nhật",
     "settings": "Cài đặt",
     "collapseAll": "Thu gọn tất cả",
-    "resetView": "Đặt lại khung nhìn"
+    "resetView": "Đặt lại khung nhìn",
+    "copied": "Đã sao chép vào bảng nhớ tạm."
   },
   "start": {
     "search": "Dán URL kết nối, hoặc tìm trong các kết nối đã lưu",
@@ -61,7 +62,6 @@
     "file": "Tệp cơ sở dữ liệu",
     "name": "Tên",
     "nameHelp": "Để trống sẽ dùng “{{suggested}}”.",
-    "passwordHelp": "Để trống để giữ mật khẩu đã lưu.",
     "advanced": "Nâng cao",
     "useSsl": "Dùng SSL/TLS",
     "useSsh": "Kết nối qua đường hầm SSH",
@@ -152,11 +152,8 @@
     "partitions": "Phân vùng",
     "name": "Tên",
     "type": "Kiểu",
-    "null": "Null",
     "default": "Mặc định",
-    "key": "Khoá",
     "unique": "Duy nhất",
-    "direction": "Chiều",
     "references": "Tham chiếu",
     "onDelete": "Khi xoá",
     "timing": "Thời điểm",
@@ -174,7 +171,18 @@
     "whatWillRun": "Câu lệnh sẽ chạy",
     "typeToConfirm": "Gõ tên để xác nhận",
     "typeToConfirmHelp": "Nhập “{{name}}” để bật nút.",
-    "applying": "Đang áp dụng…"
+    "applying": "Đang áp dụng…",
+    "sections": "Nhóm cấu trúc",
+    "filter": "Lọc…",
+    "nullable": "Cho phép NULL",
+    "notNull": "NOT NULL",
+    "yes": "có",
+    "pk": "PK",
+    "generated": "cột sinh",
+    "actions": "Thao tác",
+    "noMatch": "Không có kết quả phù hợp.",
+    "outgoing": "đi ra",
+    "incoming": "đến"
   },
   "settings": {
     "title": "Cài đặt",
@@ -189,9 +197,7 @@
     "density": "Mật độ",
     "materials": "Vật liệu",
     "opacity": "Độ đục",
-    "opacityHelp": "Các bảng kính đặc đến mức nào. 1.00 là đục hoàn toàn; ở giữa là mặc định.",
-    "blur": "Độ mờ",
-    "blurHelp": "Bán kính của bề mặt tiêu chuẩn. Bề mặt dày hơn sẽ nhân theo; 0 sẽ tắt hiệu ứng kính.",
+    "opacityHelp": "Độ đặc của các bảng trong cửa sổ. Khung làm việc đúng bằng số này; các cột bên cạnh vẫn mỏng hơn đúng như thiết kế. Menu và tấm là đục nên không bị ảnh hưởng.",
     "resetMaterials": "Đặt lại vật liệu",
     "compact": "Gọn",
     "default": "Mặc định",
@@ -313,7 +319,8 @@
     "properties": "Thuộc tính",
     "exportData": "Xuất dữ liệu ra tệp…",
     "actionsFor": "Thao tác cho {{name}}",
-    "copiedName": "Đã sao chép {{name}}."
+    "copiedName": "Đã sao chép {{name}}.",
+    "analyze": "Phân tích hiệu năng"
   },
   "properties": {
     "rows": "Số hàng",
@@ -346,5 +353,92 @@
     "hintPath": "Thử đường dẫn như music.album, hoặc mẫu như ^a.*t$",
     "someOf": "{{shown}} trong {{total}}",
     "tryPath": "Tìm thấy ở đường dẫn khác:"
+  },
+  "container": {
+    "size": "Kích thước",
+    "dataSize": "Dữ liệu",
+    "indexSize": "Chỉ mục",
+    "owner": "Chủ sở hữu",
+    "encoding": "Bảng mã",
+    "charset": "Bộ ký tự",
+    "collation": "Đối chiếu",
+    "schemas": "Lược đồ",
+    "tables": "Bảng",
+    "views": "Khung nhìn",
+    "routines": "Thủ tục",
+    "indexes": "Chỉ mục",
+    "rows": "Hàng",
+    "connections": "Kết nối",
+    "connectionLimit": "Giới hạn kết nối",
+    "collections": "Bộ sưu tập",
+    "documents": "Tài liệu",
+    "file": "Tệp",
+    "pageSize": "Cỡ trang",
+    "journalMode": "Chế độ nhật ký",
+    "largest": "Bảng lớn nhất",
+    "overview": "Tổng quan"
+  },
+  "metric": {
+    "databaseSize": "Kích thước CSDL",
+    "cacheHitRatio": "Tỷ lệ cache",
+    "transactionRate": "Giao dịch",
+    "rollbackRatio": "Quay lui",
+    "connections": "Kết nối",
+    "connectionLimit": "Giới hạn kết nối",
+    "deadlocks": "Khoá chết",
+    "conflicts": "Xung đột",
+    "tempBytes": "Ghi tạm",
+    "ioTime": "Thời gian đĩa",
+    "uptime": "Thời gian chạy",
+    "slowQueries": "Truy vấn chậm",
+    "tempDiskTables": "Bảng đĩa tạm"
+  },
+  "analyze": {
+    "queries": "Truy vấn",
+    "server": "Máy chủ",
+    "sections": "Đối tượng phân tích",
+    "windowLabel": "Khoảng thời gian",
+    "reading": "Đang đọc…",
+    "slowest": "Thời gian đi đâu",
+    "trend": "Thời gian câu lệnh mỗi giây",
+    "statement": "Câu lệnh",
+    "calls": "Lượt gọi",
+    "totalTime": "Tổng",
+    "meanTime": "Trung bình",
+    "maxTime": "Chậm nhất",
+    "share": "Tỷ lệ",
+    "new": "mới",
+    "quiet": "Không có câu lệnh nào chạy trong khoảng này.",
+    "openInEditor": "Mở trong trình soạn thảo",
+    "activity": "Kết nối theo trạng thái",
+    "largestTables": "Bảng lớn nhất",
+    "deadRows": "Phần đậm của mỗi thanh là dung lượng do hàng chết chiếm.",
+    "unusedIndexes": "Chỉ mục chưa từng dùng",
+    "unusedHint": "Mỗi chỉ mục vẫn tốn một lần ghi cho mọi thao tác thêm và sửa."
+  },
+  "analyzeWindow": {
+    "hour": "1 giờ",
+    "sixHours": "6 giờ",
+    "day": "1 ngày",
+    "week": "1 tuần",
+    "month": "1 tháng",
+    "all": "Toàn bộ"
+  },
+  "analyzeCaveat": {
+    "short": "Lịch sử đã ghi ngắn hơn khoảng này, nên đây là toàn bộ kể từ lần đọc đầu tiên.",
+    "cumulative": "Đây là tổng luỹ kế của máy chủ, không phải một khoảng — để mở thẻ này thì các khoảng sẽ dần đầy.",
+    "reset": "Máy chủ đã đặt lại bộ đếm trong khoảng này, nên các lần đọc trước đã bị bỏ."
+  },
+  "analyzeSpan": {
+    "single": "một lần đọc",
+    "minutes": "trong {{count}} phút",
+    "hours": "trong {{count}} giờ",
+    "days": "trong {{count}} ngày"
+  },
+  "analyzeProblem": {
+    "unsupported": "Công cụ này không lưu thống kê câu lệnh.",
+    "not-installed": "Máy chủ này chưa cài phần mở rộng thống kê.",
+    "not-permitted": "Tài khoản này không đọc được khung nhìn thống kê.",
+    "hint": "Với PostgreSQL, thêm thư viện vào cấu hình máy chủ, khởi động lại, rồi tạo phần mở rộng:"
   }
 }

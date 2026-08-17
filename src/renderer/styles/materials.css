@@ -10,12 +10,12 @@
  * Each surface carries a bright top edge. That single line is what makes a
  * panel read as a material catching light rather than a flat rectangle.
  *
- * TINT AND ALPHA ARE SEPARATE, and that is what makes the two settings sliders
+ * TINT AND ALPHA ARE SEPARATE, and that is what makes the opacity setting
  * possible. A surface declares the colour it is made of and how much of it
- * there is; the sliders scale those two numbers across every surface at once.
- * Had each material kept baking its own finished `background-color`, a
- * translucency control could only have set one alpha for all four — which is
- * the same as deleting the hierarchy the weights exist to express.
+ * there is; the dial moves the second across every surface at once. Had each
+ * material kept baking its own finished `background-color`, a translucency
+ * control could only have set one alpha for all four — which is the same as
+ * deleting the hierarchy the weights exist to express.
  */
 
 :root {
@@ -32,28 +32,20 @@
   --material-alpha-lift: 0%;
 
   /*
-   * A floor the dial cannot pull a surface below. Zero for the window's own
-   * materials — the whole point of the control is to let those go thin — and
-   * raised on anything modal, where separation from what is behind is not a
-   * matter of taste.
+   * A floor the dial cannot pull a surface below.
+   *
+   * The dial subtracts a constant, which is what keeps the surfaces the same
+   * distance apart as it thins them — and means the thinnest of them reaches
+   * zero first and would simply stop existing. A few percent is still a
+   * surface; nothing is a hole.
    */
-  --mat-alpha-floor: 0%;
-
-  /*
-   * The blur radius of a standard surface. Every weight is a fixed multiple of
-   * it — a thick material has always blurred harder than a thin one, and one
-   * absolute radius for all of them would flatten that the way one absolute
-   * alpha would flatten the tints.
-   */
-  --material-blur: 30px;
+  --mat-alpha-floor: 6%;
 }
 
 .mat-ultrathin,
 .mat-thin,
 .mat-regular,
 .mat-thick,
-.surface-sheet,
-.surface-popover,
 .panel-content {
   position: relative;
   background-color: color-mix(
@@ -69,56 +61,28 @@
       ),
     transparent
   );
-  -webkit-backdrop-filter: blur(calc(var(--material-blur) * var(--mat-blur-ratio)))
-    saturate(var(--mat-sat));
-  backdrop-filter: blur(calc(var(--material-blur) * var(--mat-blur-ratio)))
-    saturate(var(--mat-sat));
   border-color: var(--mat-edge);
 }
 
-/*
- * With the blur off there is nothing left for the filter to do, and a
- * `blur(0px)` still costs a full compositing pass per surface per frame. The
- * root carries the flag so the whole window drops the filter together.
- */
-:root[data-glass='off'] .mat-ultrathin,
-:root[data-glass='off'] .mat-thin,
-:root[data-glass='off'] .mat-regular,
-:root[data-glass='off'] .mat-thick,
-:root[data-glass='off'] .surface-sheet,
-:root[data-glass='off'] .surface-popover,
-:root[data-glass='off'] .panel-content {
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-
 .mat-ultrathin {
-  --mat-blur-ratio: 0.27;
-  --mat-sat: 150%;
   --mat-tint: var(--color-base-100);
   --mat-alpha: 30%;
   --mat-edge: color-mix(in oklab, white 22%, transparent);
 }
 
 .mat-thin {
-  --mat-blur-ratio: 0.53;
-  --mat-sat: 180%;
   --mat-tint: var(--color-base-100);
   --mat-alpha: 45%;
   --mat-edge: color-mix(in oklab, white 28%, transparent);
 }
 
 .mat-regular {
-  --mat-blur-ratio: 1;
-  --mat-sat: 180%;
   --mat-tint: var(--color-base-100);
   --mat-alpha: 60%;
   --mat-edge: color-mix(in oklab, white 30%, transparent);
 }
 
 .mat-thick {
-  --mat-blur-ratio: 1.6;
-  --mat-sat: 200%;
   --mat-tint: var(--color-base-100);
   --mat-alpha: 78%;
   --mat-edge: color-mix(in oklab, white 34%, transparent);
@@ -142,84 +106,59 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Modal presentation: the scrim dims, the surface blurs.
- *
- * Blurring both is the common mistake and it undoes the effect. A blurred scrim
- * already flattens everything behind it, so the glass on top has nothing left
- * to refract and reads as flat tint — the surface stops looking like a material
- * and starts looking like a grey rectangle. Worse, it is two full-screen
- * backdrop filters composited every frame for one visual result.
- *
- * So: the scrim is dim only, and the panel carries a *large* blur, which is
- * what makes it read as thick glass rather than a frosted pane. Bigger
- * surfaces read as thicker, so a sheet blurs harder than a popover, which
- * blurs harder than a menu.
+ * Modal presentation: the scrim dims, the surface is solid.
  *
  * These live here rather than with the controls because they are materials —
- * and because that is what lets the two settings sliders reach them. Declared
- * beside the buttons, they carried their own hardcoded blur and alpha and were
- * the two surfaces the sliders could not move.
+ * or rather because they are the deliberate absence of one, and the reasoning
+ * for that belongs beside the surfaces it is an exception to.
  * ------------------------------------------------------------------------- */
+/*
+ * The scrim dims enough to push the window back and no further.
+ *
+ * It carries all of the separation between a sheet and the workspace now, so
+ * it has to be readable *as* a dimming rather than as a black wash: at a third
+ * of black everything behind the modal converges on one grey and the window
+ * stops being recognisable as the thing you will return to.
+ */
 .scrim {
-  background: oklch(0% 0 0 / 0.32);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
+  background: oklch(0% 0 0 / 0.2);
 }
 
 [data-theme='shelf-dark'] .scrim {
-  background: oklch(0% 0 0 / 0.5);
+  background: oklch(0% 0 0 / 0.38);
 }
 
 /*
- * Modal surfaces take the dial upward only.
+ * Modal surfaces are opaque.
  *
- * At a quarter opacity the sheet's fill came within a few points of the window
- * behind it and its edge simply vanished — you could not tell where the modal
- * began. A sheet that does not separate itself from what it interrupts has
- * stopped being a sheet, so the dial can make these more solid and never less.
+ * This is the material rule at the top of this file taken to its conclusion: a
+ * menu opens over the sidebar and a sheet opens over the workspace, and both of
+ * those are already translucent — so a translucent menu is one glass surface on
+ * another, which is the arrangement that collapses legibility.
+ *
+ * It is also the only honest answer to what the blur could do here. A
+ * `backdrop-filter` filters what the *page* has painted, and the app's glass is
+ * the OS's material behind the whole window, which no in-page filter can reach.
+ * Over the sidebar there is nothing behind a menu but a flat tint and a few
+ * lines of thin grey text: measured on screen the filter ran correctly and
+ * destroyed exactly the pixels it was given, and the result was invisible —
+ * a full-screen compositing pass a frame for a surface that still read as flat.
+ *
+ * So the separation is carried by the things that can carry it: an opaque fill
+ * a clear step away from the columns behind it, a shadow, and the light-catching
+ * edge. The window keeps its glass; the things in front of it are objects.
  */
+.surface-sheet,
+.surface-popover {
+  background-color: var(--color-base-100);
+}
+
 .surface-sheet {
-  --mat-blur-ratio: 1.6;
-  --mat-sat: 180%;
-  --mat-tint: var(--color-base-100);
-  --mat-alpha: 76%;
-  --mat-alpha-floor: var(--mat-alpha);
   box-shadow: var(--elev-sheet);
 }
 
-[data-theme='shelf-dark'] .surface-sheet {
-  --mat-alpha: 70%;
-}
-
 .surface-popover {
-  --mat-blur-ratio: 1;
-  --mat-sat: 180%;
-  --mat-tint: var(--color-base-100);
-  --mat-alpha: 72%;
-  --mat-alpha-floor: var(--mat-alpha);
   box-shadow: var(--elev-popover);
-}
-
-[data-theme='shelf-dark'] .surface-popover {
-  --mat-alpha: 66%;
-}
-
-/*
- * A popover on a sheet is solid, not glass.
- *
- * Two reasons, and they point the same way. The material rule: stacking one
- * translucent surface on another collapses legibility. And the mechanism: an
- * ancestor carrying a `backdrop-filter` becomes the backdrop root for
- * everything inside it, so a popover in a sheet was blurring the *sheet's own
- * flat fill* rather than the page — which is a blur that costs a compositing
- * pass and produces a grey rectangle. That is what "the blur is broken" looked
- * like, and the fix is not to blur at all.
- */
-.surface-sheet .surface-popover,
-.surface-popover .surface-popover {
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  background-color: var(--color-base-100);
 }
 
 /* The light-catching edge, applied to whichever sides face the light. */
@@ -260,12 +199,8 @@
   .mat-thin,
   .mat-regular,
   .mat-thick,
-  .surface-sheet,
-  .surface-popover,
   .panel-content {
     background-color: var(--mat-tint, var(--color-base-100));
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
   }
 }
 
@@ -274,12 +209,8 @@
   .mat-thin,
   .mat-regular,
   .mat-thick,
-  .surface-sheet,
-  .surface-popover,
   .panel-content {
     background-color: var(--mat-tint, var(--color-base-100));
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
     border-color: var(--color-base-content);
   }
 }
@@ -320,9 +251,13 @@
 .panel-sidebar {
   --panel-tint: var(--color-recessed);
   --mat-tint: var(--panel-tint);
-  /* Thinner than the working surface on purpose. Depth is what the ordering
-     means: the columns are furthest back, so they let the most through. */
-  --mat-alpha: 45%;
+  /*
+   * Thinner than the working surface on purpose, and by a wide margin. Depth is
+   * what the ordering means: the columns are furthest back, so they let the
+   * most through — and the dial preserves this distance rather than closing it,
+   * so the two never converge however much glass the window is made of.
+   */
+  --mat-alpha: 38%;
 }
 
 /*
@@ -347,7 +282,7 @@
 [data-theme='shelf-dark'] .panel-sidebar {
   --panel-tint: var(--color-recessed);
   --mat-tint: var(--panel-tint);
-  --mat-alpha: 52%;
+  --mat-alpha: 44%;
 }
 
 /*
@@ -365,8 +300,6 @@
  * of it rather than outside it.
  */
 .panel-content {
-  --mat-blur-ratio: 1.6;
-  --mat-sat: 180%;
   --mat-tint: var(--color-base-100);
   --mat-alpha: 90%;
 }

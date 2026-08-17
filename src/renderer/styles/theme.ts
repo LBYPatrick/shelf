@@ -21,29 +21,48 @@ export type Density = 'compact' | 'default' | 'comfortable';
 /**
  * How much glass the window is made of.
  *
- * Both are relative to the *designed* material rather than absolute, which is
- * what lets one control move four material weights without flattening them
- * into one. A single absolute alpha for every surface would delete the
- * hierarchy those weights exist to express.
+ * Relative to the *designed* material rather than absolute, which is what lets
+ * one control move four material weights without flattening them into one. A
+ * single absolute alpha for every surface would delete the hierarchy those
+ * weights exist to express.
+ *
+ * There was a blur radius here too, and it is gone rather than merely unused:
+ * the only surfaces that could have blurred are the modal ones, and those are
+ * opaque now — see `materials.css`. A control that provably changes nothing is
+ * worse than no control, because someone will move it, see nothing happen, and
+ * leave it wherever they let go.
  */
 export interface Materials {
   /**
-   * 1 is solid, 0 is fully clear, and the midpoint is the material as designed.
+   * 1 is solid, 0 is fully clear, and the anchor is the material as designed.
    * The floor is deliberately above 0 — see `MATERIAL_LIMITS`.
    */
   readonly opacity: number;
-  /**
-   * The blur radius of a standard surface, in pixels. Every other weight is a
-   * fixed multiple of it, so one number moves the whole set without the four
-   * of them converging.
-   */
-  readonly blur: number;
 }
 
-/** The middle of the opacity range is the appearance the app ships with. */
+/**
+ * The alpha of the working surface, which is what the bottom of the dial is
+ * calibrated against.
+ *
+ * The dial used to scale every alpha toward zero, and it was wrong twice over.
+ * At 0.2 it painted the pane at 36% — nobody can be expected to translate a
+ * number through a multiplication to find out what they asked for. And scaling
+ * closes the *gaps*: the pane and the columns are 45 points apart as designed
+ * and were 18 apart at the bottom of the range, which is how the working
+ * surface ended up indistinguishable from the sidebar beside it.
+ *
+ * So the dial subtracts rather than scales. Every surface moves by the same
+ * amount, so the distance between any two of them is the distance they were
+ * designed to have, at every position; and the amount is chosen so the pane —
+ * the surface covering most of the window — lands on the dial's own number at
+ * the bottom of the range.
+ */
+export const CONTENT_ALPHA = 0.9;
+
+/** The dial position at which every material is exactly as designed. */
 export const DESIGNED_OPACITY = 0.5;
 
-export const DEFAULT_MATERIALS: Materials = { opacity: DESIGNED_OPACITY, blur: 30 };
+export const DEFAULT_MATERIALS: Materials = { opacity: DESIGNED_OPACITY };
 
 /**
  * The range the sliders offer, and the range anything stored is held to.
@@ -55,9 +74,6 @@ export const DEFAULT_MATERIALS: Materials = { opacity: DESIGNED_OPACITY, blur: 3
  */
 export const MATERIAL_LIMITS = {
   opacity: { min: 0.2, max: 1 },
-  /* Past about 80px the blur stops reading as depth and starts reading as fog,
-     and each surface is another full-screen filter to composite. */
-  blur: { min: 0, max: 80 },
 } as const;
 
 function clampTo(
@@ -73,7 +89,6 @@ function clampTo(
 export function clampMaterials(materials: Partial<Materials> | undefined): Materials {
   return {
     opacity: clampTo(materials?.opacity, DEFAULT_MATERIALS.opacity, MATERIAL_LIMITS.opacity),
-    blur: clampTo(materials?.blur, DEFAULT_MATERIALS.blur, MATERIAL_LIMITS.blur),
   };
 }
 
@@ -85,14 +100,22 @@ export function clampMaterials(materials: Partial<Materials> | undefined): Mater
  * is the whole trick: the four weights stay in order at every position of the
  * slider, because a straight line through them cannot reorder them.
  *
- * Below the midpoint the alphas scale toward zero, so the panels thin out. Above
- * it they close the remaining gap to solid together, so they arrive at fully
- * opaque at the same moment rather than the thickest getting there first and
- * sitting there while the others catch up.
+ * Below the anchor the offset does the work, so the panels thin out together
+ * and keep the distances between them. Above it they close the remaining gap to
+ * solid together, so they arrive at fully opaque at the same moment rather than
+ * the thickest getting there first and sitting there while the others catch up.
  */
 export function alphaTransform(opacity: number): { scale: number; lift: number } {
   if (opacity <= DESIGNED_OPACITY) {
-    return { scale: opacity / DESIGNED_OPACITY, lift: 0 };
+    /*
+     * A pure offset: scale stays at 1, so two surfaces stay exactly as far
+     * apart as they were designed to be. The offset is sized so that at the
+     * floor of the range the working surface sits at the floor's own number —
+     * 20% on the dial is 20% of a surface, not 36%.
+     */
+    const travelled =
+      (DESIGNED_OPACITY - opacity) / (DESIGNED_OPACITY - MATERIAL_LIMITS.opacity.min);
+    return { scale: 1, lift: -(CONTENT_ALPHA - MATERIAL_LIMITS.opacity.min) * travelled };
   }
 
   const toSolid = (1 - opacity) / (1 - DESIGNED_OPACITY);
@@ -265,6 +288,11 @@ export interface Palette {
    * base-200/300, because those sit only a few points of lightness from
    * base-100 and the panels have to read as a *different* surface from the
    * working one, not merely a slightly different one.
+   *
+   * Held well away from base-100 for a second reason: two surfaces that share a
+   * tint and differ only in how much of it there is converge on the same colour
+   * as the opacity dial thins them, and the depth the three columns exist to
+   * express goes with them. The tonal gap is what survives that.
    */
   readonly recessed: Oklch;
 }
@@ -283,7 +311,7 @@ function rampFor(seed: Oklch, appearance: Appearance): Omit<Palette, 'primaryCon
       // starts lifted and slightly desaturated rather than at its seed value.
       primary: { l: Math.min(seed.l + 0.1, 0.86), c: seed.c * 0.82, h },
       subtle: { l: 0.28, c: seed.c * 0.35, h },
-      recessed: { l: 0.145, c: NEUTRAL_TINT * 1.3, h },
+      recessed: { l: 0.115, c: NEUTRAL_TINT * 1.6, h },
     };
   }
 
@@ -295,7 +323,7 @@ function rampFor(seed: Oklch, appearance: Appearance): Omit<Palette, 'primaryCon
     neutral: { l: 0.46, c: NEUTRAL_TINT * 2.3, h },
     primary: seed,
     subtle: { l: 0.92, c: seed.c * 0.35, h },
-    recessed: { l: 0.915, c: NEUTRAL_TINT * 1.2, h },
+    recessed: { l: 0.875, c: NEUTRAL_TINT * 1.5, h },
   };
 }
 
@@ -366,13 +394,6 @@ export function applyTheme(
   const alpha = alphaTransform(materials.opacity);
   root.style.setProperty('--material-alpha-scale', String(alpha.scale));
   root.style.setProperty('--material-alpha-lift', `${alpha.lift * 100}%`);
-  root.style.setProperty('--material-blur', `${materials.blur}px`);
-  /*
-   * A `blur(0px)` is not free — it is still a compositing pass per surface per
-   * frame. The flag lets the stylesheet drop the filter outright rather than
-   * paying for one that does nothing.
-   */
-  root.dataset['glass'] = materials.blur === 0 ? 'off' : 'on';
 
   for (const [property, value] of Object.entries(themeVariables(seed, appearance))) {
     root.style.setProperty(property, value);

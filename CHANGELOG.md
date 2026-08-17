@@ -29,6 +29,18 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   keyboard shortcut reference generated from the binding data.
 - Export to CSV, JSON, JSONL or SQL, streamed from the connection host straight
   to disk with backpressure honoured.
+- Analysis, in the database's Properties popup: the slowest statements over the
+  last hour, six hours, day, week, month or all time, with calls, total and mean
+  time and each statement's share of the window, and a ranked chart of where the
+  time went; plus cache hit ratio, transaction rate, connections by state, the
+  largest tables with their dead-row bloat and the indexes the planner has never
+  chosen. No engine keeps a history — `pg_stat_statements` and MySQL's digest
+  table both hold one running total since the counters were last reset — so the
+  app records its own readings and differences them, and says so when a window
+  is wider than the history behind it.
+- Properties for a schema and for a database: size, owner, encoding, collation
+  and counts, with the largest tables inside it, declared per engine through a
+  new `containers` capability.
 - Full-value inspector for cells wider or taller than a row.
 - Session persistence: open tabs and unfinished query text return per
   connection.
@@ -91,6 +103,98 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Exporting to a file wrote a file of blank lines.** The host read
+  `cursor.fields` before the cursor had answered a single batch, and several
+  drivers only learn a result's shape from the first one — so the column list
+  was empty, the CSV header was a blank line and every row rendered as nothing.
+  The export reported the right row count while doing it. Both existing export
+  tests take the clipboard branch, which is why it shipped; there is an
+  end-to-end test for the file branch now.
+- **The sample database could not export a query's results at all.** Its
+  `stream` read the entity and ignored the query, so it threw on `undefined`
+  before a byte was written — in the one engine every screenshot and every gate
+  run uses.
+- **An unnamed export is stamped rather than called `query-results`.** A fixed
+  name collides with itself: the second export either overwrites the first or
+  has to be renamed by hand. It is `query-YYYYMMDD-hhmmss-nnnnnn` now, which is
+  unique and sorts a folder of exports into the order they were taken. Names the
+  user chose are kept, and made safe for a filesystem — a saved query called
+  "orders / last 30 days" was producing a path with a directory in it.
+- **The structure view's table was a CSS grid.** Tailwind owns `.grid`, and a
+  scoped rule that set the table's width and `table-layout` but never its
+  `display` did not outrank it — so head and body were blockified into two
+  separate anonymous tables, each sizing its own columns, and every header label
+  sat a third of the pane away from the values under it. Renamed, given a
+  `colgroup` per section, and the framework-name gate now covers Tailwind's
+  utilities as well as daisyUI's components.
+- **Opening Indexes or Relations on PostgreSQL took the whole view down.** The
+  driver returned `array_agg(name)` as OID 1003, which `pg` has no parser for
+  and hands back verbatim as the string `{id,name}`; the first `.join()` in the
+  render threw. Cast to `text[]`, and the conformance suite now asserts the
+  shape rather than only the type.
+- **Column descriptions were fetched and never shown.** They sit under the
+  column name now, where a sentence has the width of a sentence.
+- **Referential actions were shown as catalogue letters** — `a`, `n`, `c` —
+  rather than `NO ACTION`, `SET NULL`, `CASCADE`.
+- **The opacity dial painted 36% when it said 20%**, and closed the gaps between
+  the surfaces as it thinned them, so the working pane and the glass columns
+  converged on one colour at the bottom of the range. It subtracts a constant
+  now: every surface keeps the distance it was designed to have, and the pane
+  lands on the dial's own number at the floor.
+- **The connection editor shows the password it saved.** It used to leave the
+  field empty and explain, in help text, that blank meant "keep the saved one" —
+  a rule the reader has to be told and then remember, and one that made changing
+  a port an act of remembering a password. The field is filled from the keyring
+  and editable, with one control to reveal it.
+- **The properties popup no longer resizes as you read it.** Its sections are
+  wildly different heights, so every switch resized the window and every
+  arriving fetch nudged it again. One frame holds still and the panes cross-fade
+  inside it; the analysis is mounted once rather than torn down and reloaded on
+  every switch back.
+- **Connections by state fills its card and answers to the pointer.** The ring
+  says a whole is divided and is bad at letting you compare the divisions, so
+  the comparing is done by bars in a list that runs the width of the card
+  instead of a narrow column pinned beside the chart. Hovering either the ring
+  or a row lights the other.
+- **A dark rectangle sat in the corner of the content pane.** The notch that
+  backs the pane's cut corner was a full square behind it, and the pane is
+  glass — so across the quarter-disc the two surfaces stacked and composited to
+  a shade darker than either. It is masked to the wedge now, and the gate
+  asserts it in pixels: eight pixels across is far under the screenshot
+  threshold, so the snapshot that exists to guard this corner could not see it.
+- **The filter bar's controls sat four pixels from the top and eleven from the
+  bottom.** Everything in it is a field-height control except the segmented
+  switch, which is that plus its own track padding — and the track cannot
+  shrink, because the option inside it is a pointer target. So the bar was
+  taller than most of what it held and `flex-start` dropped the whole surplus at
+  the bottom. The row carries the height now and centres its own contents.
+- **A printed snippet can be selected and copied.** The `pg_stat_statements`
+  setup commands are shown precisely so they can be run somewhere else, and a
+  block you have to retype is one that gets retyped wrong.
+- **Menus and sheets are opaque, and nothing in the page blurs any more.**
+  `backdrop-filter` filters what the page has painted, and the app's glass is
+  the OS's material behind the whole window, which no in-page filter can reach.
+  Measured on screen, the filter ran correctly and destroyed exactly the pixels
+  it was given, and the result was invisible. A menu over the sidebar was also
+  one translucent surface on another, which the material rules already forbid.
+  The blur setting went with it rather than being left as a control that
+  provably does nothing.
+- **Every panel ran a full-screen backdrop filter over nothing.** The root is
+  transparent and the blurred desktop is the OS's own material behind the whole
+  window, which no in-page filter can reach — so the blur cost a compositing
+  pass per panel per frame and produced exactly what not running it produced.
+  Blur now belongs only to sheets and menus, which are the surfaces that sit
+  over the app's own content and have something to refract.
+- **The open-tab session was never written.** It is assembled from Vue state,
+  and a reactive proxy cannot be structured-cloned — the context bridge rejected
+  it asynchronously, into a promise nobody awaited, so every launch opened an
+  empty workspace in silence. Settings now serialise at one boundary, and the
+  gate asserts the round trip.
+- **A table mid-load announced that it was empty.** Tabulator draws its "No
+  rows" placeholder the moment it has no rows, which is also the whole of the
+  first fetch — under the loading veil, blurred.
+- **A schema and a database had no menu at all.** Right-clicking a folder did
+  nothing, because the handler took an entity and returned early without one.
 - **Every target now clears the 28px desktop minimum.** Text fields, the
   segmented control, the sheet close button, the accent swatches and the tab
   strip's new-tab button were all under it; the entity row's action button was

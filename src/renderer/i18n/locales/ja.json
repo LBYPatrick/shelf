@@ -29,7 +29,8 @@
     "update": "更新",
     "settings": "設定",
     "collapseAll": "すべて折りたたむ",
-    "resetView": "表示をリセット"
+    "resetView": "表示をリセット",
+    "copied": "クリップボードにコピーしました。"
   },
   "start": {
     "search": "接続 URL を貼り付けるか、保存済みの接続を検索",
@@ -61,7 +62,6 @@
     "file": "データベースファイル",
     "name": "名前",
     "nameHelp": "空欄にすると「{{suggested}}」が使われます。",
-    "passwordHelp": "空欄のままにすると保存済みのパスワードを使います。",
     "advanced": "詳細設定",
     "useSsl": "SSL/TLS を使う",
     "useSsh": "SSH トンネル経由で接続",
@@ -152,11 +152,8 @@
     "partitions": "パーティション",
     "name": "名前",
     "type": "型",
-    "null": "NULL 可",
     "default": "既定値",
-    "key": "キー",
     "unique": "一意",
-    "direction": "向き",
     "references": "参照先",
     "onDelete": "削除時",
     "timing": "タイミング",
@@ -174,7 +171,18 @@
     "whatWillRun": "実行される文",
     "typeToConfirm": "確認のため名前を入力",
     "typeToConfirmHelp": "「{{name}}」と入力するとボタンが有効になります。",
-    "applying": "適用中…"
+    "applying": "適用中…",
+    "sections": "セクション",
+    "filter": "絞り込み…",
+    "nullable": "NULL 許可",
+    "notNull": "NOT NULL",
+    "yes": "はい",
+    "pk": "PK",
+    "generated": "生成列",
+    "actions": "操作",
+    "noMatch": "一致するものはありません。",
+    "outgoing": "参照先",
+    "incoming": "参照元"
   },
   "settings": {
     "title": "設定",
@@ -189,9 +197,7 @@
     "density": "表示密度",
     "materials": "マテリアル",
     "opacity": "不透明度",
-    "opacityHelp": "ガラスパネルの不透明さ。1.00 で完全に不透明、中央が初期設定です。",
-    "blur": "ぼかし",
-    "blurHelp": "標準的な面のぼかし半径。厚い面はこれに比例します。0 でガラスを無効化します。",
+    "opacityHelp": "ウィンドウのパネルの不透明度。作業ペインはこの値になり、隣の列は設計どおりの分だけ薄いままです。メニューとシートは不透明なので影響を受けません。",
     "resetMaterials": "マテリアルをリセット",
     "compact": "高密度",
     "default": "標準",
@@ -313,7 +319,8 @@
     "properties": "プロパティ",
     "exportData": "データをファイルに書き出す…",
     "actionsFor": "{{name}} の操作",
-    "copiedName": "{{name}} をコピーしました。"
+    "copiedName": "{{name}} をコピーしました。",
+    "analyze": "パフォーマンスを分析"
   },
   "properties": {
     "rows": "行数",
@@ -346,5 +353,92 @@
     "hintPath": "music.album のようなパス、または ^a.*t$ のようなパターン",
     "someOf": "{{total}} 件中 {{shown}} 件",
     "tryPath": "別のパスの下に見つかりました:"
+  },
+  "container": {
+    "size": "サイズ",
+    "dataSize": "データ",
+    "indexSize": "インデックス",
+    "owner": "所有者",
+    "encoding": "エンコーディング",
+    "charset": "文字セット",
+    "collation": "照合順序",
+    "schemas": "スキーマ",
+    "tables": "テーブル",
+    "views": "ビュー",
+    "routines": "ルーチン",
+    "indexes": "インデックス",
+    "rows": "行",
+    "connections": "接続",
+    "connectionLimit": "接続上限",
+    "collections": "コレクション",
+    "documents": "ドキュメント",
+    "file": "ファイル",
+    "pageSize": "ページサイズ",
+    "journalMode": "ジャーナルモード",
+    "largest": "最大のテーブル",
+    "overview": "概要"
+  },
+  "metric": {
+    "databaseSize": "データベースサイズ",
+    "cacheHitRatio": "キャッシュヒット",
+    "transactionRate": "トランザクション",
+    "rollbackRatio": "ロールバック",
+    "connections": "接続",
+    "connectionLimit": "接続上限",
+    "deadlocks": "デッドロック",
+    "conflicts": "競合",
+    "tempBytes": "一時書き込み",
+    "ioTime": "ディスク時間",
+    "uptime": "稼働時間",
+    "slowQueries": "スロークエリ",
+    "tempDiskTables": "一時ディスク表"
+  },
+  "analyze": {
+    "queries": "クエリ",
+    "server": "サーバー",
+    "sections": "分析対象",
+    "windowLabel": "期間",
+    "reading": "読み取り中…",
+    "slowest": "時間の使い道",
+    "trend": "毎秒のステートメント時間",
+    "statement": "ステートメント",
+    "calls": "呼び出し",
+    "totalTime": "合計",
+    "meanTime": "平均",
+    "maxTime": "最遅",
+    "share": "割合",
+    "new": "新規",
+    "quiet": "この期間に実行されたものはありません。",
+    "openInEditor": "エディタで開く",
+    "activity": "状態別の接続",
+    "largestTables": "最大のテーブル",
+    "deadRows": "各バーの濃い部分はデッドタプルが占める領域です。",
+    "unusedIndexes": "未使用のインデックス",
+    "unusedHint": "いずれも挿入・更新のたびに書き込みコストがかかります。"
+  },
+  "analyzeWindow": {
+    "hour": "1 時間",
+    "sixHours": "6 時間",
+    "day": "1 日",
+    "week": "1 週間",
+    "month": "1 か月",
+    "all": "全期間"
+  },
+  "analyzeCaveat": {
+    "short": "記録された履歴がこの期間より短いため、最初の読み取り以降のすべてを表示しています。",
+    "cumulative": "これはサーバーの累計であり期間ではありません。このタブを開いたままにすると期間が埋まります。",
+    "reset": "この期間中にサーバーがカウンタをリセットしたため、以前の読み取りは破棄されました。"
+  },
+  "analyzeSpan": {
+    "single": "読み取り 1 件",
+    "minutes": "{{count}} 分間",
+    "hours": "{{count}} 時間",
+    "days": "{{count}} 日間"
+  },
+  "analyzeProblem": {
+    "unsupported": "このエンジンはステートメント統計を保持しません。",
+    "not-installed": "このサーバーには統計拡張がインストールされていません。",
+    "not-permitted": "このアカウントは統計ビューを読み取れません。",
+    "hint": "PostgreSQL では、サーバー設定にライブラリを追加して再起動し、拡張を作成します:"
   }
 }

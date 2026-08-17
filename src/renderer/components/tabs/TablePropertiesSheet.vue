@@ -27,10 +27,16 @@ const properties = ref<EntityProperties>({});
 </script>
 
 <template>
+  <!--
+    Stacked, like the container popup beside it: what this belongs to, then what
+    it is. A qualified name run together as one string makes the part you came
+    to read the smaller half of it.
+  -->
   <Sheet
     v-model="open"
     wide
-    :title="entity.schema ? `${entity.schema}.${entity.name}` : entity.name"
+    :title="entity.name"
+    :subtitle="entity.schema"
   >
     <!--
       Three facts, given equal weight and read left to right. A definition list

@@ -131,3 +131,37 @@ test('escape dismisses one overlay at a time, from the top', async ({ page }) =>
   await page.keyboard.press('Escape');
   await expect(sheet).toBeHidden();
 });
+
+/*
+ * A form that will not show what it already holds makes changing a *port* an
+ * act of remembering a password. It used to leave the field blank and explain,
+ * in help text, that blank meant "keep the saved one" — a rule the reader has
+ * to be told and then remember, and one that silently discards a password the
+ * moment they type a single character and delete it again.
+ */
+test('editing a connection shows the password it saved', async ({ page }) => {
+  await page
+    .getByRole('button', { name: /New connection/ })
+    .first()
+    .click();
+  await page.getByRole('radio', { name: 'PostgreSQL', exact: true }).click();
+  await page.getByLabel('Host').fill('127.0.0.1');
+  await page.getByLabel('Port').fill('55432');
+  await page.getByLabel('User').fill('shelf');
+  await page.getByRole('textbox', { name: 'Password' }).fill('hunter2');
+  await page.getByRole('textbox', { name: 'Database' }).fill('shelf');
+  await page.getByLabel('Name').fill('Reveal me');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+
+  await page
+    .getByRole('button', { name: /Edit Reveal me/ })
+    .first()
+    .click();
+  const field = page.getByRole('textbox', { name: 'Password' });
+  await expect(field).toHaveValue('hunter2');
+  // Masked until asked, and asked with one control rather than two.
+  await expect(field).toHaveAttribute('type', 'password');
+  await page.getByRole('button', { name: 'Show password' }).click();
+  await expect(field).toHaveAttribute('type', 'text');
+});
