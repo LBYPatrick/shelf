@@ -77,6 +77,10 @@ is ever tied to a licence, because there is no licence.**
 - **Find** — a command palette (`⌘K`) over tabs, tables and actions, with
   subsequence matching, and a start screen that parses a pasted connection URL
   into a filled-in form.
+- **Carry settings and connections between machines** — settings are editable as
+  a form or as the JSON document they are stored as, and both they and any saved
+  connection can be written to a file and read back. A connection document is a
+  preset: it never carries the password, which stays in the OS keyring.
 - **Resume** — tabs and unfinished query text come back when you reopen a
   connection.
 
@@ -105,6 +109,7 @@ is ever tied to a licence, because there is no licence.**
 ```bash
 make install    # check tooling, install packages, rebuild native modules
 make dev        # run with hot reload
+make preview    # run the built app, with no dev server
 ```
 
 Requires **Node 20+** and **pnpm**. `make install` will install pnpm through
@@ -129,6 +134,14 @@ English, 日本語, 简体中文, 한국어 and Tiếng Việt, following the sy
 default or set explicitly in Settings. Engine-specific words — *collection*,
 *keyspace*, *item* — are translated too, so a Japanese sentence does not end up
 with an English noun dropped into the middle of it.
+
+### The start screen
+
+Opening the app gives a small window, not an empty workspace: what Shelf is and
+how to start something new on the left, everything you could open on the right —
+recent connections, saved ones and the sample database, each group folding away.
+The window grows to the size you left it at the moment a database opens, and
+gives the space back when you return.
 
 ### Try it without a database
 

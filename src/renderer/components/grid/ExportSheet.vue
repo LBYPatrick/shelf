@@ -16,7 +16,9 @@ import { computed, ref, watch } from 'vue';
 import { useTranslation } from 'i18next-vue';
 import type { CellValue, Field } from '@drivers/types';
 import { toDelimited, toJson, toMarkdown } from '@shared/tabular';
+import { elapsedLabel, useElapsed } from '../../composables/useElapsed';
 import { useToasts } from '../../stores/toasts';
+import CircuitRing from '../ui/CircuitRing.vue';
 import PressButton from '../ui/PressButton.vue';
 import SegmentedControl from '../ui/SegmentedControl.vue';
 import Sheet from '../ui/Sheet.vue';
@@ -35,7 +37,24 @@ const props = defineProps<{
    * is read by the template compiler as an event listener, so it never arrives
    * as a prop at all.
    */
-  writeFile?: (path: string, format: 'csv' | 'json' | 'jsonl' | 'sql') => Promise<void>;
+  writeFile?: (
+    path: string,
+    format: 'csv' | 'json' | 'jsonl' | 'sql',
+    scope: Scope
+  ) => Promise<void>;
+  /**
+   * How many rows the statement would return without the preview limit.
+   *
+   * Present only where the two can differ. A run fetches a page so you can look
+   * at it, so "export this" is genuinely two requests: the rows on screen, or
+   * the ones the statement actually matches — and the second means running it
+   * again, which is worth saying out loud rather than doing silently either
+   * way. Absent when there is nothing to choose between, as for a dispatched
+   * job whose whole answer is already on this machine.
+   */
+  fullRows?: number;
+  /** True when the loaded rows are only the first page of a larger answer. */
+  truncated?: boolean;
 }>();
 
 const open = defineModel<boolean>({ required: true });
@@ -44,10 +63,23 @@ const { t } = useTranslation();
 
 type Delivery = 'file' | 'clipboard';
 type Format = 'csv' | 'tsv' | 'json' | 'jsonl' | 'markdown' | 'sql';
+export type Scope = 'page' | 'full';
+
+/**
+ * Which rows, when the two are not the same set.
+ *
+ * The page is what is loaded — instant, and exactly what you were looking at.
+ * The full set means the statement runs again without the preview limit, which
+ * is the honest cost of asking for rows nobody has fetched yet. Offered only
+ * where a limit was actually applied; otherwise the question does not arise and
+ * the control is not there to be answered wrongly.
+ */
+const scope = ref<Scope>('page');
 
 const delivery = ref<Delivery>('file');
 const format = ref<Format>('csv');
 const busy = ref(false);
+const elapsed = useElapsed(busy);
 const done = ref<string | null>(null);
 const error = ref<string | null>(null);
 
@@ -84,6 +116,32 @@ watch([delivery, available], () => {
 
 const canWriteFile = computed(() => props.writeFile !== undefined);
 
+/*
+ * The choice exists whenever the rows on screen are only the first of them.
+ *
+ * It used to also require knowing how many there were in total, which was a
+ * number the app had because the whole result came back and was cut here. Now
+ * the limit is in the statement, so "how many are there really" is a question
+ * nobody has asked the server — and having no answer to it is not a reason to
+ * stop offering the export that would go and find out.
+ */
+const offersScope = computed(
+  () =>
+    props.truncated === true &&
+    (props.fullRows === undefined || props.fullRows > props.rows.length)
+);
+
+const scopes = computed(() => [
+  { value: 'page' as const, label: t('export.scopePage', { count: props.rows.length }) },
+  { value: 'full' as const, label: t('export.scopeFull') },
+]);
+
+// The clipboard can only hold what is already in this process, so asking it for
+// the full set is asking for something it cannot do.
+watch([delivery, offersScope], () => {
+  if (delivery.value === 'clipboard' || !offersScope.value) scope.value = 'page';
+});
+
 function render(): string {
   switch (format.value) {
     case 'tsv':
@@ -117,7 +175,7 @@ async function run(): Promise<void> {
     });
     if (!path) return;
 
-    await props.writeFile!(path, format.value as 'csv' | 'json' | 'jsonl' | 'sql');
+    await props.writeFile!(path, format.value as 'csv' | 'json' | 'jsonl' | 'sql', scope.value);
     /*
      * The confirmation goes to a toast because the sheet holding it closes in
      * the next statement. It set `done` and then dismissed the surface the
@@ -155,6 +213,33 @@ async function run(): Promise<void> {
           delivery === 'file'
             ? $t('export.fileHint')
             : $t('export.clipboardHint', { count: rows.length })
+        }}
+      </p>
+    </section>
+
+    <!--
+      Only where the answer differs from what is on screen. A run applied a
+      preview limit; a dispatched job did not, and its rows are already here.
+    -->
+    <section
+      v-if="offersScope && delivery === 'file'"
+      class="section"
+    >
+      <p class="type-label section__title">
+        {{ $t('export.scope') }}
+      </p>
+      <SegmentedControl
+        v-model="scope"
+        :options="scopes"
+        :aria-label="$t('export.scope')"
+      />
+      <p class="hint type-label">
+        {{
+          scope !== 'full'
+            ? $t('export.scopePageHint')
+            : fullRows === undefined
+              ? $t('export.scopeFullHintUnknown')
+              : $t('export.scopeFullHint', { count: fullRows })
         }}
       </p>
     </section>
@@ -204,19 +289,55 @@ async function run(): Promise<void> {
       >
         {{ $t('action.cancel') }}
       </PressButton>
+      <!--
+        While it is out, the button says how long for and its own edge carries
+        the ring. An export of everything a statement matches is the one thing
+        in this app with no upper bound on how long it can take, and the sheet
+        stays open in front of it — so the reader is left looking at a word.
+      -->
       <PressButton
+        class="export__go"
         size="sm"
         variant="primary"
         :disabled="busy || (delivery === 'file' && !canWriteFile)"
         @click="run"
       >
-        {{ busy ? $t('export.working') : $t('export.run') }}
+        <CircuitRing v-if="busy" />
+        <span :class="{ export__label: busy }">
+          {{ busy ? $t('export.working') : $t('export.run') }}
+        </span>
+        <span
+          v-if="busy"
+          class="export__clock"
+          role="timer"
+        >{{ elapsedLabel(elapsed) }}</span>
       </PressButton>
     </template>
   </Sheet>
 </template>
 
 <style scoped>
+/* The ring is drawn on this button's outline, so the button is what it is
+   positioned against. */
+.export__go {
+  position: relative;
+}
+
+/*
+ * Sized for its widest reading and set in tabular figures, so the hundredths
+ * turning over move neither the button's width nor the word beside them.
+ */
+.export__clock {
+  min-width: 4.25rem;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+.export__label {
+  opacity: 0.85;
+}
+
 .section {
   display: flex;
   flex-direction: column;

@@ -30,22 +30,44 @@
     "settings": "设置",
     "collapseAll": "全部折叠",
     "resetView": "重置视图",
-    "copied": "已复制到剪贴板。"
+    "copied": "已复制到剪贴板。",
+    "reset": "重置",
+    "confirm": "确认",
+    "open": "打开…",
+    "dispatch": "后台运行",
+    "saveQuery": "保存查询"
   },
   "start": {
     "search": "粘贴连接 URL，或搜索已保存的连接",
     "searchLabel": "粘贴连接 URL 或搜索",
     "recognised": "已识别",
     "setUp": "去设置",
+    "recent": "最近打开",
+    "saved": "已保存",
+    "matches": "匹配的连接",
+    "noMatches": "没有匹配的连接。",
+    "nothingSaved": "还没有保存任何连接。",
     "newConnection": "新建连接",
-    "nothingSaved": "还没有保存任何连接。在上方粘贴连接 URL，或选择一种引擎开始。",
-    "sampleTitle": "手边没有数据库？",
-    "sampleBody": "打开一个示例库，浏览、编辑、查询和关系图都能正常使用。不会安装任何东西，也不会保存任何东西。",
-    "sampleAction": "试用示例数据",
+    "newConnectionBody": "粘贴一个 URL，或者逐项填写。",
+    "settingsBody": "外观、数据与键盘。",
+    "importPresets": "导入预设",
+    "importPresetsBody": "从 JSON 文件添加连接。",
+    "importTitle": "导入连接",
+    "exportTitle": "导出连接",
+    "export": "导出 {{name}}",
+    "exported": "已保存。密码仍留在钥匙串中。",
+    "imported": "已导入 {{n}} 个。每个仍需填写密码。",
+    "importFailed": "无法读取该文件",
+    "sample": "示例",
+    "sampleTitle": "示例数据库",
+    "sampleBody": "可直接浏览、查询和编辑。不会安装任何东西。",
     "sampleOpening": "正在打开…",
     "noKeyring": "未找到系统钥匙串，因此无法在这台机器上保存密码。",
     "neverOpened": "从未打开",
     "justNow": "刚刚",
+    "minutesAgo": "{{n}} 分钟前",
+    "hoursAgo": "{{n}} 小时前",
+    "daysAgo": "{{n}} 天前",
     "connectTo": "连接到 {{name}}",
     "edit": "编辑 {{name}}",
     "remove": "删除 {{name}}"
@@ -82,7 +104,8 @@
     "chooseEngine": "请选择一种数据库引擎。",
     "chooseFile": "请选择数据库文件。",
     "needHost": "请填写主机、套接字路径或连接 URL。",
-    "required": "{{field}} 为必填项。"
+    "required": "{{field}} 为必填项。",
+    "testOk": "已连接 — {{version}}"
   },
   "workspace": {
     "entities": "对象",
@@ -104,7 +127,8 @@
     "readOnly": "只读",
     "disconnectHint": "点击断开连接",
     "searchEntities": "搜索表",
-    "toggleSidebar": "切换侧边栏"
+    "toggleSidebar": "切换侧边栏",
+    "jobs": "任务"
   },
   "table": {
     "filterPlaceholder": "筛选 — 例如 name like 'A%'",
@@ -142,7 +166,27 @@
     "explainHint": "查看数据库将如何执行此查询",
     "saveHint": "保存此查询",
     "caret": "第 {{line}} 行第 {{column}} 列 / 共 {{lines}} 行",
-    "selected": "已选 {{count}} 个字符"
+    "selected": "已选 {{count}} 个字符",
+    "groupStatement": "语句",
+    "groupTransaction": "事务",
+    "groupResult": "结果",
+    "runScope": "运行的范围",
+    "resultsBar": "当前结果",
+    "formatFailed": "无法格式化",
+    "rowLimit": "{{rows}} 行",
+    "elapsed": "已运行 {{time}}",
+    "bar": "语句",
+    "formatHint": "按当前引擎的方言格式化语句",
+    "autoCommit": "自动提交",
+    "autoCommitHint": "关闭后，语句将在你自行提交的事务中执行。",
+    "beginHint": "开启事务；在你提交之前不会写入",
+    "rowLimitNone": "不限",
+    "summaryRows": "{{rows}} 行",
+    "summaryFirst": "前 {{rows}} 行",
+    "summaryAffected": "影响 {{rows}} 行",
+    "summaryMs": "{{ms}} 毫秒",
+    "summaryRow": "{{rows}} 行",
+    "summaryFirstOne": "前 {{rows}} 行"
   },
   "structure": {
     "columns": "列",
@@ -182,7 +226,11 @@
     "actions": "操作",
     "noMatch": "没有匹配项。",
     "outgoing": "外向",
-    "incoming": "内向"
+    "incoming": "内向",
+    "wrap": "自动换行",
+    "wrapHint": "完整显示内容，需要几行就用几行",
+    "wrapOn": "已开启自动换行。",
+    "wrapOff": "已关闭自动换行。"
   },
   "settings": {
     "title": "设置",
@@ -223,7 +271,31 @@
     "resetData": "重置数据设置",
     "primaryRun": "主运行操作",
     "runAll": "整个编辑器",
-    "runCurrent": "光标所在语句"
+    "runCurrent": "光标所在语句",
+    "viewVisual": "表单",
+    "viewJson": "JSON",
+    "jsonValid": "JSON 有效。",
+    "applied": "设置已应用。",
+    "exportTitle": "导出设置",
+    "importTitle": "导入设置",
+    "exported": "设置已保存。",
+    "imported": "设置已导入。",
+    "exportSettings": "导出…",
+    "importSettings": "导入…",
+    "appearanceDesc": "窗口的配色，以及屏幕能容纳多少内容。这里的每一项都会即时生效。",
+    "dataDesc": "一次结果取回什么，以及你如何修改其中的内容。",
+    "editorDesc": "SQL 编辑器的样式，以及它如何处理过长的行。",
+    "file": "配置文件",
+    "fileDesc": "本页的全部偏好，作为一份文档保存或带到另一台机器。",
+    "resetAll": "重置",
+    "resetDesc": "把数据与编辑器偏好恢复为初始值，外观设置保持不变。",
+    "resetConfirm": "再按一次即可重置所有数据与编辑器偏好。",
+    "wasReset": "偏好已重置。",
+    "copy": "复制",
+    "exportRow": "把全部偏好写入文件",
+    "importRow": "从文件读取并替换",
+    "jsonLines": "{{count}} 行",
+    "copyHint": "把整份文档复制到剪贴板"
   },
   "palette": {
     "placeholder": "搜索表、标签页和操作…",
@@ -300,7 +372,13 @@
     "written": "已写出。",
     "working": "处理中…",
     "run": "导出",
-    "wroteTo": "已写入 {{name}}。"
+    "wroteTo": "已写入 {{name}}。",
+    "scope": "行",
+    "scopePage": "当前页（{{count}}）",
+    "scopeFull": "查询匹配的全部",
+    "scopePageHint": "用已加载的行写出，不会再次执行。",
+    "scopeFullHint": "不带预览上限重新执行语句；共匹配 {{count}} 行。",
+    "scopeFullHintUnknown": "不带预览限制重新执行该语句。"
   },
   "grid": {
     "oneBased": "从 1 开始",
@@ -320,7 +398,8 @@
     "exportData": "导出数据到文件…",
     "actionsFor": "{{name}} 的操作",
     "copiedName": "已复制 {{name}}。",
-    "analyze": "分析性能"
+    "analyze": "分析性能",
+    "diagram": "关系图"
   },
   "properties": {
     "rows": "行数",
@@ -414,7 +493,15 @@
     "largestTables": "最大的表",
     "deadRows": "每根条形中较深的部分是死元组占用的空间。",
     "unusedIndexes": "从未使用的索引",
-    "unusedHint": "它们在每次插入和更新时仍会产生写入开销。"
+    "unusedHint": "它们在每次插入和更新时仍会产生写入开销。",
+    "brushHint": "在图上横向拖动，即可把下方内容收窄到该区间。",
+    "wholeRange": "整个区间",
+    "scaleLabel": "纵轴刻度",
+    "totals": "{{calls}} 次调用共 {{time}}",
+    "noReadings": "还没有采样。此面板打开时 Shelf 会采样并做差分——让它开着，这里就会填满。",
+    "quietSelection": "所选区间内没有任何语句执行。",
+    "scaleLinear": "线性",
+    "scaleLog": "对数"
   },
   "analyzeWindow": {
     "hour": "1 小时",
@@ -427,7 +514,8 @@
   "analyzeCaveat": {
     "short": "记录的历史短于该范围，因此显示的是自首次读取以来的全部数据。",
     "cumulative": "这是服务器的累计值而非区间数据 — 保持此标签页打开，区间数据会逐渐积累。",
-    "reset": "服务器在此区间内重置了计数器，因此较早的读取已被丢弃。"
+    "reset": "服务器在此区间内重置了计数器，因此较早的读取已被丢弃。",
+    "wide": "该区间两端之间没有采样，可用的最近一次采样比区间本身更早，因此这里覆盖的时间比标注的更长。"
   },
   "analyzeSpan": {
     "single": "仅一次读取",
@@ -439,6 +527,46 @@
     "unsupported": "此引擎不保留语句统计信息。",
     "not-installed": "此服务器未安装统计扩展。",
     "not-permitted": "此账户无法读取统计视图。",
-    "hint": "在 PostgreSQL 上，将该库加入服务器配置并重启，然后创建扩展："
+    "hint": "在 PostgreSQL 上，将该库加入服务器配置并重启，然后创建扩展：",
+    "not-loaded": "扩展已创建但从未被加载，因此没有统计任何内容。",
+    "not-tracking": "该服务器上的语句记录已关闭。",
+    "other-database": "该服务器上有记录，但没有属于当前数据库的。",
+    "nothing-recorded": "扩展正在记录，目前还没有任何内容。"
+  },
+  "plan": {
+    "title": "执行计划",
+    "exportSvg": "将计划导出为 SVG",
+    "exportPng": "将计划导出为 PNG",
+    "exported": "已保存计划。"
+  },
+  "jobs": {
+    "empty": "还没有后台任务。后台运行会自行执行、把完整结果留在本机，并在完成时通知你。",
+    "dispatched": "已后台运行 {{name}}。",
+    "finished": "完成 —— {{rows}} 行，可以导出。",
+    "open": "打开",
+    "openResult": "打开 {{name}} 的行",
+    "rename": "重命名",
+    "discard": "丢弃",
+    "discarded": "已丢弃 {{name}}。",
+    "rowsIn": "{{time}} 内 {{rows}} 行",
+    "resultBar": "当前任务",
+    "showing": "显示第 {{from}}–{{to}} 行，共 {{total}} 行",
+    "previous": "上一页",
+    "next": "下一页",
+    "statusPending": "等待中",
+    "statusRunning": "运行中",
+    "statusDone": "完成",
+    "statusFailed": "失败",
+    "interrupted": "因重启而中断。",
+    "rowsGone": "该任务的行已不存在。"
+  },
+  "value": {
+    "asJson": "按 JSON 格式化",
+    "empty": "（空）"
+  },
+  "erd": {
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "fit": "适应"
   }
 }

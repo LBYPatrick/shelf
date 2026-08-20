@@ -52,22 +52,31 @@ let tabWidth = 160;
  */
 const marker = ref<{ x: number; width: number } | null>(null);
 
+/**
+ * Where the marker belongs, worked out rather than read off the page.
+ *
+ * It used to be measured, and the comment said why: tabs were as wide as their
+ * titles, so nothing but the box itself could say where one ended. They are all
+ * one width now, and measuring became the wrong tool the moment that width
+ * started animating — a box read mid-flight is the width the tabs are *passing
+ * through*, so the marker chased a target that had already moved and settled
+ * beside the tab rather than on it.
+ *
+ * Arithmetic has neither problem: every tab is `--tab-w` and every gap is the
+ * same, so the nth tab starts at n × (width + gap). It is exact at every frame
+ * of the resize, which is what lets the two animate together.
+ */
 function measure(): void {
-  // By class, not by index: the marker is itself a child of the list, so
-  // counting positions would be off by one for as long as it is on screen.
   const list = listEl.value;
   const index = tabs.tabs.findIndex((tab) => tab.id === tabs.activeId);
-  const element = list?.querySelectorAll<HTMLElement>('.striptab')[index];
 
-  if (!list || !element) {
+  if (!list || index < 0 || tabSize.value === 0) {
     marker.value = null;
     return;
   }
 
-  // Measured, not offset: `offsetLeft` and `offsetWidth` round to whole pixels,
-  // so the marker sat up to half a pixel out from the tab it is meant to be.
-  const box = element.getBoundingClientRect();
-  marker.value = { x: box.left - list.getBoundingClientRect().left, width: box.width };
+  const gap = Number.parseFloat(getComputedStyle(list).gap) || 0;
+  marker.value = { x: index * (tabSize.value + gap), width: tabSize.value };
 }
 
 /**
@@ -121,11 +130,46 @@ function beginDrag(event: PointerEvent, index: number): void {
   start(event);
 }
 
+/* ----------------------------------------------------------------- renaming */
+
+const renaming = ref<string | null>(null);
+const draftTitle = ref('');
+/*
+ * A callback ref, because this input is inside the `v-for` over the tabs: a
+ * string ref there collects into an *array* of every element that carried it,
+ * and the one we want is whichever tab is being renamed. Only one exists at a
+ * time, so the callback is the whole of the bookkeeping.
+ */
+let renameField: HTMLInputElement | null = null;
+
+function bindRenameField(el: unknown): void {
+  renameField = (el as HTMLInputElement | null) ?? null;
+}
+
+function beginRename(tab: Tab): void {
+  renaming.value = tab.id;
+  draftTitle.value = tab.title;
+  void nextTick(() => {
+    renameField?.focus();
+    renameField?.select();
+  });
+}
+
+function commitRename(): void {
+  const id = renaming.value;
+  if (!id) return;
+
+  // Cleared first: committing focuses something else, and a blur handler that
+  // fires while the field is still the one being renamed commits twice.
+  renaming.value = null;
+  tabs.rename(id, draftTitle.value);
+}
+
 function onAuxClick(event: MouseEvent, tab: Tab): void {
   // Middle click closes, which is the convention everywhere tabs exist.
   if (event.button === 1) {
     event.preventDefault();
-    tabs.close(tab.id);
+    closeTab(tab.id);
   }
 }
 
@@ -134,15 +178,162 @@ function onAuxClick(event: MouseEvent, tab: Tab): void {
  * all move the tabs without the list itself changing. Watching the store would
  * miss every one of them.
  */
+/**
+ * One width for every tab, worked out the way a browser works it out.
+ *
+ * `flex: 1 1 0` divides the space equally, which is the right *result* — but it
+ * requires the tablist to fill the strip, and a full-width tablist pushes the
+ * new-tab button to the far edge of the window, a hand-span from the tab it
+ * belongs after. Chrome puts it immediately after the rightmost tab, which is
+ * where you look for it.
+ *
+ * So the width is computed and the tablist is sized by its contents: every tab
+ * gets `(room − the new-tab button) / count`, clamped between the density
+ * scale's floor and ceiling. Below the floor they stop shrinking and the strip
+ * scrolls instead of grinding them into slivers.
+ */
+const tabSize = ref(0);
+
+/**
+ * Tabs that have just been opened, so they can arrive rather than appear.
+ *
+ * A new tab used to be there in one frame at full width while every other tab
+ * animated to make room for it — so the row moved and the newcomer did not,
+ * which reads as the tabs getting out of the way of something that was already
+ * there. It grows out of nothing and fades up instead, on the same curve and
+ * over the same time as the shuffle it causes.
+ */
+const entering = ref(new Set<string>());
+const enterTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+/** As long as the width transition it runs alongside. */
+const ENTER_MS = 260;
+
+/**
+ * Closing, held for the length of the animation.
+ *
+ * A tab removed from the store is gone from the DOM in the same frame, so it
+ * cannot animate out — the row simply closes over the gap. The removal waits
+ * instead: the tab shrinks to nothing and fades, and only then is it actually
+ * closed. Out faster than in, because the reader has already decided.
+ */
+const leaving = ref(new Set<string>());
+const leaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+const LEAVE_MS = 180;
+
+function closeTab(id: string): void {
+  if (leaving.value.has(id)) return;
+
+  leaving.value = new Set(leaving.value).add(id);
+  leaveTimers.set(
+    id,
+    setTimeout(() => {
+      const next = new Set(leaving.value);
+      next.delete(id);
+      leaving.value = next;
+      leaveTimers.delete(id);
+      tabs.close(id);
+    }, LEAVE_MS)
+  );
+}
+
+function markEntering(id: string): void {
+  entering.value = new Set(entering.value).add(id);
+
+  clearTimeout(enterTimers.get(id));
+  enterTimers.set(
+    id,
+    setTimeout(() => {
+      const next = new Set(entering.value);
+      next.delete(id);
+      entering.value = next;
+      enterTimers.delete(id);
+    }, ENTER_MS)
+  );
+}
+
+/*
+ * Compared against what was there rather than against the count: a tab can be
+ * opened and another closed in the same turn, and the length would not move.
+ */
+let known = new Set<string>();
+
+watch(
+  () => tabs.tabs.map((tab) => tab.id).join('\u0000'),
+  () => {
+    const now = new Set(tabs.tabs.map((tab) => tab.id));
+    // Nothing animates on the first render: a restored session is not five
+    // tabs being created, it is five tabs that were already open.
+    if (known.size > 0) {
+      for (const id of now) if (!known.has(id)) markEntering(id);
+    }
+    known = now;
+  },
+  { immediate: true }
+);
+
+/** Read from the stylesheet, so density still governs the two bounds. */
+function bound(name: string, fallback: number): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name);
+  const value = Number.parseFloat(raw);
+  if (!Number.isFinite(value)) return fallback;
+  return raw.trim().endsWith('rem')
+    ? value * Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
+    : value;
+}
+
+function sizeTabs(): void {
+  const strip = stripEl.value;
+  const count = tabs.tabs.length;
+  if (!strip || count === 0) return;
+
+  const min = bound('--tab-min', 104);
+  const max = bound('--tab-max', 208);
+
+  const newButton = strip.querySelector<HTMLElement>('.strip__new');
+  const gap = Number.parseFloat(getComputedStyle(strip).gap) || 0;
+  const room = strip.clientWidth - (newButton?.offsetWidth ?? 0) - gap * (count + 1);
+
+  tabSize.value = Math.round(Math.max(min, Math.min(max, room / count)));
+}
+
+/**
+ * Widths first, then the marker — with a frame in between.
+ *
+ * `sizeTabs` writes a reactive value that becomes a CSS custom property, and
+ * the DOM does not carry it until Vue has flushed. Measuring in the same turn
+ * reads the geometry the tabs had *before* the new width, so opening a tab left
+ * the marker sized and placed for the old layout: a white slab hanging off the
+ * end of the last tab, or sitting over the tab before the open one.
+ */
+async function relayout(): Promise<void> {
+  sizeTabs();
+  await nextTick();
+  measure();
+}
+
+watch(
+  () => tabs.tabs.length,
+  () => void relayout()
+);
+
 let observer: ResizeObserver | undefined;
 
 onMounted(() => {
-  observer = new ResizeObserver(measure);
+  void relayout();
+  observer = new ResizeObserver(() => void relayout());
+  if (stripEl.value) observer.observe(stripEl.value);
   if (listEl.value) observer.observe(listEl.value);
   measure();
 });
 
-onBeforeUnmount(() => observer?.disconnect());
+onBeforeUnmount(() => {
+  observer?.disconnect();
+  for (const timer of [...enterTimers.values(), ...leaveTimers.values()]) clearTimeout(timer);
+  enterTimers.clear();
+  leaveTimers.clear();
+});
 
 watch(
   [() => tabs.activeId, () => tabs.tabs.length, () => dragIndex.value],
@@ -171,6 +362,7 @@ const KIND_ICON: Record<Tab['kind'], string> = {
       ref="listEl"
       class="strip__tabs"
       role="tablist"
+      :style="{ '--tab-w': tabSize ? `${tabSize}px` : undefined }"
     >
       <span
         v-if="marker"
@@ -187,6 +379,8 @@ const KIND_ICON: Record<Tab['kind'], string> = {
         :class="{
           'striptab--on': tab.id === tabs.activeId,
           'striptab--dragging': dragIndex === index,
+          'striptab--entering': entering.has(tab.id),
+          'striptab--leaving': leaving.has(tab.id),
         }"
         :style="dragIndex === index ? { transform: `translateX(${dragOffset}px)` } : undefined"
         role="tab"
@@ -197,14 +391,42 @@ const KIND_ICON: Record<Tab['kind'], string> = {
           beginDrag($event, index);
         "
         @auxclick="onAuxClick($event, tab)"
-        @keydown.delete="tabs.close(tab.id)"
+        @dblclick="beginRename(tab)"
+        @keydown.delete="closeTab(tab.id)"
       >
         <AppIcon
           class="striptab__mark"
           :name="KIND_ICON[tab.kind]"
           :size="12"
         />
-        <span class="striptab__title">{{ tab.title }}</span>
+        <!--
+          The name, and the field it becomes.
+          ──────────────────────────────────
+          Double-click renames it in place, the way a file is renamed: the text
+          you were reading is the text you are now editing, in the same position
+          and at the same size, so nothing moves under the pointer that opened
+          it. Return commits, Escape puts it back, and clicking away commits —
+          which is what every rename-in-place on the platform does, because
+          having typed a name and looked elsewhere is not an instruction to
+          discard it.
+        -->
+        <input
+          v-if="renaming === tab.id"
+          :ref="(el) => bindRenameField(el)"
+          v-model="draftTitle"
+          class="striptab__title striptab__rename"
+          spellcheck="false"
+          :aria-label="`Rename ${tab.title}`"
+          @pointerdown.stop
+          @dblclick.stop
+          @keydown.enter.prevent="commitRename()"
+          @keydown.esc.prevent="renaming = null"
+          @blur="commitRename()"
+        >
+        <span
+          v-else
+          class="striptab__title"
+        >{{ tab.title }}</span>
         <span
           v-if="tab.subtitle"
           class="striptab__scope"
@@ -220,7 +442,7 @@ const KIND_ICON: Record<Tab['kind'], string> = {
           :class="{ 'striptab__close--unsaved': tab.unsaved }"
           :aria-label="`Close ${tab.title}`"
           @pointerdown.stop
-          @click.stop="tabs.close(tab.id)"
+          @click.stop="closeTab(tab.id)"
         >
           <span
             v-if="tab.unsaved"
@@ -274,10 +496,29 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   scrollbar-width: none;
 }
 
-/* The tabs themselves; the strip around them is what scrolls. */
+/*
+ * The tabs themselves; the strip around them is what scrolls.
+ *
+ * It grows to fill the strip so the tabs inside it have a width to divide —
+ * without that they would size to their content and the equal division would
+ * have nothing to divide. Past the point where they hit their floor it grows
+ * beyond the strip instead, and the strip scrolls.
+ */
 .strip__tabs {
   position: relative;
   display: flex;
+  /*
+   * Sized by its tabs, and never shrunk below them.
+   *
+   * `flex: 0 1 auto` let the strip squeeze this box when the tabs stopped
+   * fitting — and the tabs, being a fixed width each, carried on painting
+   * outside it. The overflow landed on top of the new-tab button, which from
+   * about eleven tabs on could not be clicked at all: the thing you press to
+   * get another tab stopped working exactly when you had enough tabs to need
+   * it. Refusing to shrink makes the strip scroll instead, which is what the
+   * overflow was always for.
+   */
+  flex: 0 0 auto;
   align-items: center;
   gap: var(--gap-tight);
   min-width: 0;
@@ -289,9 +530,14 @@ const KIND_ICON: Record<Tab['kind'], string> = {
 }
 
 /*
- * Tonal and flush, not raised. The hairline is what gives the shape an edge
- * against glass — a fill alone on a translucent bar reads as a smudge, because
- * the bar is already carrying whatever is behind the window.
+ * Tonal and flush, and nothing drawn around it.
+ *
+ * It carried an inset hairline, on the argument that a fill alone reads as a
+ * smudge against a translucent bar. The answer to that is a fill with enough
+ * step in it, not a line: an outline around the open tab makes it a *box* on a
+ * bar that has no other boxes, and against the quiet tabs beside it the outline
+ * is the loudest thing in the strip — louder than the selection it is marking.
+ * A step up the ramp says the same thing with nothing added.
  */
 .strip__marker {
   position: absolute;
@@ -300,11 +546,60 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   height: calc(var(--tab-h) - var(--gap));
   margin-top: calc((var(--tab-h) - var(--gap)) / -2);
   border-radius: var(--control-radius);
-  background: var(--fill-3);
-  box-shadow: inset 0 0 0 1px var(--separator);
+  /*
+   * The working surface, come up to meet the bar.
+   *
+   * It was a *tint* over the bar, which in light mode makes the open tab darker
+   * than the pane it belongs to — the opposite of what every browser does and
+   * of what the shape means. A tab is the front edge of its page: painting it
+   * the page's own colour is what makes the two read as one thing, and it lands
+   * lighter than the bar in light mode and lighter than the bar in dark, which
+   * is the same relationship both ways round.
+   */
+  background: var(--color-base-100);
   transition:
     transform var(--t-pop) var(--ease-out),
     width var(--t-pop) var(--ease-out);
+}
+
+/*
+ * Arriving and leaving, both as a width and an alpha.
+ *
+ * An animation on `width` overrides the transition on the same property for as
+ * long as it runs, which is what lets a tab grow out of nothing while its
+ * neighbours are transitioning to make room — one movement, one curve. The
+ * padding goes with it, or the contents of a tab a few pixels wide would spill
+ * out of it, and `overflow: hidden` clips the label while there is no room for
+ * it yet.
+ */
+.striptab--entering,
+.striptab--leaving {
+  overflow: hidden;
+}
+
+@keyframes tab-in {
+  from {
+    width: 0;
+    padding-inline: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes tab-out {
+  to {
+    width: 0;
+    padding-inline: 0;
+    opacity: 0;
+  }
+}
+
+.striptab--entering {
+  animation: tab-in 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.striptab--leaving {
+  animation: tab-out 180ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  pointer-events: none;
 }
 
 /* Held, it is the same object as the tab and must not arrive after it. */
@@ -313,25 +608,57 @@ const KIND_ICON: Record<Tab['kind'], string> = {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .strip__marker {
+  .strip__marker,
+  .striptab {
     transition: none;
+  }
+
+  /* They still arrive and still leave, without the travel. */
+  .striptab--entering {
+    animation-name: none;
+  }
+
+  .striptab--leaving {
+    animation-duration: 90ms;
   }
 }
 
+/*
+ * Every tab the same width, the way a browser does it.
+ *
+ * They used to be as wide as their titles, which meant the strip re-laid itself
+ * out whenever a title changed — running a query renames its tab — and every
+ * tab moved sideways under the pointer. Worse, two tabs of the same kind could
+ * be four times different in width for no reason the reader could act on.
+ *
+ * The number comes from `sizeTabs`, not from `flex`: see the note there for why
+ * dividing the space with `flex-basis: 0` puts the new-tab button in the wrong
+ * place.
+ */
 .striptab {
   position: relative;
   display: flex;
   align-items: center;
   gap: var(--gap-tight);
   flex: 0 0 auto;
+  width: var(--tab-w, var(--tab-max));
   height: calc(var(--tab-h) - var(--gap));
-  max-width: 16rem;
   padding-inline: var(--gap) var(--gap-tight);
   border-radius: var(--control-radius);
   font-size: 0.75rem;
   color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
   touch-action: none;
-  transition: color var(--t-hover) var(--ease-out);
+  /*
+   * The width is animated on the same curve and duration as the marker that
+   * travels over them, so opening a tab is one movement: every tab narrows,
+   * the selection slides, and they arrive together. Left instant, the row
+   * snapped to its new widths and the marker then slid across a layout that had
+   * already changed underneath it.
+   */
+  transition:
+    width 260ms cubic-bezier(0.32, 0.72, 0, 1),
+    background-color var(--t-hover) var(--ease-out),
+    color var(--t-hover) var(--ease-out);
 }
 
 /*
@@ -339,8 +666,20 @@ const KIND_ICON: Record<Tab['kind'], string> = {
  * put a second surface over the one that says it is open, and two highlights
  * for one state only line up while nothing moves.
  */
+/*
+ * A closed tab is a tab, not a word on a bar.
+ *
+ * They were transparent until hovered, so a strip of five read as five labels
+ * floating on the window material with one card among them. A fill quiet enough
+ * to sit below the open one still says "these are the same kind of object" —
+ * which is the whole job of the row.
+ */
+.striptab:not(.striptab--on) {
+  background: color-mix(in oklab, var(--color-base-content) 5%, transparent);
+}
+
 .striptab:not(.striptab--on):hover {
-  background: var(--fill-4);
+  background: color-mix(in oklab, var(--color-base-content) 10%, transparent);
   color: var(--color-base-content);
 }
 
@@ -375,7 +714,31 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   opacity: 0.8;
 }
 
+/*
+ * The title takes the slack, so everything after it stays at the trailing edge.
+ *
+ * Tabs are one width now rather than the width of their titles, which left a
+ * short title packed against the start and the close button sitting wherever
+ * the text happened to end — in the middle of the tab, where a click meant to
+ * select it closed it instead.
+ */
+/*
+ * The field is the label: same font, same box, no border and no fill of its
+ * own. A rename that draws a text input over the tab makes the tab jump at the
+ * moment the pointer is on it.
+ */
+.striptab__rename {
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
 .striptab__title {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

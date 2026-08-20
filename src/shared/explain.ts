@@ -7,6 +7,8 @@
  * at.
  */
 
+import { isTagged } from './values';
+
 export interface PlanNode {
   readonly label: string;
   readonly detail?: string;
@@ -121,6 +123,35 @@ function fromMysql(value: Record<string, unknown>, label = 'query'): PlanNode {
  * Turns whatever the engine returned into a plan tree, or undefined when the
  * result was not a plan at all.
  */
+/**
+ * A cell's JSON, whatever shape it arrived in.
+ *
+ * `EXPLAIN (FORMAT JSON)` returns one column of type `json`, and `pg` *has* a
+ * parser for that type — so the driver handed back a real array, the transcoder
+ * saw something structural and wrapped it as `{ $: 'json', data: '…' }`, and
+ * this function went looking for a string beginning with `[` and found none.
+ * Every Postgres plan came back as "an engine returned a plan Shelf could not
+ * read", which is the one thing that message must never mean.
+ *
+ * The mirror image of the `array_agg` case: there the driver had no parser and
+ * handed over text, here it had one and handed over a value. Neither can be
+ * assumed, so both are accepted.
+ */
+function jsonText(value: unknown): string | undefined {
+  if (typeof value === 'string') return value;
+  if (isTagged(value) && value.$ === 'json') return value.data;
+  return undefined;
+}
+
+/** The first cell of the row whose JSON opens with the given bracket. */
+function jsonCell(row: Record<string, unknown>, opening: '[' | '{'): string | undefined {
+  for (const value of Object.values(row)) {
+    const text = jsonText(value);
+    if (text !== undefined && text.trim().startsWith(opening)) return text;
+  }
+  return undefined;
+}
+
 export function parsePlan(
   engine: string,
   rows: readonly Record<string, unknown>[]
@@ -130,11 +161,9 @@ export function parsePlan(
   const first = rows[0]!;
 
   // Postgres puts the whole plan in one JSON column.
-  const jsonColumn = Object.values(first).find(
-    (value) => typeof value === 'string' && value.trim().startsWith('[')
-  );
+  const jsonColumn = jsonCell(first, '[');
 
-  if (typeof jsonColumn === 'string') {
+  if (jsonColumn !== undefined) {
     try {
       const parsed = JSON.parse(jsonColumn) as { Plan?: PostgresPlan }[];
       const plan = parsed[0]?.Plan;
@@ -145,10 +174,8 @@ export function parsePlan(
   }
 
   if (engine === 'mysql' || engine === 'tidb') {
-    const raw = Object.values(first).find(
-      (value) => typeof value === 'string' && value.trim().startsWith('{')
-    );
-    if (typeof raw === 'string') {
+    const raw = jsonCell(first, '{');
+    if (raw !== undefined) {
       try {
         const parsed = JSON.parse(raw) as Record<string, unknown>;
         return fromMysql(parsed);

@@ -1,3 +1,4 @@
+import { limitStatement } from '@shared/rowLimit';
 import { Pool, type PoolClient, type QueryResult } from 'pg';
 import Cursor from 'pg-cursor';
 import { capabilities } from '../capabilities';
@@ -589,10 +590,104 @@ export class PostgresClient implements DatabaseClient {
     const minColumn = available.has('min_exec_time') ? 'min_exec_time' : 'min_time';
     const maxColumn = available.has('max_exec_time') ? 'max_exec_time' : 'max_time';
 
+    /*
+     * What the server has, before asking for it in detail.
+     *
+     * An empty answer has four completely different causes and they need four
+     * different sentences: the library was never preloaded so nothing is
+     * counted at all; recording is switched off; the role may see that
+     * statements exist but not what they are; or there are plenty, just none
+     * for the database this popup is about. Reported as "nothing ran in this
+     * window", every one of them reads as the panel being broken — which is
+     * how a production server with days of traffic came to be described as
+     * idle.
+     */
+    const census = await this.run<{
+      total: string;
+      mine: string;
+      hidden: string;
+      track: string | null;
+    }>(
+      `SELECT count(*)::text AS total,
+              count(*) FILTER (
+                WHERE s.dbid = (SELECT oid FROM pg_database WHERE datname = current_database())
+              )::text AS mine,
+              count(*) FILTER (
+                WHERE s.queryid IS NULL OR s.query = '<insufficient privilege>'
+              )::text AS hidden,
+              current_setting('pg_stat_statements.track', true) AS track
+         FROM pg_stat_statements s`
+    ).catch((error: unknown) => ({ rows: [], error }) as never);
+
+    const counts = (
+      census as {
+        rows: { total: string; mine: string; hidden: string; track: string | null }[];
+        error?: unknown;
+      }
+    ).rows[0];
+
+    if (!counts) {
+      const message =
+        (census as { error?: unknown }).error instanceof Error
+          ? (census as { error: Error }).error.message
+          : '';
+      // The view exists because its columns do, so a failure to read it is
+      // either the missing preload — which says so in as many words — or a
+      // privilege the role does not have.
+      return /shared_preload_libraries/i.test(message)
+        ? { ok: false, problem: 'not-loaded', detail: message }
+        : {
+            ok: false,
+            problem: 'not-permitted',
+            detail: message || 'The statistics view could not be read.',
+          };
+    }
+
+    if (counts.track === 'none') {
+      return {
+        ok: false,
+        problem: 'not-tracking',
+        detail: 'pg_stat_statements.track is set to none, so the server is recording nothing.',
+      };
+    }
+
+    const total = Number(counts.total);
+    const mine = Number(counts.mine);
+
+    if (total === 0) {
+      return {
+        ok: false,
+        problem: 'nothing-recorded',
+        detail: 'pg_stat_statements is installed and holds no statements at all.',
+      };
+    }
+
+    if (Number(counts.hidden) === total) {
+      return {
+        ok: false,
+        problem: 'not-permitted',
+        detail:
+          `The server is recording ${total.toLocaleString()} statements, but this role may only ` +
+          'see its own. GRANT pg_read_all_stats TO the connecting role, or connect as one that has it.',
+      };
+    }
+
+    if (mine === 0) {
+      return {
+        ok: false,
+        problem: 'other-database',
+        detail:
+          `${total.toLocaleString()} statements are recorded on this server, none of them for ` +
+          `the database this connection is on. pg_stat_statements is one table for the whole ` +
+          `cluster; open a connection to the database the work is running in.`,
+      };
+    }
+
     try {
       const [statements, info] = await Promise.all([
         this.run<{
-          id: string;
+          // Null for a statement this role is not allowed to see; see below.
+          id: string | null;
           text: string;
           calls: string;
           total_ms: string;
@@ -603,6 +698,20 @@ export class PostgresClient implements DatabaseClient {
           hit: string;
           read: string;
         }>(
+          /*
+           * Scoped to the database this connection is on, because the popup
+           * that shows it is a database's. `pg_stat_statements` is one table
+           * for the whole cluster, so an unscoped read mixed every database on
+           * the server into a panel headed with the name of one of them.
+           *
+           * `queryid` is not filtered here, though every row that has one is
+           * the only kind worth charting. A role that can see the view but not
+           * other roles' statements gets those rows back with the id and the
+           * text withheld, and dropping them in SQL made that case
+           * indistinguishable from an empty server — the panel came up blank on
+           * an instance where the extension was installed and working. They are
+           * counted below instead, so the interface can say which it is.
+           */
           `SELECT s.queryid::text AS id,
                   s.query AS text,
                   s.calls::text AS calls,
@@ -614,7 +723,7 @@ export class PostgresClient implements DatabaseClient {
                   s.shared_blks_hit::text AS hit,
                   s.shared_blks_read::text AS read
              FROM pg_stat_statements s
-            WHERE s.queryid IS NOT NULL
+            WHERE s.dbid = (SELECT oid FROM pg_database WHERE datname = current_database())
             ORDER BY s.${totalColumn} DESC
             LIMIT 500`
         ),
@@ -628,7 +737,15 @@ export class PostgresClient implements DatabaseClient {
       const resetText = info.rows[0]?.stats_reset;
       const resetAt = resetText ? Date.parse(resetText) : Number.NaN;
 
-      const rows: StatementStat[] = statements.rows.map((row) => {
+      // Withheld rows carry no id and the text Postgres substitutes for one it
+      // will not show. The census above has already decided whether that is the
+      // whole story; here they are simply not data.
+      const readable = statements.rows.filter(
+        (row): row is typeof row & { id: string } =>
+          row.id !== null && row.text !== '<insufficient privilege>'
+      );
+
+      const rows: StatementStat[] = readable.map((row) => {
         const hit = Number(row.hit);
         const read = Number(row.read);
         const blocks = hit + read;
@@ -873,7 +990,9 @@ export class PostgresClient implements DatabaseClient {
         if (signal?.aborted) break;
 
         const started = performance.now();
-        const result = await client.query<Record<string, unknown>>(statement);
+        const result = await client.query<Record<string, unknown>>(
+          limitStatement(statement, options.maxRows)
+        );
         const durationMs = performance.now() - started;
 
         const all = result.rows ?? [];
@@ -887,7 +1006,7 @@ export class PostgresClient implements DatabaseClient {
           ),
           rows,
           truncated,
-          rowCount: all.length,
+          rowCount: rows.length,
           ...(typeof result.rowCount === 'number' && all.length === 0
             ? { affectedRows: result.rowCount }
             : {}),

@@ -41,6 +41,21 @@ export function fontOf(element: Element): string {
   return `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
 }
 
+/**
+ * How wide a string is, without putting it on the page.
+ *
+ * The same canvas the grid measures with. Anything laying text out by hand —
+ * an SVG node that has to be wide enough for its own label — needs this rather
+ * than a guess at an average character, because a guess is wrong by a whole
+ * word on the strings that matter: the long ones.
+ */
+export function textWidth(text: string, font: string): number {
+  const ctx = measurer();
+  if (!ctx) return text.length * 7;
+  ctx.font = font;
+  return ctx.measureText(text).width;
+}
+
 export interface WidthOptions {
   readonly font: string;
   /** Header labels are set in the UI face, the values in the monospace one. */

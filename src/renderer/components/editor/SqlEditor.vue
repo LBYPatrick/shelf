@@ -13,7 +13,7 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { statementAt, type Statement } from '@shared/sqlText';
-import { monaco, resolveColour } from '../../lib/monaco';
+import { EDITOR_THEMES, defineEditorTheme, monaco } from '../../lib/monaco';
 import { useSettings } from '../../stores/settings';
 import { useTheme } from '../../composables/useTheme';
 
@@ -45,162 +45,6 @@ let statementMarks: monaco.editor.IEditorDecorationsCollection | undefined;
 let applyingExternal = false;
 
 /* ------------------------------------------------------------- appearance */
-
-const THEMES = { light: 'shelf-light', dark: 'shelf-dark' } as const;
-
-/**
- * Our tokens, flattened into the plain data a Monaco theme is.
- *
- * Rebuilt whenever the appearance or the accent changes rather than defined
- * once: the accent is user-chosen, so a palette baked in at startup would be
- * the one thing in the window that did not follow it.
- */
-function defineTheme(appearance: 'light' | 'dark'): void {
-  // `#rrggbbaa`, alpha and all; Monaco rejects anything that is not hex.
-  const token = (name: string, fallback: string) => resolveColour(name, fallback);
-
-  monaco.editor.defineTheme(THEMES[appearance], {
-    base: appearance === 'dark' ? 'vs-dark' : 'vs',
-    inherit: true,
-    rules: [
-      { token: 'keyword', foreground: token('--syntax-keyword', '#7c3aed') },
-      { token: 'keyword.sql', foreground: token('--syntax-keyword', '#7c3aed') },
-      { token: 'operator.sql', foreground: token('--syntax-operator', '#64748b') },
-      { token: 'string', foreground: token('--syntax-string', '#15803d') },
-      { token: 'string.sql', foreground: token('--syntax-string', '#15803d') },
-      { token: 'number', foreground: token('--syntax-number', '#c2410c') },
-      { token: 'comment', foreground: token('--syntax-comment', '#94a3b8') },
-      { token: 'predefined.sql', foreground: token('--syntax-function', '#2563eb') },
-      { token: 'identifier', foreground: token('--color-base-content', '#1e293b') },
-      { token: 'delimiter', foreground: token('--syntax-operator', '#64748b') },
-    ],
-    colors: {
-      /*
-       * Transparent, so the editor sits on the pane's own shade. An opaque
-       * editor background would be a fourth surface in a stack that already
-       * reads top to front, and it would ignore the opacity dial entirely.
-       */
-      'editor.background': '#00000000',
-      'editor.foreground': token('--color-base-content', '#1e293b'),
-      'editorGutter.background': '#00000000',
-      'editorLineNumber.foreground': token('--syntax-comment', '#94a3b8'),
-      'editorLineNumber.activeForeground': token('--color-base-content', '#1e293b'),
-      'editorCursor.foreground': token('--color-primary', '#2563eb'),
-      'editorIndentGuide.background1': token('--separator', '#e2e8f0'),
-
-      /*
-       * The line the caret is on is a wash, not a frame. Monaco's default draws
-       * it as a two-pixel *border* the width of the longest line, which put a
-       * rectangle through the code and left a stray fragment hanging off the
-       * end of it.
-       */
-      /*
-       * The caret's line: a fill, and only a fill.
-       *
-       * Monaco's default draws it as a two-pixel *border* the width of the
-       * longest line, which puts a rectangle through the code and leaves a
-       * stray fragment hanging off the end of it. The border is off and the
-       * quietest fill in the ramp does the work, which is what an editor's line
-       * highlight is everywhere it is done well.
-       *
-       * A trace of the accent rather than a grey step: it belongs to the same
-       * family as the wash on the statement about to run, so the two read as
-       * one idea at two strengths instead of as two unrelated marks.
-       *
-       * Heavier on the dark theme, and not by preference. The accent there is
-       * lighter and less saturated to survive a dark surface, so the same five
-       * per cent that reads as a clear band over white disappears completely.
-       *
-       * It stays translucent all the way to Monaco. Flattening it would need to
-       * know what is behind the editor, and behind the editor is glass over the
-       * material the OS paints outside the window — every guess at that landed
-       * a few points off and drew a band the full width of the content.
-       */
-      'editor.lineHighlightBackground': token(
-        appearance === 'dark'
-          ? 'color-mix(in oklab, var(--color-primary) 11%, transparent)'
-          : 'color-mix(in oklab, var(--color-primary) 6%, transparent)',
-        '#f1f5f9'
-      ),
-      'editor.lineHighlightBorder': '#00000000',
-
-      'editor.selectionBackground': token('--accent-subtle', '#dbeafe'),
-      'editor.inactiveSelectionBackground': token('--fill-3', '#e2e8f0'),
-      'editor.selectionHighlightBackground': token('--fill-4', '#f1f5f9'),
-      'editor.wordHighlightBackground': token('--fill-4', '#f1f5f9'),
-
-      /*
-       * Matches carry the accent as a fill, and nothing is outlined.
-       *
-       * A border around a match draws a box through the middle of a line of
-       * code; the fill already says where the match is, and saying it twice
-       * only adds the box.
-       */
-      'editor.findMatchBackground': token('--accent-subtle', '#bfdbfe'),
-      'editor.findMatchHighlightBackground': token('--fill-3', '#e2e8f0'),
-      'editor.findMatchBorder': '#00000000',
-      'editor.findMatchHighlightBorder': '#00000000',
-      'editor.selectionHighlightBorder': '#00000000',
-      'editor.wordHighlightBorder': '#00000000',
-
-      /* The band behind the line holding the current match, for the same
-         reason: the match itself is marked, which is the part that helps. */
-      'editor.rangeHighlightBackground': '#00000000',
-      'editor.rangeHighlightBorder': '#00000000',
-
-      'editorBracketMatch.background': token('--fill-3', '#e2e8f0'),
-      'editorBracketMatch.border': '#00000000',
-
-      /* Widgets: find, suggest, hover, the context menu. */
-      'editorWidget.background': token('--color-base-100', '#ffffff'),
-      'editorWidget.foreground': token('--color-base-content', '#1e293b'),
-      'editorWidget.border': token('--separator', '#e2e8f0'),
-      'widget.shadow': '#00000022',
-      'input.background': token('--fill-4', '#f8fafc'),
-      'input.foreground': token('--color-base-content', '#1e293b'),
-      'input.border': token('--separator', '#e2e8f0'),
-      'input.placeholderForeground': token('--syntax-comment', '#94a3b8'),
-      'inputOption.activeBackground': token('--accent-subtle', '#dbeafe'),
-      'inputOption.activeBorder': '#00000000',
-      'inputOption.activeForeground': token('--color-primary-text', '#1d4ed8'),
-      focusBorder: token('--color-primary', '#2563eb'),
-      'icon.foreground': token('--color-base-content', '#1e293b'),
-      'toolbar.hoverBackground': token('--fill-4', '#f1f5f9'),
-      descriptionForeground: token('--syntax-comment', '#94a3b8'),
-      errorForeground: token('--color-error', '#dc2626'),
-
-      'editorSuggestWidget.background': token('--color-base-100', '#ffffff'),
-      'editorSuggestWidget.border': token('--separator', '#e2e8f0'),
-      'editorSuggestWidget.foreground': token('--color-base-content', '#1e293b'),
-      'editorSuggestWidget.selectedBackground': token('--accent-subtle', '#dbeafe'),
-      'editorSuggestWidget.selectedForeground': token('--color-primary-text', '#1d4ed8'),
-      'editorSuggestWidget.highlightForeground': token('--color-primary-text', '#1d4ed8'),
-
-      'editorHoverWidget.background': token('--color-base-100', '#ffffff'),
-      'editorHoverWidget.border': token('--separator', '#e2e8f0'),
-      'editorHoverWidget.foreground': token('--color-base-content', '#1e293b'),
-
-      'list.hoverBackground': token('--fill-4', '#f1f5f9'),
-      'list.focusBackground': token('--accent-subtle', '#dbeafe'),
-      'list.activeSelectionBackground': token('--accent-subtle', '#dbeafe'),
-      'list.activeSelectionForeground': token('--color-primary-text', '#1d4ed8'),
-
-      'menu.background': token('--color-base-100', '#ffffff'),
-      'menu.foreground': token('--color-base-content', '#1e293b'),
-      'menu.border': token('--separator', '#e2e8f0'),
-      'menu.selectionBackground': token('--accent-subtle', '#dbeafe'),
-      'menu.selectionForeground': token('--color-primary-text', '#1d4ed8'),
-
-      /* The same thumb the rest of the window's scrollbars use. */
-      'scrollbarSlider.background': token('--fill-3', '#cbd5e1'),
-      'scrollbarSlider.hoverBackground': token('--fill-2', '#94a3b8'),
-      'scrollbarSlider.activeBackground': token('--fill-1', '#64748b'),
-      'editorOverviewRuler.border': '#00000000',
-    },
-  });
-
-  monaco.editor.setTheme(THEMES[appearance]);
-}
 
 /* ------------------------------------------------------------ completions */
 
@@ -338,13 +182,13 @@ defineExpose({
 onMounted(() => {
   if (!host.value) return;
 
-  defineTheme(theme.appearance);
+  defineEditorTheme(theme.appearance);
   registerCompletions();
 
   editor = monaco.editor.create(host.value, {
     value: model.value,
     language: 'sql',
-    theme: THEMES[theme.appearance],
+    theme: EDITOR_THEMES[theme.appearance],
     readOnly: props.readOnly ?? false,
     automaticLayout: true,
     fontFamily: 'var(--font-mono)',
@@ -435,12 +279,12 @@ watch(() => props.schema, registerCompletions);
 
 watch(
   () => theme.appearance,
-  (appearance) => defineTheme(appearance)
+  (appearance) => defineEditorTheme(appearance)
 );
 
 watch(
   () => theme.accent,
-  () => defineTheme(theme.appearance),
+  () => defineEditorTheme(theme.appearance),
   { deep: true }
 );
 

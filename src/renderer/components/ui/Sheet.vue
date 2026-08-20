@@ -10,10 +10,28 @@
  * Focus is trapped while it is open and returned to whatever had it before,
  * which is what keeps it usable without a mouse.
  */
-import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
 import { useDismiss } from '../../composables/useDismiss';
+import AppIcon from './AppIcon.vue';
 
-const props = defineProps<{ title: string; subtitle?: string; wide?: boolean }>();
+const props = defineProps<{
+  title: string;
+  subtitle?: string;
+  /** A glyph before the name, for a sheet that is a place rather than a task. */
+  icon?: string;
+  wide?: boolean;
+  /** Wider still, for a sheet holding a drawing rather than a form. */
+  broad?: boolean;
+  /**
+   * The body takes the whole panel: no padding, and no fading edge.
+   *
+   * For a view that *is* the surface rather than sitting on one — an editor
+   * filling the sheet. The fade exists to say that scrolling content passes
+   * under the chrome, and over a bounded surface with its own footer it only
+   * dims the last line of it.
+   */
+  flush?: boolean;
+}>();
 const open = defineModel<boolean>({ required: true });
 
 const panel = ref<HTMLElement>();
@@ -71,6 +89,168 @@ watch(open, async (isOpen) => {
   }
 });
 
+/**
+ * Withholds the body's scroll-driven edge for one frame after mounting.
+ *
+ * A sheet that is *mounted already open* inserted an element carrying an
+ * `animation-timeline: scroll()` into the document in the same commit that made
+ * it visible, and Chromium crashed the renderer outright — not an exception,
+ * the whole window gone. Shift-clicking a grid cell did exactly that, because
+ * the value inspector was rendered with `v-if` on the value it was about to
+ * show. The call site is fixed too, but a sheet must not be the kind of
+ * component that has a rule about how it may be mounted.
+ */
+const edges = ref(false);
+onMounted(() => requestAnimationFrame(() => (edges.value = true)));
+
+/* ------------------------------------------------------------------- height */
+
+/**
+ * As tall as it needs to be, and no taller.
+ *
+ * Every sheet used to take one fixed height, on the argument that a sheet whose
+ * content arrives late would otherwise resize under the reader. That solved the
+ * flicker by paying for it everywhere: a popup with six facts in it reserved
+ * the room for forty and left two thirds of itself empty, and it was the same
+ * empty whatever was in it.
+ *
+ * So it follows its content, and the objection is answered directly instead:
+ * the change is *animated*, on a curve that decelerates, and the sheet stays
+ * centred while it happens — so a late answer reads as the window settling
+ * rather than as the ground moving. Past four fifths of the viewport it stops
+ * growing and the body scrolls, which is the only point at which a fixed height
+ * was ever the right answer.
+ */
+const measure = ref<HTMLElement>();
+const head = ref<HTMLElement>();
+const foot = ref<HTMLElement>();
+
+/** The share of the window a sheet may take before it starts scrolling. */
+const CEILING = 0.8;
+
+/**
+ * ...or this many pixels, whichever is more.
+ *
+ * A share alone is the wrong shape on a small window. The start screen is a
+ * compact window by design, and four fifths of it left a hundred and sixteen
+ * pixels of scrim doing nothing while the form inside it scrolled. A fraction
+ * says how much of a *large* window a popup may take; on a small one what
+ * matters is that it is big enough to hold a form, and the scrim's own margin
+ * is the real limit.
+ */
+const FLOOR = 480;
+
+/** What the scrim keeps for itself, top and bottom, as a share of the window. */
+const SCRIM = 0.04;
+
+const height = ref<number | null>(null);
+const overflowing = ref(false);
+let sizer: ResizeObserver | undefined;
+
+function resize(): void {
+  const body = measure.value?.parentElement;
+  if (!body) return;
+
+  /*
+   * Measured off the wrapper, and never off the panel or the body.
+   *
+   * Both of those are the boxes being *constrained*, so their height is the
+   * answer we are trying to compute, and `scrollHeight` on either is never
+   * smaller than the box it is read from — a panel already holding a height
+   * reports that height as its content's, so every sheet could grow and none
+   * could shrink. Switching settings from its long list of sections to its
+   * short editor left the editor above a third of a window of nothing.
+   *
+   * Taking the constraint off to measure and putting it straight back is worse
+   * than the bug: reading a layout property flushes style, so the browser takes
+   * the *natural* height as the one the transition starts from, and the sheet
+   * jumps to its new size with a 280ms animation from that size to itself. It
+   * looked like the animation had been removed.
+   *
+   * The wrapper is under no such constraint — it is a plain block that is
+   * exactly as tall as what is in it, whatever the body around it has been told
+   * to be. It is a `flow-root` so that a first or last child's margin is inside
+   * that measurement rather than collapsing out through it; adding up the
+   * pieces without that came out a pixel or two short, and a popup whose
+   * content fitted drew a scrollbar down the side of a panel with room to
+   * spare.
+   */
+  const box = getComputedStyle(body);
+  const padding = parseFloat(box.paddingTop) + parseFloat(box.paddingBottom);
+  const chrome = (head.value?.offsetHeight ?? 0) + (foot.value?.offsetHeight ?? 0);
+  const natural =
+    chrome + Math.ceil(measure.value!.getBoundingClientRect().height + padding) + 1;
+
+  const view = window.innerHeight;
+  const ceiling = Math.min(view * (1 - SCRIM * 2), Math.max(view * CEILING, FLOOR));
+
+  /*
+   * Whether the body scrolls is decided here, not left to `overflow: auto`.
+   *
+   * A classic scrollbar takes its width out of the content, so a body that
+   * scrolls by a few pixels narrows its own text, wraps a line, and grows —
+   * which is more overflow. Measuring, growing the panel, losing the scrollbar,
+   * and measuring again is a loop the browser settles by stopping partway, and
+   * where it stopped was a popup seven pixels short of its content with a track
+   * down the side of it. Since the measurement already knows whether the
+   * content fits, the sheet says so: at its natural size nothing scrolls, so
+   * nothing can appear to change the width it was measured at.
+   */
+  overflowing.value = natural > ceiling;
+  height.value = Math.min(natural, Math.round(ceiling));
+}
+
+/*
+ * Observed rather than watched: what changes the height is content arriving,
+ * a disclosure opening, a translation being longer — none of which any one
+ * caller could be relied upon to announce.
+ */
+watch([open, measure], async ([isOpen]) => {
+  sizer?.disconnect();
+  sizer = undefined;
+
+  if (!isOpen) {
+    height.value = null;
+    return;
+  }
+
+  await nextTick();
+  resize();
+
+  if (measure.value) {
+    sizer = new ResizeObserver(resize);
+    sizer.observe(measure.value);
+  }
+});
+
+/*
+ * And once more when anything in the sheet has finished moving.
+ *
+ * The observer alone is not enough when the *content* animates: measuring it
+ * resizes the panel, resizing the panel resizes the content's box, and
+ * Chromium's loop protection cuts the round trip off partway through — which
+ * left a properties popup seven pixels short of a list that had grown while it
+ * was opening. Transitions and animations bubble, so the end of the last one is
+ * the moment to ask again — including the sheet's own height transition, which
+ * ends 280ms after the last change and so is late enough for anything still
+ * settling underneath. It cannot run away: a measurement that agrees with the
+ * height already applied changes nothing, and so starts no transition to end.
+ */
+function onSettled(): void {
+  resize();
+}
+
+function onWindowResize(): void {
+  if (open.value) resize();
+}
+
+onMounted(() => window.addEventListener('resize', onWindowResize));
+
+onBeforeUnmount(() => {
+  sizer?.disconnect();
+  window.removeEventListener('resize', onWindowResize);
+});
+
 onBeforeUnmount(() => previouslyFocused?.focus());
 
 void props;
@@ -88,12 +268,25 @@ void props;
         <div
           ref="panel"
           class="panel surface-sheet mat-edge-top"
-          :class="{ 'panel--wide': wide }"
+          :class="{ 'panel--wide': wide, 'panel--broad': broad }"
+          :style="height !== null ? { height: `${height}px` } : undefined"
           role="dialog"
           aria-modal="true"
           :aria-labelledby="titleId"
+          @transitionend="onSettled"
+          @animationend="onSettled"
         >
-          <header class="panel__head">
+          <header
+            ref="head"
+            class="panel__head"
+          >
+            <AppIcon
+              v-if="icon"
+              class="panel__icon"
+              :name="icon"
+              :size="17"
+            />
+
             <!--
               A stacked label: what this thing belongs to, then what it is. The
               subtitle goes *above* rather than below because it is the wider
@@ -120,7 +313,20 @@ void props;
               row as its name, not on one of their own. A row containing a
               single switcher is a row of chrome, and the sheet has only so many
               of them before the content starts below the fold.
+
+              Two places for them, because they are two different kinds of
+              thing. What the sheet is *showing* belongs beside its name, where
+              a subtitle would go — it qualifies the title. What the sheet can
+              *do* belongs at the far end, beside the close button, with the
+              other verbs.
             -->
+            <div
+              v-if="$slots.lead"
+              class="panel__lead"
+            >
+              <slot name="lead" />
+            </div>
+
             <div
               v-if="$slots.header"
               class="panel__tools"
@@ -138,12 +344,31 @@ void props;
             </button>
           </header>
 
-          <div class="panel__body">
-            <slot />
+          <div
+            class="panel__body"
+            :class="{
+              'panel__body--edges': edges && !flush,
+              'panel__body--flush': flush,
+              'panel__body--scrolls': overflowing,
+            }"
+          >
+            <!--
+              A wrapper with no styling of its own, whose only job is to be
+              exactly as tall as the content. The body cannot be measured for
+              this: it is the element being constrained, so its height is the
+              answer we are trying to compute.
+            -->
+            <div
+              ref="measure"
+              class="panel__measure"
+            >
+              <slot />
+            </div>
           </div>
 
           <footer
             v-if="$slots.footer"
+            ref="foot"
             class="panel__foot"
           >
             <slot name="footer" />
@@ -160,27 +385,63 @@ void props;
   inset: 0;
   z-index: 100;
   display: grid;
-  place-items: start center;
-  padding-block: 12vh 6vh;
+  /*
+   * Centred, so a sheet that grows or shrinks expands about its middle rather
+   * than dropping its foot. Top-aligned, every resize moved the bottom edge
+   * only — which reads as the content pushing the window down instead of the
+   * window taking the room it needs.
+   */
+  place-items: center;
+  padding-block: 4vh;
 }
 
 .panel {
   display: flex;
   flex-direction: column;
   width: min(34rem, calc(100vw - 4rem));
-  max-height: 100%;
+  /*
+   * Four fifths of the window or 480px, whichever is more, and never more than
+   * the scrim's own margin leaves. The height itself is set inline from the
+   * measurement — see the note in the script — and this is the same ceiling
+   * stated here as well, so a sheet still behaves before the first measurement
+   * lands.
+   */
+  max-height: min(92vh, max(80vh, 480px));
   border-radius: 1.25rem;
   overflow: hidden;
+  /*
+   * The curve decelerates: fast at the start, settling at the end, which is
+   * what makes a size change read as the window arriving at a size rather than
+   * being dragged to one. Linear here would look mechanical at exactly the
+   * moment the reader is deciding whether the interface is responding to them.
+   */
+  transition: height 280ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .panel--wide {
   width: min(48rem, calc(100vw - 4rem));
 }
 
+/*
+ * A form has a comfortable measure and stops there; a diagram is as wide as it
+ * is, and every column of window it is denied is a column the reader has to pan
+ * across instead.
+ */
+.panel--broad {
+  width: min(72rem, calc(100vw - 3rem));
+}
+
+/* Contains its children's margins, so its height is the whole of what is in
+   it — the number the sheet is sized from. */
+.panel__measure {
+  display: flow-root;
+}
+
 .panel__head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--gap-loose);
+  gap: var(--gap);
   padding: var(--gap-loose) var(--gap-section);
 }
 
@@ -209,11 +470,28 @@ void props;
 
 /* Pushed to the trailing end, and never squeezed: the switcher is sized to its
    options, so a long title truncates before the controls do. */
+.panel__icon {
+  flex: 0 0 auto;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
+/* Beside the name and no further: it qualifies the title rather than acting. */
+.panel__lead {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--gap);
+}
+
 .panel__tools {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
   gap: var(--gap);
+  margin-inline-start: auto;
+}
+
+.panel__lead ~ .panel__close {
   margin-inline-start: auto;
 }
 
@@ -251,7 +529,8 @@ void props;
 .panel__body {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  /* Scrolls only when the measurement says it must — see the note in resize(). */
+  overflow-y: hidden;
   padding: 0 var(--gap-section) var(--gap-section);
   mask-image: linear-gradient(
     to bottom,
@@ -263,7 +542,7 @@ void props;
 }
 
 @supports (animation-timeline: scroll()) {
-  .panel__body {
+  .panel__body--edges {
     animation: sheet-edge-top linear both;
     animation-timeline: scroll(self block);
     animation-range: 0 1.25rem;
@@ -277,6 +556,15 @@ void props;
       --sheet-edge-top: 1.25rem;
     }
   }
+}
+
+.panel__body--scrolls {
+  overflow-y: auto;
+}
+
+.panel__body--flush {
+  padding: 0;
+  mask-image: none;
 }
 
 .panel__foot {
@@ -318,6 +606,11 @@ void props;
   .sheet-enter-from .panel,
   .sheet-leave-to .panel {
     transform: none;
+  }
+
+  /* The size still changes; it simply stops being a movement to watch. */
+  .panel {
+    transition: none;
   }
 }
 </style>

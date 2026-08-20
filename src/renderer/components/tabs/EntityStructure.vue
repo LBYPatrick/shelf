@@ -22,7 +22,9 @@ import type {
 } from '@drivers/types';
 import { isSupported, type SchemaChange } from '@shared/ddl';
 import { useTranslation } from 'i18next-vue';
+import { useDrag } from '../../composables/useDrag';
 import { host } from '../../lib/host';
+import { useToasts } from '../../stores/toasts';
 import { useConnections } from '../../stores/connections';
 import AppIcon from '../ui/AppIcon.vue';
 import FormField from '../ui/FormField.vue';
@@ -44,6 +46,7 @@ const props = defineProps<{ entity: EntityRef }>();
 const emit = defineEmits<{ loaded: [EntityProperties] }>();
 
 const connections = useConnections();
+const toasts = useToasts();
 const { t } = useTranslation();
 
 type Section = 'columns' | 'indexes' | 'relations' | 'triggers' | 'partitions';
@@ -66,6 +69,146 @@ const partitions = ref<readonly Partition[]>([]);
 const properties = ref<EntityProperties>({});
 
 const capabilities = computed(() => connections.active?.capabilities);
+
+/*
+ * The head of each section, in one place.
+ *
+ * The five tables used to declare their own `<colgroup>` and `<thead>`, which
+ * is five copies of the same two facts — what the columns are called and how
+ * wide they start. Naming them once is what makes a grip on the edge of a
+ * header possible at all: a width the reader has dragged has to be written
+ * somewhere both the head and the body read from.
+ */
+interface HeadColumn {
+  readonly key: string;
+  /** Translation key, or absent for the actions column, which is unlabelled. */
+  readonly label?: string;
+  /** The width it starts at, before anyone drags anything. */
+  readonly share: string;
+}
+
+const HEADS: Record<Section, readonly HeadColumn[]> = {
+  columns: [
+    { key: 'name', label: 'structure.name', share: '34%' },
+    { key: 'type', label: 'structure.type', share: '26%' },
+    { key: 'nullable', label: 'structure.nullable', share: '12%' },
+    { key: 'default', label: 'structure.default', share: '22%' },
+    { key: 'actions', share: '6%' },
+  ],
+  indexes: [
+    { key: 'name', label: 'structure.name', share: '34%' },
+    { key: 'columns', label: 'import.columns', share: '34%' },
+    { key: 'type', label: 'structure.type', share: '24%' },
+    { key: 'actions', share: '8%' },
+  ],
+  relations: [
+    { key: 'name', label: 'structure.name', share: '28%' },
+    { key: 'columns', label: 'import.columns', share: '24%' },
+    { key: 'references', label: 'structure.references', share: '30%' },
+    { key: 'onDelete', label: 'structure.onDelete', share: '18%' },
+  ],
+  triggers: [
+    { key: 'name', label: 'structure.name', share: '40%' },
+    { key: 'timing', label: 'structure.timing', share: '30%' },
+    { key: 'event', label: 'structure.event', share: '30%' },
+  ],
+  partitions: [
+    { key: 'name', label: 'structure.name', share: '40%' },
+    { key: 'expression', label: 'structure.expression', share: '60%' },
+  ],
+};
+
+const head = computed(() => HEADS[section.value]);
+
+/* ------------------------------------------------------- resizable columns */
+
+/** Narrow enough to push a column out of the way, wide enough to still grab. */
+const MIN_COLUMN = 56;
+
+/**
+ * Pixel widths, per section, once anyone has dragged one.
+ *
+ * Until then the declared shares hold and the table fills the pane, which is
+ * the right default and the one that survives a resize of the window. The first
+ * drag measures what the browser worked out and freezes it, so the column that
+ * moves is the only one that changes.
+ */
+const widths = ref<Partial<Record<Section, number[]>>>({});
+const bodyEl = ref<HTMLElement>();
+
+let grip: number | null = null;
+
+function measured(): number[] | undefined {
+  return widths.value[section.value];
+}
+
+function freeze(): void {
+  if (measured()) return;
+  const cells = bodyEl.value?.querySelectorAll<HTMLElement>('table.rows thead th');
+  if (!cells?.length) return;
+  widths.value = {
+    ...widths.value,
+    [section.value]: [...cells].map((cell) => Math.round(cell.getBoundingClientRect().width)),
+  };
+}
+
+const { start: startResize, dragging: resizing } = useDrag({
+  axis: 'x',
+  getValue: () => (grip === null ? 0 : (measured()?.[grip] ?? 0)),
+  onDrag: ({ value }) => {
+    if (grip === null) return;
+    const set = [...(measured() ?? [])];
+    set[grip] = Math.max(MIN_COLUMN, Math.round(value));
+    widths.value = { ...widths.value, [section.value]: set };
+  },
+});
+
+function beginResize(event: PointerEvent, index: number): void {
+  freeze();
+  grip = index;
+  startResize(event);
+}
+
+function colStyle(index: number): { width: string } {
+  const set = measured();
+  return { width: set?.[index] ? `${set[index]}px` : (head.value[index]?.share ?? 'auto') };
+}
+
+/**
+ * The table's own width. Once columns are in pixels it is their sum, so a
+ * column dragged wider takes the room from the pane rather than from its
+ * neighbours — the pane scrolls, which is what a resizable table does
+ * everywhere else it exists.
+ */
+const tableStyle = computed(() => {
+  const set = measured();
+  if (!set) return { width: '100%' };
+  return { width: `${set.reduce((total, width) => total + width, 0)}px` };
+});
+
+/* ------------------------------------------------------------ wrapped text */
+
+/**
+ * Off by default: a table is scanned down its first column, and rows of
+ * different heights make that a slower read than an ellipsis does. On, nothing
+ * is hidden — a default that is a whole expression long takes the lines it
+ * needs instead of ending in three dots.
+ */
+const wrapping = ref(false);
+
+/*
+ * Said out loud, because the control is an icon and its effect is invisible on
+ * a table whose values all happen to fit: pressing it and seeing nothing change
+ * is indistinguishable from pressing a dead button.
+ */
+function toggleWrap(): void {
+  wrapping.value = !wrapping.value;
+  toasts.show({
+    id: 'structure-wrap',
+    tone: 'info',
+    message: wrapping.value ? t('structure.wrapOn') : t('structure.wrapOff'),
+  });
+}
 
 const sections = computed(() => {
   const available: { value: Section; label: string }[] = [
@@ -257,7 +400,10 @@ watch(() => props.entity, load);
 </script>
 
 <template>
-  <div class="structure">
+  <div
+    class="structure"
+    :class="{ 'structure--wrap': wrapping, 'structure--resizing': resizing }"
+  >
     <div class="structure__head">
       <SegmentedControl
         v-model="section"
@@ -266,6 +412,19 @@ watch(() => props.entity, load);
       />
 
       <span class="structure__spacer" />
+
+      <PressButton
+        v-tip="$t('structure.wrapHint')"
+        size="sm"
+        :active="wrapping"
+        :aria-label="$t('structure.wrap')"
+        @click="toggleWrap"
+      >
+        <AppIcon
+          name="wrap"
+          :size="13"
+        />
+      </PressButton>
 
       <label class="structure__find">
         <AppIcon
@@ -325,6 +484,7 @@ watch(() => props.entity, load);
 
     <div
       v-else
+      ref="bodyEl"
       class="structure__body"
     >
       <!--
@@ -340,37 +500,39 @@ watch(() => props.entity, load);
       <table
         v-if="section === 'columns'"
         class="rows"
+        :style="tableStyle"
       >
         <colgroup>
           <col
-            span="1"
-            style="width: 34%"
-          >
-          <col
-            span="1"
-            style="width: 26%"
-          >
-          <col
-            span="1"
-            style="width: 12%"
-          >
-          <col
-            span="1"
-            style="width: 22%"
-          >
-          <col
-            span="1"
-            style="width: 6%"
+            v-for="(column, index) in head"
+            :key="column.key"
+            :style="colStyle(index)"
           >
         </colgroup>
         <thead>
           <tr>
-            <th>{{ $t('structure.name') }}</th>
-            <th>{{ $t('structure.type') }}</th>
-            <th>{{ $t('structure.nullable') }}</th>
-            <th>{{ $t('structure.default') }}</th>
-            <th>
-              <span class="sr-only">{{ $t('structure.actions') }}</span>
+            <th
+              v-for="(column, index) in head"
+              :key="column.key"
+            >
+              <span v-if="column.label">{{ $t(column.label) }}</span>
+              <span
+                v-else
+                class="sr-only"
+              >{{ $t('structure.actions') }}</span>
+              <!--
+                On the *leading* edge of every header but the first, sizing the
+                column to its left. A grip on the trailing edge is the same
+                boundary and reads the same way, but half of it overhangs the
+                next header — and a sticky header is its own stacking context,
+                so the neighbour paints over the half of the grip that is on it
+                and swallows every press aimed at the middle.
+              -->
+              <span
+                v-if="index > 0"
+                class="rows__grip"
+                @pointerdown.prevent.stop="beginResize($event, index - 1)"
+              />
             </th>
           </tr>
         </thead>
@@ -449,32 +611,39 @@ watch(() => props.entity, load);
       <table
         v-else-if="section === 'indexes'"
         class="rows"
+        :style="tableStyle"
       >
         <colgroup>
           <col
-            span="1"
-            style="width: 36%"
-          >
-          <col
-            span="1"
-            style="width: 36%"
-          >
-          <col
-            span="1"
-            style="width: 22%"
-          >
-          <col
-            span="1"
-            style="width: 6%"
+            v-for="(column, index) in head"
+            :key="column.key"
+            :style="colStyle(index)"
           >
         </colgroup>
         <thead>
           <tr>
-            <th>{{ $t('structure.name') }}</th>
-            <th>{{ $t('import.columns') }}</th>
-            <th>{{ $t('structure.type') }}</th>
-            <th>
-              <span class="sr-only">{{ $t('structure.actions') }}</span>
+            <th
+              v-for="(column, index) in head"
+              :key="column.key"
+            >
+              <span v-if="column.label">{{ $t(column.label) }}</span>
+              <span
+                v-else
+                class="sr-only"
+              >{{ $t('structure.actions') }}</span>
+              <!--
+                On the *leading* edge of every header but the first, sizing the
+                column to its left. A grip on the trailing edge is the same
+                boundary and reads the same way, but half of it overhangs the
+                next header — and a sticky header is its own stacking context,
+                so the neighbour paints over the half of the grip that is on it
+                and swallows every press aimed at the middle.
+              -->
+              <span
+                v-if="index > 0"
+                class="rows__grip"
+                @pointerdown.prevent.stop="beginResize($event, index - 1)"
+              />
             </th>
           </tr>
         </thead>
@@ -528,31 +697,40 @@ watch(() => props.entity, load);
       <table
         v-else-if="section === 'relations'"
         class="rows"
+        :style="tableStyle"
       >
         <colgroup>
           <col
-            span="1"
-            style="width: 30%"
-          >
-          <col
-            span="1"
-            style="width: 22%"
-          >
-          <col
-            span="1"
-            style="width: 30%"
-          >
-          <col
-            span="1"
-            style="width: 18%"
+            v-for="(column, index) in head"
+            :key="column.key"
+            :style="colStyle(index)"
           >
         </colgroup>
         <thead>
           <tr>
-            <th>{{ $t('structure.name') }}</th>
-            <th>{{ $t('import.columns') }}</th>
-            <th>{{ $t('structure.references') }}</th>
-            <th>{{ $t('structure.onDelete') }}</th>
+            <th
+              v-for="(column, index) in head"
+              :key="column.key"
+            >
+              <span v-if="column.label">{{ $t(column.label) }}</span>
+              <span
+                v-else
+                class="sr-only"
+              >{{ $t('structure.actions') }}</span>
+              <!--
+                On the *leading* edge of every header but the first, sizing the
+                column to its left. A grip on the trailing edge is the same
+                boundary and reads the same way, but half of it overhangs the
+                next header — and a sticky header is its own stacking context,
+                so the neighbour paints over the half of the grip that is on it
+                and swallows every press aimed at the middle.
+              -->
+              <span
+                v-if="index > 0"
+                class="rows__grip"
+                @pointerdown.prevent.stop="beginResize($event, index - 1)"
+              />
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -592,26 +770,40 @@ watch(() => props.entity, load);
       <table
         v-else-if="section === 'triggers'"
         class="rows"
+        :style="tableStyle"
       >
         <colgroup>
           <col
-            span="1"
-            style="width: 46%"
-          >
-          <col
-            span="1"
-            style="width: 27%"
-          >
-          <col
-            span="1"
-            style="width: 27%"
+            v-for="(column, index) in head"
+            :key="column.key"
+            :style="colStyle(index)"
           >
         </colgroup>
         <thead>
           <tr>
-            <th>{{ $t('structure.name') }}</th>
-            <th>{{ $t('structure.timing') }}</th>
-            <th>{{ $t('structure.event') }}</th>
+            <th
+              v-for="(column, index) in head"
+              :key="column.key"
+            >
+              <span v-if="column.label">{{ $t(column.label) }}</span>
+              <span
+                v-else
+                class="sr-only"
+              >{{ $t('structure.actions') }}</span>
+              <!--
+                On the *leading* edge of every header but the first, sizing the
+                column to its left. A grip on the trailing edge is the same
+                boundary and reads the same way, but half of it overhangs the
+                next header — and a sticky header is its own stacking context,
+                so the neighbour paints over the half of the grip that is on it
+                and swallows every press aimed at the middle.
+              -->
+              <span
+                v-if="index > 0"
+                class="rows__grip"
+                @pointerdown.prevent.stop="beginResize($event, index - 1)"
+              />
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -635,21 +827,40 @@ watch(() => props.entity, load);
       <table
         v-else
         class="rows"
+        :style="tableStyle"
       >
         <colgroup>
           <col
-            span="1"
-            style="width: 40%"
-          >
-          <col
-            span="1"
-            style="width: 60%"
+            v-for="(column, index) in head"
+            :key="column.key"
+            :style="colStyle(index)"
           >
         </colgroup>
         <thead>
           <tr>
-            <th>{{ $t('structure.name') }}</th>
-            <th>{{ $t('structure.expression') }}</th>
+            <th
+              v-for="(column, index) in head"
+              :key="column.key"
+            >
+              <span v-if="column.label">{{ $t(column.label) }}</span>
+              <span
+                v-else
+                class="sr-only"
+              >{{ $t('structure.actions') }}</span>
+              <!--
+                On the *leading* edge of every header but the first, sizing the
+                column to its left. A grip on the trailing edge is the same
+                boundary and reads the same way, but half of it overhangs the
+                next header — and a sticky header is its own stacking context,
+                so the neighbour paints over the half of the grip that is on it
+                and swallows every press aimed at the middle.
+              -->
+              <span
+                v-if="index > 0"
+                class="rows__grip"
+                @pointerdown.prevent.stop="beginResize($event, index - 1)"
+              />
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -945,6 +1156,60 @@ watch(() => props.entity, load);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/*
+ * Wrapped, everything is shown and the row is as tall as it needs to be. The
+ * height on a cell is a *minimum*, so the rows that fit on one line are exactly
+ * where they were and only the long ones grow — and `anywhere` rather than
+ * `break-word`, because the values that overflow here are identifiers with no
+ * spaces to break at.
+ */
+.structure--wrap .rows td,
+.structure--wrap .rows__note {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * The grip: a hit area wider than the line it draws, because a two-pixel target
+ * is a target you hunt for. It sits on the boundary rather than beside it.
+ */
+.rows__grip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--gap) / -2);
+  width: var(--gap);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.rows__grip::after {
+  content: '';
+  position: absolute;
+  top: 20%;
+  bottom: 20%;
+  left: 50%;
+  width: 1px;
+  background: color-mix(in oklab, var(--color-base-content) 18%, transparent);
+  transition: background-color var(--t-hover) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .rows__grip:hover::after {
+    background: var(--color-primary);
+    width: 2px;
+  }
+}
+
+/* While a column is moving, the pointer is a resize everywhere — not only over
+   the two-pixel line it started on. */
+.structure--resizing,
+.structure--resizing * {
+  cursor: col-resize !important;
+  user-select: none;
 }
 
 .rows tbody tr:hover {

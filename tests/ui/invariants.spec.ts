@@ -215,6 +215,50 @@ test.describe('layout', () => {
     expect(raised.filter((tab) => tab.shadow !== 'none')).toEqual([]);
   });
 
+  test('the strip survives more tabs than it has room for', async ({ sample }) => {
+    /*
+     * Two defects that only appear once the tabs stop fitting.
+     *
+     * The tablist could be *shrunk* by the strip while its tabs — a fixed width
+     * each — carried on painting outside it, and the overflow landed on top of
+     * the new-tab button. From about eleven tabs on, the control you press to
+     * get another tab could not be clicked at all.
+     *
+     * And the marker was measured off the page while the tabs were animating to
+     * their new width, so it chased a number that had already changed and came
+     * to rest beside the open tab instead of on it.
+     */
+    const add = sample.locator('.strip').getByRole('button', { name: /new query tab/i });
+
+    for (let index = 0; index < 14; index += 1) {
+      // The click itself is the assertion for the first defect: a covered
+      // button times out here rather than failing a measurement later.
+      await add.click();
+    }
+
+    await sample.waitForTimeout(500);
+
+    const overflow = await sample.evaluate(() => {
+      const strip = document.querySelector('.strip') as HTMLElement;
+      return strip.scrollWidth - strip.clientWidth;
+    });
+    expect(overflow, 'fourteen tabs still fit; the case is not being tested').toBeGreaterThan(
+      0
+    );
+
+    const drift = await sample.evaluate(() => {
+      const marker = document.querySelector('.strip__marker')!.getBoundingClientRect();
+      const active = document.querySelector('.striptab--on')!.getBoundingClientRect();
+      return {
+        x: Math.abs(marker.left - active.left),
+        w: Math.abs(marker.width - active.width),
+      };
+    });
+
+    expect(drift.x, 'the marker is not on the open tab').toBeLessThanOrEqual(1);
+    expect(drift.w, 'the marker is not the width of the open tab').toBeLessThanOrEqual(1);
+  });
+
   test('the window can be dragged by its top row', async ({ sample }) => {
     // Everything along the top edge that is not itself a control should move
     // the window; the tabs opt out because they drag to reorder.
@@ -414,38 +458,164 @@ test.describe('layout', () => {
     await sample.keyboard.press('Escape');
   });
 
-  test('the properties popup holds its height', async ({ sample }) => {
+  test('a popup is the size of what is in it, centred, and capped', async ({ sample }) => {
     /*
-     * The sections are wildly different heights — six facts, or a chart and a
-     * table of five hundred statements — and the popup was sized by whichever
-     * was showing, so every switch resized the window and every arriving fetch
-     * nudged it again. A modal that moves while you are reading it is the thing
-     * to fix; a transition between two moving heights would only have made the
-     * movement smoother.
+     * These used to be one fixed height apiece, so that a fetch landing could
+     * not resize them — which meant a popup with six facts in it reserved the
+     * room for forty and sat two thirds empty. It follows its content now, and
+     * the objection is answered where it belongs: the change is animated on a
+     * decelerating curve and the sheet stays centred, so a late answer reads as
+     * the window settling rather than as the ground moving.
+     *
+     * Three things have to hold, and this is all three: different content is
+     * different heights, nothing exceeds four fifths of the window, and the
+     * sheet is centred at whatever size it lands on.
+     */
+    const dialog = sample.getByRole('dialog');
+    const heights: Record<string, number> = {};
+
+    const viewport = await sample.evaluate(() => window.innerHeight);
+    const ceiling = Math.round(viewport * 0.8);
+
+    const measure = async (label: string, open: () => Promise<void>) => {
+      await open();
+      await expect(dialog).toBeVisible();
+      // Past the enter transition and the resize that follows the first
+      // measurement; a box read mid-flight is neither size.
+      await sample.waitForTimeout(700);
+
+      const box = (await dialog.boundingBox())!;
+      heights[label] = Math.round(box.height);
+
+      expect(heights[label], `${label} exceeds the ceiling`).toBeLessThanOrEqual(ceiling + 1);
+
+      /*
+       * And no shorter than what it holds. A popup that settles a few pixels
+       * under its content puts a scrollbar down the side of a panel with room
+       * to spare — which is how both halves of the measurement went wrong, and
+       * neither showed up as a height that was obviously silly.
+       */
+      const short = await sample.evaluate(() => {
+        const body = document.querySelector('.panel__body')!;
+        return body.scrollHeight - body.clientHeight;
+      });
+      expect(short, `${label} is shorter than its content`).toBeLessThanOrEqual(0);
+      expect(
+        Math.abs(box.y + box.height / 2 - viewport / 2),
+        `${label} is not centred`
+      ).toBeLessThan(30);
+
+      await sample.keyboard.press('Escape');
+      await expect(dialog).toBeHidden();
+    };
+
+    await revealTables(sample);
+
+    await measure('database', async () => {
+      await sample.locator('.row--database').first().click({ button: 'right' });
+      await sample.getByRole('menuitem', { name: 'Properties' }).click();
+    });
+    await measure('table', async () => {
+      await sample.getByRole('treeitem', { name: 'album' }).first().click({ button: 'right' });
+      await sample.getByRole('menuitem', { name: 'Properties' }).click();
+    });
+
+    // The point of the change: a short popup is short. Asserted as a real gap
+    // rather than "not equal", so a one-pixel difference cannot pass for it.
+    expect(
+      heights['database'],
+      `both popups took the same room: ${JSON.stringify(heights)}`
+    ).toBeLessThan(heights['table']! - 20);
+  });
+
+  test('a popup that loses content gets shorter, and travels there', async ({ sample }) => {
+    /*
+     * `scrollHeight` is never smaller than the box it is read from, so a panel
+     * already holding a height reports that height as its content's. Every
+     * sheet could therefore grow and none could shrink: switching settings from
+     * its long list of sections to its short JSON editor left the editor above
+     * a third of a window of nothing, and it stayed that way until the popup
+     * was closed and opened again.
+     */
+    await sample.getByRole('button', { name: 'Settings', exact: true }).click();
+    const dialog = sample.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await sample.waitForTimeout(700);
+    const long = (await dialog.boundingBox())!.height;
+
+    /*
+     * Sampled every frame across the change, because *how* it gets there is
+     * half the rule. Measuring the content by taking the imposed height off the
+     * panel and putting it straight back fixed the shrinking and broke this:
+     * reading a layout property flushes style, so the browser took the natural
+     * height as the one the transition started from, and the sheet jumped to
+     * its new size with an animation from that size to itself.
+     */
+    const frames = await sample.evaluate(async () => {
+      const panel = document.querySelector('.panel') as HTMLElement;
+      const heights: number[] = [];
+      const until = performance.now() + 500;
+      [...document.querySelectorAll('label, button')]
+        .find((node) => node.textContent?.trim() === 'JSON')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      while (performance.now() < until) {
+        heights.push(panel.getBoundingClientRect().height);
+        await new Promise((settle) => requestAnimationFrame(settle));
+      }
+      return heights;
+    });
+
+    const short = frames.at(-1)!;
+    expect(
+      short,
+      `the popup kept the taller view's height: ${long} then ${short}`
+    ).toBeLessThan(long - 20);
+
+    const between = frames.filter((height) => height < long - 5 && height > short + 5);
+    expect(
+      between.length,
+      `the height jumped rather than animating: ${JSON.stringify([...new Set(frames.map(Math.round))])}`
+    ).toBeGreaterThan(3);
+
+    await sample.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+  });
+
+  test('no chart sizes itself from the width of its pane', async ({ sample }) => {
+    /*
+     * An SVG given `width: 100%` and no height takes its height from the ratio
+     * of its own `viewBox`. The statement trend was drawn in a 100 × 64 box, so
+     * in a sheet a thousand pixels wide it came out six hundred pixels tall —
+     * a panel of empty plot area that pushed everything worth reading below the
+     * fold, and which read as a chart that had failed to draw.
+     *
+     * Every chart in the app is checked, not only that one: the mistake is a
+     * property of how an SVG is sized and not of any one drawing.
      */
     await sample.locator('.row--database').first().click({ button: 'right' });
     await sample.getByRole('menuitem', { name: 'Properties' }).click();
-    const dialog = sample.getByRole('dialog');
-    await expect(dialog).toBeVisible();
+    await expect(sample.getByRole('dialog')).toBeVisible();
 
-    const height = async () => Math.round((await dialog.boundingBox())!.height);
+    const oversized: string[] = [];
+    for (const section of ['Overview', 'Queries', 'Server']) {
+      await sample.getByRole('radio', { name: section }).click();
+      await sample.waitForTimeout(600);
 
-    // Measured before the fetch lands as well: the overview going from one line
-    // of "Loading…" to six facts was a jump of its own.
-    const heights = [await height()];
-    await expect(sample.locator('.facts__item').first()).toBeVisible();
-    heights.push(await height());
-
-    for (const name of ['Queries', 'Server', 'Overview']) {
-      await dialog.locator('.segmented__option', { hasText: name }).click();
-      await sample.waitForTimeout(400);
-      heights.push(await height());
+      oversized.push(
+        ...(await sample.evaluate((where) => {
+          const limit = window.innerHeight * 0.55;
+          return [...document.querySelectorAll('svg')]
+            .filter((svg) => svg.getBoundingClientRect().height > limit)
+            .map(
+              (svg) =>
+                `${where}: svg.${svg.getAttribute('class') ?? '?'} is ` +
+                `${Math.round(svg.getBoundingClientRect().height)}px tall`
+            );
+        }, section))
+      );
     }
 
-    expect(new Set(heights), `the popup resized: ${heights.join(', ')}`).toHaveProperty(
-      'size',
-      1
-    );
+    expect(oversized).toEqual([]);
     await sample.keyboard.press('Escape');
   });
 
@@ -541,7 +711,7 @@ test.describe('materials', () => {
     }) => {
       await setAppearance(page, appearance);
       await page
-        .getByRole('button', { name: /sample/i })
+        .getByRole('button', { name: /sample database/i })
         .first()
         .click();
       await page.locator('.workspace').waitFor({ timeout: 30_000 });
@@ -787,7 +957,7 @@ test.describe('materials', () => {
      */
     await setAppearance(page, 'dark');
     await page
-      .getByRole('button', { name: /sample/i })
+      .getByRole('button', { name: /sample database/i })
       .first()
       .click();
     await page.locator('.workspace').waitFor({ timeout: 30_000 });
@@ -1061,7 +1231,7 @@ test.describe('controls', () => {
     expect(unnamed).toEqual([]);
   });
 
-  test('no component wears a framework component class', async ({ sample }) => {
+  test('no component wears a framework component class', async ({ page, sample }) => {
     /*
      * daisyUI ships `.select`, `.input`, `.btn`, `.card` and friends. A
      * component of ours that takes one of those names inherits its border, its
@@ -1078,7 +1248,14 @@ test.describe('controls', () => {
      * proves the point: a component called `.toast` inherited daisyUI's fixed
      * position and column layout, and no amount of looking at a workspace with
      * no toast in it would have found that.
+     *
+     * The start screen is checked on its own window, and it is the newest case:
+     * it is the one screen that is gone the moment a database is open, and it
+     * took `.hero` — a daisyUI component that centres its contents in a
+     * full-width grid — for as long as this gate looked only at a workspace.
      */
+    expect(await frameworkClassesOn(page)).toEqual([]);
+
     await revealTables(sample);
     await sample.getByRole('treeitem', { name: 'album' }).first().click({ button: 'right' });
     await sample.getByRole('menuitem', { name: 'Copy table name' }).click();
@@ -1087,100 +1264,7 @@ test.describe('controls', () => {
     await sample.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(sample.getByRole('dialog')).toBeVisible();
 
-    const collisions = await sample.evaluate(() => {
-      /*
-       * The full set of daisyUI component names. Two of these had already been
-       * taken by our own components before this list existed — `.select` drew a
-       * box inside a box, and `.status` painted a grey pill the width of the
-       * status bar — so it is deliberately the whole list rather than the ones
-       * that have bitten so far.
-       */
-      const OWNED = [
-        'alert',
-        'avatar',
-        'badge',
-        'breadcrumbs',
-        'btn',
-        'card',
-        'carousel',
-        'chat',
-        'checkbox',
-        'collapse',
-        'countdown',
-        'diff',
-        'divider',
-        'dock',
-        'drawer',
-        'dropdown',
-        'fieldset',
-        'filter',
-        'footer',
-        'hero',
-        'indicator',
-        'input',
-        'join',
-        'kbd',
-        'label',
-        'link',
-        'list',
-        'loading',
-        'mask',
-        'menu',
-        'mockup',
-        'modal',
-        'navbar',
-        'progress',
-        'radio',
-        'range',
-        'rating',
-        'select',
-        'skeleton',
-        'stat',
-        'status',
-        'steps',
-        'swap',
-        'tab',
-        'table',
-        'tabs',
-        'textarea',
-        'timeline',
-        'toast',
-        'toggle',
-        'tooltip',
-        'stack',
-        'validator',
-      ];
-
-      /*
-       * Tailwind's own utilities, which are not components and bite harder for
-       * it. `.grid` is one declaration — `display: grid` — so a scoped rule
-       * that sets a table's width and `table-layout` but never its `display`
-       * does not outrank it: the structure view's table was a grid container,
-       * its head and body were blockified into two separate anonymous tables,
-       * and each sized its own columns. The header sat at two thirds the width
-       * of the rows under it for as long as this list held only daisyUI's names.
-       */
-      const UTILITIES = [
-        'block',
-        'contents',
-        'flex',
-        'grid',
-        'hidden',
-        'inline',
-        'isolate',
-        'relative',
-        'absolute',
-        'fixed',
-        'sticky',
-        'static',
-        'visible',
-      ];
-
-      return [...OWNED, ...UTILITIES].filter(
-        (name) => document.querySelector(`.${name}`) !== null
-      );
-    });
-    expect(collisions).toEqual([]);
+    expect(await frameworkClassesOn(sample)).toEqual([]);
     await sample.keyboard.press('Escape');
   });
 
@@ -1230,6 +1314,44 @@ test.describe('controls', () => {
         .map((el) => `${el.tagName.toLowerCase()}.${el.className}`.slice(0, 80))
     );
     expect(native).toEqual([]);
+  });
+
+  test('the rail names its icons, and does not make you wait twice', async ({ sample }) => {
+    /*
+     * A rail of icons is legible only to someone who already knows what they
+     * mean, and `title` is not the answer: the OS tooltip arrives after a
+     * second and a half, in a corner of its own choosing, styled by the
+     * platform rather than by the app.
+     *
+     * The second half is the part that is easy to lose. Moving along a row of
+     * icons is one gesture; making the reader wait again at every stop is what
+     * makes a toolbar feel slow, so once a label is up the next one is
+     * immediate.
+     */
+    const tip = sample.locator('.hovertip');
+    await expect(tip).toHaveCount(0);
+
+    await sample.locator('.rail__item').nth(1).hover();
+    await expect(tip).toBeVisible({ timeout: 3000 });
+    await expect(tip).not.toBeEmpty();
+
+    const started = Date.now();
+    await sample.locator('.rail__item').nth(2).hover();
+    await expect(tip).toContainText(/\w/, { timeout: 1500 });
+    expect(Date.now() - started, 'the second label waited again').toBeLessThan(250);
+
+    // And it goes away rather than following the pointer around.
+    await sample.locator('.tree').hover();
+    await expect(tip).toBeHidden({ timeout: 2000 });
+
+    /*
+     * Repeating the accessible name aloud is the same word twice, so the bubble
+     * is hidden from assistive technology and the button keeps the label.
+     */
+    const named = await sample.evaluate(() =>
+      [...document.querySelectorAll('.rail__item')].every((el) => el.getAttribute('aria-label'))
+    );
+    expect(named, 'a rail button has no accessible name of its own').toBe(true);
   });
 
   test('every target clears the pointer minimum', async ({ sample }) => {
@@ -1332,6 +1454,58 @@ test.describe('typography and colour', () => {
     expect(failures).toEqual([]);
   });
 
+  /*
+   * A diagram's boxes stand *on* its canvas, and which direction "up" is
+   * depends on the theme.
+   *
+   * A fill is mixed toward the mid grey, so the same recessed field darkens on
+   * the light theme and lightens on the dark one — and a node painted
+   * `--color-base-100` therefore rose off the field in one theme and sank into
+   * a hole in it in the other. It shipped that way: on the dark theme the
+   * tables read as cut-outs in the pane rather than as objects on it.
+   */
+  for (const mode of ['light', 'dark'] as const) {
+    test(`a diagram's tables stand above its canvas in ${mode} mode`, async ({ page }) => {
+      await setAppearance(page, mode);
+      await page
+        .getByRole('button', { name: /sample database/i })
+        .first()
+        .click();
+      await page.locator('.workspace').waitFor({ timeout: 30_000 });
+      await revealTables(page);
+
+      await page.locator('.row--database').first().click({ button: 'right' });
+      await page.getByRole('menuitem', { name: /Diagram/ }).click();
+      await expect(page.locator('.erd')).toBeVisible({ timeout: 30_000 });
+      await expect(page.locator('.erd-node').first()).toBeVisible({ timeout: 30_000 });
+
+      const luminance = await page.evaluate(() => {
+        const channel = (value: number) =>
+          value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+        const of = (colour: string) => {
+          const [r, g, b] = colour.match(/[\d.]+/g)!.map(Number) as [number, number, number];
+          return (
+            0.2126 * channel(r / 255) + 0.7152 * channel(g / 255) + 0.0722 * channel(b / 255)
+          );
+        };
+        return {
+          canvas: of(getComputedStyle(document.querySelector('.erd')!).backgroundColor),
+          box: of(getComputedStyle(document.querySelector('.erd-node__box')!).fill),
+        };
+      });
+
+      const ratio =
+        (Math.max(luminance.box, luminance.canvas) + 0.05) /
+        (Math.min(luminance.box, luminance.canvas) + 0.05);
+
+      expect(
+        luminance.box,
+        `the tables are darker than the canvas they stand on: ${JSON.stringify(luminance)}`
+      ).toBeGreaterThan(luminance.canvas);
+      expect(ratio, `the step is too small to see: ${ratio}`).toBeGreaterThan(1.08);
+    });
+  }
+
   test('the start screen clears 4.5:1 in dark mode', async ({ page }) => {
     // The screen a first run lands on, in the appearance nothing had checked.
     await setAppearance(page, 'dark');
@@ -1342,7 +1516,7 @@ test.describe('typography and colour', () => {
   test('body text clears 4.5:1 in dark mode too', async ({ page }) => {
     await setAppearance(page, 'dark');
     await page
-      .getByRole('button', { name: /sample/i })
+      .getByRole('button', { name: /sample database/i })
       .first()
       .click();
     await page.locator('.workspace').waitFor({ timeout: 30_000 });
@@ -1580,6 +1754,42 @@ test.describe('corner', () => {
   });
 });
 
+test.describe('grid', () => {
+  test('the selection travels with the rows it is drawn on', async ({ sample }) => {
+    /*
+     * The range overlay is positioned against the box it is a child of, and
+     * that box was `static` — so it resolved against the outer table, which
+     * does not scroll, while its ranges are placed in the scrolling table's
+     * coordinates. The highlight stayed where it was drawn as the rows moved
+     * under it: after a third of a row of scrolling its edges ran through the
+     * middle of two lines of text, which reads as a strikethrough rather than
+     * as a selection in the wrong place.
+     */
+    await revealTables(sample);
+    await openTable(sample, 'album');
+    await expect(sample.locator('.tabulator-row').first()).toBeVisible({ timeout: 20_000 });
+    await stabilize(sample);
+
+    const row = sample.locator('.tabulator-row').nth(3);
+    await row.locator('.tabulator-cell').nth(1).click();
+    await expect(sample.locator('.tabulator-range')).toBeVisible();
+
+    await sample.locator('.tabulator-tableholder').hover();
+    await sample.mouse.wheel(0, 37);
+    await stabilize(sample);
+
+    const [range, cell] = await Promise.all([
+      sample.locator('.tabulator-range').boundingBox(),
+      row.locator('.tabulator-cell').nth(1).boundingBox(),
+    ]);
+
+    expect(
+      Math.abs(range!.y - cell!.y),
+      `the selection is ${Math.round(range!.y - cell!.y)}px from the cell it belongs to`
+    ).toBeLessThan(2);
+  });
+});
+
 test.describe('tree', () => {
   test('the open tabs are actually written to the session', async ({ sample }) => {
     /*
@@ -1644,3 +1854,115 @@ test.describe('tree', () => {
     expect(below.every((cls) => cls.includes('row--column'))).toBe(true);
   });
 });
+
+/**
+ * Names our own components must not take, on whatever page is passed.
+ *
+ * A function rather than an inline evaluate because the collision that got
+ * through was on a screen the workspace fixture never shows, and a check that
+ * can only run in one place is a check with a blind spot.
+ */
+async function frameworkClassesOn(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    /*
+     * The full set of daisyUI component names. Two of these had already been
+     * taken by our own components before this list existed — `.select` drew a
+     * box inside a box, and `.status` painted a grey pill the width of the
+     * status bar — so it is deliberately the whole list rather than the ones
+     * that have bitten so far.
+     */
+    const OWNED = [
+      'alert',
+      'avatar',
+      'badge',
+      'breadcrumbs',
+      'btn',
+      'card',
+      'carousel',
+      'chat',
+      'checkbox',
+      'collapse',
+      'countdown',
+      'diff',
+      'divider',
+      'dock',
+      'drawer',
+      'dropdown',
+      'fieldset',
+      'filter',
+      'footer',
+      'hero',
+      'indicator',
+      'input',
+      'join',
+      'kbd',
+      'label',
+      'link',
+      'list',
+      'loading',
+      'mask',
+      'menu',
+      'mockup',
+      'modal',
+      'navbar',
+      'progress',
+      'radio',
+      'range',
+      'rating',
+      'select',
+      'skeleton',
+      'stat',
+      'status',
+      'steps',
+      'swap',
+      'tab',
+      'table',
+      'tabs',
+      'textarea',
+      'timeline',
+      'toast',
+      'toggle',
+      'tooltip',
+      'stack',
+      'validator',
+    ];
+
+    /*
+     * Tailwind's own utilities, which are not components and bite harder for
+     * it. `.grid` is one declaration — `display: grid` — so a scoped rule
+     * that sets a table's width and `table-layout` but never its `display`
+     * does not outrank it: the structure view's table was a grid container,
+     * its head and body were blockified into two separate anonymous tables,
+     * and each sized its own columns. The header sat at two thirds the width
+     * of the rows under it for as long as this list held only daisyUI's names.
+     */
+    const UTILITIES = [
+      'block',
+      'contents',
+      'flex',
+      'grid',
+      'hidden',
+      'inline',
+      'isolate',
+      'relative',
+      'absolute',
+      'fixed',
+      'sticky',
+      'static',
+      'visible',
+    ];
+
+    /*
+     * Ours only. Monaco and Tabulator bring their own DOM and their own class
+     * names — Monaco's scrollbars are literally `.visible` — and neither is a
+     * component of ours that could have inherited a daisyUI rule by accident.
+     * Their subtrees are skipped rather than the names being struck off the
+     * list, so a component of *ours* called `.visible` would still be caught.
+     */
+    const theirs = (element: Element) => element.closest('.monaco-editor, .tabulator') !== null;
+
+    return [...OWNED, ...UTILITIES].filter((name) =>
+      [...document.querySelectorAll(`.${name}`)].some((element) => !theirs(element))
+    );
+  });
+}

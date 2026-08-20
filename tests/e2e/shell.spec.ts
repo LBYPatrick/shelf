@@ -1,4 +1,8 @@
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { expect, test } from './fixtures';
+import { createConnection } from './helpers';
 
 test('the window opens on a calm, single-purpose start screen', async ({ page }) => {
   await expect(page.locator('#app')).toBeVisible();
@@ -79,7 +83,7 @@ test('choosing an engine does not submit the form', async ({ page }) => {
 });
 
 test('switching language translates the interface', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
@@ -90,9 +94,13 @@ test('switching language translates the interface', async ({ page }) => {
   // A real listbox now, not a native select: open it and choose, which is what
   // a person does and what a native `selectOption` could never exercise.
   await settings.getByLabel('Language').click();
-  await settings.getByRole('option', { name: '日本語' }).click();
+  // The list is drawn in the body rather than inside the control, so nothing
+  // between the two can clip it — which also puts it outside the dialog.
+  await page.getByRole('option', { name: '日本語' }).click();
 
-  await expect(settings.getByText('外観')).toBeVisible();
+  // By role, because the sections now carry a sentence each and one of them
+  // mentions another section by name.
+  await expect(settings.getByRole('heading', { name: '外観' })).toBeVisible();
   // Option labels are built at setup time unless they are computed; these used
   // to keep whichever language the component mounted in.
   await expect(settings.getByRole('radio', { name: 'ダーク' })).toBeVisible();
@@ -103,7 +111,7 @@ test('switching language translates the interface', async ({ page }) => {
 
   // And it survives a reload, because the choice is persisted.
   await page.reload();
-  await expect(page.getByText('サンプルデータを試す')).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText('サンプルデータベース')).toBeVisible({ timeout: 20_000 });
 });
 
 /*
@@ -113,7 +121,7 @@ test('switching language translates the interface', async ({ page }) => {
  * with it.
  */
 test('escape dismisses one overlay at a time, from the top', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   await page.getByRole('button', { name: /settings/i }).click();
@@ -164,4 +172,112 @@ test('editing a connection shows the password it saved', async ({ page }) => {
   await expect(field).toHaveAttribute('type', 'password');
   await page.getByRole('button', { name: 'Show password' }).click();
   await expect(field).toHaveAttribute('type', 'text');
+});
+
+/*
+ * Settings are one state with two views, and a file is the third. What is
+ * asserted is that all three are the same state: the document shows what the
+ * form holds, an imported one moves the form, and what is written out is what
+ * comes back in.
+ */
+test('settings go out to a file and come back through the form', async ({ app, page }) => {
+  const directory = await mkdtemp(join(tmpdir(), 'shelf-settings-'));
+  const target = join(directory, 'settings.json');
+
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+  }, target);
+
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+
+  // The document view shows the live state rather than a copy of the defaults.
+  await page.getByRole('radio', { name: 'JSON' }).click();
+  await expect(page.locator('.monaco-editor').first()).toBeVisible();
+  await expect(page.getByText('Valid JSON.')).toBeVisible();
+  await expect(page.locator('.monaco-editor').first()).toContainText('shelf.settings');
+
+  // Writing a file is a row in the visual pane now rather than a button in a
+  // footer that stood over both views — the document view's own chrome is the
+  // validity bar and Apply, and nothing else.
+  await page.getByRole('radio', { name: 'Visual' }).click();
+  await page.getByRole('button', { name: 'Export…' }).click();
+  await expect
+    .poll(async () => readFile(target, 'utf8').catch(() => ''), { timeout: 15_000 })
+    .toContain('shelf.settings');
+
+  // Edit the file the way a person would with an editor, and read it back in.
+  const saved = JSON.parse(await readFile(target, 'utf8')) as {
+    appearance: Record<string, unknown>;
+    preferences: Record<string, unknown>;
+  };
+  saved.appearance['density'] = 'compact';
+  saved.preferences['pageSize'] = 250;
+  // A value no control could produce is dropped rather than written through.
+  saved.appearance['mode'] = 'chartreuse';
+  await writeFile(target, JSON.stringify(saved), 'utf8');
+
+  await page.getByRole('button', { name: 'Import…' }).click();
+
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.dataset['density']))
+    .toBe('compact');
+
+  // The form is showing the same thing, because there is only one state.
+  await expect(page.getByRole('radio', { name: 'Compact' })).toHaveAttribute(
+    'aria-checked',
+    'true'
+  );
+  // ...and the nonsense never landed.
+  await expect(page.getByRole('radio', { name: 'System' })).toHaveAttribute(
+    'aria-checked',
+    'true'
+  );
+});
+
+/*
+ * A connection document is the thing people commit and mail, so the assertion
+ * that matters is as much about what is *not* in it: the password stays in the
+ * keyring, and the file says so rather than leaving it to be discovered.
+ */
+test('a connection can be written to a file and read back', async ({ app, page }) => {
+  const directory = await mkdtemp(join(tmpdir(), 'shelf-preset-'));
+  const target = join(directory, 'preset.json');
+
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+  }, target);
+
+  await createConnection(page, {
+    engine: 'SQLite',
+    file: join(directory, 'p.db'),
+    name: 'Portable',
+    connect: false,
+  });
+  await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
+
+  await page.getByRole('button', { name: 'Export Portable' }).click();
+
+  await expect
+    .poll(async () => readFile(target, 'utf8').catch(() => ''), { timeout: 15_000 })
+    .toContain('Portable');
+
+  const preset = JSON.parse(await readFile(target, 'utf8')) as {
+    note: string;
+    connections: { name: string }[];
+  };
+  expect(preset.connections).toHaveLength(1);
+  expect(preset.note).toContain('keyring');
+  expect(await readFile(target, 'utf8')).not.toContain('password');
+
+  // Read it back: the same connection arrives again, from the file alone.
+  await page.getByRole('button', { name: 'Delete Portable' }).click();
+  await expect(page.getByRole('button', { name: 'Connect to Portable' })).toBeHidden();
+
+  await page.getByRole('button', { name: /Import presets/ }).click();
+  await expect(page.getByRole('button', { name: 'Connect to Portable' })).toBeVisible({
+    timeout: 15_000,
+  });
 });

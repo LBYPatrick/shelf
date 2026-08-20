@@ -658,21 +658,10 @@ watch(
 /*
  * The ledger's badge is amber because unsaved writes are a thing to be warned
  * about. A filter is not — it is a mode you chose — so its count borrows the
- * mode's own colour rather than shouting in a colour that means "unsaved".
+ * mode's own colour instead. That one is `.toolbar__count` in `controls.css`,
+ * with the rest of the bar, because the query tab's result switcher wears it
+ * too.
  */
-.toolbar__count {
-  display: grid;
-  place-items: center;
-  min-width: 1rem;
-  height: 1rem;
-  padding-inline: 0.1875rem;
-  border-radius: 999px;
-  background: color-mix(in oklab, currentColor 18%, transparent);
-  color: inherit;
-  font-size: 0.625rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
 
 /*
  * The bar grows out of the toolbar it was summoned from rather than appearing

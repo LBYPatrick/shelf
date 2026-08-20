@@ -137,14 +137,21 @@ const properties = ref<EntityProperties>({});
 }
 
 /*
- * A window onto the sections, not a container that grows with them. 22rem is
- * about a dozen rows — enough that scrolling is obviously possible rather than
- * a surprise, and short enough that the summary above stays on screen.
+ * A window onto the sections, not a container that grows with them.
+ *
+ * A table with eleven columns makes a popup eleven rows tall and a table with
+ * forty does not make one forty rows tall: past the cap the list scrolls
+ * *inside its own card*, under a tab row and a filter that stay put. Letting it
+ * grow instead handed the scrolling to the sheet's body, which put a track down
+ * the side of the whole popup and carried the tabs off the top of it — and the
+ * cap is a maximum rather than a height, so a table with three columns still
+ * gets a popup three rows tall.
  */
 .structure-pane {
   display: flex;
-  height: 22rem;
-  min-height: 0;
+  flex: 1;
+  min-height: 12rem;
+  max-height: min(26rem, 42vh);
   border-radius: var(--radius-box);
   border: 1px solid var(--separator);
   overflow: hidden;

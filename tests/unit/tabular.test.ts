@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CellValue, Field } from '@drivers/types';
-import { toDelimited, toJson, toMarkdown } from '@shared/tabular';
+import { toDelimited, toDelimitedGrid, toJson, toMarkdown } from '@shared/tabular';
 
 const field = (name: string, dataType?: string): Field =>
   dataType === undefined ? { name } : { name, dataType };
@@ -92,5 +92,29 @@ describe('markdown', () => {
 
   it('unwraps a tagged value here too', () => {
     expect(toMarkdown([field('released', 'date')], [TAGGED])).toContain('2012-04-24 ');
+  });
+});
+
+describe('a rectangle of cells', () => {
+  it('joins rows with the delimiter and lines with a newline', () => {
+    expect(
+      toDelimitedGrid(
+        [
+          ['1', 'ada'],
+          ['2', 'grace'],
+        ],
+        '\t'
+      )
+    ).toBe('1\tada\n2\tgrace');
+  });
+
+  it('quotes a value holding the delimiter, a quote or a newline', () => {
+    expect(toDelimitedGrid([['a\tb', 'say "hi"', 'two\nlines']], '\t')).toBe(
+      '"a\tb"\t"say ""hi"""\t"two\nlines"'
+    );
+  });
+
+  it('carries no header of its own, because a selection has none', () => {
+    expect(toDelimitedGrid([['only']], '\t')).toBe('only');
   });
 });

@@ -10,11 +10,12 @@ import { revealTables, typeQuery } from './helpers';
  * what you pick rather than hiding what you did not.
  */
 test('finds a table by path, by pattern, and opens it', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   await page.keyboard.press('ControlOrMeta+k');
-  const field = page.getByRole('combobox');
+  // Named, because the query bar carries a combobox of its own — the row limit.
+  const field = page.locator('.palette__input');
   await expect(field).toBeFocused();
 
   // A path binds its segments to the levels of the tree.
@@ -44,7 +45,7 @@ test('finds a table by path, by pattern, and opens it', async ({ page }) => {
 });
 
 test('runs a setting from the slash mode', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   const theme = () => page.evaluate(() => document.documentElement.dataset['theme']);
@@ -71,7 +72,7 @@ test('runs a setting from the slash mode', async ({ page }) => {
 });
 
 test('the sidebar sends you here rather than filtering in place', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   await revealTables(page);
@@ -87,7 +88,7 @@ test('the sidebar sends you here rather than filtering in place', async ({ page 
  * was typed went into the SQL behind it.
  */
 test('opens over the query editor, and takes the typing with it', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   await page
@@ -97,7 +98,8 @@ test('opens over the query editor, and takes the typing with it', async ({ page 
   await typeQuery(page, 'SELECT 1');
 
   await page.keyboard.press('ControlOrMeta+k');
-  const field = page.getByRole('combobox');
+  // Named, because the query bar carries a combobox of its own — the row limit.
+  const field = page.locator('.palette__input');
   await expect(field).toBeFocused();
 
   await page.keyboard.type('artist');

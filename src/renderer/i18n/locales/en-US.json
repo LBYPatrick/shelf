@@ -30,22 +30,44 @@
     "settings": "Settings",
     "collapseAll": "Collapse all",
     "resetView": "Reset view",
-    "copied": "Copied to the clipboard."
+    "copied": "Copied to the clipboard.",
+    "reset": "Reset",
+    "confirm": "Confirm",
+    "open": "Open…",
+    "dispatch": "Dispatch",
+    "saveQuery": "Save Query"
   },
   "start": {
     "search": "Paste a connection URL, or search your connections",
     "searchLabel": "Paste a connection URL or search",
     "recognised": "Recognised",
     "setUp": "Set up",
+    "recent": "Recent",
+    "saved": "Saved",
+    "matches": "Matches",
+    "noMatches": "Nothing saved matches that.",
+    "nothingSaved": "Nothing saved yet.",
     "newConnection": "New connection",
-    "nothingSaved": "Nothing saved yet. Paste a connection URL above, or pick an engine to start.",
-    "sampleTitle": "No database to hand?",
-    "sampleBody": "Open a sample one and everything works — browsing, editing, queries, the diagram. Nothing is installed and nothing is saved.",
-    "sampleAction": "Explore sample data",
+    "newConnectionBody": "Paste a URL, or fill in the details.",
+    "settingsBody": "Appearance, data, and the keyboard.",
+    "importPresets": "Import presets",
+    "importPresetsBody": "Add connections from a JSON file.",
+    "importTitle": "Import connections",
+    "exportTitle": "Export connection",
+    "export": "Export {{name}}",
+    "exported": "Saved. The password stays in the keyring.",
+    "imported": "Imported {{n}}. Each still needs its password.",
+    "importFailed": "That file could not be read",
+    "sample": "Sample",
+    "sampleTitle": "Sample database",
+    "sampleBody": "Ready to browse, query and edit. Nothing gets installed.",
     "sampleOpening": "Opening…",
     "noKeyring": "No system keyring was found, so passwords cannot be saved on this machine.",
     "neverOpened": "never opened",
     "justNow": "just now",
+    "minutesAgo": "{{n}}m ago",
+    "hoursAgo": "{{n}}h ago",
+    "daysAgo": "{{n}}d ago",
     "connectTo": "Connect to {{name}}",
     "edit": "Edit {{name}}",
     "remove": "Delete {{name}}"
@@ -82,7 +104,8 @@
     "chooseEngine": "Choose a database engine.",
     "chooseFile": "Choose a database file.",
     "needHost": "Enter a host, a socket path, or a connection URL.",
-    "required": "{{field}} is required."
+    "required": "{{field}} is required.",
+    "testOk": "Connected — {{version}}"
   },
   "workspace": {
     "entities": "Entities",
@@ -104,7 +127,8 @@
     "readOnly": "read-only",
     "disconnectHint": "click to disconnect",
     "searchEntities": "Search tables",
-    "toggleSidebar": "Toggle sidebar"
+    "toggleSidebar": "Toggle sidebar",
+    "jobs": "Jobs"
   },
   "table": {
     "filterPlaceholder": "Filter — e.g. name like 'A%'",
@@ -142,7 +166,27 @@
     "explainHint": "Show how the database would run this",
     "saveHint": "Save this query",
     "caret": "Ln {{line}}, Col {{column}} of {{lines}}",
-    "selected": "{{count}} selected"
+    "selected": "{{count}} selected",
+    "groupStatement": "Statement",
+    "groupTransaction": "Transaction",
+    "groupResult": "Result",
+    "runScope": "What Run performs",
+    "resultsBar": "This result",
+    "formatFailed": "Could not format",
+    "rowLimit": "{{rows}} rows",
+    "elapsed": "Running for {{time}}",
+    "bar": "Statement",
+    "formatHint": "Reformat the statement in this engine’s dialect",
+    "autoCommit": "Auto commit",
+    "autoCommitHint": "Off, statements run inside a transaction you commit yourself.",
+    "beginHint": "Open a transaction; nothing is written until you commit",
+    "rowLimitNone": "Unlimited",
+    "summaryRows": "{{rows}} rows",
+    "summaryFirst": "first {{rows}} rows",
+    "summaryAffected": "{{rows}} affected",
+    "summaryMs": "{{ms}} ms",
+    "summaryRow": "{{rows}} row",
+    "summaryFirstOne": "first {{rows}} row"
   },
   "structure": {
     "columns": "Columns",
@@ -182,7 +226,11 @@
     "actions": "Actions",
     "noMatch": "Nothing matches that.",
     "outgoing": "outgoing",
-    "incoming": "incoming"
+    "incoming": "incoming",
+    "wrap": "Wrap lines",
+    "wrapHint": "Show the whole value on as many lines as it needs",
+    "wrapOn": "Line wrapping on.",
+    "wrapOff": "Line wrapping off."
   },
   "settings": {
     "title": "Settings",
@@ -223,7 +271,31 @@
     "resetData": "Reset data settings",
     "primaryRun": "Primary run action",
     "runAll": "Whole editor",
-    "runCurrent": "Statement under the cursor"
+    "runCurrent": "Statement under the cursor",
+    "viewVisual": "Visual",
+    "viewJson": "JSON",
+    "jsonValid": "Valid JSON.",
+    "applied": "Settings applied.",
+    "exportTitle": "Export settings",
+    "importTitle": "Import settings",
+    "exported": "Settings saved.",
+    "imported": "Settings imported.",
+    "exportSettings": "Export…",
+    "importSettings": "Import…",
+    "appearanceDesc": "How the window is coloured and how much fits on screen. Every control here applies as you touch it.",
+    "dataDesc": "What a result brings back, and how you change what is in it.",
+    "editorDesc": "The SQL editor: how it is set, and what it does with a long line.",
+    "file": "Settings file",
+    "fileDesc": "Every preference on this page, as one document you can keep or carry to another machine.",
+    "resetAll": "Reset",
+    "resetDesc": "Puts the data and editor preferences back to what they were. Appearance is left alone.",
+    "resetConfirm": "Press again to reset every data and editor preference.",
+    "wasReset": "Preferences reset.",
+    "copy": "Copy",
+    "exportRow": "Write every preference to a file",
+    "importRow": "Replace them from a file",
+    "jsonLines": "{{count}} lines",
+    "copyHint": "Copy the whole document to the clipboard"
   },
   "palette": {
     "placeholder": "Search tables, tabs and actions…",
@@ -300,7 +372,13 @@
     "written": "Written.",
     "working": "Working…",
     "run": "Export",
-    "wroteTo": "Wrote {{name}}."
+    "wroteTo": "Wrote {{name}}.",
+    "scope": "Rows",
+    "scopePage": "This page ({{count}})",
+    "scopeFull": "Everything the query matches",
+    "scopePageHint": "Written from the rows already loaded — no second run.",
+    "scopeFullHint": "Runs the statement again without the preview limit; it matched {{count}} rows.",
+    "scopeFullHintUnknown": "Runs the statement again without the preview limit."
   },
   "grid": {
     "oneBased": "1-based",
@@ -320,7 +398,8 @@
     "exportData": "Export data to file…",
     "actionsFor": "Actions for {{name}}",
     "copiedName": "Copied {{name}}.",
-    "analyze": "Analyze performance"
+    "analyze": "Analyze performance",
+    "diagram": "Diagram of relationships"
   },
   "properties": {
     "rows": "Rows",
@@ -414,7 +493,15 @@
     "largestTables": "Largest tables",
     "deadRows": "The darker part of each bar is space held by dead rows.",
     "unusedIndexes": "Indexes never used",
-    "unusedHint": "Each one still costs a write on every insert and update."
+    "unusedHint": "Each one still costs a write on every insert and update.",
+    "brushHint": "Drag across the chart to narrow everything below to that span.",
+    "wholeRange": "Whole range",
+    "scaleLabel": "Vertical scale",
+    "totals": "{{time}} in {{calls}} calls",
+    "noReadings": "No readings yet. Shelf takes one when this panel is open, and differences them — leave it open and this fills in.",
+    "quietSelection": "Nothing ran in the span you selected.",
+    "scaleLinear": "Linear",
+    "scaleLog": "Log"
   },
   "analyzeWindow": {
     "hour": "Hour",
@@ -427,7 +514,8 @@
   "analyzeCaveat": {
     "short": "The recorded history is shorter than this range, so this is everything since the first reading.",
     "cumulative": "This is the server’s running total, not a range — leave this tab open and ranges will fill in.",
-    "reset": "The server reset its counters inside this range, so earlier readings were discarded."
+    "reset": "The server reset its counters inside this range, so earlier readings were discarded.",
+    "wide": "Nothing was recorded between the readings either side of this range, so the nearest one available is older than the range asks for and this covers more than it says."
   },
   "analyzeSpan": {
     "single": "one reading",
@@ -439,6 +527,46 @@
     "unsupported": "This engine does not keep statement statistics.",
     "not-installed": "The statistics extension is not installed on this server.",
     "not-permitted": "This account cannot read the statistics view.",
-    "hint": "On PostgreSQL, add the library to the server configuration, restart, then create the extension:"
+    "hint": "On PostgreSQL, add the library to the server configuration, restart, then create the extension:",
+    "not-loaded": "The extension is created but was never loaded, so it has counted nothing.",
+    "not-tracking": "Statement recording is switched off on this server.",
+    "other-database": "Statements are recorded on this server, but none for this database.",
+    "nothing-recorded": "The extension is recording and has nothing yet."
+  },
+  "plan": {
+    "title": "Query plan",
+    "exportSvg": "Export plan as SVG",
+    "exportPng": "Export plan as PNG",
+    "exported": "Plan saved."
+  },
+  "jobs": {
+    "empty": "Nothing dispatched yet. A dispatched statement runs on its own, keeps its whole answer on this machine, and tells you when it is done.",
+    "dispatched": "Dispatched {{name}}.",
+    "finished": "Finished — {{rows}} rows, ready to export.",
+    "open": "Open",
+    "openResult": "Open the rows from {{name}}",
+    "rename": "Rename",
+    "discard": "Discard",
+    "discarded": "Discarded {{name}}.",
+    "rowsIn": "{{rows}} rows in {{time}}",
+    "resultBar": "This job",
+    "showing": "Showing {{from}}–{{to}} of {{total}}",
+    "previous": "Previous page",
+    "next": "Next page",
+    "statusPending": "Pending",
+    "statusRunning": "Running",
+    "statusDone": "Done",
+    "statusFailed": "Failed",
+    "interrupted": "Interrupted by a restart.",
+    "rowsGone": "This job no longer has its rows."
+  },
+  "value": {
+    "asJson": "formatted as JSON",
+    "empty": "(empty)"
+  },
+  "erd": {
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fit": "Fit"
   }
 }

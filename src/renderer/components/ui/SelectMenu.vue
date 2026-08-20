@@ -45,8 +45,47 @@ const active = ref(0);
 const selectedIndex = computed(() => props.options.findIndex((o) => o.value === model.value));
 const label = computed(() => props.options[selectedIndex.value]?.label ?? '');
 
+/**
+ * Where the list is drawn, in viewport coordinates.
+ *
+ * The list used to be an absolutely positioned child of the control, which
+ * meant every ancestor that clips could cut it in half — and in a settings row
+ * two of them do: the card the rows sit in has `overflow: hidden` for its
+ * rounded corners, and the sheet's body scrolls. The list came out truncated
+ * mid-option with the rest of the choices unreachable.
+ *
+ * So it is teleported to the body and positioned from the trigger's own box.
+ * Nothing between the two can clip it, and the only cost is having to keep the
+ * two in step while the page moves underneath — see `reposition`.
+ */
+const placement = ref({ left: 0, width: 0, above: false, top: 0, bottom: 0 });
+
+/** Room the list needs before it gives up on opening downwards. */
+const MIN_ROOM = 180;
+
+function reposition(): void {
+  const trigger = root.value?.querySelector<HTMLElement>('.select__trigger');
+  if (!trigger) return;
+
+  const box = trigger.getBoundingClientRect();
+  const below = window.innerHeight - box.bottom;
+
+  // Measured against the room available rather than against the list's own
+  // height, which is not known until after it has been placed somewhere.
+  const above = below < MIN_ROOM && box.top > below;
+
+  placement.value = {
+    left: box.left,
+    width: box.width,
+    above,
+    top: box.bottom,
+    bottom: window.innerHeight - box.top,
+  };
+}
+
 function show(): void {
   active.value = Math.max(0, selectedIndex.value);
+  reposition();
   open.value = true;
   void nextTick(() => {
     list.value?.querySelector<HTMLElement>('[data-active="true"]')?.scrollIntoView({
@@ -77,18 +116,39 @@ function move(delta: number): void {
 }
 
 function onPointerDown(event: PointerEvent): void {
-  if (root.value?.contains(event.target as Node)) return;
+  const target = event.target as Node;
+  // The list is no longer inside the control, so "did the press land on me"
+  // has to ask both.
+  if (root.value?.contains(target) || list.value?.contains(target)) return;
   open.value = false;
 }
 
 // Bound at the window rather than the panel: a click that lands on a sheet
 // behind this one still has to dismiss it.
 watch(open, (isOpen) => {
-  if (isOpen) window.addEventListener('pointerdown', onPointerDown, true);
-  else window.removeEventListener('pointerdown', onPointerDown, true);
+  if (isOpen) {
+    window.addEventListener('pointerdown', onPointerDown, true);
+    /*
+     * In the capture phase, because the thing that scrolls is a pane somewhere
+     * above the control and a scroll event does not bubble out of it. Following
+     * rather than closing: the list is attached to a control the reader can
+     * still see, and having it vanish because a stray wheel event reached the
+     * sheet reads as the app losing it.
+     */
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+  } else {
+    window.removeEventListener('pointerdown', onPointerDown, true);
+    window.removeEventListener('scroll', reposition, true);
+    window.removeEventListener('resize', reposition);
+  }
 });
 
-onBeforeUnmount(() => window.removeEventListener('pointerdown', onPointerDown, true));
+onBeforeUnmount(() => {
+  window.removeEventListener('pointerdown', onPointerDown, true);
+  window.removeEventListener('scroll', reposition, true);
+  window.removeEventListener('resize', reposition);
+});
 </script>
 
 <template>
@@ -120,34 +180,44 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onPointerDown, t
       />
     </button>
 
-    <ul
-      v-if="open"
-      :id="`${id ?? 'select'}-list`"
-      ref="list"
-      class="select__list surface-popover"
-      role="listbox"
-      :aria-label="ariaLabel"
-    >
-      <li
-        v-for="(option, index) in options"
-        :key="option.value"
-        class="select__option"
-        :class="{ 'select__option--active': index === active }"
-        :data-active="index === active"
-        role="option"
-        :aria-selected="option.value === model"
-        @pointerenter="active = index"
-        @click="choose(index)"
+    <Teleport to="body">
+      <ul
+        v-if="open"
+        :id="`${id ?? 'select'}-list`"
+        ref="list"
+        class="select__list surface-popover"
+        :class="{ 'select__list--above': placement.above }"
+        :style="{
+          left: `${placement.left}px`,
+          width: `${placement.width}px`,
+          ...(placement.above
+            ? { bottom: `${placement.bottom}px` }
+            : { top: `${placement.top}px` }),
+        }"
+        role="listbox"
+        :aria-label="ariaLabel"
       >
-        <AppIcon
-          class="select__tick"
-          :class="{ 'select__tick--on': option.value === model }"
-          name="check"
-          :size="12"
-        />
-        <span>{{ option.label }}</span>
-      </li>
-    </ul>
+        <li
+          v-for="(option, index) in options"
+          :key="option.value"
+          class="select__option"
+          :class="{ 'select__option--active': index === active }"
+          :data-active="index === active"
+          role="option"
+          :aria-selected="option.value === model"
+          @pointerenter="active = index"
+          @click="choose(index)"
+        >
+          <AppIcon
+            class="select__tick"
+            :class="{ 'select__tick--on': option.value === model }"
+            name="check"
+            :size="12"
+          />
+          <span>{{ option.label }}</span>
+        </li>
+      </ul>
+    </Teleport>
   </div>
 </template>
 
@@ -204,17 +274,26 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onPointerDown, t
  * The list scales from the control rather than from its own centre, so the
  * relationship between the two is visible in the movement.
  */
+/*
+ * Fixed and in the body, so nothing between the control and the page can clip
+ * it. Its coordinates come from the trigger — see `reposition` — and the margin
+ * is what used to be `top: calc(100% + gap)`.
+ */
 .select__list {
-  position: absolute;
-  z-index: 40;
-  inset-inline: 0;
-  top: calc(100% + var(--gap-tight));
+  position: fixed;
+  z-index: 200;
+  margin-block: var(--gap-tight);
   max-height: 15rem;
   padding: var(--gap-tight);
   overflow-y: auto;
   border-radius: var(--radius-box);
   transform-origin: top center;
   animation: select-in 160ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Opening upwards, it grows from the edge nearest the control. */
+.select__list--above {
+  transform-origin: bottom center;
 }
 
 @keyframes select-in {

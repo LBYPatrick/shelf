@@ -78,3 +78,36 @@ export function statementAt(text: string, position: number): Statement {
 
   return { text: text.trim(), from: 0, to: text.length };
 }
+
+/**
+ * Which dialect the formatter should parse as.
+ *
+ * `sql-formatter` parses before it prints, and its generic `sql` dialect is
+ * ANSI: it rejects `::float`, `->>`, backtick quoting and every other thing an
+ * actual server accepts. Every query tab formatted as ANSI, so a perfectly
+ * ordinary Postgres statement came back unchanged and unexplained — the parse
+ * error was caught and dropped on the floor, which made "Format" look like a
+ * button that does nothing rather than one that could not read the statement.
+ *
+ * TiDB speaks MySQL's dialect and reports itself as its own engine; DuckDB's is
+ * close enough to Postgres that the library models it separately, and does.
+ * Anything without a SQL dialect of its own gets ANSI, which is the honest
+ * answer rather than a guess.
+ */
+export function formatterDialect(engine: string | undefined): string {
+  switch (engine) {
+    case 'postgres':
+      return 'postgresql';
+    case 'mysql':
+      return 'mysql';
+    case 'tidb':
+      return 'tidb';
+    case 'sqlite':
+    case 'mock':
+      return 'sqlite';
+    case 'duckdb':
+      return 'duckdb';
+    default:
+      return 'sql';
+  }
+}

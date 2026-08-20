@@ -39,20 +39,28 @@ const model = defineModel<EngineId | null>({ required: true });
 </template>
 
 <style scoped>
+/*
+ * A row of chips, not a wall of tiles.
+ *
+ * Nine cards two rows deep took seven tenths of the popup for one field, and
+ * pushed the host and the password — the things actually being filled in —
+ * under the fold behind a scrollbar. The engine is one decision among several
+ * here, so it is the size of a field, and the marks still carry the colours
+ * that make an engine recognisable before its name is read.
+ */
 .engines {
-  display: grid;
-  /* Five across leaves nine engines as 5 + 4 rather than a lone straggler. */
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--gap-tight);
 }
 
 .engine {
   position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 5px;
-  padding: var(--gap) var(--gap-tight);
+  gap: var(--gap-tight);
+  min-height: var(--hit-min);
+  padding: var(--gap-hair) var(--gap);
   border-radius: var(--radius-box);
   border: 1px solid transparent;
   background-color: var(--fill-4);
@@ -88,10 +96,11 @@ const model = defineModel<EngineId | null>({ required: true });
 .engine__mark {
   display: grid;
   place-items: center;
-  width: 1.875rem;
-  height: 1.875rem;
-  border-radius: 0.6rem;
-  font-size: 0.6875rem;
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.4rem;
+  font-size: 0.5rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: oklch(99% 0 0);
@@ -106,10 +115,9 @@ const model = defineModel<EngineId | null>({ required: true });
 }
 
 .engine__name {
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   font-weight: 500;
-  letter-spacing: 0.01em;
-  text-align: center;
+  white-space: nowrap;
   color: color-mix(in oklab, var(--color-base-content) 68%, transparent);
   transition: color var(--t-hover) var(--ease-out);
 }

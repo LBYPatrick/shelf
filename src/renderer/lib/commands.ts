@@ -1,5 +1,6 @@
 import { i18next, LOCALES } from '../i18n';
 import { ACCENT_PRESETS, oklch } from '../styles/theme';
+import { ROW_LIMITS } from '../stores/settings';
 import type { useSettings, Settings } from '../stores/settings';
 import type { useTheme } from '../composables/useTheme';
 
@@ -248,7 +249,26 @@ export function buildCommands({ theme, settings, navigation }: CommandContext): 
     },
 
     /*
-     * The three numeric preferences — rows per page, maximum rows, editor font
+     * The row limit stopped being a number you type and became one of seven
+     * choices, which is exactly the shape a palette row can carry: a name you
+     * can say, with the answer in it.
+     */
+    ...enumCommands({
+      base: 'rows',
+      setting: 'maxRows',
+      icon: 'tables',
+      label: t('settings.maxRows'),
+      keywords: 'limit result size truncate',
+      options: ROW_LIMITS.map((value) => ({
+        value,
+        word: String(value),
+        label: t('query.rowLimit', { rows: value.toLocaleString() }),
+      })),
+      set: (value) => write('maxRows', value),
+    }),
+
+    /*
+     * The two remaining numeric preferences — rows per page and editor font
      * size — have no command. A palette row is a name you can say; a number you
      * have to type into a slot is a form field, and the sheet already has one.
      * The parity test names them so their absence stays deliberate.
@@ -257,11 +277,7 @@ export function buildCommands({ theme, settings, navigation }: CommandContext): 
 }
 
 /** Preferences that are deliberately not reachable as commands, and why. */
-export const UNCOMMANDED: readonly (keyof Settings)[] = [
-  'pageSize',
-  'maxRows',
-  'editorFontSize',
-];
+export const UNCOMMANDED: readonly (keyof Settings)[] = ['pageSize', 'editorFontSize'];
 
 /** Matches a `/…` query against the typed form of a command. */
 export function matchSlash(command: Command, query: string): boolean {

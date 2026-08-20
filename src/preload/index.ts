@@ -29,6 +29,7 @@ const windowApi: WindowApi = {
   isMaximized: () => ipcRenderer.invoke(WINDOW_CHANNELS.isMaximized) as Promise<boolean>,
   setAppearance: (appearance: Appearance) =>
     ipcRenderer.send(WINDOW_CHANNELS.setAppearance, appearance),
+  setCompact: (compact: boolean) => ipcRenderer.send(WINDOW_CHANNELS.setCompact, compact),
   onMaximizedChanged: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, maximized: boolean) =>
       listener(maximized);
@@ -93,6 +94,11 @@ const appDb: AppDbApi = {
 const dialogs: DialogApi = {
   openFile: (options) => ipcRenderer.invoke(DIALOG_CHANNELS.openFile, options),
   saveFile: (options) => ipcRenderer.invoke(DIALOG_CHANNELS.saveFile, options),
+  readTextFile: (options) => ipcRenderer.invoke(DIALOG_CHANNELS.readTextFile, options),
+  writeTextFile: (options, text) =>
+    ipcRenderer.invoke(DIALOG_CHANNELS.writeTextFile, options, text),
+  writeBinaryFile: (options, base64) =>
+    ipcRenderer.invoke(DIALOG_CHANNELS.writeBinaryFile, options, base64),
 };
 
 const shelf = {

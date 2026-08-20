@@ -1,3 +1,4 @@
+import { UNLIMITED } from '@shared/rowLimit';
 import { defineStore } from 'pinia';
 import { saveSetting } from '../lib/settings';
 import { ref, watch } from 'vue';
@@ -42,9 +43,57 @@ export interface Settings {
  */
 export const DEFAULTS_FOR_TEST = () => DEFAULTS;
 
+/**
+ * The row limits offered, everywhere they are offered.
+ *
+ * A free number box was the wrong control for this: it is set before almost
+ * every run, from the toolbar, and typing four digits is not a thing to do
+ * between writing a query and running it. Five hundred is the default because
+ * it is the size at which you are still *looking* at rows rather than holding
+ * them — anything larger is a question for an export, which streams and never
+ * enters this process.
+ */
+export const ROW_LIMITS: readonly number[] = [
+  10,
+  100,
+  500,
+  1000,
+  2000,
+  5000,
+  10_000,
+  UNLIMITED,
+];
+
+/**
+ * The list as a control sees it, in one place.
+ *
+ * Two dropdowns offer this — the query bar's and the one in Settings — and they
+ * are the same list of the same numbers with the same rule about a value saved
+ * before the list existed. Written twice, they were two places for that rule to
+ * drift apart in.
+ */
+export function rowLimitOptions(
+  saved: number,
+  t: (key: string, vars?: Record<string, unknown>) => string
+): { value: string; label: string }[] {
+  const values = ROW_LIMITS.includes(saved)
+    ? [...ROW_LIMITS]
+    : [...ROW_LIMITS, saved].sort((a, b) => a - b);
+
+  return values.map((value) => ({
+    value: String(value),
+    // "Unlimited" is a different kind of answer from "500 rows", and saying
+    // "9,007,199,254,740,991 rows" is not a way of saying it.
+    label:
+      value >= UNLIMITED
+        ? t('query.rowLimitNone')
+        : t('query.rowLimit', { rows: value.toLocaleString() }),
+  }));
+}
+
 const DEFAULTS: Settings = {
   pageSize: 100,
-  maxRows: 50_000,
+  maxRows: 500,
   editTrigger: 'dblclick',
   binaryEncoding: 'hex',
   rowIndexBase: 1,

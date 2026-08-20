@@ -8,7 +8,7 @@
  * than in the row components, which are destroyed as they scroll away.
  */
 import ProgressBar from '../ui/ProgressBar.vue';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import type { CellValue, ContainerRef, Entity, EntityRef, Field } from '@drivers/types';
 import { useTranslation } from 'i18next-vue';
 import AppIcon from '../ui/AppIcon.vue';
@@ -100,13 +100,119 @@ onBeforeUnmount(() => {
  * what is inside them — so the tree does not ask the reader to remember which
  * kind of thing needs which gesture.
  */
+/**
+ * What was just revealed, so it can arrive rather than appear.
+ *
+ * The tree is virtualised: expanding a folder inserts its children into a flat
+ * array and every row below jumps down by their height, in one frame, with
+ * nothing to say where they came from. A height animation is not available here
+ * — there is no element whose height to animate, only a list that got longer.
+ *
+ * What *is* available is telling the reader which rows are new. They fade and
+ * rise into place one after another, which reads as the folder unpacking, and
+ * the rows below simply move as they always did. The band is remembered by
+ * index rather than by key so a row recycled onto the same index during a
+ * scroll does not animate again.
+ */
+const revealed = ref<{ from: number; to: number } | null>(null);
+let revealTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** The whole cascade, start to finish. Longer than this reads as a wait. */
+const REVEAL_MS = 260;
+
+function markRevealed(at: number, count: number): void {
+  clearTimeout(revealTimer);
+  revealed.value = { from: at + 1, to: at + count };
+  revealTimer = setTimeout(() => (revealed.value = null), REVEAL_MS + count * 18);
+}
+
+/** How far into the revealed band a row sits, or null if it is not in one. */
+function revealIndex(absolute: number): number | null {
+  const band = revealed.value;
+  if (!band || absolute < band.from || absolute > band.to) return null;
+  return absolute - band.from;
+}
+
+/**
+ * What is on its way out, and the node it belongs to.
+ *
+ * Closing a folder is the harder half. Opening one can animate because the rows
+ * are there to animate — closing removes them from the flat list, and a row
+ * that no longer exists cannot leave. So the removal is *held* for the length
+ * of the animation: the doomed rows are marked, they fade and rise, and only
+ * then does the store actually collapse.
+ *
+ * The twisty is not held with them. It turns on the press, because that is the
+ * acknowledgement — the rows draining afterwards is the folder closing, not the
+ * app deciding whether to.
+ */
+const collapsing = ref<{ from: number; to: number; key: string } | null>(null);
+let collapseTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** Out faster than in: the reader has already decided. */
+const COLLAPSE_MS = 140;
+
+function isCollapsing(row: TreeRow): boolean {
+  return collapsing.value?.key === row.key;
+}
+
+function leaving(absolute: number): boolean {
+  const band = collapsing.value;
+  return !!band && absolute >= band.from && absolute <= band.to;
+}
+
+/** How many rows below this one belong to it. */
+function descendants(at: number, depth: number): number {
+  let count = 0;
+  while (
+    at + 1 + count < entities.rows.length &&
+    entities.rows[at + 1 + count]!.depth > depth
+  ) {
+    count += 1;
+  }
+  return count;
+}
+
+function toggleOf(row: TreeRow): void {
+  if (row.groupKey) entities.toggleGroup(row.groupKey);
+  else if (row.entity) entities.toggle(row.entity);
+}
+
 function activate(row: TreeRow): void {
-  if (row.groupKey) {
-    entities.toggleGroup(row.groupKey);
+  if (!opens(row)) return;
+
+  const before = entities.rows.length;
+  const at = entities.rows.indexOf(row);
+
+  if (row.expanded && at >= 0) {
+    const count = descendants(at, row.depth);
+    if (count === 0) {
+      toggleOf(row);
+      return;
+    }
+
+    clearTimeout(collapseTimer);
+    collapsing.value = { from: at + 1, to: at + count, key: row.key };
+    collapseTimer = setTimeout(() => {
+      collapsing.value = null;
+      toggleOf(row);
+    }, COLLAPSE_MS);
     return;
   }
-  if (row.entity) entities.toggle(row.entity);
+
+  toggleOf(row);
+
+  // Measured after the store has recomputed, which it does synchronously.
+  void nextTick(() => {
+    const grew = entities.rows.length - before;
+    if (grew > 0 && at >= 0) markRevealed(at, grew);
+  });
 }
+
+onBeforeUnmount(() => {
+  clearTimeout(revealTimer);
+  clearTimeout(collapseTimer);
+});
 
 /** Folders and tables open; columns and notes are leaves. */
 function opens(row: TreeRow): boolean {
@@ -161,6 +267,7 @@ const canDescribeContainers = computed(
   () => connections.active?.capabilities.containers ?? false
 );
 const canAnalyse = computed(() => connections.active?.capabilities.statistics ?? false);
+const canRelate = computed(() => connections.active?.capabilities.relations ?? false);
 
 const menuItems = computed<MenuItem[]>(() => {
   const on = menuOn.value;
@@ -176,6 +283,17 @@ const menuItems = computed<MenuItem[]>(() => {
       },
       ...(on.container.kind === 'database' && canAnalyse.value
         ? [{ id: 'analyze', label: t('menu.analyze'), icon: 'chart', startsGroup: true }]
+        : []),
+      /*
+       * The diagram is opened from the thing it is a diagram of.
+       *
+       * It used to be a button on the empty workspace — visible only while no
+       * tab was open, which is the one moment nobody is looking for it, and
+       * gone for good once anything was. Here it sits beside the schema whose
+       * shape it draws.
+       */
+      ...(canRelate.value
+        ? [{ id: 'diagram', label: t('menu.diagram'), icon: 'diagram', startsGroup: true }]
         : []),
     ];
   }
@@ -225,6 +343,8 @@ function onChoose(id: string): void {
 
   if ('container' in on) {
     if (id === 'copy') copyName(on.container.name);
+    else if (id === 'diagram')
+      tabs.openErd({ kind: on.container.kind, name: on.container.name });
     else if (id === 'container' || id === 'analyze') {
       containerStart.value = id === 'analyze' ? 'queries' : 'overview';
       containerOf.value = on.container;
@@ -349,8 +469,17 @@ const KIND_ICON: Record<string, string> = {
           v-for="(row, index) in slice"
           :key="row.key"
           class="row"
-          :class="[`row--${row.kind}`]"
-          :style="{ paddingInlineStart: `calc(var(--gap) + ${row.depth} * 0.75rem)` }"
+          :class="[
+            `row--${row.kind}`,
+            {
+              'row--revealed': revealIndex(window.first + index) !== null,
+              'row--leaving': leaving(window.first + index),
+            },
+          ]"
+          :style="{
+            paddingInlineStart: `calc(var(--gap) + ${row.depth} * 0.75rem)`,
+            '--reveal': revealIndex(window.first + index) ?? 0,
+          }"
           role="treeitem"
           :aria-label="row.label"
           :aria-level="row.depth + 1"
@@ -373,7 +502,7 @@ const KIND_ICON: Record<string, string> = {
           <template v-if="row.kind === 'database' || row.kind === 'schema'">
             <AppIcon
               class="row__twisty"
-              :class="{ 'row__twisty--open': row.expanded }"
+              :class="{ 'row__twisty--open': row.expanded && !isCollapsing(row) }"
               name="chevron"
               :size="12"
             />
@@ -404,7 +533,7 @@ const KIND_ICON: Record<string, string> = {
           <template v-else-if="row.kind === 'entity'">
             <AppIcon
               class="row__twisty"
-              :class="{ 'row__twisty--open': row.expanded }"
+              :class="{ 'row__twisty--open': row.expanded && !isCollapsing(row) }"
               name="chevron"
               :size="12"
             />
@@ -528,6 +657,48 @@ const KIND_ICON: Record<string, string> = {
   will-change: transform;
 }
 
+/*
+ * A folder unpacking: the rows it revealed rise into place one after another.
+ *
+ * The delay is per row and small — the whole cascade is over in about a quarter
+ * of a second, which is the point at which a stagger stops reading as life and
+ * starts reading as a queue. It is capped so opening a schema with four hundred
+ * tables does not animate the four hundredth eight seconds later; past the cap
+ * they all arrive together, which nobody can tell apart from the last few of a
+ * cascade anyway.
+ */
+@keyframes row-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.row--revealed {
+  animation: row-reveal 200ms var(--ease-out) both;
+  animation-delay: calc(min(var(--reveal, 0), 12) * 18ms);
+}
+
+/*
+ * Leaving, all together and quickly.
+ *
+ * No stagger on the way out: the reader has already decided, and a cascade
+ * there reads as the interface taking its time about a thing that is finished.
+ * They rise rather than fall, which is the direction the folder is folding
+ * them into.
+ */
+@keyframes row-leave {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.row--leaving {
+  animation: row-leave 140ms var(--ease-out) both;
+  pointer-events: none;
+}
+
 .row {
   display: flex;
   align-items: center;
@@ -647,6 +818,15 @@ const KIND_ICON: Record<string, string> = {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* The rows still arrive and still leave; they just stop travelling to do it. */
+  .row--revealed {
+    animation-name: none;
+  }
+
+  .row--leaving {
+    animation-duration: 80ms;
+  }
+
   .row__twisty {
     transition: none;
   }

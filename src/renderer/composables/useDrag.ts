@@ -17,6 +17,9 @@ const VELOCITY_WINDOW_MS = 100;
 /** Movement required before a drag commits, so a click is never a tiny drag. */
 const DEFAULT_THRESHOLD = 4;
 
+/** Set on the root for as long as any gesture is live; see `start`. */
+const DRAGGING_CLASS = 'is-dragging';
+
 export interface DragBounds {
   readonly min: number;
   readonly max: number;
@@ -88,6 +91,8 @@ export function useDrag(options: UseDragOptions) {
   let origin = 0;
   let startValue = 0;
   let committed = false;
+  /** The last value the gesture tracked, so a release we never see can still land. */
+  let latest: { value: number; overshoot: number } | null = null;
 
   const coordinate = (event: PointerEvent) => (axis === 'x' ? event.clientX : event.clientY);
 
@@ -128,6 +133,19 @@ export function useDrag(options: UseDragOptions) {
   function handleMove(event: PointerEvent): void {
     if (event.pointerId !== pointerId) return;
 
+    /*
+     * A move with no button held is a release that never arrived. The OS can
+     * take the pointer mid-gesture — dragging over a window drag region is the
+     * one that bit here — and the `pointerup` then goes to the OS instead of to
+     * us, leaving the handle following the pointer with nothing pressed. Every
+     * subsequent move says plainly that the button is up, so this is the first
+     * frame at which the gesture can be ended honestly.
+     */
+    if (event.buttons === 0) {
+      abandon();
+      return;
+    }
+
     const position = coordinate(event);
     const rawDelta = position - origin;
 
@@ -146,7 +164,33 @@ export function useDrag(options: UseDragOptions) {
 
     samples.value = [...samples.value, { value: position, time: event.timeStamp }].slice(-12);
 
+    latest = { value, overshoot };
     onDrag({ value, velocity: releaseVelocity(), overshoot });
+  }
+
+  /**
+   * Ends the gesture from the last position it tracked.
+   *
+   * The release is still reported, so a handle dragged past its limit snaps
+   * back rather than being left rubber-banded where the pointer was lost.
+   */
+  function abandon(): void {
+    if (pointerId === null) return;
+
+    const wasDragging = committed;
+    const state = latest;
+    const velocityRaw = releaseVelocity();
+    const velocity = invert ? -velocityRaw : velocityRaw;
+
+    detach();
+
+    if (!wasDragging || !onRelease || !state) return;
+
+    onRelease({
+      ...state,
+      velocity,
+      projected: state.value + projectMomentum(velocity),
+    });
   }
 
   function handleUp(event: PointerEvent): void {
@@ -172,15 +216,27 @@ export function useDrag(options: UseDragOptions) {
   }
 
   function detach(): void {
+    /*
+     * Only this gesture's own flag comes off. The class is on the root and is
+     * therefore shared, and a component unmounting elsewhere while a drag is
+     * live would otherwise hand the title bar back mid-drag.
+     */
+    if (pointerId !== null) document.documentElement.classList.remove(DRAGGING_CLASS);
+
     if (target && pointerId !== null) {
       if (target.hasPointerCapture(pointerId)) target.releasePointerCapture(pointerId);
       target.removeEventListener('pointermove', handleMove);
       target.removeEventListener('pointerup', handleUp);
       target.removeEventListener('pointercancel', handleUp);
+      target.removeEventListener('lostpointercapture', abandon);
     }
+    window.removeEventListener('pointerup', handleUp);
+    window.removeEventListener('pointercancel', handleUp);
+    window.removeEventListener('blur', abandon);
     target = null;
     pointerId = null;
     committed = false;
+    latest = null;
     dragging.value = false;
     samples.value = [];
   }
@@ -196,10 +252,29 @@ export function useDrag(options: UseDragOptions) {
     committed = false;
     samples.value = [{ value: origin, time: event.timeStamp }];
 
+    /*
+     * The window's own title bar is a drag region, and the OS claims the
+     * pointer the moment one is entered — a divider dragged up towards the top
+     * of the window handed the gesture to the window manager mid-drag and the
+     * release never came back. Suspending every drag region for the duration of
+     * a gesture is the only reliable answer: `no-drag` is decided by the OS from
+     * what is under the pointer, not by which element started the gesture.
+     */
+    document.documentElement.classList.add(DRAGGING_CLASS);
+
     target.setPointerCapture(pointerId);
     target.addEventListener('pointermove', handleMove);
     target.addEventListener('pointerup', handleUp);
     target.addEventListener('pointercancel', handleUp);
+    // Capture can be revoked without a release — the element being detached
+    // does it — and the events then go back to whatever is under the pointer.
+    target.addEventListener('lostpointercapture', abandon);
+    // The safety net for a release delivered somewhere else entirely. Both
+    // paths call the same handler, and the second finds the gesture already
+    // over.
+    window.addEventListener('pointerup', handleUp);
+    window.addEventListener('pointercancel', handleUp);
+    window.addEventListener('blur', abandon);
   }
 
   onScopeDispose(detach);

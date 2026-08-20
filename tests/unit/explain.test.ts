@@ -90,3 +90,42 @@ describe('parsing plans', () => {
     expect(parsePlan('postgres', [{ id: 1, name: 'x' }])).toBeUndefined();
   });
 });
+
+describe('a plan column the driver already parsed', () => {
+  /*
+   * `EXPLAIN (FORMAT JSON)` returns a `json` column, and `pg` has a parser for
+   * that type — so the plan arrives as a value, gets tagged as JSON by the
+   * transcoder on its way across the boundary, and is not the string this used
+   * to look for. Every Postgres plan reported itself as unreadable.
+   */
+  const plan = [
+    {
+      Plan: {
+        'Node Type': 'Seq Scan',
+        'Relation Name': 'album',
+        'Total Cost': 12.5,
+        'Plan Rows': 64,
+      },
+    },
+  ];
+
+  it('reads a plan that crossed the boundary as a tagged value', () => {
+    const parsed = parsePlan('postgres', [
+      { 'QUERY PLAN': { $: 'json', data: JSON.stringify(plan) } },
+    ]);
+    expect(parsed?.label).toContain('Seq Scan');
+  });
+
+  it('still reads one that arrived as text', () => {
+    const parsed = parsePlan('postgres', [{ 'QUERY PLAN': JSON.stringify(plan) }]);
+    expect(parsed?.label).toContain('Seq Scan');
+  });
+
+  it('reads a MySQL plan tagged the same way', () => {
+    const mysql = { query_block: { select_id: 1, table: { table_name: 'album' } } };
+    const parsed = parsePlan('mysql', [
+      { EXPLAIN: { $: 'json', data: JSON.stringify(mysql) } },
+    ]);
+    expect(parsed).toBeDefined();
+  });
+});

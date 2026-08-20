@@ -79,12 +79,15 @@ export interface WindowResult {
    * Why the answer is not exactly the window that was asked for.
    *
    * `short` means the history does not reach back far enough and the widest
-   * available difference was used; `cumulative` means there was only one
-   * reading, so the numbers are the counters themselves rather than a
-   * difference; `reset` means the server cleared its counters inside the
-   * window, which makes every earlier reading useless as a baseline.
+   * available difference was used; `wide` means the opposite — the nearest
+   * reading old enough is far older than the window, because nothing was
+   * recording in between, so the answer covers more ground than was asked for;
+   * `cumulative` means there was only one reading, so the numbers are the
+   * counters themselves rather than a difference; `reset` means the server
+   * cleared its counters inside the window, which makes every earlier reading
+   * useless as a baseline.
    */
-  readonly caveat?: 'short' | 'cumulative' | 'reset';
+  readonly caveat?: 'short' | 'wide' | 'cumulative' | 'reset';
 }
 
 /** Trims a reading down to what is worth keeping. */
@@ -176,6 +179,42 @@ export function windowOf(
   const length = windowLength(window);
   const baseline = baselineFor(history, latest, length);
 
+  return difference(baseline, latest, length, window === 'all');
+}
+
+/**
+ * The same difference, over a range picked by hand off the chart.
+ *
+ * Dragging across the histogram asks a question the six window buttons cannot:
+ * *what ran during that spike*. The bounds are pulled onto real readings —
+ * nothing between two readings is knowable, so a range that fell inside one is
+ * the empty answer rather than a made-up fraction of it.
+ */
+export function rangeOf(
+  history: readonly StatementSample[],
+  from: number,
+  to: number
+): WindowResult | null {
+  const within = history.filter((sample) => sample.takenAt >= from && sample.takenAt <= to);
+  const latest = within[within.length - 1];
+  if (!latest) return null;
+
+  // The reading that closes the range is the last one inside it; the one that
+  // opens it is the last one at or before the start, so the first interval
+  // inside the selection is counted rather than dropped.
+  const baseline =
+    [...history].reverse().find((sample) => sample.takenAt <= from && sample !== latest) ??
+    (within[0] === latest ? undefined : within[0]);
+
+  return difference(baseline, latest, Number.POSITIVE_INFINITY, true);
+}
+
+function difference(
+  baseline: StatementSample | undefined,
+  latest: StatementSample,
+  length: number,
+  openEnded: boolean
+): WindowResult {
   const previous = new Map<string, StatementStat>(
     (baseline?.statements ?? []).map((statement) => [statement.id, statement])
   );
@@ -216,12 +255,22 @@ export function windowOf(
     .sort((a, b) => b.totalMs - a.totalMs);
 
   const caveat = ((): WindowResult['caveat'] => {
-    if (!baseline) return window === 'all' ? undefined : 'cumulative';
+    if (!baseline) return openEnded ? undefined : 'cumulative';
     if (baseline.resetAt !== undefined && wasReset(baseline, latest)) return 'reset';
-    if (Number.isFinite(length) && latest.takenAt - baseline.takenAt < length * 0.9) {
-      return 'short';
-    }
-    return undefined;
+    if (!Number.isFinite(length)) return undefined;
+
+    const span = latest.takenAt - baseline.takenAt;
+    if (span < length * 0.9) return 'short';
+
+    /*
+     * Readings are taken while the panel is open and at no other time, so a
+     * history is a handful of clusters with nights in between. Asked for an
+     * hour the morning after, the newest reading old enough is yesterday's last
+     * one — and the difference against it is a day's work presented under a
+     * control that says "Hour". It is still the closest honest answer available,
+     * so it is shown; it is not passed off as the hour that was asked for.
+     */
+    return span > length * 1.5 ? 'wide' : undefined;
   })();
 
   return {
@@ -230,4 +279,108 @@ export function windowOf(
     to: latest.takenAt,
     ...(caveat ? { caveat } : {}),
   };
+}
+
+/* ------------------------------------------------------------------ shaping */
+
+/** What the server spent between two consecutive readings. */
+export interface Interval {
+  readonly from: number;
+  readonly to: number;
+  /** Time spent in statements across the interval, in milliseconds. */
+  readonly totalMs: number;
+  readonly calls: number;
+}
+
+/**
+ * The history as work done between readings, rather than as running totals.
+ *
+ * This is what a chart of "when was it busy" needs, and it is not the same
+ * shape as a window: a window is one difference over a long span, and this is
+ * every difference in order. A reading whose counters went backwards opens a
+ * new interval rather than producing a negative one — the reset is already
+ * truncated out of stored history, but a history handed in from anywhere else
+ * must not be able to draw a bar below the axis.
+ */
+export function intervals(history: readonly StatementSample[]): readonly Interval[] {
+  const out: Interval[] = [];
+
+  for (let index = 1; index < history.length; index += 1) {
+    const before = history[index - 1]!;
+    const after = history[index]!;
+    if (after.takenAt <= before.takenAt) continue;
+
+    const previous = new Map(before.statements.map((s) => [s.id, s]));
+    let totalMs = 0;
+    let calls = 0;
+
+    for (const statement of after.statements) {
+      const was = previous.get(statement.id);
+      totalMs += Math.max(0, statement.totalMs - (was?.totalMs ?? 0));
+      calls += Math.max(0, statement.calls - (was?.calls ?? 0));
+    }
+
+    out.push({ from: before.takenAt, to: after.takenAt, totalMs, calls });
+  }
+
+  return out;
+}
+
+/** One column of the histogram. */
+export interface Bucket {
+  readonly from: number;
+  readonly to: number;
+  readonly totalMs: number;
+  readonly calls: number;
+  /** Wall-clock seconds of the bucket that any reading actually covered. */
+  readonly coveredSeconds: number;
+}
+
+/**
+ * Intervals laid onto equal columns of time.
+ *
+ * An interval that straddles a boundary is *split across the columns it covers*
+ * in proportion to the overlap, rather than being dropped into whichever column
+ * its end falls in. Readings are ten minutes apart at best and hours apart at
+ * worst, so assigning each one whole would put a night's work in the first
+ * column of the morning and leave the night empty — a chart that says the
+ * opposite of what happened.
+ *
+ * `coveredSeconds` is what makes a rate honest: a column nothing was recording
+ * during covers no seconds, and dividing by the column's width instead would
+ * report a quiet night rather than an unobserved one.
+ */
+export function bucketize(
+  series: readonly Interval[],
+  from: number,
+  to: number,
+  count: number
+): readonly Bucket[] {
+  const columns = Math.max(1, Math.floor(count));
+  const width = Math.max(1, (to - from) / columns);
+
+  const buckets = Array.from({ length: columns }, (_, index) => ({
+    from: from + index * width,
+    to: from + (index + 1) * width,
+    totalMs: 0,
+    calls: 0,
+    coveredSeconds: 0,
+  }));
+
+  for (const interval of series) {
+    const span = interval.to - interval.from;
+    if (span <= 0) continue;
+
+    for (const bucket of buckets) {
+      const overlap = Math.min(interval.to, bucket.to) - Math.max(interval.from, bucket.from);
+      if (overlap <= 0) continue;
+
+      const share = overlap / span;
+      bucket.totalMs += interval.totalMs * share;
+      bucket.calls += interval.calls * share;
+      bucket.coveredSeconds += overlap / 1000;
+    }
+  }
+
+  return buckets;
 }

@@ -15,7 +15,10 @@ import { useTabs } from '../../stores/tabs';
 import ErdCanvas, { type ErdEdge, type ErdTable } from '../viz/ErdCanvas.vue';
 import { errorMessage } from '@shared/errors';
 
-defineProps<{ active: boolean }>();
+const props = defineProps<{
+  active: boolean;
+  scope: { readonly kind: 'database' | 'schema'; readonly name: string } | null;
+}>();
 
 const connections = useConnections();
 const entities = useEntities();
@@ -52,8 +55,14 @@ async function load(): Promise<void> {
   error.value = null;
 
   try {
+    /*
+     * Only what the diagram is of. A schema draws its own tables; a database
+     * draws all of them, which is what it means to ask for the database.
+     */
     const targets = entities.entities.filter(
-      (entity) => entity.kind === 'table' || entity.kind === 'collection'
+      (entity) =>
+        (entity.kind === 'table' || entity.kind === 'collection') &&
+        (props.scope?.kind !== 'schema' || entity.schema === props.scope.name)
     );
 
     const loaded = await inBatches(targets, async (entity) => {

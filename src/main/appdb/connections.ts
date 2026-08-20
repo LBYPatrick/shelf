@@ -9,7 +9,7 @@ import type { SecretStore } from '../secrets';
 import type { AppDatabase } from './database';
 
 /** Keyring keys a connection may hold. */
-const SECRET_KEYS = ['password', 'sshPassword', 'sshPassphrase'] as const;
+const SECRET_KEYS = ['password', 'sshPassword', 'sshPassphrase', 'proxyPassword'] as const;
 export type SecretKey = (typeof SECRET_KEYS)[number];
 
 interface ConnectionRow {
@@ -171,10 +171,21 @@ export class ConnectionRepository {
         }
       : undefined;
 
+    // A proxy's credentials are credentials: same keyring, same rule that they
+    // never sit in the application database beside the host name.
+    const proxyPassword = this.secrets.get(id, 'proxyPassword');
+    const proxy = saved.config.proxy
+      ? {
+          ...saved.config.proxy,
+          ...(proxyPassword !== undefined ? { password: proxyPassword } : {}),
+        }
+      : undefined;
+
     return {
       ...saved.config,
       ...(password !== undefined ? { password } : {}),
       ...(ssh ? { ssh } : {}),
+      ...(proxy ? { proxy } : {}),
       readOnly: saved.readOnly,
       ...overrides,
     };

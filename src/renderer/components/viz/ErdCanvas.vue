@@ -10,13 +10,15 @@
  * Drawn as themed SVG so it re-colours with the accent and the light/dark mode
  * along with everything else.
  */
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import {
   forceCenter,
   forceCollide,
   forceLink,
   forceManyBody,
   forceSimulation,
+  forceX,
+  forceY,
   type Simulation,
   type SimulationLinkDatum,
   type SimulationNodeDatum,
@@ -25,6 +27,7 @@ import { select } from 'd3-selection';
 import { zoom, zoomIdentity, type ZoomBehavior } from 'd3-zoom';
 import { drag } from 'd3-drag';
 import { linkHorizontal } from 'd3-shape';
+import ZoomControl from './ZoomControl.vue';
 
 export interface ErdTable {
   readonly key: string;
@@ -54,10 +57,12 @@ const props = defineProps<{ tables: readonly ErdTable[]; edges: readonly ErdEdge
 const emit = defineEmits<{ openTable: [string] }>();
 
 const svg = ref<SVGSVGElement>();
+const frame = ref<HTMLElement>();
 const nodes = shallowRef<Node[]>([]);
 const links = shallowRef<Link[]>([]);
 const transform = ref(zoomIdentity);
 const hovered = ref<string | null>(null);
+const touched = ref(false);
 const tick = ref(0);
 
 let simulation: Simulation<Node, Link> | undefined;
@@ -113,8 +118,23 @@ function build(): void {
   nodes.value = built;
   links.value = built_links;
 
+  /*
+   * Repulsion, but bounded, and something pulling back.
+   *
+   * Charge alone has nothing to stop it: two tables with no key between them
+   * push each other apart for as long as the simulation runs, and a schema is
+   * mostly pairs of tables with no key between them. The layout settled tens of
+   * thousands of units across — so "fit the whole diagram" honestly answered
+   * nine per cent, and the reader was shown five specks and a lot of nothing.
+   *
+   * `distanceMax` stops a table shoving one it is nowhere near, and a weak pull
+   * toward the middle on each axis gives the drift something to work against.
+   * `forceCenter` cannot do that job: it re-centres the *average* every tick,
+   * which slides the whole cloud back over the origin without ever making it
+   * smaller.
+   */
   simulation = forceSimulation(built)
-    .force('charge', forceManyBody().strength(-900))
+    .force('charge', forceManyBody().strength(-520).distanceMax(1400))
     .force(
       'link',
       forceLink<Node, Link>(built_links)
@@ -122,21 +142,47 @@ function build(): void {
         .distance(220)
     )
     .force('center', forceCenter(0, 0))
+    .force('gravity-x', forceX(0).strength(0.045))
+    // Slightly stronger down the short axis, so the cloud lands wider than it
+    // is tall — which is the shape of the pane it has to fit into.
+    .force('gravity-y', forceY(0).strength(0.075))
     // Collision uses the real box, so nodes settle without overlapping.
     .force(
       'collide',
       forceCollide<Node>().radius((node) => Math.hypot(node.width, node.height) / 2 + 16)
     )
-    .on('tick', () => (tick.value += 1));
+    .on('tick', () => (tick.value += 1))
+    /*
+     * Fitted once, when the layout stops moving. Fitting on every tick would
+     * make the diagram breathe while it settles, and fitting before it settles
+     * frames a shape that no longer exists a second later.
+     */
+    .on('end', () => {
+      if (!touched.value) fit(false);
+    });
 
   // The layout runs to a resting state and stops. Leaving it running would
   // make the diagram creep while you are reading it.
   simulation.alpha(1).alphaDecay(0.03);
 }
 
-const viewBox = computed(() => {
-  void tick.value;
-  if (nodes.value.length === 0) return '-400 -300 800 600';
+/*
+ * The canvas is the size of the pane, and the zoom does the rest.
+ *
+ * It used to take a `viewBox` around every node, which meant the diagram's
+ * *scale* was decided by how many tables there were: two hundred of them laid
+ * out by a force simulation cover a canvas tens of thousands of units across,
+ * and fitting that into a pane drew every table as a speck two pixels tall. The
+ * zoom could not rescue it either — three times a speck is a speck. So one unit
+ * is one pixel at rest, whatever the schema, and what changes with the size of
+ * the schema is where the view starts.
+ */
+const pane = ref({ width: 800, height: 600 });
+let watcher: ResizeObserver | undefined;
+
+/** The box every node fits in, in diagram units. */
+function bounds(): { x: number; y: number; width: number; height: number } | null {
+  if (nodes.value.length === 0) return null;
 
   const xs = nodes.value.flatMap((node) => [
     (node.x ?? 0) - node.width / 2,
@@ -147,12 +193,10 @@ const viewBox = computed(() => {
     (node.y ?? 0) + node.height / 2,
   ]);
 
-  const padding = 60;
-  const minX = Math.min(...xs) - padding;
-  const minY = Math.min(...ys) - padding;
-
-  return `${minX} ${minY} ${Math.max(...xs) - minX + padding} ${Math.max(...ys) - minY + padding}`;
-});
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
+}
 
 const curve = linkHorizontal<
   { source: [number, number]; target: [number, number] },
@@ -199,11 +243,43 @@ onMounted(() => {
   if (!svg.value) return;
   const element = select(svg.value);
 
+  /*
+   * Wide enough at the bottom to hold a two-hundred-table schema in view, and
+   * far enough at the top to read a column name at arm's length. The old range
+   * stopped at three, which was three times too small to read whenever the
+   * diagram had been shrunk to fit in the first place.
+   */
   zoomBehavior = zoom<SVGSVGElement, unknown>()
-    .scaleExtent([0.2, 3])
-    .on('zoom', (event) => (transform.value = event.transform));
+    .scaleExtent([0.05, 4])
+    .on('zoom', (event) => {
+      // A gesture has a source event behind it; our own `fit` does not. Once
+      // the reader has moved the view it is theirs, and the layout settling a
+      // second later must not take it back.
+      if (event.sourceEvent) touched.value = true;
+      transform.value = event.transform;
+    });
 
   element.call(zoomBehavior);
+
+  watcher = new ResizeObserver(([entry]) => {
+    if (!entry) return;
+    pane.value = { width: entry.contentRect.width, height: entry.contentRect.height };
+  });
+  if (frame.value) watcher.observe(frame.value);
+
+  bindDrag();
+});
+
+/*
+ * Bound after every rebuild, not once at mount.
+ *
+ * The nodes are drawn by Vue from `nodes`, so at the moment this component
+ * mounts there is nothing under the SVG to select — the handlers went onto an
+ * empty selection and no table could be moved.
+ */
+function bindDrag(): void {
+  if (!svg.value) return;
+  const element = select(svg.value);
 
   // Node dragging pins the node where it is dropped, which is what makes the
   // arrangement yours rather than the simulation's.
@@ -226,27 +302,65 @@ onMounted(() => {
         node.fy = node.y ?? null;
       })
   );
-});
+}
 
 watch(() => [props.tables, props.edges], build, { deep: false });
 
-onBeforeUnmount(() => simulation?.stop());
+watch(nodes, () => void nextTick(bindDrag));
 
-function fit(): void {
+onBeforeUnmount(() => {
+  simulation?.stop();
+  watcher?.disconnect();
+});
+
+/**
+ * Puts the whole diagram in view, whatever size it turned out to be.
+ *
+ * `zoomIdentity` was what this used to do, which only ever meant "put it back
+ * where the browser had it" — and where the browser had it depended on a
+ * `viewBox` that had already shrunk the drawing to nothing.
+ */
+function fit(animate = true): void {
   if (!svg.value || !zoomBehavior) return;
-  select(svg.value).transition().duration(400).call(zoomBehavior.transform, zoomIdentity);
+
+  const box = bounds();
+  if (!box || box.width === 0 || box.height === 0) return;
+
+  const padding = 48;
+  const scale = Math.min(
+    (pane.value.width - padding * 2) / box.width,
+    (pane.value.height - padding * 2) / box.height,
+    1
+  );
+  const next = zoomIdentity
+    .translate(
+      pane.value.width / 2 - (box.x + box.width / 2) * scale,
+      pane.value.height / 2 - (box.y + box.height / 2) * scale
+    )
+    .scale(scale);
+
+  const target = select(svg.value);
+  if (animate) target.transition().duration(400).call(zoomBehavior.transform, next);
+  else target.call(zoomBehavior.transform, next);
+}
+
+function nudge(by: number): void {
+  if (!svg.value || !zoomBehavior) return;
+  touched.value = true;
+  select(svg.value).transition().duration(180).call(zoomBehavior.scaleBy, by);
 }
 
 defineExpose({ fit });
 </script>
 
 <template>
-  <div class="erd">
+  <div
+    ref="frame"
+    class="erd"
+  >
     <svg
       ref="svg"
       class="erd__svg"
-      :viewBox="viewBox"
-      preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label="Entity relationship diagram"
     >
@@ -328,18 +442,23 @@ defineExpose({ fit });
       </g>
     </svg>
 
-    <button
-      class="erd__fit"
-      @click="fit"
-    >
-      Reset view
-    </button>
+    <ZoomControl
+      :scale="transform.k"
+      @zoom="nudge"
+      @fit="fit()"
+    />
   </div>
 </template>
 
 <style scoped>
 .erd {
   position: relative;
+  /*
+   * The same recessed field the query editor sits in. The diagram is content
+   * inside the working pane, not the pane itself, and giving it the pane's own
+   * colour left the node boxes with nothing to stand on.
+   */
+  background: var(--fill-4);
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -356,10 +475,20 @@ defineExpose({ fit });
   cursor: grabbing;
 }
 
+/*
+ * Contrast, throughout.
+ *
+ * Every value here was a fraction of the text colour low enough that the
+ * diagram read as a watermark: lines at thirty per cent over a translucent pane
+ * are a suggestion of a line, and the boxes they join were themselves
+ * translucent. The drawing is the content of this pane, so it is drawn at the
+ * weight content is drawn at, and only the *dimming* of what you are not
+ * pointing at is faint.
+ */
 .erd__edge {
   fill: none;
-  stroke: color-mix(in oklab, var(--color-base-content) 30%, transparent);
-  stroke-width: 1.5;
+  stroke: color-mix(in oklab, var(--color-base-content) 46%, transparent);
+  stroke-width: 1.75;
   transition:
     opacity 200ms ease-out,
     stroke 200ms ease-out;
@@ -379,55 +508,43 @@ defineExpose({ fit });
 }
 
 .erd-node__box {
-  fill: color-mix(in oklab, var(--color-base-100) 92%, transparent);
-  stroke: color-mix(in oklab, var(--color-base-content) 14%, transparent);
+  fill: var(--surface-raised);
+  stroke: color-mix(in oklab, var(--color-base-content) 24%, transparent);
   filter: drop-shadow(0 4px 14px oklch(0% 0 0 / 0.12));
 }
 
 .erd-node__header {
-  fill: color-mix(in oklab, var(--color-primary) 16%, transparent);
+  fill: color-mix(in oklab, var(--color-primary) 24%, transparent);
 }
 
 .erd-node__title {
   fill: var(--color-base-content);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   font-family: var(--font-ui);
 }
 
 .erd-node__column {
-  fill: color-mix(in oklab, var(--color-base-content) 82%, transparent);
-  font-size: 10px;
+  fill: color-mix(in oklab, var(--color-base-content) 92%, transparent);
+  font-size: 11px;
   font-family: var(--font-mono);
 }
 
 .erd-node__column--key {
-  fill: var(--color-primary);
+  fill: var(--color-primary-text, var(--color-primary));
+  font-weight: 600;
 }
 
 .erd-node__type {
-  fill: color-mix(in oklab, var(--color-base-content) 42%, transparent);
-  font-size: 9px;
+  fill: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  font-size: 10px;
   font-family: var(--font-mono);
 }
 
 .erd-node__more {
-  fill: color-mix(in oklab, var(--color-base-content) 42%, transparent);
-  font-size: 9px;
+  fill: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  font-size: 10px;
   font-style: italic;
-}
-
-.erd__fit {
-  position: absolute;
-  right: var(--gap);
-  bottom: var(--gap);
-  padding: var(--gap-tight) var(--gap);
-  border-radius: var(--radius-field);
-  border: 1px solid var(--separator);
-  background: color-mix(in oklab, var(--color-base-100) 78%, transparent);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  font-size: 0.6875rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

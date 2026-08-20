@@ -9,7 +9,9 @@
 import { computed, onBeforeUnmount, ref } from 'vue';
 import type { SaveConnectionInput, SavedConnection } from '@shared/connections';
 import type { ParsedConnection } from '@shared/connectionUrl';
+import { useTranslation } from 'i18next-vue';
 import { useConnections } from '../../stores/connections';
+import { useToasts } from '../../stores/toasts';
 import PressButton from '../ui/PressButton.vue';
 import Sheet from '../ui/Sheet.vue';
 import ConnectionForm from './ConnectionForm.vue';
@@ -27,6 +29,8 @@ const emit = defineEmits<{
 }>();
 
 const connections = useConnections();
+const toasts = useToasts();
+const { t } = useTranslation();
 
 const form = ref<InstanceType<typeof ConnectionForm>>();
 const open = ref(true);
@@ -58,20 +62,31 @@ function runTest(): void {
   const input = form.value?.buildInput();
   if (input) void test(input);
 }
-const testResult = ref<{ ok: true; version: string } | { ok: false; message: string } | null>(
-  null
-);
-
+/*
+ * The answer arrives as a notification, not as a line that appears at the foot
+ * of the form and shifts everything above it. It is a *result*, which is what
+ * toasts are for — and the form it reports on is often taller than the popup,
+ * so the line reporting it could easily be off screen when it arrived.
+ */
 async function test(input: SaveConnectionInput): Promise<void> {
   testing.value = true;
-  testResult.value = null;
   try {
-    testResult.value = await connections.test({
+    const result = await connections.test({
       kind: 'draft',
       config: input.config,
       ...(input.secrets ? { secrets: input.secrets } : {}),
       ...(input.id ? { basedOn: input.id } : {}),
     });
+
+    toasts.show(
+      result.ok
+        ? {
+            id: 'connection-test',
+            tone: 'success',
+            message: t('connection.testOk', { version: result.version }),
+          }
+        : { id: 'connection-test', tone: 'error', message: result.message }
+    );
   } finally {
     testing.value = false;
   }
@@ -103,7 +118,6 @@ function close(): void {
       :seed="props.seed"
       :keyring-available="props.keyringAvailable"
       :testing="testing"
-      :test-result="testResult"
       @save="save($event, false)"
       @connect="save($event, true)"
       @test="test"

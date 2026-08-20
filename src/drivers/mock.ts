@@ -805,11 +805,19 @@ export class MockClient implements DatabaseClient {
       ...(match[1] ? { schema: match[1] } : {}),
     });
 
-    const limit = /\blimit\s+(\d+)/i.exec(text);
-    const rows = table.rows.slice(
-      0,
-      Math.min(Number(limit?.[1] ?? options.maxRows), options.maxRows)
-    );
+    /*
+     * The statement's own LIMIT and the preview ceiling are two different
+     * things, and the result has to report them as two different things.
+     *
+     * `SELECT … LIMIT 3` matches three rows: that is the answer, complete, and
+     * nothing was cut short. Reporting the size of the whole table and claiming
+     * to be showing the first five hundred of it — which is what this did —
+     * describes a query nobody ran.
+     */
+    const stated = /\blimit\s+(\d+)/i.exec(text);
+    const matched = stated ? Math.min(Number(stated[1]), table.rows.length) : table.rows.length;
+
+    const rows = table.rows.slice(0, Math.min(matched, options.maxRows));
     const encoded = encodeRows(rows);
 
     return [
@@ -819,8 +827,9 @@ export class MockClient implements DatabaseClient {
           encoded
         ),
         rows: encoded,
-        truncated: rows.length < table.rows.length,
-        rowCount: table.rows.length,
+        // Cut by *us*, not by the statement.
+        truncated: matched > options.maxRows,
+        rowCount: encoded.length,
         statement: text,
         durationMs: performance.now() - started,
       },

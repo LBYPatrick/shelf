@@ -48,6 +48,18 @@
      stop each choosing their own. */
   --control-radius: 0.5rem;
 
+  /*
+   * An object standing on a recessed field: a table in a diagram, a node in a
+   * plan, a card on a tinted well.
+   *
+   * `--color-base-100` cannot do this in both themes. A fill is mixed *toward*
+   * the mid grey, so on the light theme the field darkens and a white card
+   * rises off it — and on the dark theme the same fill lightens the field, so
+   * the same card sinks into a hole in it. Raised means away from the field,
+   * and that is a different direction in each theme.
+   */
+  --surface-raised: var(--color-base-100);
+
   /* Shadows are cast by light, so they are ink — never a tint of the text
      colour, which on a dark theme turns every shadow into a pale halo. */
   --shadow-ink: 0 0 0;
@@ -61,6 +73,9 @@
 }
 
 [data-theme='shelf-dark'] {
+  /* Up, not down: see the note on the light theme's value. */
+  --surface-raised: var(--color-base-300);
+
   /* Same grey, roughly double the alpha — a light tint over a dark surface
      reads far weaker than the same alpha of dark over white. */
   --fill-1: color-mix(in oklab, var(--fill-base) 36%, transparent);
@@ -292,6 +307,59 @@
 }
 
 /*
+ * A segmented control in a tab toolbar is a compact, quiet one.
+ *
+ * At its own size it is 34px tall in a row of 28px controls: six pixels prouder
+ * than everything beside it and half a pixel off the row's centre line, which
+ * is exactly the kind of near-miss that reads as wrong without being nameable.
+ * And a raised white thumb in a row of quiet text buttons is the loudest thing
+ * on the bar — louder than Run, which is the one control that is supposed to be.
+ *
+ * So in this context it takes the bar's own height and the bar's own loudness:
+ * a tonal track a step below the buttons' hover fill, and a thumb that is a
+ * surface rather than a card. Written here rather than in the component,
+ * because it is the *toolbar* making the rule — anywhere else, a segmented
+ * control is a form control and should look like one.
+ */
+.toolbar .segmented {
+  --seg-pad: 2px;
+  --seg-radius: var(--control-radius);
+  align-self: center;
+  background-color: var(--fill-4);
+}
+
+.toolbar .segmented__option {
+  height: calc(var(--field-h) - var(--seg-pad) * 2);
+  padding-inline: var(--gap);
+  font-size: 0.6875rem;
+}
+
+.toolbar .segmented__indicator {
+  background-color: var(--fill-2);
+  box-shadow: none;
+}
+
+/*
+ * A number carried by the control it belongs to — how many filters are in
+ * force, how many rows a result set holds. It takes its colour from the control
+ * rather than having one, so a count on a mode that is switched on is the
+ * mode's colour and a count on a quiet action is quiet.
+ */
+.toolbar__count {
+  display: grid;
+  place-items: center;
+  min-width: 1rem;
+  height: 1rem;
+  padding-inline: 0.1875rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, currentColor 18%, transparent);
+  color: inherit;
+  font-size: 0.625rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
  * Separates what acts on the thing from what acts on its result. A hairline
  * rather than a gap, because the two groups belong to one bar — a gap alone
  * reads as the row having been padded, not divided.
@@ -303,6 +371,57 @@
   height: calc(var(--field-h) - var(--gap));
   margin-inline: var(--gap-tight);
   background: var(--separator);
+}
+
+/*
+ * Groups, held together by proximity and nothing else.
+ *
+ * They carried a small uppercase caption each — STATEMENT, TRANSACTION — on the
+ * argument that a group should say what it is. It should not have to: the
+ * controls that act on the text you are writing sit together at one end, the
+ * ones that act on the connection sit at the other, and the gap between them is
+ * the whole of what needs saying. A caption is a label for a label, read once
+ * and then permanently in the way. The group keeps its `aria-label`, which is
+ * where a name is genuinely needed.
+ */
+.toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-hair);
+}
+
+/*
+ * Two scopes of one verb, drawn as one control.
+ *
+ * "Run" and "Run current" are the same action over a different amount of text,
+ * and set side by side as separate buttons they read as unrelated — the reader
+ * has to notice that one label is a prefix of the other. Butted together with a
+ * hairline between and a single outer radius, they read the way a split button
+ * reads: one thing, two scopes, and the loud half is the one that ⌘↩ performs.
+ */
+.toolbar__pair {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: var(--control-radius);
+}
+
+.toolbar__pair > :first-child {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.toolbar__pair > :last-child {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+/*
+ * The quiet half sits on a tonal surface rather than on nothing. Against the
+ * filled half it would otherwise read as empty space with a word in it, and the
+ * pair would stop reading as one control at exactly the moment it matters.
+ */
+.toolbar__pair > .toolbar__action {
+  background-color: var(--fill-4);
 }
 
 @media (hover: hover) and (pointer: fine) {

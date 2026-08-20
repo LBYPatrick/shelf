@@ -23,14 +23,14 @@ test('capture the interface', async ({ page }) => {
       .click();
     await page.getByRole('radio', { name: engine, exact: true }).click();
     await page.getByLabel('Host', { exact: true }).fill(host);
-    await page.getByRole('button', { name: 'Save' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
     await settle(400);
   }
 
   await page.screenshot({ path: `${OUT}/02-start-saved.png` });
 
   // Sample mode: the whole app, with no database at all.
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await page.locator('.strip').waitFor({ timeout: 20_000 });
   await settle(900);
   await page.screenshot({ path: `${OUT}/03-sample-workspace.png` });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { statementAt } from '@shared/sqlText';
+import { formatterDialect, statementAt } from '@shared/sqlText';
 
 /** The statement the cursor sits in, for a cursor placed at `|`. */
 const at = (marked: string) => {
@@ -67,5 +67,21 @@ describe('finding the statement under the cursor', () => {
 
   it('survives an unterminated string rather than losing the rest', () => {
     expect(at("SELECT 'unclosed| FROM t")).toBe("SELECT 'unclosed FROM t");
+  });
+});
+
+describe('choosing a dialect for the formatter', () => {
+  it('gives Postgres its own, so casts and JSON operators parse', () => {
+    expect(formatterDialect('postgres')).toBe('postgresql');
+  });
+
+  it('sends the MySQL-compatible engines to their own grammars', () => {
+    expect(formatterDialect('mysql')).toBe('mysql');
+    expect(formatterDialect('tidb')).toBe('tidb');
+  });
+
+  it('falls back to ANSI for anything with no dialect of its own', () => {
+    expect(formatterDialect('mongodb')).toBe('sql');
+    expect(formatterDialect(undefined)).toBe('sql');
   });
 });

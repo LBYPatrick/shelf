@@ -14,16 +14,33 @@ const PATHS: Record<string, string> = {
   tables: 'M2.5 4.5h11M2.5 8h11M2.5 11.5h11M6 4.5v7',
   star: 'M8 2.5l1.7 3.5 3.8.5-2.8 2.7.7 3.8L8 11.2 4.6 13l.7-3.8L2.5 6.5l3.8-.5z',
   history: 'M8 4.5v3.5l2.5 1.5M2.8 8a5.2 5.2 0 1 0 1.6-3.8M4.4 2.6v2.2h2.2',
+  /*
+   * A cog with eight teeth and a hub, the same shape the sibling project uses.
+   * What was here was an eight-lobed blob with a circle inside it — recognisable
+   * as "settings" only by where it sat, which is not recognisable.
+   *
+   * Generated on the 16-unit grid rather than lifted from an icon font at
+   * another size: a 24-unit path scaled down carries a stroke weight that
+   * disagrees with every other glyph in this set.
+   */
   settings:
-    'M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M8 1.8l.9 1.6 1.8-.3.5 1.8 1.6.9-1 1.5.6 1.7-1.7.6-.5 1.8-1.8-.3L8 14.2l-1.4-1.1-1.8.3-.5-1.8-1.7-.6.6-1.7-1-1.5 1.6-.9.5-1.8 1.8.3z',
+    'M6.72 1.98A6.15 6.15 0 0 1 9.28 1.98L9.44 3.58A4.65 4.65 0 0 1 10.11 3.86L11.35 2.84A6.15 6.15 0 0 1 13.16 4.65L12.14 5.89A4.65 4.65 0 0 1 12.42 6.56L14.02 6.72A6.15 6.15 0 0 1 14.02 9.28L12.42 9.44A4.65 4.65 0 0 1 12.14 10.11L13.16 11.35A6.15 6.15 0 0 1 11.35 13.16L10.11 12.14A4.65 4.65 0 0 1 9.44 12.42L9.28 14.02A6.15 6.15 0 0 1 6.72 14.02L6.56 12.42A4.65 4.65 0 0 1 5.89 12.14L4.65 13.16A6.15 6.15 0 0 1 2.84 11.35L3.86 10.11A4.65 4.65 0 0 1 3.58 9.44L1.98 9.28A6.15 6.15 0 0 1 1.98 6.72L3.58 6.56A4.65 4.65 0 0 1 3.86 5.89L2.84 4.65A6.15 6.15 0 0 1 4.65 2.84L5.89 3.86A4.65 4.65 0 0 1 6.56 3.58L6.72 1.98ZM10.15 8A2.15 2.15 0 1 1 5.85 8A2.15 2.15 0 1 1 10.15 8Z',
   refresh: 'M13.2 8a5.2 5.2 0 1 1-1.6-3.8M13.5 2.4v2.9h-2.9',
   search: 'M7 11.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zM10.5 10.5L14 14',
   close: 'M4 4l8 8M12 4l-8 8',
   plus: 'M8 3.5v9M3.5 8h9',
+  minus: 'M3.5 8h9',
+  wrap: 'M2.5 4h11M2.5 8h8a2.5 2.5 0 0 1 0 5H6.5M8.5 11l-2 2 2 2M2.5 12h2',
   chevron: 'M6 3.5L10.5 8L6 12.5',
   table: 'M2.5 3.5h11v9h-11zM2.5 6.5h11M6 6.5v6',
   view: 'M2.5 3.5h11v9h-11zM2.5 6.5h11',
   routine: 'M6 12.5V5a2 2 0 0 1 2-2h1M4.5 7.5h5',
+  /*
+   * Layers, for the jobs list: a set of answers stacked up, which is what a
+   * queue of dispatched queries is. `routine` was standing in for it and drew
+   * something that reads as a lower-case f at rail size.
+   */
+  jobs: 'M8 2.2L14 5.4L8 8.6L2 5.4ZM2 8.4L8 11.6L14 8.4M2 11.2L8 14.4L14 11.2',
   query: 'M3.5 5L6 8l-2.5 3M8 11.5h4.5',
   sidebar: 'M2.5 3.5h11v9h-11zM6.5 3.5v9',
   structure: 'M3.5 3.5h9v3h-9zM3.5 9.5h9v3h-9z',

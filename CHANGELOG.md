@@ -8,6 +8,16 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Start screen rebuilt as a two-pane welcome window: identity and the ways to
+  start something new on the left, recent connections, saved ones and the sample
+  database on the right as folding groups. The window is compact while it is
+  shown and returns to the workspace size when a database opens.
+- Settings can be edited as the JSON document they are stored as, beside the
+  form, and exported to or imported from a file. Values a control could not
+  produce are dropped or clamped rather than written through.
+- Any saved connection can be exported as a JSON preset and imported back.
+  Presets never carry a password: it stays in the OS keyring.
+
 - Three-process Electron architecture: the renderer talks to a dedicated
   connection host over a `MessageChannel`, so database work cannot block the
   interface and a driver crash costs one process restart.
@@ -141,6 +151,23 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   converged on one colour at the bottom of the range. It subtracts a constant
   now: every surface keeps the distance it was designed to have, and the pane
   lands on the dial's own number at the floor.
+- **The rail names its icons.** A column of glyphs is legible only to someone
+  who already knows what they mean, and `title` is not the answer: the OS
+  tooltip arrives after a second and a half, in a corner of its own choosing,
+  styled by the platform rather than by the app. The label is drawn beside the
+  icon, appears on keyboard focus as well as hover, and — once one is up —
+  the next is immediate, because moving along a row of icons is one gesture and
+  waiting again at every stop is what makes a toolbar feel slow.
+- **Every properties popup is the same, settled height.** They are opened and
+  *then* their content arrives, so sized by that content each was one height
+  while it said "Loading…" and another once the answer landed — and the next one
+  opened was a different size again. They have a definite height now and their
+  bodies scroll.
+- **The settings icon is a cog.** It was an eight-lobed blob with a circle in
+  it, recognisable as "settings" only by where it sat — which is not
+  recognisable. It turns a quarter under the pointer: the one icon in the rail
+  whose shape means something mechanical is the one where movement reads as the
+  object behaving rather than as decoration.
 - **The connection editor shows the password it saved.** It used to leave the
   field empty and explain, in help text, that blank meant "keep the saved one" —
   a rule the reader has to be told and then remember, and one that made changing

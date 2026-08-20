@@ -12,7 +12,7 @@
  */
 import { ref } from 'vue';
 
-defineProps<{ label: string }>();
+defineProps<{ label: string; hint?: string }>();
 const open = defineModel<boolean>({ default: false });
 
 const content = ref<HTMLElement>();
@@ -62,6 +62,10 @@ function leave(element: Element): void {
         />
       </svg>
       <span class="type-label">{{ label }}</span>
+      <span
+        v-if="hint"
+        class="disclosure__hint"
+      >{{ hint }}</span>
     </button>
 
     <Transition
@@ -88,9 +92,18 @@ function leave(element: Element): void {
   display: flex;
   align-items: center;
   gap: var(--gap-tight);
+  width: 100%;
   padding: var(--gap-tight) 0;
   color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
   transition: color var(--t-hover) var(--ease-out);
+}
+
+/* How much is inside, without having to open it. */
+.disclosure__hint {
+  margin-inline-start: auto;
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
 }
 
 .disclosure__chevron {

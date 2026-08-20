@@ -44,7 +44,7 @@ export const test = base.extend<UiFixtures>({
 
   sample: async ({ page }, use) => {
     await page
-      .getByRole('button', { name: /sample/i })
+      .getByRole('button', { name: /sample database/i })
       .first()
       .click();
     await page.locator('.workspace').waitFor({ timeout: 30_000 });
@@ -91,4 +91,31 @@ export async function stabilize(page: Page): Promise<void> {
   });
   // The version string and row timings are real values that change per machine.
   await page.addStyleTag({ content: `.statusbar__version { visibility: hidden !important; }` });
+
+  /*
+   * And wait for anything that was already moving to stop.
+   *
+   * Zeroing the durations only stops what starts *after* the stylesheet lands.
+   * A sheet opens with a 300ms scale-and-lift, so a shot taken while one is in
+   * flight catches the panel at 97% — every glyph in it a couple of pixels
+   * from where it belongs, which is a whole-image difference that has nothing
+   * to do with the design. It bit as soon as the settings sheet grew: the
+   * bigger the panel, the later it settles.
+   */
+  await page
+    .waitForFunction(
+      () => {
+        const panel = document.querySelector('.panel');
+        if (!panel) return true;
+
+        const box = panel.getBoundingClientRect();
+        const seen = (window as unknown as { __box?: string }).__box;
+        const now = `${Math.round(box.width)}x${Math.round(box.height)}@${Math.round(box.top)}`;
+        (window as unknown as { __box?: string }).__box = now;
+        return seen === now;
+      },
+      undefined,
+      { polling: 'raf', timeout: 5_000 }
+    )
+    .catch(() => undefined);
 }

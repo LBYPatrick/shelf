@@ -56,6 +56,24 @@ export class QueryRepository {
     const text = entry.text.trim();
     if (!text) return;
 
+    /*
+     * A connection that was never saved files its history under no connection.
+     *
+     * `connection_id` is a foreign key, and not every open connection is a row
+     * in that table — sample mode has none at all, and a connection opened from
+     * a URL without being saved has none either. Every statement run in either
+     * threw `FOREIGN KEY constraint failed` inside a promise nobody awaited, so
+     * the history was silently not being written and the only sign of it was a
+     * line in the console. The column is nullable and the reader already
+     * handles null, which is the honest place for a statement whose connection
+     * the app does not have on file.
+     */
+    const known =
+      entry.connectionId !== null &&
+      this.db.prepare('SELECT 1 FROM connection WHERE id = ?').get(entry.connectionId) !==
+        undefined;
+    const connectionId = known ? entry.connectionId : null;
+
     // A statement re-run within a few seconds is the same act, not two: keeping
     // both would fill the list with near-duplicates of whatever is being
     // iterated on right now.
@@ -63,7 +81,7 @@ export class QueryRepository {
       .prepare(
         'SELECT id, executed_at FROM query_history WHERE connection_id IS ? AND text = ? ORDER BY executed_at DESC LIMIT 1'
       )
-      .get(entry.connectionId, text) as { id: string; executed_at: number } | undefined;
+      .get(connectionId, text) as { id: string; executed_at: number } | undefined;
 
     const now = Date.now();
 
@@ -83,7 +101,7 @@ export class QueryRepository {
       )
       .run(
         randomUUID(),
-        entry.connectionId,
+        connectionId,
         text,
         entry.rowCount,
         entry.durationMs,

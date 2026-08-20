@@ -77,9 +77,15 @@ test('reports a bad connection instead of failing silently', async ({ page }) =>
 
   await sheet.getByRole('button', { name: 'Test' }).click();
 
-  // The failure is reported rather than swallowed, and it says something.
-  await expect(sheet.getByRole('status')).toBeVisible({ timeout: 25_000 });
-  await expect(sheet.getByRole('status')).not.toBeEmpty();
+  /*
+   * The failure is reported rather than swallowed, and it says something. It
+   * arrives as a notice rather than as a line at the foot of the form: the form
+   * is often taller than the popup holding it, so the one place the answer must
+   * not be is below the fold of the thing that asked the question.
+   */
+  const notice = page.locator('.notice').first();
+  await expect(notice).toBeVisible({ timeout: 25_000 });
+  await expect(notice).not.toBeEmpty();
 });
 
 test('runs a query and shows its results', async ({ page }) => {
@@ -210,6 +216,50 @@ test('restores the tabs that were open, including unfinished query text', async 
   void app;
 });
 
+test('asks the server for a preview rather than for everything', async ({ page }) => {
+  const file = join(await mkdtemp(join(tmpdir(), 'shelf-limit-')), 'l.db');
+
+  await createConnection(page, { engine: 'SQLite', file, name: 'Preview' });
+  await page.getByRole('button', { name: 'New query', exact: true }).click();
+
+  /*
+   * A statement with no end to it. The row limit used to be a cut made after
+   * the fact — the whole result came back and the first five hundred rows of it
+   * were kept — so this would generate rows until something broke. Answering it
+   * at all is the proof that the limit went to the server in the statement.
+   */
+  await typeQuery(
+    page,
+    'WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM seq) SELECT n FROM seq;'
+  );
+  await page.keyboard.press('ControlOrMeta+Enter');
+
+  await expect(page.locator('.tabulator-row').first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.results__summary')).toContainText('first 500 rows', {
+    timeout: 20_000,
+  });
+});
+
+test('draws the schema it is asked to draw', async ({ page }) => {
+  await page.getByRole('button', { name: /Sample database/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+  await revealTables(page);
+
+  /*
+   * From the schema's own menu, and scoped to it. It used to be a button on the
+   * empty workspace — available only while nothing was open, and unreachable
+   * from the moment anything was — and it drew every table in the connection,
+   * which on a real database is a hairball no screen can show at a legible
+   * size.
+   */
+  await page.locator('.row--schema').first().click({ button: 'right' });
+  await page.getByRole('menuitem', { name: /Diagram/ }).click();
+
+  await expect(page.locator('.erd')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.erd-node')).toHaveCount(3, { timeout: 20_000 });
+  await expect(page.locator('.zoomer__percent')).toBeVisible();
+});
+
 test('shows how the database would run a statement', async ({ page }) => {
   const file = join(await mkdtemp(join(tmpdir(), 'shelf-explain-')), 'x.db');
 
@@ -335,7 +385,7 @@ test('imports a CSV file into an existing table', async ({ app, page }) => {
 });
 
 test('sample mode opens the whole app with no database at all', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   // A database, its schemas, and — once they are opened — tables and a view,
@@ -360,7 +410,7 @@ test('sample mode opens the whole app with no database at all', async ({ page })
 test('the header stays aligned with the body on a table wider than the pane', async ({
   page,
 }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
   await openTable(page, 'album');
   await expect(page.locator('.tabulator-row').first()).toBeVisible({ timeout: 15_000 });
@@ -389,7 +439,7 @@ test('the header stays aligned with the body on a table wider than the pane', as
 });
 
 test('filters a table with the builder, without anyone writing SQL', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   await revealTables(page);
@@ -430,7 +480,7 @@ test('filters a table with the builder, without anyone writing SQL', async ({ pa
  * is real rather than decorative.
  */
 test('the editor brings find and replace, and says where the caret is', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
   await page.getByRole('button', { name: 'New query', exact: true }).first().click();
 
@@ -464,7 +514,7 @@ test('the editor brings find and replace, and says where the caret is', async ({
  * the export's own confirmation was written onto the sheet it then closed.
  */
 test('a clipboard write says so', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   await revealTables(page);
@@ -487,7 +537,7 @@ test('a clipboard write says so', async ({ page }) => {
  * wanted.
  */
 test('the sidebar opens as folders, shut until asked', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   // The database is the only one of its kind, so it is open; its schemas are
@@ -533,7 +583,7 @@ test('the sidebar opens as folders, shut until asked', async ({ page }) => {
  * hidden target, one destination.
  */
 test('every table carries a menu, from the button and from right-click', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   await revealTables(page);
@@ -580,7 +630,7 @@ test('every table carries a menu, from the button and from right-click', async (
  * a tab you were not looking at was silent.
  */
 test('the status bar says when work succeeded and when it failed', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   await page.getByRole('button', { name: 'New query', exact: true }).first().click();
@@ -605,7 +655,7 @@ test('the status bar says when work succeeded and when it failed', async ({ page
  * shortcut list did nothing at all.
  */
 test('the data shortcuts do what the shortcut list says they do', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   await revealTables(page);
@@ -632,12 +682,140 @@ test('the data shortcuts do what the shortcut list says they do', async ({ page 
 });
 
 /*
+ * Selecting cells and pressing ⌘C did nothing at all.
+ *
+ * Tabulator's clipboard module was never switched on, and the handler that was
+ * meant to catch the key was registered as `instance.on('keydown')` — an
+ * external event Tabulator does not have, so it was never once called. The grid
+ * copies the text it drew, which is the point: a date on the clipboard has to
+ * be the date that was on screen and not the transport's ISO envelope.
+ */
+test('cells copy out of the grid, and say so', async ({ page }) => {
+  await page.getByRole('button', { name: /Sample database/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+
+  await revealTables(page);
+  await openTable(page, 'album');
+  await expect(page.locator('.tabulator-row').first()).toBeVisible({ timeout: 15_000 });
+
+  // The first cell of each row is the row-number gutter, which is a column to
+  // the grid and not to the data — it must not come along.
+  const cell = (row: number, column: number) =>
+    page
+      .locator('.tabulator-row')
+      .nth(row)
+      .locator('.tabulator-cell')
+      .nth(column + 1);
+
+  // A range, made the way a range is made: press on one corner and drag to the
+  // other. What the grid has selected is what lands on the clipboard.
+  const start = await cell(0, 0).boundingBox();
+  const finish = await cell(1, 1).boundingBox();
+  if (!start || !finish) throw new Error('the grid drew no cells to select');
+
+  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(finish.x + finish.width / 2, finish.y + finish.height / 2, {
+    steps: 8,
+  });
+  await page.mouse.up();
+  await page.keyboard.press('ControlOrMeta+c');
+
+  await expect(page.locator('.notices [role="status"]')).toContainText('Copied');
+
+  const expected = [
+    [await cell(0, 0).innerText(), await cell(0, 1).innerText()].join('\t'),
+    [await cell(1, 0).innerText(), await cell(1, 1).innerText()].join('\t'),
+  ].join('\n');
+
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
+});
+
+/*
+ * Shift-clicking a cell opens it in full — and used to kill the renderer.
+ *
+ * The inspector was rendered with `v-if` on the value it was about to show, so
+ * it mounted already open, which inserted a `scroll()`-timeline animation into
+ * the document in the same commit that made it visible. Chromium did not throw;
+ * the process died and the window went with it.
+ */
+test('a cell opens in full without taking the window with it', async ({ page }) => {
+  await page.getByRole('button', { name: /Sample database/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+
+  await revealTables(page);
+  await openTable(page, 'album');
+  await expect(page.locator('.tabulator-row').first()).toBeVisible({ timeout: 15_000 });
+
+  await page
+    .locator('.tabulator-row')
+    .first()
+    .locator('.tabulator-cell')
+    .nth(2)
+    .click({ modifiers: ['Shift'] });
+
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toBeHidden();
+
+  // Still there, still answering — which is the whole assertion.
+  await expect(page.locator('.tabulator-row').first()).toBeVisible();
+});
+
+/*
+ * How many rows to bring back is chosen in the bar, before the run.
+ *
+ * It used to be a number typed into Settings, defaulting to fifty thousand —
+ * a limit nobody set, on a control nobody found, holding rows nobody was
+ * looking at. And running a statement wrote to the query history under a
+ * foreign key the connection did not have, so every run in sample mode threw
+ * `FOREIGN KEY constraint failed` into a promise nobody awaited.
+ */
+test('the row limit is chosen in the bar, and no run fails quietly', async ({ page }) => {
+  const failures: string[] = [];
+  page.on('pageerror', (error) => failures.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') failures.push(message.text());
+  });
+
+  await page.getByRole('button', { name: /Sample database/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+
+  await page
+    .getByRole('button', { name: /new query/i })
+    .first()
+    .click();
+  await page.locator('.monaco-editor').waitFor();
+  await typeQuery(page, 'select * from album');
+
+  await page.getByRole('combobox', { name: /Maximum rows/i }).click();
+  await page.getByRole('option', { name: '10 rows' }).click();
+  await page.getByRole('button', { name: /^Run/ }).first().click();
+
+  await expect(page.locator('.tabulator-row').first()).toBeVisible({ timeout: 15_000 });
+  await expect.poll(async () => page.locator('.tabulator-row').count()).toBe(10);
+
+  /*
+   * And it says so rather than presenting ten rows as the whole answer — as
+   * "first 10 rows", one statement rather than two. It used to print a count
+   * *and* "showing first 10" beside it, which read as a total and a window onto
+   * it; the total stopped existing when the limit went into the statement, and
+   * what was printed in its place was the ceiling plus the one extra row the
+   * server is asked for: "11 rows · showing first 10".
+   */
+  await expect(page.locator('.results__bar')).toContainText('first 10 rows');
+  await expect(page.locator('.results__bar')).not.toContainText('11');
+
+  expect(failures).toEqual([]);
+});
+
+/*
  * The table tab and the query tab now reach the same sheet. The table tab used
  * to skip it and infer the format from whatever extension you typed into the
  * save dialog, so "Export" meant two different interactions in two places.
  */
 test('exports a table through the same sheet the query tab uses', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   await revealTables(page);
@@ -667,7 +845,7 @@ test('exports a table through the same sheet the query tab uses', async ({ page 
  * behavioural half of the same guard.
  */
 test('exports query results, choosing a format and a destination', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   await page
@@ -701,7 +879,7 @@ test('exports query results, choosing a format and a destination', async ({ page
  * them precisely because the server cannot answer yet.
  */
 test('a snippet can be selected and copied, and says so', async ({ page }) => {
-  await page.getByRole('button', { name: /Explore sample data/ }).click();
+  await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   await page.locator('.row--database').first().click({ button: 'right' });
@@ -722,4 +900,35 @@ test('a snippet can be selected and copied, and says so', async ({ page }) => {
     timeout: 10_000,
   });
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('SELECT');
+});
+
+/*
+ * The start screen and the workspace get different windows, and the shrink back
+ * is the half that broke. `isResizable()` was the obvious way to ask which
+ * shape the window was in, and it lies: pinning a window by setting its minimum
+ * and maximum to the same size leaves macOS reporting it as not resizable long
+ * after both are cleared, so the window grew once when a database opened and
+ * every later call decided it was already small and did nothing.
+ */
+test('the window is compact for the start screen and full for a workspace', async ({
+  app,
+  page,
+}) => {
+  const size = () =>
+    app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getSize());
+
+  const start = await size();
+
+  await page.getByRole('button', { name: /Sample database/ }).click();
+  await page.locator('.strip').waitFor({ timeout: 20_000 });
+  await expect.poll(size).not.toEqual(start);
+
+  const workspace = await size();
+  expect(workspace[0]!).toBeGreaterThan(start[0]!);
+  expect(workspace[1]!).toBeGreaterThan(start[1]!);
+
+  // Back to the start screen: the window has to give the space back.
+  await page.reload();
+  await page.waitForLoadState('domcontentloaded');
+  await expect.poll(size).toEqual(start);
 });

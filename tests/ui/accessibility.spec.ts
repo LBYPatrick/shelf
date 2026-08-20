@@ -92,7 +92,7 @@ test('the command palette is accessible', async ({ sample }) => {
 test('the workspace is accessible in dark mode', async ({ page }) => {
   await setAppearance(page, 'dark');
   await page
-    .getByRole('button', { name: /sample/i })
+    .getByRole('button', { name: /sample database/i })
     .first()
     .click();
   await page.locator('.workspace').waitFor({ timeout: 30_000 });

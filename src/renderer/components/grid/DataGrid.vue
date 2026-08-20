@@ -15,6 +15,7 @@
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import ProgressBar from '../ui/ProgressBar.vue';
 import ValueSheet from './ValueSheet.vue';
+import { useTranslation } from 'i18next-vue';
 import {
   TabulatorFull as Tabulator,
   type ColumnDefinition,
@@ -23,8 +24,11 @@ import {
 import type { CellValue, Field, Row } from '@drivers/types';
 import { displayValue } from '@shared/values';
 import { isNumericType } from '@shared/columnTypes';
+import { toDelimitedGrid } from '@shared/tabular';
+import { errorMessage } from '@shared/errors';
 import { columnWidths, fontOf, stretchLast } from '../../lib/columnWidths';
 import { useSettings } from '../../stores/settings';
+import { useToasts } from '../../stores/toasts';
 
 const props = defineProps<{
   fields: readonly Field[];
@@ -40,6 +44,8 @@ const emit = defineEmits<{
 }>();
 
 const settings = useSettings();
+const toasts = useToasts();
+const { t } = useTranslation();
 
 /** The row-number gutter, which is frozen and never sized from its data. */
 const GUTTER = 56;
@@ -360,15 +366,93 @@ function build(): void {
     inspect(cell.getField(), cell.getValue() as CellValue);
   });
 
-  instance.on('keydown', ((event: KeyboardEvent) => {
-    if (event.key !== 'Enter' || !event.shiftKey) return;
-    const cell = instance.getSelectedRanges()[0]?.getCells()[0]?.[0];
+  /*
+   * A real listener on the element, not `instance.on('keydown')`.
+   *
+   * Tabulator has no such external event — it routes keys through its own
+   * keybindings table — so the handler that used to be registered there was
+   * never called once, and neither Shift+Enter nor anything else bound that way
+   * ever ran. Range selection puts focus inside the table, so a key pressed
+   * over the grid reaches this element by bubbling.
+   */
+  container.value.addEventListener('keydown', onKeydown);
+
+  table.value = instance;
+}
+
+/**
+ * The selected cells, as tab-separated text.
+ *
+ * Deliberately not Tabulator's clipboard module. That one copies by selecting
+ * the table's own DOM and calling `document.execCommand('copy')`, which puts
+ * the *formatter's* markup on the clipboard — `<span class="cell-null">NULL`
+ * and the styles the export module clones off the page — and its plain-text
+ * fallback stringifies whatever came off the wire, so a date pasted as its
+ * transport envelope. What belongs on the clipboard is what the cell says,
+ * which is what `displayValue` already decided.
+ */
+function selectionText(): string {
+  const instance = table.value;
+  if (!instance) return '';
+
+  const byName = new Map(props.fields.map((field) => [field.name, field]));
+
+  // The row-number gutter is a column to Tabulator and is inside the range it
+  // reports; it is not data, so it is dropped by not being a known field.
+  const lines = instance
+    .getRanges()
+    .flatMap((range) =>
+      range
+        .getStructuredCells()
+        .map((cells) =>
+          cells
+            .filter((cell) => byName.has(cell.getField()))
+            .map((cell) =>
+              cellText(cell.getRow().getData() as Row, byName.get(cell.getField())!)
+            )
+        )
+    )
+    .filter((cells) => cells.length > 0);
+
+  return lines.length === 0 ? '' : toDelimitedGrid(lines, '\t');
+}
+
+/**
+ * Copying is invisible — nothing on screen changes — so it says so. Without a
+ * toast the only way to find out whether ⌘C did anything is to paste somewhere
+ * and look, which is the check the message exists to save.
+ */
+async function copySelection(): Promise<void> {
+  const text = selectionText();
+  if (!text) return;
+
+  try {
+    await navigator.clipboard.writeText(text);
+    toasts.show({ tone: 'success', message: t('action.copied') });
+  } catch (caught) {
+    // A refused clipboard is the one case where saying nothing is worst of all:
+    // the reader has no way to tell it apart from a copy that worked.
+    toasts.show({ tone: 'error', message: errorMessage(caught) });
+  }
+}
+
+function onKeydown(event: KeyboardEvent): void {
+  // An open cell editor is a text field, and ⌘C there means the text in it.
+  const target = event.target as HTMLElement | null;
+  if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+
+  if (event.key === 'Enter' && event.shiftKey) {
+    const cell = table.value?.getRanges()[0]?.getStructuredCells()[0]?.[0];
     if (!cell) return;
     event.preventDefault();
     inspect(cell.getField(), cell.getValue() as CellValue);
-  }) as never);
+    return;
+  }
 
-  table.value = instance;
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'c') {
+    event.preventDefault();
+    void copySelection();
+  }
 }
 
 /**
@@ -463,6 +547,7 @@ onMounted(() => {
 /** Drops the table and everything bound to it, leaving the container empty. */
 function teardown(): void {
   laidOutAt = undefined;
+  container.value?.removeEventListener('keydown', onKeydown);
   if (scroller && syncHeader) scroller.removeEventListener('scroll', syncHeader);
   scroller = undefined;
   syncHeader = undefined;
@@ -491,13 +576,21 @@ watch(
   }
 );
 
-/* The gutter's formatter reads the base, so this only has to re-run it — which
-   is what a plain redraw does. The forced one would refit every column. */
+/*
+ * The gutter's formatter reads the base, so flipping it has to re-run that
+ * formatter — and `redraw(false)` does not. It re-renders the *rows* from the
+ * data they already hold; the row header is a frozen column drawn beside them
+ * and its cells were left exactly as they were. So the numbers did not change,
+ * which read as the control being dead, and the only way anyone found to make
+ * it take effect was to run the whole query again.
+ *
+ * `reformat` on each loaded row re-runs every formatter in it, gutter included,
+ * without touching column widths or asking the database for anything.
+ */
 watch(
   () => settings.values.rowIndexBase,
   () => {
-    table.value?.redraw(false);
-    countRedraw();
+    for (const row of table.value?.getRows() ?? []) row.reformat();
   }
 );
 
@@ -565,11 +658,27 @@ watch(
       aria-hidden="true"
     />
 
+    <!--
+      Mounted from the start rather than with the value, and this is not a
+      preference. Every other sheet in the app exists before it opens and only
+      flips a flag; this one appeared *already open*, so the panel's body — which
+      carries a `scroll()`-timeline animation for its fade-out edge — was
+      inserted mid-flight with a scroll timeline attached, and the renderer went
+      down. Not an exception: the process died, taking the window with it, on
+      shift-clicking any cell.
+    -->
+    <!--
+      Mounted from the start rather than with the value it shows. Every other
+      sheet in the app exists before it opens and only flips a flag; this one
+      arrived *already open*, which is the arrangement that took the renderer
+      down — see the note in `Sheet.vue`. It is also simply the right shape: the
+      inspector is a fixture of the grid, and what changes is which cell it is
+      looking at.
+    -->
     <ValueSheet
-      v-if="inspecting"
       v-model="inspectorOpen"
-      :column="inspecting.column"
-      :value="inspecting.value"
+      :column="inspecting?.column ?? ''"
+      :value="inspecting?.value ?? null"
     />
   </div>
 </template>

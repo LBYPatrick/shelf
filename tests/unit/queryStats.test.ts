@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { StatementSample } from '@drivers/types';
-import { SAMPLE_LIMITS, condense, retain, windowOf } from '@shared/queryStats';
+import {
+  SAMPLE_LIMITS,
+  bucketize,
+  condense,
+  intervals,
+  rangeOf,
+  retain,
+  windowOf,
+} from '@shared/queryStats';
 
 const HOUR = 3_600_000;
 
@@ -162,5 +170,86 @@ describe('holding the history to a size', () => {
     const ancient = sample(0, { a: [1, 1] });
     const now = SAMPLE_LIMITS.maxAgeMs + HOUR;
     expect(retain([ancient], sample(now, { a: [2, 2] }))).toHaveLength(1);
+  });
+});
+
+describe('a history with a night in the middle of it', () => {
+  const history = [
+    sample(0, { a: [10, 100] }),
+    sample(HOUR, { a: [20, 200] }),
+    // Nothing recorded overnight; the panel is opened again a day later.
+    sample(25 * HOUR, { a: [400, 5000] }),
+  ];
+
+  it('still answers, because the nearest reading is the best there is', () => {
+    expect(at(windowOf(history, 'hour'), 'a')?.totalMs).toBe(4800);
+  });
+
+  it('says the answer covers far more than the range asked for', () => {
+    expect(windowOf(history, 'hour')?.caveat).toBe('wide');
+  });
+
+  it('says nothing when the range and the readings agree', () => {
+    expect(windowOf(history, 'day')?.caveat).toBeUndefined();
+  });
+});
+
+describe('a range picked off the chart', () => {
+  const history = [
+    sample(0, { a: [10, 100], b: [1, 10] }),
+    sample(HOUR, { a: [20, 300], b: [2, 20] }),
+    sample(2 * HOUR, { a: [25, 350], b: [90, 900] }),
+  ];
+
+  it('differences the readings the range covers, not the whole history', () => {
+    const result = rangeOf(history, HOUR, 2 * HOUR);
+    expect(result?.statements.find((s) => s.id === 'b')?.totalMs).toBe(880);
+    expect(result?.statements.find((s) => s.id === 'a')?.totalMs).toBe(50);
+  });
+
+  it('has nothing to say about a range with no reading in it', () => {
+    expect(rangeOf(history, 3 * HOUR, 4 * HOUR)).toBeNull();
+  });
+
+  it('reports the readings it actually used as its span', () => {
+    const result = rangeOf(history, HOUR, 2 * HOUR);
+    // The reading *at* the start of the range is the baseline, not the one
+    // before it: the range covers the work done after that reading was taken.
+    expect(result?.from).toBe(HOUR);
+    expect(result?.to).toBe(2 * HOUR);
+  });
+});
+
+describe('shaping the history for a chart', () => {
+  const history = [
+    sample(0, { a: [10, 100] }),
+    sample(HOUR, { a: [20, 400] }),
+    sample(2 * HOUR, { a: [30, 500] }),
+  ];
+
+  it('reports what was spent between each pair of readings', () => {
+    expect(intervals(history).map((entry) => entry.totalMs)).toEqual([300, 100]);
+  });
+
+  it('never reports a negative interval when the counters go backwards', () => {
+    const reset = [sample(0, { a: [50, 900] }), sample(HOUR, { a: [1, 5] })];
+    expect(intervals(reset)[0]?.totalMs).toBe(0);
+  });
+
+  it('splits an interval across every column it covers', () => {
+    const buckets = bucketize(intervals(history), 0, 2 * HOUR, 2);
+    expect(buckets.map((bucket) => bucket.totalMs)).toEqual([300, 100]);
+  });
+
+  it('spreads one long interval over the columns in proportion', () => {
+    const long = [{ from: 0, to: 2 * HOUR, totalMs: 400, calls: 8 }];
+    const buckets = bucketize(long, 0, 2 * HOUR, 2);
+    expect(buckets.map((bucket) => bucket.totalMs)).toEqual([200, 200]);
+  });
+
+  it('marks a column nothing was recorded in as uncovered rather than idle', () => {
+    const buckets = bucketize(intervals(history), 0, 4 * HOUR, 4);
+    expect(buckets[3]?.coveredSeconds).toBe(0);
+    expect(buckets[0]?.coveredSeconds).toBe(3600);
   });
 });

@@ -2,6 +2,8 @@ import { createClient } from '@drivers/registry';
 import type { HostChannel, HostContract } from '@shared/contract';
 import { runExport } from './export';
 import { cellToValue, readTable } from './import';
+import { discardSpool, readSpoolPage, spool, spoolCursor, spoolPath } from './spool';
+import { openTunnel, through } from './tunnel';
 import type { Session } from './session';
 
 /**
@@ -23,23 +25,43 @@ export const handlers: Registry = {
     // Reconnecting over a live connection would leak the old one.
     const existing = session.connections.get(connectionId);
     if (existing) await existing.disconnect().catch(() => undefined);
+    await session.closeTunnel(connectionId);
 
-    const client = await createClient(session.consume(handle));
-    await client.connect(signal);
-    session.connections.set(connectionId, client);
+    /*
+     * The tunnel comes up first and the driver is pointed at it, so no driver
+     * knows anything about proxying — see `utility/tunnel.ts`. It is closed
+     * with the connection, and again on the way in, because a reconnect that
+     * left the old listener behind would leak a port per attempt.
+     */
+    const config = session.consume(handle);
+    const tunnel = await openTunnel(config);
 
-    return { capabilities: client.capabilities, version: await client.versionString() };
+    try {
+      const client = await createClient(through(config, tunnel));
+      await client.connect(signal);
+      session.connections.set(connectionId, client);
+      if (tunnel) session.tunnels.set(connectionId, tunnel);
+
+      return { capabilities: client.capabilities, version: await client.versionString() };
+    } catch (error) {
+      await tunnel?.close().catch(() => undefined);
+      throw error;
+    }
   },
 
   'conn/close': async (session, { connectionId }) => {
     const client = session.connections.get(connectionId);
-    if (!client) return;
     session.connections.delete(connectionId);
-    await client.disconnect();
+    await client?.disconnect();
+    await session.closeTunnel(connectionId);
   },
 
   'conn/test': async (session, { handle }, signal) => {
-    const client = await createClient(session.consume(handle));
+    // Tested through the tunnel too, or "test connection" would pass on a
+    // machine that cannot reach the database at all.
+    const config = session.consume(handle);
+    const tunnel = await openTunnel(config);
+    const client = await createClient(through(config, tunnel));
     try {
       await client.connect(signal);
       return { ok: true as const, version: await client.versionString() };
@@ -50,6 +72,9 @@ export const handlers: Registry = {
       };
     } finally {
       await client.disconnect().catch(() => undefined);
+      // A test owns its tunnel and takes it down with it; nothing is left
+      // listening after a dialog the reader has already closed.
+      await tunnel?.close().catch(() => undefined);
     }
   },
 
@@ -111,6 +136,41 @@ export const handlers: Registry = {
     session.require(connectionId).applyChanges(changes),
   'changes/preview': (session, { connectionId, changes }) =>
     session.require(connectionId).applyChangesSql(changes),
+
+  /*
+   * Dispatch: the statement runs to completion and every row lands on disk.
+   *
+   * No limit is applied — that is the whole distinction from `query/run`, which
+   * exists to fetch a page you can look at. The cursor is drained straight into
+   * a spool, so the cost is bounded by the chunk size rather than by the size
+   * of the answer.
+   */
+  'job/run': async (session, { connectionId, jobId, text }, signal) => {
+    const client = session.require(connectionId);
+    const cursor = await client.stream({ query: text, chunkSize: 1000 });
+    const path = spoolPath(jobId);
+
+    const result = await spool(cursor, path, undefined, signal);
+    return { ...result, path };
+  },
+
+  'job/page': (_session, { path, offset, limit }) => readSpoolPage(path, offset, limit),
+
+  'job/export': async (_session, { path, target, format }, signal) => {
+    const cursor = await spoolCursor(path, 1000);
+
+    let rowsWritten = 0;
+    await runExport(
+      cursor,
+      { format, path: target, chunkSize: 1000 },
+      (progress) => (rowsWritten = progress.rowsWritten),
+      signal
+    );
+
+    return { rowsWritten };
+  },
+
+  'job/discard': (_session, { path }) => discardSpool(path),
 
   'export/run': async (session, payload, signal) => {
     const client = session.require(payload.connectionId);

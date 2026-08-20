@@ -62,6 +62,7 @@ describe('settings parity', () => {
       'binaryEncoding',
       'primaryRun',
       'wrapLines',
+      'maxRows',
     ]);
 
     const unaccounted = all.filter((key) => !exempt.has(key) && !covered.has(key));
@@ -73,7 +74,8 @@ describe('settings parity', () => {
 
   it('exempts only the preferences a palette row cannot express', () => {
     // A row is a name you can say. A number typed into a slot is a form field,
-    // and the settings sheet already has one.
-    expect([...UNCOMMANDED].sort()).toEqual(['editorFontSize', 'maxRows', 'pageSize']);
+    // and the settings sheet already has one. The row limit left this list when
+    // it stopped being a number and became seven named choices.
+    expect([...UNCOMMANDED].sort()).toEqual(['editorFontSize', 'pageSize']);
   });
 });

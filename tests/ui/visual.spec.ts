@@ -53,7 +53,7 @@ test.describe('dark', () => {
   test('workspace with a table open', async ({ page }) => {
     await setAppearance(page, 'dark');
     await page
-      .getByRole('button', { name: /sample/i })
+      .getByRole('button', { name: /sample database/i })
       .first()
       .click();
     await page.locator('.workspace').waitFor({ timeout: 30_000 });
@@ -111,7 +111,7 @@ test.describe('corners', () => {
   test('the same corner on the dark theme', async ({ page }) => {
     await setAppearance(page, 'dark');
     await page
-      .getByRole('button', { name: /sample/i })
+      .getByRole('button', { name: /sample database/i })
       .first()
       .click();
     await page.locator('.workspace').waitFor({ timeout: 30_000 });

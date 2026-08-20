@@ -17,6 +17,7 @@ import DisclosureGroup from '../ui/DisclosureGroup.vue';
 import FormField from '../ui/FormField.vue';
 import PressButton from '../ui/PressButton.vue';
 import AppIcon from '../ui/AppIcon.vue';
+import SegmentedControl from '../ui/SegmentedControl.vue';
 import TextInput from '../ui/TextInput.vue';
 import EnginePicker from './EnginePicker.vue';
 
@@ -27,7 +28,6 @@ const props = defineProps<{
   seed?: ParsedConnection | undefined;
   keyringAvailable: boolean;
   testing: boolean;
-  testResult: { ok: true; version: string } | { ok: false; message: string } | null;
 }>();
 
 const emit = defineEmits<{
@@ -59,6 +59,19 @@ interface Draft {
   sshPassword: string;
   sshKeyfile: string;
   sshMode: 'agent' | 'password' | 'keyfile';
+  /*
+   * Read back from the keyring since it was written, and never once collected:
+   * the draft had no field for it, so an encrypted key could be chosen and its
+   * passphrase could not be given. The tunnel that now uses it made that a
+   * connection you cannot open rather than a field that does nothing.
+   */
+  sshPassphrase: string;
+  proxyEnabled: boolean;
+  proxyKind: 'socks5' | 'socks4' | 'http';
+  proxyHost: string;
+  proxyPort: string;
+  proxyUsername: string;
+  proxyPassword: string;
 }
 
 function emptyDraft(): Draft {
@@ -84,6 +97,13 @@ function emptyDraft(): Draft {
     sshPassword: '',
     sshKeyfile: '',
     sshMode: 'agent',
+    sshPassphrase: '',
+    proxyEnabled: false,
+    proxyKind: 'socks5',
+    proxyHost: '',
+    proxyPort: '1080',
+    proxyUsername: '',
+    proxyPassword: '',
   };
 }
 
@@ -91,6 +111,20 @@ const draft = reactive<Draft>(emptyDraft());
 const showAdvanced = ref(false);
 /** Off every time the sheet opens: revealing is a deliberate act, not a mode. */
 const revealed = ref(false);
+
+/**
+ * The three ways a network puts something in front of a database.
+ *
+ * SOCKS5 first because it is what most proxies are; SOCKS4 is offered as 4a —
+ * the variant that can carry a host name — because plain SOCKS4 cannot name a
+ * host the client has not already resolved, and on a private network that is
+ * the whole point.
+ */
+const proxyKinds = [
+  { value: 'socks5' as const, label: 'SOCKS5' },
+  { value: 'socks4' as const, label: 'SOCKS4a' },
+  { value: 'http' as const, label: 'HTTP' },
+];
 
 const descriptor = computed(() => (draft.engine ? engineDescriptor(draft.engine) : null));
 const shows = (field: string) => descriptor.value?.fields.includes(field as never) ?? false;
@@ -138,6 +172,11 @@ watch(
     draft.sshUsername = config.ssh?.username ?? '';
     draft.sshKeyfile = config.ssh?.keyfile ?? '';
     draft.sshMode = config.ssh?.mode ?? 'agent';
+    draft.proxyEnabled = config.proxy?.enabled ?? false;
+    draft.proxyKind = config.proxy?.kind ?? 'socks5';
+    draft.proxyHost = config.proxy?.host ?? '';
+    draft.proxyPort = config.proxy?.port ? String(config.proxy.port) : '1080';
+    draft.proxyUsername = config.proxy?.username ?? '';
     draft.options = Object.fromEntries(
       Object.entries(config.options ?? {}).map(([key, value]) => [key, String(value ?? '')])
     );
@@ -162,6 +201,7 @@ watch(
         if (props.editing?.id !== id) return;
         draft.password = secrets['password'] ?? '';
         draft.sshPassword = secrets['sshPassword'] ?? '';
+        draft.proxyPassword = secrets['proxyPassword'] ?? '';
         draft.sshPassphrase = secrets['sshPassphrase'] ?? '';
       })
       .catch(() => undefined);
@@ -258,6 +298,24 @@ function buildInput(): SaveConnectionInput {
             username: draft.sshUsername,
             mode: draft.sshMode,
             ...(draft.sshKeyfile ? { keyfile: draft.sshKeyfile } : {}),
+            ...(draft.sshPassphrase ? { passphrase: draft.sshPassphrase } : {}),
+          },
+        }
+      : {}),
+    /*
+     * One route at a time. A bastion reached through a SOCKS proxy is a real
+     * arrangement and two hops to explain; offering the combination without
+     * having tried it would be offering something that has never worked.
+     */
+    ...(draft.proxyEnabled && !draft.sshEnabled && draft.proxyHost
+      ? {
+          proxy: {
+            enabled: true,
+            kind: draft.proxyKind,
+            host: draft.proxyHost,
+            port: Number(draft.proxyPort) || 1080,
+            ...(draft.proxyUsername ? { username: draft.proxyUsername } : {}),
+            ...(draft.proxyPassword ? { password: draft.proxyPassword } : {}),
           },
         }
       : {}),
@@ -267,6 +325,8 @@ function buildInput(): SaveConnectionInput {
   const secrets: Record<string, string> = {};
   if (draft.password) secrets['password'] = draft.password;
   if (draft.sshPassword) secrets['sshPassword'] = draft.sshPassword;
+  if (draft.sshPassphrase) secrets['sshPassphrase'] = draft.sshPassphrase;
+  if (draft.proxyPassword) secrets['proxyPassword'] = draft.proxyPassword;
 
   return {
     ...(props.editing ? { id: props.editing.id } : {}),
@@ -535,6 +595,83 @@ async function pickFile(): Promise<void> {
                 type="password"
               />
             </FormField>
+            <FormField
+              v-if="draft.sshMode === 'keyfile'"
+              v-slot="{ id }"
+              label="Key passphrase"
+              help="Only if the key file is encrypted."
+            >
+              <TextInput
+                :id="id"
+                v-model="draft.sshPassphrase"
+                type="password"
+              />
+            </FormField>
+          </div>
+
+          <!--
+            The other way through. Offered only when a tunnel is not, because
+            the two are alternatives and a form that lets you fill in both is a
+            form that has to explain which one wins.
+          -->
+          <CheckBox
+            v-if="descriptor.supportsSsh && !draft.sshEnabled"
+            v-model="draft.proxyEnabled"
+            label="Connect through a proxy"
+          />
+
+          <div
+            v-if="descriptor.supportsSsh && draft.proxyEnabled && !draft.sshEnabled"
+            class="pairs"
+          >
+            <FormField label="Proxy type">
+              <SegmentedControl
+                v-model="draft.proxyKind"
+                :options="proxyKinds"
+                aria-label="Proxy type"
+              />
+            </FormField>
+            <FormField
+              v-slot="{ id }"
+              label="Proxy host"
+            >
+              <TextInput
+                :id="id"
+                v-model="draft.proxyHost"
+                placeholder="127.0.0.1"
+              />
+            </FormField>
+            <FormField
+              v-slot="{ id }"
+              label="Proxy port"
+            >
+              <TextInput
+                :id="id"
+                v-model="draft.proxyPort"
+                inputmode="numeric"
+              />
+            </FormField>
+            <FormField
+              v-slot="{ id }"
+              label="Proxy username"
+              help="Leave blank for a proxy that needs no credentials."
+            >
+              <TextInput
+                :id="id"
+                v-model="draft.proxyUsername"
+                autocomplete="off"
+              />
+            </FormField>
+            <FormField
+              v-slot="{ id }"
+              label="Proxy password"
+            >
+              <TextInput
+                :id="id"
+                v-model="draft.proxyPassword"
+                type="password"
+              />
+            </FormField>
           </div>
         </div>
       </DisclosureGroup>
@@ -546,7 +683,13 @@ async function pickFile(): Promise<void> {
           hint="Refuses anything that writes, at the driver."
         />
 
+        <!--
+          Nothing to save for a file: SQLite and DuckDB are opened by path, so
+          a checkbox about the keychain on that form is a control that cannot
+          act on anything the reader has typed.
+        -->
         <CheckBox
+          v-if="draft.engine && !isFileEngine(draft.engine)"
           v-model="draft.rememberSecrets"
           label="Save password"
           :disabled="!keyringAvailable"
@@ -581,15 +724,6 @@ async function pickFile(): Promise<void> {
         role="status"
       >
         {{ problems[0] }}
-      </p>
-
-      <p
-        v-else-if="testResult"
-        class="result"
-        :class="testResult.ok ? 'result--ok' : 'result--bad'"
-        role="status"
-      >
-        {{ testResult.ok ? `Connected — ${testResult.version}` : testResult.message }}
       </p>
     </template>
   </form>
@@ -670,8 +804,7 @@ async function pickFile(): Promise<void> {
   gap: var(--gap);
 }
 
-.problems,
-.result {
+.problems {
   font-size: 0.75rem;
   padding: var(--gap) var(--gap-loose);
   border-radius: var(--radius-field);
@@ -683,13 +816,5 @@ async function pickFile(): Promise<void> {
   transition:
     background-color var(--t-hover) var(--ease-out),
     color var(--t-hover) var(--ease-out);
-}
-
-.result--ok {
-  background: color-mix(in oklab, var(--color-success) 18%, transparent);
-}
-
-.result--bad {
-  background: color-mix(in oklab, var(--color-error) 16%, transparent);
 }
 </style>

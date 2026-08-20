@@ -1,3 +1,4 @@
+import { limitStatement } from '@shared/rowLimit';
 import Database from 'better-sqlite3';
 import { capabilities } from '../capabilities';
 import { encodeRows, tagFields } from '../transcode';
@@ -377,7 +378,7 @@ export class SqliteClient implements DatabaseClient {
 
     for (const statement of statements) {
       const started = performance.now();
-      const prepared = db.prepare(statement);
+      const prepared = db.prepare(limitStatement(statement, options.maxRows));
 
       if (prepared.reader) {
         // `raw` is avoided so duplicate column names do not silently collapse;
@@ -398,7 +399,7 @@ export class SqliteClient implements DatabaseClient {
           fields,
           rows,
           truncated,
-          rowCount: all.length,
+          rowCount: rows.length,
           statement,
           durationMs: performance.now() - started,
         });

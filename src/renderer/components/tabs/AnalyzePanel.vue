@@ -28,8 +28,12 @@ import { formatBytes } from '@shared/bytes';
 import { errorMessage } from '@shared/errors';
 import {
   WINDOWS,
+  bucketize,
+  intervals,
+  rangeOf,
   retain,
   windowOf,
+  windowLength,
   type StatementDelta,
   type WindowId,
 } from '@shared/queryStats';
@@ -43,7 +47,7 @@ import PressButton from '../ui/PressButton.vue';
 import SegmentedControl from '../ui/SegmentedControl.vue';
 import RankedBars, { type Bar } from '../viz/RankedBars.vue';
 import ShareDonut from '../viz/ShareDonut.vue';
-import TrendLine, { type Point } from '../viz/TrendLine.vue';
+import StatementHistogram from '../viz/StatementHistogram.vue';
 
 const props = defineProps<{ section: 'queries' | 'server'; active: boolean }>();
 
@@ -122,14 +126,36 @@ async function refresh(): Promise<void> {
 
 /* ------------------------------------------------------------------ queries */
 
-const result = computed(() => windowOf(history.value, windowId.value));
+/**
+ * The span dragged out on the histogram, or null for the window as chosen.
+ *
+ * Everything downstream reads `result`, so a selection re-answers the ranking,
+ * the table and the totals rather than only shading the chart — a brush that
+ * changed nothing but the chart would be decoration.
+ */
+const selection = ref<readonly [number, number] | null>(null);
+
+const result = computed(() =>
+  selection.value
+    ? rangeOf(history.value, selection.value[0], selection.value[1])
+    : windowOf(history.value, windowId.value)
+);
 const statements = computed<readonly StatementDelta[]>(() => result.value?.statements ?? []);
+
+// A window is a different stretch of time, so a selection drawn over the old
+// one describes nothing in the new one.
+watch(windowId, () => (selection.value = null));
 
 const TOP = 10;
 
 /** What a Postgres server needs before it will report anything at all. */
 const SETUP = `shared_preload_libraries = 'pg_stat_statements'
 CREATE EXTENSION pg_stat_statements;`;
+
+/** The two problems those two lines actually fix. */
+const needsSetup = computed(
+  () => problem.value?.kind === 'not-installed' || problem.value?.kind === 'not-loaded'
+);
 
 const bars = computed<Bar[]>(() =>
   statements.value.slice(0, TOP).map((statement) => ({
@@ -145,31 +171,45 @@ const chosen = computed(
 );
 
 /**
- * The rate at which the server has been spending time in statements, one point
- * per pair of readings. It is a rate rather than a total because the readings
- * are irregular: a total would make a long gap look like a busy period.
+ * The work done between each pair of readings, laid onto equal columns.
+ *
+ * The columns are decided by the window rather than by a control, because the
+ * useful width of one is a property of the span being looked at: five minutes
+ * of an hour and a day of a month are the same picture at two scales. Forty is
+ * about as many as read as columns rather than as a comb at the widths this
+ * panel gets.
  */
-const trend = computed<Point[]>(() => {
-  const points: Point[] = [];
+const COLUMNS = 40;
+
+const series = computed(() => intervals(history.value));
+
+const chartSpan = computed<readonly [number, number] | null>(() => {
   const samples = history.value;
+  const last = samples[samples.length - 1];
+  if (!last || samples.length < 2) return null;
 
-  for (let index = 1; index < samples.length; index += 1) {
-    const before = samples[index - 1]!;
-    const after = samples[index]!;
-    const seconds = (after.takenAt - before.takenAt) / 1000;
-    if (seconds <= 0) continue;
+  const length = windowLength(windowId.value);
+  const earliest = samples[0]!.takenAt;
+  const from = Number.isFinite(length) ? Math.max(earliest, last.takenAt - length) : earliest;
 
-    const previous = new Map(before.statements.map((s) => [s.id, s.totalMs]));
-    const spent = after.statements.reduce((sum, statement) => {
-      const was = previous.get(statement.id) ?? 0;
-      return sum + Math.max(0, statement.totalMs - was);
-    }, 0);
-
-    points.push({ at: after.takenAt, value: spent / seconds });
-  }
-
-  return points;
+  // A window wider than the history is drawn as the history, not as a wall of
+  // empty columns with the data crushed into the last of them.
+  return from >= last.takenAt ? [earliest, last.takenAt] : [from, last.takenAt];
 });
+
+const buckets = computed(() => {
+  const range = chartSpan.value;
+  return range ? bucketize(series.value, range[0], range[1], COLUMNS) : [];
+});
+
+/** What the current answer covers, whether it came from a window or a drag. */
+const spentMs = computed(() =>
+  statements.value.reduce((sum, statement) => sum + statement.totalMs, 0)
+);
+
+const callCount = computed(() =>
+  statements.value.reduce((sum, statement) => sum + statement.calls, 0)
+);
 
 /**
  * Anything shown as code can be taken away.
@@ -197,6 +237,33 @@ function formatDuration(ms: number): string {
 }
 
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact' });
+
+const clock = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+const dayAndClock = new Intl.DateTimeFormat(undefined, {
+  month: 'short',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+/**
+ * A moment on the chart's axis, in the smallest form that stays unambiguous.
+ *
+ * Inside a day the date is noise on every label; beyond one, the time of day
+ * alone would put Tuesday's 09:00 and Wednesday's 09:00 under the same word.
+ */
+function formatMoment(at: number): string {
+  const range = chartSpan.value;
+  const span = range ? range[1] - range[0] : 0;
+  return (span > 24 * 3_600_000 ? dayAndClock : clock).format(new Date(at));
+}
+
+/** Statement time per second of observed wall clock; see the histogram. */
+function formatRate(msPerSecond: number): string {
+  if (msPerSecond >= 1000) return `${(msPerSecond / 1000).toFixed(1)}×`;
+  if (msPerSecond >= 1) return `${Math.round(msPerSecond)} ms/s`;
+  return `${msPerSecond.toFixed(1)} ms/s`;
+}
 
 /** Elapsed time, in the largest unit that leaves a number worth reading. */
 function formatElapsed(seconds: number): string {
@@ -340,10 +407,23 @@ onBeforeUnmount(stopSampling);
           <p class="type-title">
             {{ $t(`analyzeProblem.${problem.kind}`) }}
           </p>
-          <p class="analyze__hint">
+          <!--
+            The install commands are the answer to exactly two of these and
+            actively misleading for the rest: a server that is recording
+            thousands of statements for another database does not need the
+            extension creating again. What every one of them gets instead is the
+            server's own numbers, below.
+          -->
+          <p
+            v-if="needsSetup"
+            class="analyze__hint"
+          >
             {{ $t('analyzeProblem.hint') }}
           </p>
-          <div class="snippet">
+          <div
+            v-if="needsSetup"
+            class="snippet"
+          >
             <pre class="analyze__code selectable">{{ SETUP }}</pre>
             <button
               type="button"
@@ -407,6 +487,31 @@ onBeforeUnmount(stopSampling);
           </p>
 
           <section
+            v-if="buckets.length > 0"
+            class="panel"
+          >
+            <div class="panel__head">
+              <h2 class="panel__title type-label">
+                {{ $t('analyze.trend') }}
+              </h2>
+              <span class="analyze__totals">{{
+                $t('analyze.totals', {
+                  time: formatDuration(spentMs),
+                  calls: compact.format(Math.round(callCount)),
+                })
+              }}</span>
+            </div>
+            <StatementHistogram
+              :buckets="buckets"
+              :selection="selection"
+              :label="$t('analyze.trend')"
+              :format="formatRate"
+              :format-time="formatMoment"
+              @select="selection = $event"
+            />
+          </section>
+
+          <section
             v-if="statements.length > 0"
             class="panel"
           >
@@ -418,19 +523,6 @@ onBeforeUnmount(stopSampling);
               :label="$t('analyze.slowest')"
               :selected="selected"
               @pick="selected = $event"
-            />
-          </section>
-
-          <section
-            v-if="trend.length > 1"
-            class="panel"
-          >
-            <h2 class="panel__title type-label">
-              {{ $t('analyze.trend') }}
-            </h2>
-            <TrendLine
-              :points="trend"
-              :label="$t('analyze.trend')"
             />
           </section>
 
@@ -563,11 +655,26 @@ onBeforeUnmount(stopSampling);
             </div>
           </section>
 
+          <!--
+            Three different silences, said as three different sentences. "The
+            extension is installed and nothing has run" and "nothing has been
+            recorded yet, come back in ten minutes" are not the same news, and
+            the panel used to give both of them the same four words — which read
+            as a broken screen on a server that was plainly busy.
+          -->
           <p
             v-if="statements.length === 0"
             class="analyze__note"
           >
-            {{ loading ? $t('workspace.loading') : $t('analyze.quiet') }}
+            {{
+              loading
+                ? $t('workspace.loading')
+                : history.length === 0
+                  ? $t('analyze.noReadings')
+                  : selection
+                    ? $t('analyze.quietSelection')
+                    : $t('analyze.quiet')
+            }}
           </p>
         </template>
       </template>
@@ -764,9 +871,23 @@ onBeforeUnmount(stopSampling);
 
 .analyze__note {
   padding: var(--gap-section);
+  margin-inline: auto;
+  max-width: 44ch;
   text-align: center;
   font-size: 0.8125rem;
+  line-height: 1.5;
   color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+}
+
+/*
+ * The sum of whatever is currently being answered, beside the title of the
+ * chart that chooses it. It sits here rather than under the chart because it is
+ * the number the drag is *for*: the shape says when, and this says how much.
+ */
+.analyze__totals {
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
 }
 
 .analyze__empty {

@@ -110,6 +110,26 @@ export interface SshConfig {
   readonly keepaliveInterval?: number;
 }
 
+/**
+ * Reaching the database through something else.
+ *
+ * Separate from `ssh` because they are different arrangements, not two settings
+ * of one: an SSH tunnel is an account on a machine you are allowed to log into,
+ * a SOCKS proxy is a service the network puts in front of you. They are offered
+ * as alternatives — see `openTunnel` for why only one is applied.
+ */
+export type ProxyKind = 'socks5' | 'socks4' | 'http';
+
+export interface ProxyConfig {
+  readonly enabled: boolean;
+  readonly kind: ProxyKind;
+  readonly host: string;
+  readonly port: number;
+  /** Sent only when present; an anonymous proxy is offered no method it cannot do. */
+  readonly username?: string;
+  readonly password?: string;
+}
+
 export interface SslConfig {
   readonly enabled: boolean;
   readonly rejectUnauthorized: boolean;
@@ -133,6 +153,7 @@ export interface ConnectionConfig {
   readonly url?: string;
   readonly ssl?: SslConfig;
   readonly ssh?: SshConfig;
+  readonly proxy?: ProxyConfig;
   /** Engine-specific settings that do not generalise (AWS region, Cassandra DC). */
   readonly options?: Readonly<Record<string, unknown>>;
   /** Refuse anything that writes. Enforced in the driver, not just the UI. */
@@ -283,8 +304,27 @@ export interface StatementSample {
   readonly statements: readonly StatementStat[];
 }
 
-/** Why the server cannot report statement statistics at the moment. */
-export type StatisticsProblem = 'unsupported' | 'not-installed' | 'not-permitted';
+/**
+ * Why the server cannot report statement statistics at the moment.
+ *
+ * `nothing-recorded` and `other-database` are not failures — the extension is
+ * working and has simply not been asked for anything this panel can show — but
+ * they are reported the same way because the alternative is a chart of zeroes
+ * under the words "nothing ran", which is what a busy production server was
+ * being told about itself.
+ */
+export type StatisticsProblem =
+  | 'unsupported'
+  | 'not-installed'
+  /** Created as an extension, but the library was never preloaded, so it counts nothing. */
+  | 'not-loaded'
+  | 'not-permitted'
+  /** Recording is switched off — `pg_stat_statements.track = none`. */
+  | 'not-tracking'
+  /** Statements are recorded, but none of them for the database being viewed. */
+  | 'other-database'
+  /** The extension is recording and has nothing yet, most likely a recent reset. */
+  | 'nothing-recorded';
 
 export type StatementReport =
   | { readonly ok: true; readonly sample: StatementSample }
@@ -411,6 +451,17 @@ export interface ResultSet {
   readonly rows: readonly Row[];
   /** True when the result was cut short at the configured ceiling. */
   readonly truncated: boolean;
+  /**
+   * How many rows came back — the length of `rows`, and not a claim about how
+   * many the statement would have matched.
+   *
+   * That claim used to be made, from the length of what the driver fetched
+   * before cutting it down. It stopped being possible the moment the limit went
+   * into the statement: the server is asked for the ceiling plus one and stops
+   * there, so "how many are there really" is a second query nobody asked for —
+   * and reporting the ceiling plus one is worse than useless, which is what
+   * "11 rows · showing first 10" was.
+   */
   readonly rowCount: number;
   readonly affectedRows?: number;
   /** The statement this result came from, for multi-statement scripts. */

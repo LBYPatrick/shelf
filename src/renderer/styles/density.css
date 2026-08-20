@@ -28,6 +28,15 @@
   --row-h: calc(1.625rem * var(--density));
   --sidebar-row-h: max(var(--hit-min), calc(1.625rem * var(--density)));
   --tab-h: max(var(--hit-min), calc(2.5rem * var(--density)));
+  /*
+   * Tabs share the strip equally between these two, the way a browser's do,
+   * rather than each being as wide as its own title. The ceiling is where a
+   * title stops needing more room; the floor is where an icon, three or four
+   * characters and a close button still fit, and past it the strip scrolls
+   * instead of shrinking them into slivers.
+   */
+  --tab-max: calc(13rem * var(--density));
+  --tab-min: calc(6.5rem * var(--density));
   --field-h: max(var(--hit-min), calc(1.75rem * var(--density)));
   --rail-w: 3rem;
   /* The band below the window controls that the connection row and the rail's

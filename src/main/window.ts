@@ -11,6 +11,16 @@ const DEFAULT_SIZE = { width: 1280, height: 820 };
 const MIN_SIZE = { width: 880, height: 560 };
 
 /**
+ * The start screen's window.
+ *
+ * It is a panel, not a workspace: a title, a short list of databases and two
+ * ways in. Given the whole screen it is mostly emptiness, so it gets a window
+ * the size of what it contains — and it is not resizable, because there is
+ * nothing in it that a larger window would show more of. The list scrolls.
+ */
+const COMPACT_SIZE = { width: 940, height: 580 };
+
+/**
  * Translucency is a per-platform capability, not a style choice we can apply
  * uniformly. macOS gives us real behind-window vibrancy; Windows 11 gives us
  * acrylic; most Linux compositors give us neither, so there we stay opaque and
@@ -74,11 +84,105 @@ function testPlacement(): Electron.BrowserWindowConstructorOptions {
   };
 }
 
+/**
+ * What the window was before it shrank, so it can be put back exactly, and
+ * which of the two shapes it is currently in.
+ *
+ * The shape is *recorded* rather than read back off the window, and that is not
+ * defensiveness. `isResizable()` was the obvious thing to ask and it lies here:
+ * pinning a window by setting its minimum and maximum to the same size leaves
+ * macOS reporting it as not resizable even after both constraints are cleared
+ * again, so the window grew once and every later call decided it was already
+ * compact and did nothing.
+ *
+ * Keyed by window rather than held in a module variable: there is one window
+ * today, and a module variable is how that stops being true silently.
+ */
+const expanded = new WeakMap<BrowserWindow, Electron.Rectangle>();
+const isCompact = new WeakMap<BrowserWindow, boolean>();
+
+/**
+ * Shrinks the window to the start screen's size, or restores it.
+ *
+ * The order is the substance of this. A window is clamped between its own
+ * minimum and maximum at the moment it is resized, so both have to be out of
+ * the way before `setSize` and put back afterwards — set the maximum to the
+ * compact size while the window is still 1280 wide and the resize is a no-op.
+ * `resizable` goes on before the resize and off after it for the same reason:
+ * macOS ignores a resize on a window it has been told cannot be resized.
+ */
+export function setCompactMode(window: BrowserWindow | null, compact: boolean): void {
+  if (!window || window.isDestroyed()) return;
+  if ((isCompact.get(window) ?? true) === compact) return;
+
+  if (window.isMaximized()) window.unmaximize();
+  /*
+   * And out of full screen before anything else, because a window that cannot
+   * be resized cannot leave it.
+   *
+   * macOS will take a non-resizable window full screen and then refuse to bring
+   * it back — the green button and the menu item both act on a size the window
+   * has been told it may not have — so the start screen could be entered and
+   * never exited. Compact mode declines to be full-screenable at all, and
+   * leaves first if it already is.
+   */
+  if (window.isFullScreen()) window.setFullScreen(false);
+
+  window.setMinimumSize(1, 1);
+  window.setMaximumSize(0, 0);
+  window.setResizable(true);
+
+  if (compact) {
+    if (!window.isFullScreen()) expanded.set(window, window.getBounds());
+
+    window.setSize(COMPACT_SIZE.width, COMPACT_SIZE.height, false);
+    window.center();
+    window.setMinimumSize(COMPACT_SIZE.width, COMPACT_SIZE.height);
+    window.setMaximumSize(COMPACT_SIZE.width, COMPACT_SIZE.height);
+    window.setResizable(false);
+    window.setFullScreenable(false);
+  } else {
+    /*
+     * Centred when there is nothing to go back to.
+     *
+     * `setSize` grows a window from its top-left corner, so opening a
+     * connection took the start screen — which was centred — and let it spill
+     * down and to the right of where it had been. The window that arrives is
+     * the same window, in the same place, at the size the work needs; a window
+     * the reader has already moved or sized comes back exactly where they left
+     * it, which is what the remembered bounds are for.
+     */
+    const previous = expanded.get(window);
+    if (previous) {
+      window.setBounds(previous, false);
+    } else {
+      window.setSize(DEFAULT_SIZE.width, DEFAULT_SIZE.height, false);
+      window.center();
+    }
+
+    window.setMinimumSize(MIN_SIZE.width, MIN_SIZE.height);
+    window.setFullScreenable(true);
+  }
+
+  isCompact.set(window, compact);
+}
+
 export function createMainWindow(): BrowserWindow {
+  /*
+   * Opened compact, because the start screen is the first thing shown. Sizing
+   * it to the workspace and shrinking once the renderer reports in would be a
+   * visible flinch on every launch.
+   */
   const window = new BrowserWindow({
-    ...DEFAULT_SIZE,
-    minWidth: MIN_SIZE.width,
-    minHeight: MIN_SIZE.height,
+    ...COMPACT_SIZE,
+    minWidth: COMPACT_SIZE.width,
+    minHeight: COMPACT_SIZE.height,
+    maxWidth: COMPACT_SIZE.width,
+    maxHeight: COMPACT_SIZE.height,
+    resizable: false,
+    // The start screen is a fixed size, and a window that cannot be resized
+    // cannot come back out of full screen; see `setCompactMode`.
+    fullscreenable: false,
     show: false,
     // Painted behind the renderer while it boots, so the first frame is the
     // right colour rather than a white flash.
@@ -109,6 +213,8 @@ export function createMainWindow(): BrowserWindow {
    * focus. So a suite run is invisible: no window appearing and disappearing on
    * the developer's screen, and nothing taking their keyboard mid-sentence.
    */
+  isCompact.set(window, true);
+
   window.once('ready-to-show', () => {
     if (!process.env['SHELF_E2E']) window.show();
   });

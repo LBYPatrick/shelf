@@ -11,7 +11,19 @@
  * rather than appearing, which is what makes the state change feel like an act
  * rather than a repaint.
  */
-defineProps<{ label?: string; hint?: string; disabled?: boolean }>();
+defineProps<{
+  label?: string;
+  hint?: string;
+  disabled?: boolean;
+  /**
+   * Names the input rather than the wrapper, so a caption elsewhere on the row
+   * can point at it with `for`. Without one, a settings row would need its text
+   * nested inside this component's own label to be clickable — and a label
+   * inside a label is not something a browser or a screen reader has an answer
+   * for.
+   */
+  id?: string;
+}>();
 const model = defineModel<boolean>({ required: true });
 </script>
 
@@ -21,6 +33,7 @@ const model = defineModel<boolean>({ required: true });
     :class="{ 'check--disabled': disabled }"
   >
     <input
+      :id="id"
       v-model="model"
       class="check__input"
       type="checkbox"

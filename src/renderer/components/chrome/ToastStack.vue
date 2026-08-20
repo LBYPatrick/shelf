@@ -16,10 +16,24 @@
  * the countdown has to pause while the pointer is on it — a message that leaves
  * while you are reaching for its action button is a message you cannot act on.
  */
+import { computed } from 'vue';
+import { useConnections } from '../../stores/connections';
 import { useToasts } from '../../stores/toasts';
 import ToastItem from './ToastItem.vue';
 
 const toasts = useToasts();
+const connections = useConnections();
+
+/*
+ * Centred on the start screen, in the corner in the workspace.
+ *
+ * The corner is chosen for a window with a sidebar, a tab strip and a status
+ * bar in it — it is the one place a message cannot land on something you were
+ * about to click. The start screen has none of that: it is a small centred
+ * panel in a small centred window, and a notice pinned to its bottom-right
+ * reads as having come loose from it.
+ */
+const centred = computed(() => connections.active === null);
 </script>
 
 <template>
@@ -32,6 +46,7 @@ const toasts = useToasts();
     -->
     <div
       class="notices"
+      :class="{ 'notices--centre': centred }"
       role="region"
       aria-live="polite"
       aria-label="Notifications"
@@ -62,8 +77,21 @@ const toasts = useToasts();
   pointer-events: none;
 }
 
+.notices--centre {
+  inset-inline: 0;
+  inset-block-end: var(--gap-section);
+  align-items: center;
+}
+
 .notices > * {
   pointer-events: auto;
+}
+
+/* In from the edge it will leave by, which is the edge it is anchored to —
+   sideways against the corner, upward when it is centred and has no edge. */
+.notices--centre .notice-enter-from,
+.notices--centre .notice-leave-to {
+  transform: translateY(0.75rem);
 }
 
 /* In from the edge it will leave by, which is the edge it is anchored to. */

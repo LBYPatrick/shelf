@@ -28,7 +28,21 @@
  * the header takes its natural height and the body takes what is left. Without
  * this the body is offset by the difference between the two measurements.
  */
+/*
+ * The scrolling box, and the box the selection is drawn against.
+ *
+ * `position: relative` is the whole of the second half. The range overlay is an
+ * absolutely positioned child of this element and its ranges are placed in the
+ * *table's* coordinates; with nothing positioned here the overlay resolved
+ * against the outer table instead — which does not scroll. So the highlight
+ * stayed where it was drawn while the rows moved under it, and after a scroll
+ * of a third of a row its top and bottom edges ran through the middle of two
+ * lines of text and read as a strikethrough. An absolutely positioned
+ * descendant of a scroll container travels with the content; it just has to be
+ * this box it is positioned against.
+ */
 .tabulator .tabulator-tableholder {
+  position: relative;
   flex: 1;
   min-height: 0;
   height: auto !important;

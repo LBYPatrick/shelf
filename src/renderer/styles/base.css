@@ -102,6 +102,20 @@ body {
   -webkit-app-region: no-drag;
 }
 
+/*
+ * No drag region survives a gesture of our own.
+ *
+ * The OS decides a window drag from what is under the pointer at the moment it
+ * moves, not from what was under it when the button went down — so a divider
+ * dragged up towards the title bar handed the pointer to the window manager
+ * part-way through, and the release that would have ended the gesture went with
+ * it. The handle was then left following an unpressed pointer. `useDrag` sets
+ * this for as long as it is tracking.
+ */
+:root.is-dragging .drag-region {
+  -webkit-app-region: no-drag;
+}
+
 /* Only text and inputs should be selectable; the chrome is not a document. */
 :root {
   user-select: none;

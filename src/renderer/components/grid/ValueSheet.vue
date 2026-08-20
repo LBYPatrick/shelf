@@ -61,24 +61,24 @@ async function copy(): Promise<void> {
       <span
         v-if="isJson"
         class="chip"
-      >formatted as JSON</span>
+      >{{ $t('value.asJson') }}</span>
       <span
         v-if="value === null"
         class="chip chip--null"
       >NULL</span>
     </div>
 
-    <pre class="value">{{ pretty || '(empty)' }}</pre>
+    <pre class="value">{{ pretty || $t('value.empty') }}</pre>
 
     <template #footer>
       <PressButton @click="copy">
-        Copy
+        {{ $t('action.copy') }}
       </PressButton>
       <PressButton
         variant="primary"
         @click="open = false"
       >
-        Done
+        {{ $t('action.done') }}
       </PressButton>
     </template>
   </Sheet>

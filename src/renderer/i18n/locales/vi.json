@@ -30,22 +30,44 @@
     "settings": "Cài đặt",
     "collapseAll": "Thu gọn tất cả",
     "resetView": "Đặt lại khung nhìn",
-    "copied": "Đã sao chép vào bảng nhớ tạm."
+    "copied": "Đã sao chép vào bảng nhớ tạm.",
+    "reset": "Đặt lại",
+    "confirm": "Xác nhận",
+    "open": "Mở…",
+    "dispatch": "Chạy nền",
+    "saveQuery": "Lưu truy vấn"
   },
   "start": {
     "search": "Dán URL kết nối, hoặc tìm trong các kết nối đã lưu",
     "searchLabel": "Dán URL kết nối hoặc tìm kiếm",
     "recognised": "Đã nhận ra",
     "setUp": "Thiết lập",
+    "recent": "Gần đây",
+    "saved": "Đã lưu",
+    "matches": "Kết quả khớp",
+    "noMatches": "Không có kết nối nào khớp.",
+    "nothingSaved": "Chưa lưu kết nối nào.",
     "newConnection": "Kết nối mới",
-    "nothingSaved": "Chưa lưu kết nối nào. Dán URL kết nối ở trên, hoặc chọn một engine để bắt đầu.",
-    "sampleTitle": "Chưa có cơ sở dữ liệu nào?",
-    "sampleBody": "Mở một cơ sở dữ liệu mẫu và mọi thứ đều chạy — duyệt, sửa, truy vấn, sơ đồ quan hệ. Không cài gì và không lưu gì.",
-    "sampleAction": "Dùng thử dữ liệu mẫu",
+    "newConnectionBody": "Dán một URL, hoặc điền từng mục.",
+    "settingsBody": "Giao diện, dữ liệu và bàn phím.",
+    "importPresets": "Nhập cấu hình sẵn",
+    "importPresetsBody": "Thêm kết nối từ một tệp JSON.",
+    "importTitle": "Nhập kết nối",
+    "exportTitle": "Xuất kết nối",
+    "export": "Xuất {{name}}",
+    "exported": "Đã lưu. Mật khẩu vẫn nằm trong keychain.",
+    "imported": "Đã nhập {{n}}. Mỗi cái vẫn cần mật khẩu.",
+    "importFailed": "Không đọc được tệp đó",
+    "sample": "Mẫu",
+    "sampleTitle": "Cơ sở dữ liệu mẫu",
+    "sampleBody": "Sẵn sàng để duyệt, truy vấn và sửa. Không cài đặt gì cả.",
     "sampleOpening": "Đang mở…",
     "noKeyring": "Không tìm thấy keychain của hệ thống, nên không thể lưu mật khẩu trên máy này.",
     "neverOpened": "chưa mở lần nào",
     "justNow": "vừa xong",
+    "minutesAgo": "{{n}} phút trước",
+    "hoursAgo": "{{n}} giờ trước",
+    "daysAgo": "{{n}} ngày trước",
     "connectTo": "Kết nối tới {{name}}",
     "edit": "Sửa {{name}}",
     "remove": "Xoá {{name}}"
@@ -82,7 +104,8 @@
     "chooseEngine": "Hãy chọn một engine cơ sở dữ liệu.",
     "chooseFile": "Hãy chọn tệp cơ sở dữ liệu.",
     "needHost": "Nhập máy chủ, đường dẫn socket, hoặc URL kết nối.",
-    "required": "{{field}} là bắt buộc."
+    "required": "{{field}} là bắt buộc.",
+    "testOk": "Đã kết nối — {{version}}"
   },
   "workspace": {
     "entities": "Đối tượng",
@@ -104,7 +127,8 @@
     "readOnly": "chỉ đọc",
     "disconnectHint": "nhấp để ngắt kết nối",
     "searchEntities": "Tìm bảng",
-    "toggleSidebar": "Bật/tắt thanh bên"
+    "toggleSidebar": "Bật/tắt thanh bên",
+    "jobs": "Tác vụ"
   },
   "table": {
     "filterPlaceholder": "Lọc — ví dụ name like 'A%'",
@@ -142,7 +166,27 @@
     "explainHint": "Xem cách cơ sở dữ liệu chạy truy vấn này",
     "saveHint": "Lưu truy vấn này",
     "caret": "Dòng {{line}}, Cột {{column}} / {{lines}}",
-    "selected": "Đã chọn {{count}} ký tự"
+    "selected": "Đã chọn {{count}} ký tự",
+    "groupStatement": "Câu lệnh",
+    "groupTransaction": "Transaction",
+    "groupResult": "Kết quả",
+    "runScope": "Phạm vi của Chạy",
+    "resultsBar": "Kết quả này",
+    "formatFailed": "Không định dạng được",
+    "rowLimit": "{{rows}} hàng",
+    "elapsed": "Đã chạy {{time}}",
+    "bar": "Câu lệnh",
+    "formatHint": "Định dạng câu lệnh theo phương ngữ của engine này",
+    "autoCommit": "Tự động commit",
+    "autoCommitHint": "Khi tắt, câu lệnh chạy trong một transaction do bạn tự commit.",
+    "beginHint": "Mở một transaction; chưa ghi gì cho tới khi bạn commit",
+    "rowLimitNone": "Không giới hạn",
+    "summaryRows": "{{rows}} hàng",
+    "summaryFirst": "{{rows}} hàng đầu",
+    "summaryAffected": "ảnh hưởng {{rows}} hàng",
+    "summaryMs": "{{ms}} ms",
+    "summaryRow": "{{rows}} hàng",
+    "summaryFirstOne": "{{rows}} hàng đầu"
   },
   "structure": {
     "columns": "Cột",
@@ -182,7 +226,11 @@
     "actions": "Thao tác",
     "noMatch": "Không có kết quả phù hợp.",
     "outgoing": "đi ra",
-    "incoming": "đến"
+    "incoming": "đến",
+    "wrap": "Xuống dòng",
+    "wrapHint": "Hiện toàn bộ giá trị trên số dòng cần thiết",
+    "wrapOn": "Đã bật xuống dòng.",
+    "wrapOff": "Đã tắt xuống dòng."
   },
   "settings": {
     "title": "Cài đặt",
@@ -223,7 +271,31 @@
     "resetData": "Đặt lại cài đặt dữ liệu",
     "primaryRun": "Hành động chạy chính",
     "runAll": "Toàn bộ trình soạn thảo",
-    "runCurrent": "Câu lệnh tại con trỏ"
+    "runCurrent": "Câu lệnh tại con trỏ",
+    "viewVisual": "Biểu mẫu",
+    "viewJson": "JSON",
+    "jsonValid": "JSON hợp lệ.",
+    "applied": "Đã áp dụng cài đặt.",
+    "exportTitle": "Xuất cài đặt",
+    "importTitle": "Nhập cài đặt",
+    "exported": "Đã lưu cài đặt.",
+    "imported": "Đã nhập cài đặt.",
+    "exportSettings": "Xuất…",
+    "importSettings": "Nhập…",
+    "appearanceDesc": "Màu của cửa sổ và lượng nội dung vừa màn hình. Mọi thứ ở đây áp dụng ngay khi bạn chỉnh.",
+    "dataDesc": "Một kết quả mang về những gì, và bạn thay đổi nội dung của nó ra sao.",
+    "editorDesc": "Trình soạn SQL: cách hiển thị, và cách xử lý một dòng dài.",
+    "file": "Tệp cấu hình",
+    "fileDesc": "Toàn bộ tuỳ chọn ở trang này, dưới dạng một tài liệu để giữ lại hoặc mang sang máy khác.",
+    "resetAll": "Đặt lại",
+    "resetDesc": "Trả tuỳ chọn dữ liệu và trình soạn về mặc định. Phần giao diện được giữ nguyên.",
+    "resetConfirm": "Nhấn lần nữa để đặt lại mọi tuỳ chọn dữ liệu và trình soạn.",
+    "wasReset": "Đã đặt lại tuỳ chọn.",
+    "copy": "Sao chép",
+    "exportRow": "Ghi mọi tuỳ chọn ra một tệp",
+    "importRow": "Thay thế chúng từ một tệp",
+    "jsonLines": "{{count}} dòng",
+    "copyHint": "Sao chép toàn bộ tài liệu vào clipboard"
   },
   "palette": {
     "placeholder": "Tìm bảng, thẻ và thao tác…",
@@ -300,7 +372,13 @@
     "written": "Đã ghi.",
     "working": "Đang xử lý…",
     "run": "Xuất",
-    "wroteTo": "Đã ghi {{name}}."
+    "wroteTo": "Đã ghi {{name}}.",
+    "scope": "Hàng",
+    "scopePage": "Trang này ({{count}})",
+    "scopeFull": "Toàn bộ truy vấn khớp",
+    "scopePageHint": "Ghi từ các hàng đã tải — không chạy lại.",
+    "scopeFullHint": "Chạy lại câu lệnh mà không giới hạn xem trước; nó khớp {{count}} hàng.",
+    "scopeFullHintUnknown": "Chạy lại câu lệnh mà không có giới hạn xem trước."
   },
   "grid": {
     "oneBased": "Bắt đầu từ 1",
@@ -320,7 +398,8 @@
     "exportData": "Xuất dữ liệu ra tệp…",
     "actionsFor": "Thao tác cho {{name}}",
     "copiedName": "Đã sao chép {{name}}.",
-    "analyze": "Phân tích hiệu năng"
+    "analyze": "Phân tích hiệu năng",
+    "diagram": "Sơ đồ quan hệ"
   },
   "properties": {
     "rows": "Số hàng",
@@ -414,7 +493,15 @@
     "largestTables": "Bảng lớn nhất",
     "deadRows": "Phần đậm của mỗi thanh là dung lượng do hàng chết chiếm.",
     "unusedIndexes": "Chỉ mục chưa từng dùng",
-    "unusedHint": "Mỗi chỉ mục vẫn tốn một lần ghi cho mọi thao tác thêm và sửa."
+    "unusedHint": "Mỗi chỉ mục vẫn tốn một lần ghi cho mọi thao tác thêm và sửa.",
+    "brushHint": "Kéo ngang biểu đồ để thu hẹp mọi thứ bên dưới về khoảng đó.",
+    "wholeRange": "Toàn bộ khoảng",
+    "scaleLabel": "Thang trục dọc",
+    "totals": "{{time}} trong {{calls}} lượt gọi",
+    "noReadings": "Chưa có số đo nào. Shelf đo khi bảng này đang mở rồi lấy hiệu — cứ để mở và chỗ này sẽ đầy dần.",
+    "quietSelection": "Không có gì chạy trong khoảng bạn chọn.",
+    "scaleLinear": "Tuyến tính",
+    "scaleLog": "Log"
   },
   "analyzeWindow": {
     "hour": "1 giờ",
@@ -427,7 +514,8 @@
   "analyzeCaveat": {
     "short": "Lịch sử đã ghi ngắn hơn khoảng này, nên đây là toàn bộ kể từ lần đọc đầu tiên.",
     "cumulative": "Đây là tổng luỹ kế của máy chủ, không phải một khoảng — để mở thẻ này thì các khoảng sẽ dần đầy.",
-    "reset": "Máy chủ đã đặt lại bộ đếm trong khoảng này, nên các lần đọc trước đã bị bỏ."
+    "reset": "Máy chủ đã đặt lại bộ đếm trong khoảng này, nên các lần đọc trước đã bị bỏ.",
+    "wide": "Không có số đo nào giữa hai đầu khoảng này, nên số đo gần nhất còn dùng được lại cũ hơn khoảng đã chọn và kết quả bao phủ rộng hơn."
   },
   "analyzeSpan": {
     "single": "một lần đọc",
@@ -439,6 +527,46 @@
     "unsupported": "Công cụ này không lưu thống kê câu lệnh.",
     "not-installed": "Máy chủ này chưa cài phần mở rộng thống kê.",
     "not-permitted": "Tài khoản này không đọc được khung nhìn thống kê.",
-    "hint": "Với PostgreSQL, thêm thư viện vào cấu hình máy chủ, khởi động lại, rồi tạo phần mở rộng:"
+    "hint": "Với PostgreSQL, thêm thư viện vào cấu hình máy chủ, khởi động lại, rồi tạo phần mở rộng:",
+    "not-loaded": "Phần mở rộng đã được tạo nhưng chưa từng được nạp, nên không đếm gì cả.",
+    "not-tracking": "Việc ghi nhận câu lệnh đang tắt trên máy chủ này.",
+    "other-database": "Máy chủ có ghi nhận câu lệnh, nhưng không có cái nào của cơ sở dữ liệu này.",
+    "nothing-recorded": "Phần mở rộng đang ghi nhận và hiện chưa có gì."
+  },
+  "plan": {
+    "title": "Kế hoạch truy vấn",
+    "exportSvg": "Xuất kế hoạch ra SVG",
+    "exportPng": "Xuất kế hoạch ra PNG",
+    "exported": "Đã lưu kế hoạch."
+  },
+  "jobs": {
+    "empty": "Chưa chạy nền tác vụ nào. Một câu lệnh chạy nền sẽ tự chạy, giữ toàn bộ kết quả trên máy này và báo khi xong.",
+    "dispatched": "Đã chạy nền {{name}}.",
+    "finished": "Xong — {{rows}} hàng, sẵn sàng xuất.",
+    "open": "Mở",
+    "openResult": "Mở các hàng của {{name}}",
+    "rename": "Đổi tên",
+    "discard": "Bỏ",
+    "discarded": "Đã bỏ {{name}}.",
+    "rowsIn": "{{rows}} hàng trong {{time}}",
+    "resultBar": "Tác vụ này",
+    "showing": "Hiện {{from}}–{{to}} trong {{total}}",
+    "previous": "Trang trước",
+    "next": "Trang sau",
+    "statusPending": "Chờ",
+    "statusRunning": "Đang chạy",
+    "statusDone": "Xong",
+    "statusFailed": "Lỗi",
+    "interrupted": "Bị gián đoạn do khởi động lại.",
+    "rowsGone": "Tác vụ này không còn giữ các hàng."
+  },
+  "value": {
+    "asJson": "định dạng JSON",
+    "empty": "(trống)"
+  },
+  "erd": {
+    "zoomIn": "Phóng to",
+    "zoomOut": "Thu nhỏ",
+    "fit": "Vừa khung"
   }
 }

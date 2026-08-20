@@ -40,20 +40,36 @@ export function toDelimited(
   rows: readonly Record<string, CellValue>[],
   delimiter: ',' | '\t'
 ): string {
+  return toDelimitedGrid(
+    [
+      columns.map((column) => column.name),
+      ...rows.map((row) =>
+        columns.map((column) => asText(row[column.name] ?? null, column.dataType))
+      ),
+    ],
+    delimiter
+  );
+}
+
+/**
+ * A rectangle of already-rendered text, as delimited lines.
+ *
+ * This is what a range copy out of the grid needs: a selection is some columns
+ * of some rows and carries no header, and the cells have already been through
+ * `displayValue` on their way to the screen. Same escaping either way — a value
+ * holding the delimiter, a quote or a newline is quoted and its quotes doubled,
+ * because a paste into a spreadsheet breaks identically in both.
+ */
+export function toDelimitedGrid(
+  rows: readonly (readonly string[])[],
+  delimiter: ',' | '\t'
+): string {
   const escape = (value: string) =>
     value.includes(delimiter) || value.includes('"') || value.includes('\n')
       ? `"${value.replace(/"/g, '""')}"`
       : value;
 
-  const lines = [columns.map((column) => escape(column.name)).join(delimiter)];
-  for (const row of rows) {
-    lines.push(
-      columns
-        .map((column) => escape(asText(row[column.name] ?? null, column.dataType)))
-        .join(delimiter)
-    );
-  }
-  return lines.join('\n');
+  return rows.map((row) => row.map(escape).join(delimiter)).join('\n');
 }
 
 /**

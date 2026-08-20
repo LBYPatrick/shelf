@@ -8,7 +8,7 @@ import { ConnectionHost } from './host';
 import { registerAppDbHandlers } from './ipc/appdb';
 import { registerDialogHandlers } from './ipc/dialogs';
 import { createSecretStore } from './secrets';
-import { createMainWindow } from './window';
+import { createMainWindow, setCompactMode } from './window';
 
 const connectionHost = new ConnectionHost();
 
@@ -69,6 +69,10 @@ function registerWindowHandlers(): void {
    */
   ipcMain.on(WINDOW_CHANNELS.setAppearance, (_event, appearance: Appearance) => {
     nativeTheme.themeSource = appearance;
+  });
+
+  ipcMain.on(WINDOW_CHANNELS.setCompact, (event, compact: boolean) => {
+    setCompactMode(senderWindow(event), compact);
   });
 
   ipcMain.handle(WINDOW_CHANNELS.platformInfo, (): PlatformInfo => {

@@ -2,25 +2,49 @@
 /**
  * The start screen.
  *
- * One task, centred, with nothing else competing for attention. The first thing
- * offered is a paste field, because most people arrive with a connection string
- * already on the clipboard and disassembling it into six fields by hand is work
- * the interface can do instead.
+ * Two panes, the way a welcome window has worked on this platform for years:
+ * what this is and how to start something new on the left, and everything you
+ * could open on the right.
  *
- * Saved connections are cards rather than a list: an engine mark and a label
- * colour identify a database faster than reading its name does.
+ * The split is what makes the screen worth the window it is given. A single
+ * centred stack leaves a large display mostly empty and still runs out of room
+ * for a long list; side by side, the identity keeps its space, the list gets
+ * the height, and neither pushes the other around.
+ *
+ * On the right the databases are grouped and each group folds away, because the
+ * list is the part that grows without limit — Recent is short by design, Saved
+ * is however long it is, and the sample sits with them rather than in a banner
+ * of its own. Recent and Saved are a partition rather than two views of one
+ * list: a connection appears in exactly one of them, because the same
+ * "localhost" in two sections a hundred pixels apart is a puzzle, not a
+ * shortcut.
  */
-import { computed, onMounted, ref } from 'vue';
-import type { SaveConnectionInput, SavedConnection } from '@shared/connections';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useTranslation } from 'i18next-vue';
+import type { SavedConnection } from '@shared/connections';
 import { looksLikeUrl, parseConnectionUrl, type ParsedConnection } from '@shared/connectionUrl';
-import ConnectionCard from '../components/connection/ConnectionCard.vue';
+import { parseConnections, serializeConnections } from '@shared/connectionFile';
+import { documentFileName } from '@shared/fileNames';
+import { engineDescriptor } from '@shared/engines';
 import ConnectionEditor from '../components/connection/ConnectionEditor.vue';
+import LineupRow from '../components/connection/LineupRow.vue';
 import AppIcon from '../components/ui/AppIcon.vue';
-import PressButton from '../components/ui/PressButton.vue';
+import DisclosureGroup from '../components/ui/DisclosureGroup.vue';
 import SettingsSheet from '../components/settings/SettingsSheet.vue';
 import { useConnections } from '../stores/connections';
+import { useToasts } from '../stores/toasts';
+
+/**
+ * How many databases count as "recent".
+ *
+ * Short on purpose: the point of the section is that the one you want is
+ * already on it, and a list long enough to search is the list below it.
+ */
+const RECENT_LIMIT = 4;
 
 const connections = useConnections();
+const toasts = useToasts();
+const { t } = useTranslation();
 
 const search = ref('');
 const editing = ref<SavedConnection | null | undefined>(undefined);
@@ -29,43 +53,156 @@ const opening = ref<string | null>(null);
 const sampling = ref(false);
 const settingsOpen = ref(false);
 
-async function openSample(): Promise<void> {
-  sampling.value = true;
-  try {
-    await connections.exploreSample();
-  } finally {
-    sampling.value = false;
-  }
-}
+/**
+ * Which groups are unfolded. All of them, to start.
+ *
+ * The sample in particular: it is the only way in for someone whose first run
+ * this is, and a way in behind a fold is one they have to be told about.
+ */
+const unfolded = ref<Record<string, boolean>>({ recent: true, saved: true, sample: true });
 
 onMounted(() => void connections.refresh());
 
+/** A pasted URL is an offer to add a connection, not a filter over the list. */
 const parsed = computed(() =>
   looksLikeUrl(search.value) ? parseConnectionUrl(search.value) : undefined
 );
 
-/** Typing filters the saved connections; pasting a URL offers to open it. */
-const filtered = computed(() => {
-  const needle = search.value.trim().toLowerCase();
-  if (!needle || parsed.value) return connections.saved;
+const needle = computed(() => (parsed.value ? '' : search.value.trim().toLowerCase()));
 
-  return connections.saved.filter((connection) => {
-    const config = connection.config;
-    const haystack = [
-      connection.name,
-      config.host,
-      config.database,
-      config.filePath,
-      connection.engine,
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
-    return haystack.includes(needle);
-  });
+function haystack(connection: SavedConnection): string {
+  const config = connection.config;
+  return [connection.name, config.host, config.database, config.filePath, connection.engine]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+const recent = computed(() =>
+  connections.saved
+    .filter((connection) => connection.lastUsedAt !== null)
+    .sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0))
+    .slice(0, RECENT_LIMIT)
+);
+
+const rest = computed(() => {
+  const shown = new Set(recent.value.map((connection) => connection.id));
+  return connections.saved
+    .filter((connection) => !shown.has(connection.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
 });
 
-const empty = computed(() => connections.saved.length === 0);
+interface Group {
+  readonly id: string;
+  readonly title: string;
+  readonly rows: readonly SavedConnection[];
+}
+
+/**
+ * The sections, in the order they are read.
+ *
+ * Searching collapses the partition into one list: with a query typed, "which
+ * of these did I open recently" is no longer the question being asked.
+ */
+const groups = computed<Group[]>(() => {
+  const sections = needle.value
+    ? [
+        {
+          id: 'matches',
+          title: t('start.matches'),
+          rows: connections.saved.filter((connection) =>
+            haystack(connection).includes(needle.value)
+          ),
+        },
+      ]
+    : [
+        { id: 'recent', title: t('start.recent'), rows: recent.value },
+        { id: 'saved', title: t('start.saved'), rows: rest.value },
+      ];
+
+  return sections.filter((section) => section.rows.length > 0);
+});
+
+const nothingMatches = computed(() => groups.value.length === 0);
+
+/**
+ * Searching opens whatever it found. A match hidden inside a folded group is
+ * the same as no match at all.
+ */
+watch(needle, (value) => {
+  if (!value) return;
+  for (const group of groups.value) unfolded.value[group.id] = true;
+});
+
+/** What this connection actually points at, in one line. */
+function where(connection: SavedConnection): string {
+  const config = connection.config;
+  if (config.filePath) return config.filePath.split(/[\\/]/).slice(-2).join('/');
+  if (config.host) {
+    return config.database ? `${config.host}/${config.database}` : config.host;
+  }
+  return engineDescriptor(connection.engine).name;
+}
+
+function lastUsed(connection: SavedConnection): string {
+  const at = connection.lastUsedAt;
+  if (!at) return t('start.neverOpened');
+
+  const minutes = Math.round((Date.now() - at) / 60_000);
+  if (minutes < 1) return t('start.justNow');
+  if (minutes < 60) return t('start.minutesAgo', { n: minutes });
+
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return t('start.hoursAgo', { n: hours });
+  return t('start.daysAgo', { n: Math.round(hours / 24) });
+}
+
+/**
+ * Writes one connection out as a preset.
+ *
+ * Not the password: it is in the keyring and stays there. The document says so
+ * in a field of its own, and so does the toast, because a file that silently
+ * omits a credential is one people discover is incomplete at the worst moment.
+ */
+async function exportConnection(connection: SavedConnection): Promise<void> {
+  const path = await window.shelf.dialogs.writeTextFile(
+    {
+      title: t('start.exportTitle'),
+      defaultPath: documentFileName(connection.name, 'connection'),
+      extensions: ['json'],
+    },
+    serializeConnections([connection])
+  );
+  if (!path) return;
+  toasts.show({ id: 'connection-export', tone: 'success', message: t('start.exported') });
+}
+
+/** Reads a document of presets and saves every connection in it. */
+async function importPresets(): Promise<void> {
+  const file = await window.shelf.dialogs.readTextFile({
+    title: t('start.importTitle'),
+    extensions: ['json'],
+  });
+  if (!file) return;
+
+  const result = parseConnections(file.text);
+  if (!result.ok) {
+    toasts.show({
+      id: 'connection-import',
+      tone: 'error',
+      title: t('start.importFailed'),
+      message: result.error,
+    });
+    return;
+  }
+
+  for (const input of result.connections) await connections.save(input);
+  toasts.show({
+    id: 'connection-import',
+    tone: 'success',
+    message: t('start.imported', { n: result.connections.length }),
+  });
+}
 
 function startNew(): void {
   seed.value = undefined;
@@ -88,69 +225,81 @@ async function open(connection: SavedConnection): Promise<void> {
   }
 }
 
+async function openSample(): Promise<void> {
+  sampling.value = true;
+  try {
+    await connections.exploreSample();
+  } finally {
+    sampling.value = false;
+  }
+}
+
 async function saved(connection: SavedConnection, connect: boolean): Promise<void> {
   editing.value = undefined;
   search.value = '';
   if (connect) await open(connection);
 }
 
-async function remove(connection: SavedConnection): Promise<void> {
-  await connections.remove(connection.id);
-}
-
-const failure = computed(() =>
-  connections.status.state === 'failed' ? connections.status.message : null
+/*
+ * A connection that failed is a notification, not a paragraph.
+ *
+ * It used to be a tinted block wedged into the left pane, which pushed
+ * everything under it down the moment it appeared and stayed until something
+ * else happened. It is the same class of event as every other thing the app has
+ * to tell you — the export that was written, the settings that were applied —
+ * and it goes to the same place they do.
+ */
+watch(
+  () => connections.status,
+  (status) => {
+    if (status.state !== 'failed') return;
+    toasts.show({ id: 'connection-failed', tone: 'error', message: status.message });
+  },
+  { deep: true }
 );
-
-function draftFor(input: SaveConnectionInput): void {
-  void input;
-}
 </script>
 
 <template>
   <div class="manager">
-    <!-- Drag surface and traffic-light clearance, with no title bar. -->
-    <div class="manager__chrome drag-region">
-      <button
-        class="manager__settings no-drag"
-        :aria-label="$t('action.settings')"
-        :title="$t('action.settings')"
-        @click="settingsOpen = true"
-      >
-        <AppIcon name="settings" />
-      </button>
-    </div>
-
-    <div class="manager__inner">
-      <header class="banner">
-        <h1 class="banner__title">
-          {{ $t('app.name') }}
-        </h1>
-        <p class="banner__sub">
-          {{ $t('app.tagline') }}
-        </p>
-
-        <div class="finder">
-          <svg
-            class="finder__icon"
-            viewBox="0 0 16 16"
+    <!-- What this is, and how to start something that is not on the list. -->
+    <aside class="intro">
+      <!--
+        Traffic-light clearance and a surface to drag the window by, over this
+        pane only: across the whole width it would sit on top of the list beside
+        it and swallow the first inch of every scroll.
+      -->
+      <div class="intro__chrome drag-region" />
+      <div class="intro__inner">
+        <header
+          class="identity"
+          style="--step: 0"
+        >
+          <span
+            class="identity__mark"
             aria-hidden="true"
           >
-            <circle
-              cx="7"
-              cy="7"
-              r="4.5"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.5"
+            <AppIcon
+              name="database"
+              :size="22"
             />
-            <path
-              d="M10.5 10.5 L14 14"
-              stroke="currentColor"
-              stroke-width="1.5"
-              stroke-linecap="round"
-            />
-          </svg>
+          </span>
+          <h1 class="identity__title">
+            {{ $t('app.name') }}
+          </h1>
+          <p class="identity__sub">
+            {{ $t('app.tagline') }}
+          </p>
+        </header>
+
+        <div
+          class="finder"
+          style="--step: 1"
+        >
+          <AppIcon
+            class="finder__icon"
+            name="search"
+            :size="16"
+          />
 
           <input
             v-model="search"
@@ -166,10 +315,14 @@ function draftFor(input: SaveConnectionInput): void {
           <button
             v-if="search"
             class="finder__clear"
+            type="button"
             :aria-label="$t('action.clear')"
             @click="search = ''"
           >
-            ✕
+            <AppIcon
+              name="close"
+              :size="16"
+            />
           </button>
         </div>
 
@@ -177,6 +330,7 @@ function draftFor(input: SaveConnectionInput): void {
           <button
             v-if="parsed"
             class="parsed"
+            type="button"
             @click="useParsed"
           >
             <span class="parsed__label">{{ $t('start.recognised') }}</span>
@@ -185,100 +339,153 @@ function draftFor(input: SaveConnectionInput): void {
             <span class="parsed__go">{{ $t('start.setUp') }} ↩</span>
           </button>
         </Transition>
-      </header>
 
-      <Transition name="rise">
-        <p
-          v-if="failure"
-          class="failure"
-          role="alert"
+        <div
+          class="intro__action"
+          style="--step: 2"
         >
-          {{ failure }}
-        </p>
-      </Transition>
-
-      <section
-        v-if="!empty"
-        class="tiles"
-      >
-        <TransitionGroup name="card">
-          <ConnectionCard
-            v-for="(connection, index) in filtered"
-            :key="connection.id"
-            :connection="connection"
-            :busy="opening === connection.id"
-            :style="{ '--index': index }"
-            class="tiles__item"
-            @open="open(connection)"
-            @edit="
-              seed = undefined;
-              editing = connection;
-            "
-            @remove="remove(connection)"
+          <LineupRow
+            :title="$t('start.newConnection')"
+            :subtitle="$t('start.newConnectionBody')"
+            icon="plus"
+            @open="startNew"
           />
-        </TransitionGroup>
-
-        <button
-          key="new"
-          class="tile"
-          @click="startNew"
-        >
-          <span
-            class="tile__plus"
-            aria-hidden="true"
-          >+</span>
-          <span>{{ $t('start.newConnection') }}</span>
-        </button>
-      </section>
-
-      <section
-        v-else
-        class="tiles"
-      >
-        <button
-          class="tile"
-          type="button"
-          @click="startNew"
-        >
-          <span
-            class="tile__plus"
-            aria-hidden="true"
-          >+</span>
-          <span>{{ $t('start.newConnection') }}</span>
-        </button>
-      </section>
-
-      <!--
-        The way in for someone who has nothing to connect to yet. It is a real
-        feature rather than a demo hook: the same sample database backs the
-        screenshots and the tests.
-      -->
-      <section class="sample">
-        <div class="sample__text">
-          <h2 class="sample__title">
-            {{ $t('start.sampleTitle') }}
-          </h2>
-          <p class="sample__sub">
-            {{ $t('start.sampleBody') }}
-          </p>
+          <LineupRow
+            :title="$t('action.settings')"
+            :subtitle="$t('start.settingsBody')"
+            :label="$t('action.settings')"
+            icon="settings"
+            @open="settingsOpen = true"
+          />
+          <LineupRow
+            :title="$t('start.importPresets')"
+            :subtitle="$t('start.importPresetsBody')"
+            icon="upload"
+            @open="importPresets"
+          />
         </div>
 
-        <PressButton
-          variant="glass"
-          :disabled="sampling"
-          @click="openSample"
+        <p
+          v-if="!connections.keyringAvailable"
+          class="keyring"
+          style="--step: 3"
         >
-          {{ sampling ? $t('start.sampleOpening') : $t('start.sampleAction') }}
-        </PressButton>
-      </section>
+          {{ $t('start.noKeyring') }}
+        </p>
+      </div>
+    </aside>
 
-      <p
-        v-if="!connections.keyringAvailable"
-        class="keyring"
-      >
-        {{ $t('start.noKeyring') }}
-      </p>
-    </div>
+    <!--
+      Everything there is to open. The one part of the screen that grows without
+      limit, so it is the one part that scrolls.
+    -->
+    <section class="browser">
+      <div class="browser__scroll">
+        <DisclosureGroup
+          v-for="(group, position) in groups"
+          :key="group.id"
+          v-model="unfolded[group.id]"
+          :label="group.title"
+          :hint="String(group.rows.length)"
+          class="fold"
+          :style="{ '--step': position }"
+        >
+          <div class="group__list">
+            <LineupRow
+              v-for="(connection, index) in group.rows"
+              :key="connection.id"
+              :title="connection.name"
+              :subtitle="where(connection)"
+              :meta="lastUsed(connection)"
+              :mark="engineDescriptor(connection.engine).mark"
+              :hue="engineDescriptor(connection.engine).hue"
+              :accent="connection.labelColor"
+              :label="$t('start.connectTo', { name: connection.name })"
+              :busy="opening === connection.id"
+              mono
+              class="group__row"
+              :style="{ '--index': index }"
+              @open="open(connection)"
+            >
+              <template
+                v-if="connection.readOnly"
+                #badge
+              >
+                <span class="flag">{{ $t('workspace.readOnly') }}</span>
+              </template>
+
+              <template #actions>
+                <button
+                  type="button"
+                  class="rowaction"
+                  :aria-label="$t('start.export', { name: connection.name })"
+                  @click="exportConnection(connection)"
+                >
+                  <AppIcon
+                    name="download"
+                    :size="16"
+                  />
+                </button>
+                <button
+                  type="button"
+                  class="rowaction"
+                  :aria-label="$t('start.edit', { name: connection.name })"
+                  @click="
+                    seed = undefined;
+                    editing = connection;
+                  "
+                >
+                  <AppIcon
+                    name="pencil"
+                    :size="16"
+                  />
+                </button>
+                <button
+                  type="button"
+                  class="rowaction rowaction--danger"
+                  :aria-label="$t('start.remove', { name: connection.name })"
+                  @click="connections.remove(connection.id)"
+                >
+                  <AppIcon
+                    name="close"
+                    :size="16"
+                  />
+                </button>
+              </template>
+            </LineupRow>
+          </div>
+        </DisclosureGroup>
+
+        <p
+          v-if="nothingMatches"
+          class="blank"
+        >
+          {{ needle ? $t('start.noMatches') : $t('start.nothingSaved') }}
+        </p>
+
+        <!--
+          The sample sits with the databases rather than in a banner of its own.
+          It is a real feature and not a demo hook: the same database backs the
+          screenshots and the tests.
+        -->
+        <DisclosureGroup
+          v-model="unfolded.sample"
+          :label="$t('start.sample')"
+          class="fold"
+          :style="{ '--step': groups.length }"
+        >
+          <div class="group__list">
+            <LineupRow
+              :title="$t('start.sampleTitle')"
+              :subtitle="sampling ? $t('start.sampleOpening') : $t('start.sampleBody')"
+              icon="database"
+              :busy="sampling"
+              @open="openSample"
+            />
+          </div>
+        </DisclosureGroup>
+      </div>
+    </section>
 
     <SettingsSheet v-model="settingsOpen" />
 
@@ -289,161 +496,205 @@ function draftFor(input: SaveConnectionInput): void {
       :keyring-available="connections.keyringAvailable"
       @close="editing = undefined"
       @saved="saved"
-      @draft="draftFor"
     />
   </div>
 </template>
 
 <style scoped>
 /*
- * The block is centred in the window rather than pinned near the top. With two
- * saved connections the old layout left two thirds of a large window empty
- * below the content, which reads as an unfinished page rather than a calm one.
+ * Two panes: what this is on the left, what you can open on the right.
  *
- * `justify-content: center` with `margin: auto` on the inner block centres it
- * when the content is short and lets it scroll normally once it is tall.
- */
-/*
- * The start screen paints a surface of its own.
+ * The start screen paints a surface of its own. It used to paint nothing,
+ * relying on the window being translucent — which works only for as long as
+ * whatever is behind the window is dark. On the dark theme its text is light,
+ * so over a bright desktop the title and the cards were light-on-light and
+ * effectively invisible.
  *
- * It used to paint nothing, relying on the window being translucent — which
- * works only for as long as whatever is behind the window is dark. On the dark
- * theme its text is light, so over a bright desktop the title, the subtitle and
- * the "new connection" card were light-on-light and effectively invisible. The
- * workspace never had this problem because its content pane is opaque; this
- * screen simply had no equivalent.
- *
- * Translucent still, so the window keeps its material — but opaque enough to
- * own its own contrast rather than borrowing the desktop's.
+ * Translucent still, so the window keeps its material — but no
+ * `backdrop-filter` on it. There is nothing painted behind this screen to
+ * filter: the glass is the OS's own material behind the whole window, which no
+ * in-page filter can reach, so a blur here is a full-screen compositing pass a
+ * frame producing exactly what not running it produces.
  */
 .manager {
   position: relative;
   height: 100%;
-  overflow-y: auto;
-  display: flex;
-  background-color: color-mix(in oklab, var(--color-base-100) 80%, transparent);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
-  backdrop-filter: blur(40px) saturate(180%);
+  display: grid;
+  /*
+   * The golden section, with the larger part on the left.
+   *
+   * The left pane is the one you read — a name, a line about what this is, and
+   * the field you type into — and the right is a list you scan. Giving the
+   * reading side 1.618 of the scanning side is the oldest answer there is to
+   * "how much bigger", and unlike the 1 : 1.1 it replaces it is a proportion
+   * rather than a number that happened to look right in one window.
+   */
+  grid-template-columns: minmax(15rem, 1.618fr) minmax(16rem, 1fr);
+  overflow: hidden;
+  background-color: color-mix(in oklab, var(--color-base-100) 86%, transparent);
 }
 
 @media (prefers-reduced-transparency: reduce) {
   .manager {
     background-color: var(--color-base-100);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
   }
 }
 
-.manager__chrome {
+/*
+ * One scale for both panes, taken from the size of the window.
+ *
+ * A start screen laid out at one fixed size is a small block adrift in the
+ * middle of a large display — the window grows and the thing you came for does
+ * not. Everything inside the panes is expressed in `em`, so rows, marks,
+ * headings and the spacing between them grow together and the proportion
+ * between the content and the window stays where it was designed. Both ends of
+ * the clamp are in rem, so an enlarged OS text size still scales the layout
+ * rather than being overridden by it.
+ */
+.intro,
+.browser {
+  font-size: clamp(0.8125rem, 0.35rem + 0.25vw + 0.65vh, 1.0625rem);
+}
+
+/* --- left: what this is ------------------------------------------------- */
+
+.intro {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  padding: calc(var(--titlebar-h) + var(--gap-section)) var(--gap-section) var(--gap-section);
+}
+
+.intro__chrome {
   position: absolute;
   inset-inline: 0;
   top: 0;
-  z-index: 2;
-  height: 2.75rem;
+  height: var(--titlebar-h);
+}
+
+.intro__inner {
+  width: 100%;
+  max-width: 30em;
+  margin: auto;
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-inline: var(--gap);
+  flex-direction: column;
 }
 
-.manager__settings {
-  display: grid;
-  place-items: center;
-  width: 1.875rem;
-  height: 1.875rem;
-  border-radius: 0.5rem;
-  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
-  transition:
-    background-color var(--t-hover) var(--ease-out),
-    color var(--t-hover) var(--ease-out),
-    transform var(--t-press) var(--ease-out);
+/*
+ * Everything arrives in the order it is read, one after another. Capped,
+ * because a cascade long enough to notice is a wait.
+ */
+.identity,
+.finder,
+.intro__action,
+.keyring,
+.fold {
+  animation: lift-in 420ms var(--ease-out) backwards;
+  animation-delay: calc(var(--step) * 55ms);
 }
 
-.manager__settings:active {
-  transform: scale(0.92);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .manager__settings:hover {
-    background: var(--fill-3);
-    color: var(--color-base-content);
+@keyframes lift-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
 }
 
-.manager__inner {
-  width: 100%;
-  max-width: 52rem;
-  margin: auto;
-  padding: 3.5rem var(--gap-section) var(--gap-section);
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap-loose);
+/*
+ * Spacing is declared by the thing above the gap rather than by one `gap` on
+ * the column, so a row that is not drawn takes its own separation with it
+ * instead of leaving a hole where it used to be.
+ */
+.identity,
+.finder,
+.parsed {
+  margin-bottom: 1.5em;
 }
 
-.banner {
+.keyring {
+  margin-top: 1.5em;
+}
+
+.identity {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--gap-tight);
   text-align: center;
 }
 
-/* Large text wants negative tracking; at this size the default reads loose. */
-.banner__title {
-  font-size: 2.25rem;
-  font-weight: 650;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
+.identity__mark {
+  display: grid;
+  place-items: center;
+  width: 3.6em;
+  height: 3.6em;
+  margin-bottom: 0.7em;
+  border-radius: 1.1em;
+  color: var(--color-primary-content);
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, var(--color-primary) 88%, white),
+    var(--color-primary)
+  );
+  box-shadow:
+    inset 0 1px 0 oklch(100% 0 0 / 0.35),
+    var(--elev-thumb);
 }
 
-.banner__sub {
-  font-size: 0.875rem;
-  color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
-  margin-bottom: var(--gap-loose);
+/* Drawn at a fixed pixel size, so it is the one part of the mark that would
+   not grow with the rest. */
+.identity__mark .icon {
+  width: 1.8em;
+  height: 1.8em;
+}
+
+/* Large text wants negative tracking; at this size the default reads loose. */
+.identity__title {
+  font-size: 2.15em;
+  font-weight: 650;
+  letter-spacing: -0.028em;
+  line-height: 1.1;
+}
+
+.identity__sub {
+  font-size: 0.85em;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
 }
 
 .finder {
   position: relative;
   display: flex;
   align-items: center;
-  width: 100%;
-  border-radius: 999px;
-  background: color-mix(in oklab, var(--color-base-100) 78%, transparent);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 0.75em;
+  background: var(--fill-4);
   border: 1px solid var(--separator);
-  box-shadow:
-    inset 0 1px 2px oklch(0% 0 0 / 0.04),
-    0 1px 2px oklch(0% 0 0 / 0.04);
   transition:
     border-color var(--t-hover) var(--ease-out),
-    box-shadow var(--t-hover) var(--ease-out);
+    box-shadow var(--t-hover) var(--ease-out),
+    background-color var(--t-hover) var(--ease-out);
 }
 
 .finder:focus-within {
+  background: var(--fill-3);
   border-color: color-mix(in oklab, var(--color-primary) 55%, transparent);
-  box-shadow:
-    inset 0 1px 2px oklch(0% 0 0 / 0.02),
-    0 0 0 4px color-mix(in oklab, var(--color-primary) 18%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 16%, transparent);
 }
 
 .finder__icon {
-  width: 1rem;
-  height: 1rem;
-  margin-inline-start: var(--gap-section);
-  color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
-  flex: 0 0 auto;
+  width: 1em;
+  height: 1em;
+  margin-inline-start: 0.75em;
+  color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
 }
 
 .finder__input {
   flex: 1;
   min-width: 0;
-  height: 3rem;
-  padding-inline: var(--gap);
+  height: max(var(--hit-min), 2.5em);
+  padding-inline: 0.6em;
   border: 0;
   background: transparent;
   color: var(--color-base-content);
-  font-size: 0.9375rem;
+  font-size: 0.95em;
 }
 
 /* The wrapper owns the focus ring; the input drawing its own gives two. */
@@ -453,28 +704,31 @@ function draftFor(input: SaveConnectionInput): void {
 }
 
 .finder__input::placeholder {
-  color: color-mix(in oklab, var(--color-base-content) 36%, transparent);
+  color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
 }
 
 .finder__clear {
   display: grid;
   place-items: center;
-  width: var(--hit-min);
-  height: var(--hit-min);
-  margin-inline-end: var(--gap);
+  width: max(var(--hit-min), 1.8em);
+  height: max(var(--hit-min), 1.8em);
+  margin-inline-end: 0.35em;
   border-radius: 999px;
-  font-size: 0.625rem;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  transition: background-color var(--t-press) var(--ease-out);
+}
+
+.finder__clear .icon {
+  width: 0.7em;
+  height: 0.7em;
 }
 
 .parsed {
   display: flex;
   align-items: center;
-  gap: var(--gap);
-  width: 100%;
-  margin-top: var(--gap);
-  padding: var(--gap) var(--gap-loose);
-  border-radius: 0.875rem;
+  gap: 0.5em;
+  padding: 0.5em 0.75em;
+  border-radius: 0.75em;
   border: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
   background: color-mix(in oklab, var(--color-primary) 10%, transparent);
   text-align: start;
@@ -482,7 +736,7 @@ function draftFor(input: SaveConnectionInput): void {
 }
 
 .parsed__label {
-  font-size: 0.5625rem;
+  font-size: 0.6em;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-primary-text, var(--color-primary));
@@ -490,7 +744,7 @@ function draftFor(input: SaveConnectionInput): void {
 
 .parsed__name {
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.75em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -500,123 +754,113 @@ function draftFor(input: SaveConnectionInput): void {
   padding: 1px 7px;
   border-radius: 999px;
   background: color-mix(in oklab, var(--color-primary) 22%, transparent);
-  font-size: 0.625rem;
+  font-size: 0.6em;
 }
 
 .parsed__go {
   margin-inline-start: auto;
-  font-size: 0.6875rem;
+  font-size: 0.7em;
   color: var(--color-primary-text, var(--color-primary));
   white-space: nowrap;
 }
 
-.failure {
-  padding: var(--gap) var(--gap-loose);
-  border-radius: 0.75rem;
-  background: color-mix(in oklab, var(--color-error) 14%, transparent);
-  font-size: 0.75rem;
+/* --- right: what there is to open --------------------------------------- */
+
+/*
+ * The second tone, and the whole reason the split reads as two places rather
+ * than one page with a rule down it. The left pane is the window's own surface;
+ * this one is a step back from it, so the list on it needs no card of its own to
+ * be a list — a border and the hairlines between the rows are enough.
+ */
+.browser {
+  display: flex;
+  min-width: 0;
+  border-inline-start: 1px solid var(--separator);
+  background: var(--fill-3);
 }
 
-.tiles {
-  display: grid;
-  /* Three across on a wide window, so two connections do not stretch into
-     banners the width of the screen. */
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-  gap: var(--gap);
+.browser__scroll {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: calc(var(--titlebar-h) + var(--gap)) var(--gap-section) var(--gap-section);
+}
+
+.fold + .fold {
+  margin-top: 0.9em;
+}
+
+/* One object per group, with the rows ruled inside it. */
+.group__list {
+  border-radius: 0.9em;
+  border: 1px solid var(--separator);
+  overflow: hidden;
+}
+
+/* The one thing to start on this side, as a filled row rather than an outlined
+   one: it is an action, and the groups opposite are a list. */
+.intro__action {
+  border-radius: 0.9em;
+  background: var(--fill-3);
+  overflow: hidden;
+}
+
+.group__list > :deep(* + *),
+.intro__action > :deep(* + *) {
+  border-top: 1px solid var(--separator);
+}
+
+.group__row {
+  animation: lift-in 320ms var(--ease-out) backwards;
+  animation-delay: min(calc(var(--index) * 35ms), 280ms);
 }
 
 /*
- * Cards cascade in rather than appearing together. The delay is capped so a
- * long list never makes the screen feel slow to settle.
+ * A row's own actions.
+ *
+ * Sized well above the pointer floor rather than at it: they appear on hover
+ * over a row whose whole width is also a target, so the two have to be told
+ * apart by eye at a glance, and a 28px square carrying a 10px glyph reads as a
+ * speck rather than a button.
  */
-.tiles__item {
-  animation: rise-in 320ms var(--ease-out) backwards;
-  animation-delay: calc(min(var(--index) * 40ms, 320ms));
-}
-
-@keyframes rise-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-}
-
-.tile {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--gap);
-  min-height: 4.5rem;
-  border-radius: 1rem;
-  border: 1px dashed var(--separator-strong);
+.rowaction {
+  display: grid;
+  place-items: center;
+  width: max(var(--hit-min), 2.4em);
+  height: max(var(--hit-min), 2.4em);
+  border-radius: 0.55em;
   color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
-  font-size: 0.8125rem;
   transition:
-    border-color var(--t-hover) var(--ease-out),
-    color var(--t-hover) var(--ease-out),
-    background-color var(--t-hover) var(--ease-out),
-    transform var(--t-press) var(--ease-out);
+    background-color var(--t-press) var(--ease-out),
+    color var(--t-press) var(--ease-out);
 }
 
-.tile--wide {
-  width: 100%;
-  min-height: 5.5rem;
+.rowaction .icon {
+  width: 1.15em;
+  height: 1.15em;
 }
 
-.tile__plus {
-  font-size: 1.125rem;
-  line-height: 1;
+.flag {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-warning) 26%, transparent);
+  font-size: 0.65em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.tile:active {
-  transform: scale(0.985);
-}
-
-.empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--gap-loose);
-}
-
-.empty__text {
-  font-size: 0.8125rem;
-  color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
+.blank {
+  padding: 1.5em 0;
   text-align: center;
-}
-
-.sample {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-section);
-  padding: var(--gap-loose) var(--gap-section);
-  border-radius: 1rem;
-  border: 1px solid var(--separator);
-  background: color-mix(in oklab, var(--color-base-100) 55%, transparent);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  backdrop-filter: blur(16px) saturate(160%);
-}
-
-.sample__text {
-  flex: 1;
-  min-width: 0;
-}
-
-.sample__title {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  letter-spacing: -0.006em;
-}
-
-.sample__sub {
-  font-size: 0.75rem;
-  line-height: 1.45;
-  color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+  font-size: 0.85em;
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
 }
 
 .keyring {
   text-align: center;
-  font-size: 0.6875rem;
+  font-size: 0.8em;
   color: color-mix(in oklab, var(--color-warning) 90%, var(--color-base-content));
 }
 
@@ -634,22 +878,6 @@ function draftFor(input: SaveConnectionInput): void {
   transform: translateY(-6px);
 }
 
-.card-leave-active {
-  transition:
-    opacity var(--t-pop) var(--ease-out),
-    transform var(--t-pop) var(--ease-out);
-  position: absolute;
-}
-
-.card-leave-to {
-  opacity: 0;
-  transform: scale(0.96);
-}
-
-.card-move {
-  transition: transform var(--t-sheet) var(--ease-out);
-}
-
 @media (hover: hover) and (pointer: fine) {
   .finder__clear:hover {
     background: var(--fill-2);
@@ -660,24 +888,29 @@ function draftFor(input: SaveConnectionInput): void {
     background: color-mix(in oklab, var(--color-primary) 16%, transparent);
   }
 
-  .tile:hover {
-    border-color: color-mix(in oklab, var(--color-primary) 50%, transparent);
-    background: color-mix(in oklab, var(--color-primary) 6%, transparent);
-    color: var(--color-primary-text, var(--color-primary));
+  .rowaction:hover {
+    background: var(--fill-1);
+    color: var(--color-base-content);
+  }
+
+  .rowaction--danger:hover {
+    background: var(--color-error);
+    color: var(--color-error-content);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tiles__item {
+  .identity,
+  .finder,
+  .intro__action,
+  .keyring,
+  .fold,
+  .group__row {
     animation: none;
   }
 
   .rise-enter-from,
   .rise-leave-to {
-    transform: none;
-  }
-
-  .tile:active {
     transform: none;
   }
 }

@@ -48,7 +48,7 @@ test('writes a file with a header and rows in it', async () => {
       }) as typeof dialog.showSaveDialog;
     }, target);
 
-    await page.getByRole('button', { name: /Explore sample data/ }).click();
+    await page.getByRole('button', { name: /Sample database/ }).click();
     await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
     await page
@@ -90,6 +90,85 @@ test('writes a file with a header and rows in it', async () => {
       () => (globalThis as Record<string, unknown>)['__suggested'] as string
     );
     expect(suggested).toMatch(/query-\d{8}-\d{6}-\d{6}\.csv$/);
+  } finally {
+    await app?.close();
+    await rm(userDataDir, { recursive: true, force: true });
+    await rm(target, { recursive: true, force: true });
+  }
+});
+
+/**
+ * The same seam, one layer along: a dispatched job's rows are written to a
+ * spool and the export copies that file. The spool's first line is its column
+ * list, and it was written before the cursor had read anything — so for any
+ * driver that learns its columns from the first result, the file said it had no
+ * columns, the job tab drew rows with nothing to put them in, and the export
+ * carried the same emptiness out to disk.
+ */
+test('exports a dispatched job with its columns intact', async () => {
+  const userDataDir = await mkdtemp(join(tmpdir(), 'shelf-e2e-'));
+  const target = await mkdtemp(join(tmpdir(), 'shelf-jobexport-'));
+
+  let app: ElectronApplication | undefined;
+  try {
+    app = await electron.launch({
+      args: [resolve(here, '../../out/main/index.js'), `--user-data-dir=${userDataDir}`],
+      env: { ...process.env, NODE_ENV: 'test', SHELF_E2E: '1' },
+    });
+    const page = await app.firstWindow();
+    await page.waitForLoadState('domcontentloaded');
+
+    await app.evaluate(({ dialog }, out) => {
+      dialog.showSaveDialog = ((...args: unknown[]) => {
+        const options = (args.length > 1 ? args[1] : args[0]) as { defaultPath?: string };
+        const name = (options?.defaultPath ?? '').split('/').pop() || 'job.csv';
+        return Promise.resolve({ canceled: false, filePath: `${out}/${name}` });
+      }) as typeof dialog.showSaveDialog;
+    }, target);
+
+    await page.getByRole('button', { name: /Sample database/ }).click();
+    await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+
+    await page
+      .getByRole('button', { name: /new query/i })
+      .first()
+      .click();
+    await page.locator('.monaco-editor').first().click();
+    await typeQuery(page, 'select id, name, country from music.artist');
+
+    await page.getByRole('button', { name: 'What Run performs' }).click();
+    await page.getByRole('menuitem', { name: 'Dispatch' }).click();
+
+    // The job finishes in the sidebar, and opening it opens the spool.
+    await page.getByRole('button', { name: 'Jobs' }).click();
+    const done = page.locator('.job__face:not([disabled])').first();
+    await expect(done).toBeVisible({ timeout: 20_000 });
+    await done.click();
+
+    await expect(page.locator('.jobtab')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('.jobtab .tabulator-col').first()).toBeVisible({
+      timeout: 20_000,
+    });
+
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    const sheet = page.getByRole('dialog');
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole('radio', { name: 'File' }).click();
+    await sheet.getByRole('radio', { name: 'CSV' }).click();
+    await sheet.getByRole('button', { name: 'Export' }).click();
+
+    // Several notices are in flight by now — the dispatch said so too.
+    await expect(page.locator('.notices [role="status"]').last()).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect
+      .poll(async () => (await readdir(target)).length, { timeout: 20_000 })
+      .toBeGreaterThan(0);
+
+    const files = await readdir(target);
+    const lines = (await readFile(join(target, files[0]!), 'utf8')).trim().split('\n');
+    expect(lines[0], 'the header has no column names in it').toContain('name');
+    expect(lines.length, 'the file has no rows in it').toBeGreaterThan(1);
   } finally {
     await app?.close();
     await rm(userDataDir, { recursive: true, force: true });

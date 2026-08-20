@@ -30,22 +30,44 @@
     "settings": "設定",
     "collapseAll": "すべて折りたたむ",
     "resetView": "表示をリセット",
-    "copied": "クリップボードにコピーしました。"
+    "copied": "クリップボードにコピーしました。",
+    "reset": "リセット",
+    "confirm": "確定",
+    "open": "開く…",
+    "dispatch": "バックグラウンド実行",
+    "saveQuery": "クエリを保存"
   },
   "start": {
     "search": "接続 URL を貼り付けるか、保存済みの接続を検索",
     "searchLabel": "接続 URL を貼り付けるか検索",
     "recognised": "認識しました",
     "setUp": "設定する",
+    "recent": "最近使った接続",
+    "saved": "保存済みの接続",
+    "matches": "一致した接続",
+    "noMatches": "一致する接続はありません。",
+    "nothingSaved": "保存された接続はまだありません。",
     "newConnection": "新しい接続",
-    "nothingSaved": "保存された接続はまだありません。上に接続 URL を貼り付けるか、エンジンを選んで始めてください。",
-    "sampleTitle": "手元にデータベースがありませんか？",
-    "sampleBody": "サンプルを開けば、閲覧・編集・クエリ・ER 図まですべて動きます。何もインストールされず、何も保存されません。",
-    "sampleAction": "サンプルデータを試す",
+    "newConnectionBody": "URL を貼り付けるか、項目を入力します。",
+    "settingsBody": "外観、データ、キーボード。",
+    "importPresets": "プリセットを読み込む",
+    "importPresetsBody": "JSON ファイルから接続を追加します。",
+    "importTitle": "接続を読み込む",
+    "exportTitle": "接続を書き出す",
+    "export": "{{name}} を書き出す",
+    "exported": "保存しました。パスワードはキーチェーンに残ります。",
+    "imported": "{{n}} 件を読み込みました。それぞれパスワードが必要です。",
+    "importFailed": "そのファイルを読めませんでした",
+    "sample": "サンプル",
+    "sampleTitle": "サンプルデータベース",
+    "sampleBody": "すぐに閲覧・クエリ・編集ができます。何もインストールされません。",
     "sampleOpening": "起動中…",
     "noKeyring": "システムのキーチェーンが見つからないため、このマシンではパスワードを保存できません。",
     "neverOpened": "未使用",
     "justNow": "たった今",
+    "minutesAgo": "{{n}} 分前",
+    "hoursAgo": "{{n}} 時間前",
+    "daysAgo": "{{n}} 日前",
     "connectTo": "{{name}} に接続",
     "edit": "{{name}} を編集",
     "remove": "{{name}} を削除"
@@ -82,7 +104,8 @@
     "chooseEngine": "データベースエンジンを選んでください。",
     "chooseFile": "データベースファイルを選んでください。",
     "needHost": "ホスト、ソケットのパス、または接続 URL を入力してください。",
-    "required": "{{field}} は必須です。"
+    "required": "{{field}} は必須です。",
+    "testOk": "接続しました — {{version}}"
   },
   "workspace": {
     "entities": "オブジェクト",
@@ -104,7 +127,8 @@
     "readOnly": "読み取り専用",
     "disconnectHint": "クリックで切断",
     "searchEntities": "テーブルを検索",
-    "toggleSidebar": "サイドバーの切り替え"
+    "toggleSidebar": "サイドバーの切り替え",
+    "jobs": "ジョブ"
   },
   "table": {
     "filterPlaceholder": "絞り込み — 例: name like 'A%'",
@@ -142,7 +166,27 @@
     "explainHint": "データベースがこれをどう実行するかを表示",
     "saveHint": "このクエリを保存",
     "caret": "{{line}} 行 {{column}} 列 / 全 {{lines}} 行",
-    "selected": "{{count}} 文字選択"
+    "selected": "{{count}} 文字選択",
+    "groupStatement": "ステートメント",
+    "groupTransaction": "トランザクション",
+    "groupResult": "結果",
+    "runScope": "実行の対象",
+    "resultsBar": "この結果",
+    "formatFailed": "整形できませんでした",
+    "rowLimit": "{{rows}} 行",
+    "elapsed": "{{time}} 実行中",
+    "bar": "ステートメント",
+    "formatHint": "このエンジンの方言で文を整形します",
+    "autoCommit": "自動コミット",
+    "autoCommitHint": "オフにすると、文は自分でコミットするトランザクション内で実行されます。",
+    "beginHint": "トランザクションを開始します。コミットするまで書き込まれません",
+    "rowLimitNone": "無制限",
+    "summaryRows": "{{rows}} 行",
+    "summaryFirst": "先頭 {{rows}} 行",
+    "summaryAffected": "{{rows}} 件に影響",
+    "summaryMs": "{{ms}} ミリ秒",
+    "summaryRow": "{{rows}} 行",
+    "summaryFirstOne": "先頭 {{rows}} 行"
   },
   "structure": {
     "columns": "列",
@@ -182,7 +226,11 @@
     "actions": "操作",
     "noMatch": "一致するものはありません。",
     "outgoing": "参照先",
-    "incoming": "参照元"
+    "incoming": "参照元",
+    "wrap": "折り返し",
+    "wrapHint": "値の全体を必要な行数で表示する",
+    "wrapOn": "折り返しを有効にしました。",
+    "wrapOff": "折り返しを無効にしました。"
   },
   "settings": {
     "title": "設定",
@@ -223,7 +271,31 @@
     "resetData": "データ設定をリセット",
     "primaryRun": "主要な実行操作",
     "runAll": "エディタ全体",
-    "runCurrent": "カーソル位置のステートメント"
+    "runCurrent": "カーソル位置のステートメント",
+    "viewVisual": "フォーム",
+    "viewJson": "JSON",
+    "jsonValid": "JSON は有効です。",
+    "applied": "設定を適用しました。",
+    "exportTitle": "設定を書き出す",
+    "importTitle": "設定を読み込む",
+    "exported": "設定を保存しました。",
+    "imported": "設定を読み込みました。",
+    "exportSettings": "書き出す…",
+    "importSettings": "読み込む…",
+    "appearanceDesc": "ウィンドウの配色と、画面に収まる情報量。ここの操作はすべて即座に反映されます。",
+    "dataDesc": "結果として取得する行と、その中身を変更する方法。",
+    "editorDesc": "SQL エディタの体裁と、長い行の扱い。",
+    "file": "設定ファイル",
+    "fileDesc": "このページの設定すべてを 1 つの書類として保存し、別のマシンへ持ち出せます。",
+    "resetAll": "リセット",
+    "resetDesc": "データとエディタの設定を初期状態に戻します。外観はそのままです。",
+    "resetConfirm": "もう一度押すと、データとエディタの設定をすべて初期化します。",
+    "wasReset": "設定を初期化しました。",
+    "copy": "コピー",
+    "exportRow": "すべての設定をファイルに書き出す",
+    "importRow": "ファイルから読み込んで置き換える",
+    "jsonLines": "{{count}} 行",
+    "copyHint": "書類全体をクリップボードにコピー"
   },
   "palette": {
     "placeholder": "テーブル・タブ・操作を検索…",
@@ -300,7 +372,13 @@
     "written": "書き出しました。",
     "working": "処理中…",
     "run": "エクスポート",
-    "wroteTo": "{{name}} に書き出しました。"
+    "wroteTo": "{{name}} に書き出しました。",
+    "scope": "行",
+    "scopePage": "このページ（{{count}}）",
+    "scopeFull": "クエリに一致するすべて",
+    "scopePageHint": "読み込み済みの行から書き出します。再実行しません。",
+    "scopeFullHint": "プレビュー上限なしで文を再実行します。一致は {{count}} 行です。",
+    "scopeFullHintUnknown": "プレビュー用の上限なしで文をもう一度実行します。"
   },
   "grid": {
     "oneBased": "1 始まり",
@@ -320,7 +398,8 @@
     "exportData": "データをファイルに書き出す…",
     "actionsFor": "{{name}} の操作",
     "copiedName": "{{name}} をコピーしました。",
-    "analyze": "パフォーマンスを分析"
+    "analyze": "パフォーマンスを分析",
+    "diagram": "リレーション図"
   },
   "properties": {
     "rows": "行数",
@@ -414,7 +493,15 @@
     "largestTables": "最大のテーブル",
     "deadRows": "各バーの濃い部分はデッドタプルが占める領域です。",
     "unusedIndexes": "未使用のインデックス",
-    "unusedHint": "いずれも挿入・更新のたびに書き込みコストがかかります。"
+    "unusedHint": "いずれも挿入・更新のたびに書き込みコストがかかります。",
+    "brushHint": "グラフ上をドラッグすると、以下すべてがその期間に絞り込まれます。",
+    "wholeRange": "全期間",
+    "scaleLabel": "縦軸のスケール",
+    "totals": "{{calls}} 回の呼び出しで {{time}}",
+    "noReadings": "まだ計測値がありません。このパネルを開いている間に取得して差分を取ります。開いたままにするとここが埋まります。",
+    "quietSelection": "選択した期間には何も実行されていません。",
+    "scaleLinear": "線形",
+    "scaleLog": "対数"
   },
   "analyzeWindow": {
     "hour": "1 時間",
@@ -427,7 +514,8 @@
   "analyzeCaveat": {
     "short": "記録された履歴がこの期間より短いため、最初の読み取り以降のすべてを表示しています。",
     "cumulative": "これはサーバーの累計であり期間ではありません。このタブを開いたままにすると期間が埋まります。",
-    "reset": "この期間中にサーバーがカウンタをリセットしたため、以前の読み取りは破棄されました。"
+    "reset": "この期間中にサーバーがカウンタをリセットしたため、以前の読み取りは破棄されました。",
+    "wide": "この範囲の前後で記録が取られていないため、利用できる最も近い計測値が範囲より古く、表示は範囲より広い期間を含みます。"
   },
   "analyzeSpan": {
     "single": "読み取り 1 件",
@@ -439,6 +527,46 @@
     "unsupported": "このエンジンはステートメント統計を保持しません。",
     "not-installed": "このサーバーには統計拡張がインストールされていません。",
     "not-permitted": "このアカウントは統計ビューを読み取れません。",
-    "hint": "PostgreSQL では、サーバー設定にライブラリを追加して再起動し、拡張を作成します:"
+    "hint": "PostgreSQL では、サーバー設定にライブラリを追加して再起動し、拡張を作成します:",
+    "not-loaded": "拡張は作成されていますが読み込まれていないため、何も計測していません。",
+    "not-tracking": "このサーバーでは文の記録が無効になっています。",
+    "other-database": "このサーバーには記録がありますが、このデータベースのものはありません。",
+    "nothing-recorded": "拡張は動作していますが、まだ記録がありません。"
+  },
+  "plan": {
+    "title": "実行計画",
+    "exportSvg": "計画を SVG で書き出す",
+    "exportPng": "計画を PNG で書き出す",
+    "exported": "計画を保存しました。"
+  },
+  "jobs": {
+    "empty": "まだ何も実行していません。バックグラウンド実行は単独で走り、結果全体をこの端末に保持し、完了時に通知します。",
+    "dispatched": "{{name}} を実行しました。",
+    "finished": "完了 — {{rows}} 行、書き出せます。",
+    "open": "開く",
+    "openResult": "{{name}} の行を開く",
+    "rename": "名前を変更",
+    "discard": "破棄",
+    "discarded": "{{name}} を破棄しました。",
+    "rowsIn": "{{time}} で {{rows}} 行",
+    "resultBar": "このジョブ",
+    "showing": "{{total}} 件中 {{from}}–{{to}} を表示",
+    "previous": "前のページ",
+    "next": "次のページ",
+    "statusPending": "待機中",
+    "statusRunning": "実行中",
+    "statusDone": "完了",
+    "statusFailed": "失敗",
+    "interrupted": "再起動により中断されました。",
+    "rowsGone": "このジョブの行はもう残っていません。"
+  },
+  "value": {
+    "asJson": "JSON として整形",
+    "empty": "（空）"
+  },
+  "erd": {
+    "zoomIn": "拡大",
+    "zoomOut": "縮小",
+    "fit": "全体表示"
   }
 }

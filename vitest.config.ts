@@ -9,6 +9,7 @@ export default defineConfig({
       '@shared': r('src/shared'),
       '@drivers': r('src/drivers'),
       '@renderer': r('src/renderer'),
+      '@utility': r('src/utility'),
     },
   },
   test: {

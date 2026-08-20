@@ -8,11 +8,15 @@ export const WINDOW_CHANNELS = {
   maximizedChanged: 'window:maximized-changed',
   platformInfo: 'window:platform-info',
   setAppearance: 'window:set-appearance',
+  setCompact: 'window:set-compact',
 } as const;
 
 export const DIALOG_CHANNELS = {
   openFile: 'dialog:open-file',
   saveFile: 'dialog:save-file',
+  readTextFile: 'dialog:read-text-file',
+  writeTextFile: 'dialog:write-text-file',
+  writeBinaryFile: 'dialog:write-binary-file',
 } as const;
 
 export interface DialogApi {
@@ -27,6 +31,36 @@ export interface DialogApi {
     defaultPath?: string;
     extensions?: readonly string[];
   }): Promise<string | undefined>;
+  /**
+   * Picks a text file and reads it, in one round trip.
+   *
+   * Separate from `openFile` because the renderer cannot read a path: it has no
+   * filesystem, deliberately. A settings or connection document is a few
+   * kilobytes, so it crosses whole rather than as a stream — the one that can
+   * be arbitrarily large is table data, and that goes through the host.
+   */
+  readTextFile(options: {
+    title?: string;
+    extensions?: readonly string[];
+  }): Promise<{ path: string; text: string } | undefined>;
+  /** Picks a destination and writes it. Returns the path, or undefined if the
+   *  user cancelled. */
+  writeTextFile(
+    options: { title?: string; defaultPath?: string; extensions?: readonly string[] },
+    text: string
+  ): Promise<string | undefined>;
+  /**
+   * The same, for something that is not text.
+   *
+   * Base64 rather than a `Uint8Array`, because the bridge clones what crosses
+   * it and a typed array arrives on the other side as a plain object of indices
+   * — silently, and only for large ones. A plan diagram is a few tens of
+   * kilobytes, so the third it costs to encode is not worth a second mechanism.
+   */
+  writeBinaryFile(
+    options: { title?: string; defaultPath?: string; extensions?: readonly string[] },
+    base64: string
+  ): Promise<string | undefined>;
 }
 
 /** Channels for obtaining and re-obtaining the connection host's port. */
@@ -65,4 +99,13 @@ export interface WindowApi {
    * the exact inverse of the depth those panels are supposed to have.
    */
   setAppearance(appearance: Appearance): void;
+  /**
+   * Whether the window is showing the start screen rather than a workspace.
+   *
+   * The two want different windows. A workspace is a tool you size to your
+   * screen; a start screen is a panel with a title, a short list and two ways
+   * in, and given a full-screen window it is mostly emptiness. So the window
+   * shrinks to fit it and grows back to whatever it was when a database opens.
+   */
+  setCompact(compact: boolean): void;
 }

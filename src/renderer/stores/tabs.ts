@@ -9,7 +9,7 @@ import { entityKey } from './entities';
  * nothing can open is dead weight the compiler cannot see, so it went — and
  * `restore` drops any that a session saved before it did.
  */
-export type TabKind = 'table' | 'query' | 'erd';
+export type TabKind = 'table' | 'query' | 'erd' | 'job';
 
 export interface Tab {
   readonly id: string;
@@ -19,6 +19,17 @@ export interface Tab {
   entity?: EntityRef;
   /** Editor text for query tabs, kept here so it survives tab switches. */
   text?: string;
+  /** Which dispatched job a job tab is showing. */
+  jobId?: string;
+  /**
+   * What a diagram is a diagram *of*.
+   *
+   * A whole connection at once is a hairball: two hundred tables laid out by a
+   * force simulation fill a canvas no screen can show at a legible size, and
+   * the answer to "which tables reference this one" is in there somewhere. A
+   * diagram is opened from a database or a schema, and shows that.
+   */
+  scope?: { readonly kind: 'database' | 'schema'; readonly name: string };
   unsaved: boolean;
 }
 
@@ -81,17 +92,46 @@ export const useTabs = defineStore('tabs', () => {
     return tab;
   }
 
-  function openErd(): Tab {
-    const existing = tabs.value.find((tab) => tab.kind === 'erd');
+  function openErd(scope?: Tab['scope']): Tab {
+    const existing = tabs.value.find(
+      (tab) => tab.kind === 'erd' && tab.scope?.name === scope?.name
+    );
     if (existing) {
       focus(existing.id);
       return existing;
     }
 
-    const tab: Tab = { id: nextId(), kind: 'erd', title: 'Diagram', unsaved: false };
+    const tab: Tab = {
+      id: nextId(),
+      kind: 'erd',
+      // The specific thing first and what it is second, the way a table tab
+      // carries its name over its schema.
+      title: scope?.name ?? 'Diagram',
+      ...(scope ? { subtitle: 'Diagram', scope } : {}),
+      unsaved: false,
+    };
     tabs.value = [...tabs.value, tab];
     focus(tab.id);
     return tab;
+  }
+
+  /**
+   * Names a tab whatever the reader wants it called.
+   *
+   * A workspace with six query tabs in it is six tabs called Query, Query 2 and
+   * so on — names the app made up because it had to call them something, and
+   * which say nothing about what is in them.
+   */
+  function rename(id: string, title: string): void {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+
+    const tab = tabs.value.find((candidate) => candidate.id === id);
+    if (!tab || tab.title === trimmed) return;
+
+    tabs.value = tabs.value.map((candidate) =>
+      candidate.id === id ? { ...candidate, title: trimmed } : candidate
+    );
   }
 
   function openQuery(text = ''): Tab {
@@ -107,6 +147,32 @@ export const useTabs = defineStore('tabs', () => {
     tabs.value = [...tabs.value, tab];
     focus(tab.id);
     return tab;
+  }
+
+  /**
+   * Opens a dispatched job's rows, or focuses the tab already showing them.
+   *
+   * Keyed by the job rather than by position, so clicking the same job twice
+   * does not accumulate two views of one file.
+   */
+  function openJob(jobId: string, title: string): Tab {
+    const existing = tabs.value.find((tab) => tab.kind === 'job' && tab.jobId === jobId);
+    if (existing) {
+      existing.title = title;
+      focus(existing.id);
+      return existing;
+    }
+
+    const tab: Tab = { id: nextId(), kind: 'job', title, jobId, unsaved: false };
+    tabs.value = [...tabs.value, tab];
+    focus(tab.id);
+    return tab;
+  }
+
+  /** Closes the view of a job, for when the job itself is being discarded. */
+  function closeJob(jobId: string): void {
+    const tab = tabs.value.find((entry) => entry.kind === 'job' && entry.jobId === jobId);
+    if (tab) close(tab.id);
   }
 
   function close(id: string): void {
@@ -183,6 +249,13 @@ export const useTabs = defineStore('tabs', () => {
 
     if (!stored?.tabs?.length) return;
 
+    /*
+     * A job tab is deliberately not restored. Its rows live in a spool under
+     * the OS temp directory, which the machine is free to sweep between
+     * launches — so a restored one would be a tab that opens onto a file that
+     * may not be there. The job itself survives in the jobs list, which is
+     * where its state belongs.
+     */
     const KINDS: readonly string[] = ['table', 'query', 'erd'];
     // A session saved before a tab kind was removed still restores; it just
     // restores the tabs that still exist.
@@ -229,6 +302,9 @@ export const useTabs = defineStore('tabs', () => {
     openEntity,
     openErd,
     openQuery,
+    rename,
+    openJob,
+    closeJob,
     close,
     closeOthers,
     closeToRight,

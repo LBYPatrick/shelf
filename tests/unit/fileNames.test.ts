@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { exportName, slugify, suffix, timestamp } from '@shared/fileNames';
+import { documentFileName, exportName, slugify, suffix, timestamp } from '@shared/fileNames';
 
 const AT = new Date(2026, 7, 17, 9, 5, 3);
 
@@ -55,5 +55,17 @@ describe('making a name safe for a filesystem', () => {
 
   it('falls back rather than producing an empty name', () => {
     expect(exportName('///', 'query', AT, 0.5)).toBe('query-20260817-090503-500000');
+  });
+});
+
+describe('documentFileName', () => {
+  it('names the file after the thing it holds', () => {
+    expect(documentFileName('TaskFlow Prod', 'connection')).toBe('TaskFlow-Prod.json');
+  });
+
+  it('falls back when the name survives nothing of itself', () => {
+    // A connection called "///" is not a filename, and an empty one is worse
+    // than a generic one.
+    expect(documentFileName('///', 'connection')).toBe('connection.json');
   });
 });

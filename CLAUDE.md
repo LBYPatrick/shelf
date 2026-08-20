@@ -14,6 +14,7 @@ that is a bug.
 ```bash
 make install     # install everything, rebuild native modules
 make dev         # hot-reload development
+make preview     # run the built app, no dev server and no hot reload
 make build       # typecheck + build all processes
 make test        # unit tests (vitest)
 make test-e2e    # end-to-end tests against the built app (playwright)
@@ -31,9 +32,14 @@ before considering a change finished.
 - **The renderer never imports a driver.** Drivers use Node APIs and native
   modules. If the renderer needs something from `src/drivers`, it is a *type* or
   it belongs in `src/shared`.
-- **Secrets never reach the renderer.** Credentials go keyring → main → host.
-  The renderer receives a single-use handle from
-  `window.shelf.db.prepareConnection` and nothing more.
+- **Secrets go keyring → main → host, and the renderer gets a handle.** It
+  receives a single-use token from `window.shelf.db.prepareConnection` and never
+  a password — with one deliberate, narrow exception: the connection editor asks
+  for the secrets of the *one* connection it has open, so the form can show what
+  it already holds. A field that hides its value and declines to hold it makes
+  changing a port an act of remembering a password, and "leave blank to keep the
+  saved one" is a rule the reader has to be told and then remember. It reveals
+  nothing they could not read out of the OS keychain themselves.
 - **New host channels go in `src/shared/contract.ts` first.** The renderer client
   and the host registry are checked against that one declaration, so adding a
   channel to one without the other is a type error rather than a runtime
@@ -183,6 +189,44 @@ before considering a change finished.
   showing it brings back exactly the box it had, and the container's observer
   fires on both edges — so the redraw is guarded on the geometry actually
   changing, coalesced to one a frame, and only full when the *width* moved.
+- **A sheet is the size of what is in it, and animates when that changes.** It
+  used to take one fixed height, so that content arriving late could not resize
+  it under the reader — which bought that at the cost of a popup with six facts
+  in it reserving the room for forty and sitting two thirds empty. The objection
+  is answered where it belongs instead: the height follows the content, the
+  change is animated on a decelerating curve, and the scrim centres the panel so
+  it grows about its middle rather than dropping its foot. Past 80% of the
+  viewport it stops and the body scrolls. Every sheet does this, including the
+  ones holding a surface rather than a form: a diagram draws at the size it was
+  laid out for and the window fits it, and the one thing with no natural height
+  — a text editor, which is a window onto a document and would grow by a line
+  per line typed — is given a definite height in the *content* so the sheet can
+  measure that like it measures anything else. Measure the *wrapper*, never the
+  panel or the body: those are the boxes being constrained, and `scrollHeight`
+  is never smaller than the box it is read from, so a panel already holding a
+  height reports that height as its content's and every sheet could grow while
+  none could shrink. Taking the constraint off to measure and putting it
+  straight back is worse — reading a layout property flushes style, so the
+  browser takes the natural height as the one the transition starts from and
+  the sheet jumps, animating from its new size to itself. Measure again when
+  the last transition in the sheet ends: measuring content resizes the panel
+  and resizing the panel resizes the content's box, and Chromium's observer
+  loop protection cuts that round trip off partway — which left a popup seven
+  pixels short of a list that had grown while it was opening.
+- **A list inside a popup scrolls inside its own card.** The sheet's body is a
+  scroller of last resort: let a list grow instead and a table with forty
+  columns hands the scrolling to the whole popup, which puts a track down the
+  side of it and carries the tab row off the top. The cap is a `max-height`
+  rather than a height, so three columns still make a popup three rows tall.
+  Whether the body scrolls at all is decided from the measurement rather than
+  left to `overflow: auto`: a classic scrollbar takes its width out of the
+  content, so a body overflowing by a few pixels narrows its own text, wraps a
+  line, and overflows further.
+- **An icon-only control carries a drawn label, not a `title`.** The OS tooltip
+  arrives after a second and a half, in a corner of its own choosing, styled by
+  the platform. `v-tip` from `lib/hoverTip.ts` puts it beside the control, on
+  focus as well as hover — and skips the delay while another is already up,
+  because moving along a row of icons is one gesture.
 - **Feedback lands on `pointerdown`,** not on click.
 - **Anything draggable tracks the pointer one to one,** preserves the grab
   offset, resists at its limits, and hands its release velocity to the spring

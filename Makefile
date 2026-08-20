@@ -1,4 +1,4 @@
-.PHONY: help install uninstall clean dev build test test-e2e typecheck lint format tidy commit package
+.PHONY: help install uninstall clean dev preview build test test-e2e typecheck lint format tidy commit package
 
 SHELL := /bin/bash
 VERSION := $(shell cat VERSION 2>/dev/null | tr -d '\n' || echo "0.1.0")
@@ -21,6 +21,9 @@ clean: ## Remove build artifacts and caches (keeps node_modules)
 
 dev: ## Run the app in development with hot reload
 	@pnpm dev
+
+preview: build ## Build, then run the built app with no dev server and no hot reload
+	@pnpm preview
 
 build: ## Type-check and build all three processes
 	@pnpm typecheck && pnpm build

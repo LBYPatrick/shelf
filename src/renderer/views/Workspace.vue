@@ -15,6 +15,8 @@ import EntityTree from '../components/sidebar/EntityTree.vue';
 import HistoryList from '../components/sidebar/HistoryList.vue';
 import SavedQueryList from '../components/sidebar/SavedQueryList.vue';
 import ErdTab from '../components/tabs/ErdTab.vue';
+import JobList from '../components/sidebar/JobList.vue';
+import JobTab from '../components/tabs/JobTab.vue';
 import QueryTab from '../components/tabs/QueryTab.vue';
 import TableTab from '../components/tabs/TableTab.vue';
 import SettingsSheet from '../components/settings/SettingsSheet.vue';
@@ -24,8 +26,10 @@ import ResizeHandle from '../components/ui/ResizeHandle.vue';
 import { useConnections } from '../stores/connections';
 import { useEntities } from '../stores/entities';
 import { useQueries } from '../stores/queries';
+import { useJobs } from '../stores/jobs';
 import { useTabs } from '../stores/tabs';
 import { useHotkeys } from '../composables/useHotkeys';
+import { vTip } from '../lib/hoverTip';
 import { shortcutLabel } from '../lib/keybindings';
 import { useTranslation } from 'i18next-vue';
 
@@ -33,9 +37,10 @@ const connections = useConnections();
 const entities = useEntities();
 const tabs = useTabs();
 const queries = useQueries();
+const jobs = useJobs();
 const { t } = useTranslation();
 
-type RailItem = 'entities' | 'queries' | 'history';
+type RailItem = 'entities' | 'queries' | 'history' | 'jobs';
 
 const rail = ref<RailItem>('entities');
 const sidebarWidth = ref(248);
@@ -49,6 +54,7 @@ const railItems = computed<readonly { id: RailItem; label: string; icon: string 
   { id: 'entities', label: t('workspace.entities'), icon: 'tables' },
   { id: 'queries', label: t('workspace.savedQueries'), icon: 'star' },
   { id: 'history', label: t('workspace.history'), icon: 'history' },
+  { id: 'jobs', label: t('workspace.jobs'), icon: 'jobs' },
 ]);
 
 /**
@@ -97,6 +103,9 @@ let stopPersisting: (() => void) | undefined;
 
 onMounted(async () => {
   void entities.refresh();
+  // The history of what has been dispatched outlives the window that started
+  // it, so it is read back before anything can add to it.
+  void jobs.restore();
 
   const connectionId = connections.active?.id;
   if (!connectionId) return;
@@ -131,10 +140,10 @@ onBeforeUnmount(() => stopPersisting?.());
       :style="{ paddingInlineStart: `max(var(--gap-tight), var(--controls-inset, 0px))` }"
     >
       <button
+        v-tip="`${t('workspace.toggleSidebar')} — ${shortcutLabel('sidebar.toggle')}`"
         class="topbar__toggle no-drag"
         :aria-label="$t('workspace.toggleSidebar')"
         :aria-pressed="!sidebarCollapsed"
-        :title="`${t('workspace.toggleSidebar')} — ${shortcutLabel('sidebar.toggle')}`"
         @click="sidebarCollapsed = !sidebarCollapsed"
       >
         <AppIcon name="sidebar" />
@@ -180,20 +189,27 @@ onBeforeUnmount(() => stopPersisting?.());
         <button
           v-for="item in railItems"
           :key="item.id"
+          v-tip="item.label"
           class="rail__item"
           :class="{ 'rail__item--on': rail === item.id && !sidebarCollapsed }"
           :aria-label="item.label"
           :aria-pressed="rail === item.id && !sidebarCollapsed"
-          :title="item.label"
           @click="selectRail(item.id)"
         >
           <AppIcon :name="item.icon" />
         </button>
 
+        <!--
+          The cog turns a quarter under the pointer. It is the one icon in the
+          rail whose shape *means* something mechanical, so it is the one where
+          movement reads as the object behaving rather than as decoration — and
+          the target is at the bottom corner, away from everything else, so it
+          benefits most from confirming that the pointer found it.
+        -->
         <button
-          class="rail__item rail__item--bottom"
+          v-tip="`${t('action.settings')} — ${shortcutLabel('settings.open')}`"
+          class="rail__item rail__item--bottom rail__item--gear"
           :aria-label="$t('action.settings')"
-          :title="$t('action.settings')"
           @click="settingsOpen = true"
         >
           <AppIcon name="settings" />
@@ -229,6 +245,17 @@ onBeforeUnmount(() => stopPersisting?.());
             <span class="sidebar__search-label">{{ $t('workspace.searchEntities') }}</span>
             <kbd class="sidebar__search-key">{{ shortcutLabel('palette.open') }}</kbd>
           </button>
+          <!--
+            Jobs have neither: the list is short, ordered by when things
+            happened, and refreshed by the thing that changed it. A filter box
+            over four rows is chrome pretending to be a feature.
+          -->
+          <span
+            v-else-if="rail === 'jobs'"
+            class="sidebar__title type-label"
+          >{{
+            $t('workspace.jobs')
+          }}</span>
           <input
             v-else
             v-model="queries.filter"
@@ -238,6 +265,7 @@ onBeforeUnmount(() => stopPersisting?.());
             spellcheck="false"
           >
           <PressButton
+            v-if="rail !== 'jobs'"
             size="sm"
             :aria-label="$t('action.refresh')"
             :title="$t('action.refresh')"
@@ -264,6 +292,7 @@ onBeforeUnmount(() => stopPersisting?.());
         </div>
 
         <EntityTree v-if="rail === 'entities'" />
+        <JobList v-else-if="rail === 'jobs'" />
         <SavedQueryList v-else-if="rail === 'queries'" />
         <HistoryList v-else />
       </aside>
@@ -292,6 +321,11 @@ onBeforeUnmount(() => stopPersisting?.());
                 :entity="tab.entity"
                 :active="tab.id === tabs.activeId"
               />
+              <JobTab
+                v-else-if="tab.kind === 'job' && tab.jobId"
+                :job-id="tab.jobId"
+                :active="tab.id === tabs.activeId"
+              />
               <QueryTab
                 v-else-if="tab.kind === 'query'"
                 v-model:text="tab.text!"
@@ -301,6 +335,7 @@ onBeforeUnmount(() => stopPersisting?.());
               <ErdTab
                 v-else-if="tab.kind === 'erd'"
                 :active="tab.id === tabs.activeId"
+                :scope="tab.scope ?? null"
               />
             </div>
           </template>
@@ -322,14 +357,6 @@ onBeforeUnmount(() => stopPersisting?.());
                 @click="tabs.openQuery()"
               >
                 {{ $t('workspace.newQuery') }}
-              </PressButton>
-              <PressButton
-                v-if="connections.active?.capabilities.relations"
-                variant="glass"
-                size="sm"
-                @click="tabs.openErd()"
-              >
-                {{ $t('workspace.diagram') }}
               </PressButton>
             </div>
           </div>
@@ -548,6 +575,30 @@ onBeforeUnmount(() => stopPersisting?.());
   margin-bottom: var(--gap);
 }
 
+.rail__item--gear :deep(.icon) {
+  transition: transform 380ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .rail__item--gear:hover :deep(.icon) {
+    transform: rotate(90deg);
+  }
+}
+
+/*
+ * A quarter turn is movement for its own sake, which is exactly what someone
+ * who has asked for less of it does not want.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .rail__item--gear :deep(.icon) {
+    transition: none;
+  }
+
+  .rail__item--gear:hover :deep(.icon) {
+    transform: none;
+  }
+}
+
 .rail__item--on {
   /* The marker behind it supplies the surface. */
   color: var(--color-primary-text, var(--color-primary));
@@ -650,6 +701,15 @@ onBeforeUnmount(() => stopPersisting?.());
     background-color: var(--fill-3);
     color: var(--color-base-content);
   }
+}
+
+/* A name where the filter would be, so the head keeps its height. */
+.sidebar__title {
+  flex: 1;
+  padding-inline-start: var(--gap-tight);
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .sidebar__filter {

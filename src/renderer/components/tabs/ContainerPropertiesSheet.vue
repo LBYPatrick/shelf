@@ -183,10 +183,7 @@ watch(
       stays in flow and the analysis sits on top of it, which is what lets both
       be present during the fade without either shifting the other.
     -->
-    <div
-      class="pane"
-      :class="{ 'pane--tall': sections.length > 1 }"
-    >
+    <div class="pane">
       <Transition name="pane">
         <div
           v-show="section === 'overview'"
@@ -276,34 +273,46 @@ watch(
 
 <style scoped>
 /*
- * The frame the panes live in, and the reason the popup stops moving.
+ * The frame the panes live in.
  *
- * Tall enough for the analysis when there is one, and merely tall enough to
- * survive a fetch arriving when there is not — the overview goes from one line
- * of "Loading…" to six facts, which was itself a jump.
+ * It used to hold the popup at one height so a fetch landing could not resize
+ * it. The sheet animates its own size now — decelerating, and about its centre
+ * — so the overview going from "Loading…" to six facts reads as the window
+ * settling, and a popup with six facts in it is the size of six facts instead
+ * of the size of the largest thing any of its tabs might hold.
+ */
+/*
+ * The two sections stacked, in flow.
+ *
+ * They used to be stacked by taking the second one out of flow — which is the
+ * usual way to cross-fade, and it means the container has nothing to take its
+ * height from. That was invisible while the popup was a fixed height and became
+ * a pane of zero height the moment it started sizing to its content, with the
+ * table rendered off the bottom of the window.
+ *
+ * A single grid cell does the same job without the cost: both children occupy
+ * `1 / 1`, so they overlap for the length of the fade *and* the grid is as tall
+ * as the taller of them. The sheet's own height animation covers the moment
+ * where that is briefly both.
  */
 .pane {
   position: relative;
-  min-height: 12rem;
+  display: grid;
+  min-height: 0;
 }
 
-.pane--tall {
-  min-height: 60vh;
+.pane > * {
+  grid-area: 1 / 1;
+  min-width: 0;
 }
 
 .pane__overview {
-  min-height: inherit;
+  max-height: 100%;
+  overflow-y: auto;
 }
 
-/*
- * On top of the overview rather than beside it, so the two can both be present
- * for the length of a cross-fade without either one moving the other.
- */
 .pane__analysis {
-  position: absolute;
-  inset: 0;
   display: flex;
-  min-width: 0;
 }
 
 /*

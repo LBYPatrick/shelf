@@ -1,3 +1,4 @@
+import { limitStatement } from '@shared/rowLimit';
 import { DuckDBInstance, type DuckDBConnection } from '@duckdb/node-api';
 import { capabilities } from '../capabilities';
 import { encodeRows, tagFields } from '../transcode';
@@ -343,7 +344,7 @@ export class DuckdbClient implements DatabaseClient {
       }
 
       const started = performance.now();
-      const { rows, fields } = await this.run(statement);
+      const { rows, fields } = await this.run(limitStatement(statement, options.maxRows));
       const durationMs = performance.now() - started;
 
       const truncated = rows.length > options.maxRows;
@@ -356,7 +357,7 @@ export class DuckdbClient implements DatabaseClient {
         ),
         rows: encoded,
         truncated,
-        rowCount: rows.length,
+        rowCount: encoded.length,
         statement,
         durationMs,
       });

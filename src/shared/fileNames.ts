@@ -57,3 +57,14 @@ export function exportName(
   const clean = slugify(chosen ?? '');
   return clean || `${slugify(fallback) || 'export'}-${timestamp(at)}-${suffix(random)}`;
 }
+
+/**
+ * The name offered when saving a connection or the settings as a document.
+ *
+ * Always stamped from the thing's own name rather than offered blank: these are
+ * files people accumulate a directory of, and `settings.json` written four
+ * times is four files called `settings 2.json`.
+ */
+export function documentFileName(name: string, fallback: string, extension = 'json'): string {
+  return `${slugify(name) || fallback}.${extension}`;
+}

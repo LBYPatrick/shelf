@@ -16,6 +16,7 @@ import type {
   QueryOptions,
   Relation,
   ResultSet,
+  Row,
   SelectRequest,
   ServerMetrics,
   StatementReport,
@@ -152,6 +153,34 @@ export interface HostContract {
     payload: { path: string; limit: number };
     result: { header: readonly string[]; rows: readonly (readonly string[])[]; total: number };
   };
+
+  /**
+   * Runs a statement to completion and spools every row to a file.
+   *
+   * The counterpart of `query/run`, and the difference is what each is for. A
+   * run is a look at the first page and carries a limit; a dispatch is asked
+   * for because the whole answer is wanted, so it takes no limit and the rows
+   * never enter the interface — they go from the cursor to disk, and the pages
+   * and the export are both read back from there. Exporting afterwards is a
+   * copy rather than a second execution of the statement, which for a long
+   * query is minutes saved and, on live data, a different answer avoided.
+   */
+  'job/run': {
+    payload: { connectionId: string; jobId: string; text: string };
+    result: { rows: number; fields: readonly Field[]; bytes: number; path: string };
+  };
+  /** One page out of a spool, for the viewer. */
+  'job/page': {
+    payload: { path: string; offset: number; limit: number };
+    result: { fields: readonly Field[]; rows: readonly Row[] };
+  };
+  /** Writes a spool out in one of the file formats, without re-running anything. */
+  'job/export': {
+    payload: { path: string; target: string; format: 'csv' | 'json' | 'jsonl' | 'sql' };
+    result: { rowsWritten: number };
+  };
+  /** Drops a spool from disk; a job whose rows are gone is history, not a result. */
+  'job/discard': { payload: { path: string }; result: void };
 
   'txn/begin': { payload: { connectionId: string; tabId: string }; result: void };
   'txn/commit': { payload: { connectionId: string; tabId: string }; result: void };

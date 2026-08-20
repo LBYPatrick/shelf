@@ -30,22 +30,44 @@
     "settings": "설정",
     "collapseAll": "모두 접기",
     "resetView": "보기 초기화",
-    "copied": "클립보드에 복사했습니다."
+    "copied": "클립보드에 복사했습니다.",
+    "reset": "초기화",
+    "confirm": "확인",
+    "open": "열기…",
+    "dispatch": "백그라운드 실행",
+    "saveQuery": "쿼리 저장"
   },
   "start": {
     "search": "연결 URL을 붙여넣거나 저장된 연결을 검색하세요",
     "searchLabel": "연결 URL 붙여넣기 또는 검색",
     "recognised": "인식됨",
     "setUp": "설정하기",
+    "recent": "최근 사용",
+    "saved": "저장됨",
+    "matches": "일치하는 연결",
+    "noMatches": "일치하는 연결이 없습니다.",
+    "nothingSaved": "저장된 연결이 아직 없습니다.",
     "newConnection": "새 연결",
-    "nothingSaved": "저장된 연결이 아직 없습니다. 위에 연결 URL을 붙여넣거나 엔진을 골라 시작하세요.",
-    "sampleTitle": "지금 쓸 데이터베이스가 없나요?",
-    "sampleBody": "샘플을 열면 탐색, 편집, 쿼리, 관계도까지 모두 동작합니다. 아무것도 설치되지 않고 아무것도 저장되지 않습니다.",
-    "sampleAction": "샘플 데이터 살펴보기",
+    "newConnectionBody": "URL을 붙여넣거나 항목을 채우세요.",
+    "settingsBody": "모양, 데이터, 키보드.",
+    "importPresets": "프리셋 가져오기",
+    "importPresetsBody": "JSON 파일에서 연결을 추가합니다.",
+    "importTitle": "연결 가져오기",
+    "exportTitle": "연결 내보내기",
+    "export": "{{name}} 내보내기",
+    "exported": "저장했습니다. 비밀번호는 키체인에 남습니다.",
+    "imported": "{{n}}개를 가져왔습니다. 각각 비밀번호가 필요합니다.",
+    "importFailed": "그 파일을 읽을 수 없습니다",
+    "sample": "샘플",
+    "sampleTitle": "샘플 데이터베이스",
+    "sampleBody": "바로 탐색하고 조회하고 편집할 수 있습니다. 아무것도 설치되지 않습니다.",
     "sampleOpening": "여는 중…",
     "noKeyring": "시스템 키체인을 찾을 수 없어 이 기기에서는 비밀번호를 저장할 수 없습니다.",
     "neverOpened": "열어본 적 없음",
     "justNow": "방금",
+    "minutesAgo": "{{n}}분 전",
+    "hoursAgo": "{{n}}시간 전",
+    "daysAgo": "{{n}}일 전",
     "connectTo": "{{name}}에 연결",
     "edit": "{{name}} 편집",
     "remove": "{{name}} 삭제"
@@ -82,7 +104,8 @@
     "chooseEngine": "데이터베이스 엔진을 선택하세요.",
     "chooseFile": "데이터베이스 파일을 선택하세요.",
     "needHost": "호스트, 소켓 경로 또는 연결 URL을 입력하세요.",
-    "required": "{{field}}은(는) 필수입니다."
+    "required": "{{field}}은(는) 필수입니다.",
+    "testOk": "연결됨 — {{version}}"
   },
   "workspace": {
     "entities": "객체",
@@ -104,7 +127,8 @@
     "readOnly": "읽기 전용",
     "disconnectHint": "클릭하면 연결 해제",
     "searchEntities": "테이블 검색",
-    "toggleSidebar": "사이드바 전환"
+    "toggleSidebar": "사이드바 전환",
+    "jobs": "작업"
   },
   "table": {
     "filterPlaceholder": "필터 — 예: name like 'A%'",
@@ -142,7 +166,27 @@
     "explainHint": "데이터베이스가 이를 어떻게 실행하는지 보기",
     "saveHint": "이 쿼리 저장",
     "caret": "{{line}}행 {{column}}열 / 총 {{lines}}행",
-    "selected": "{{count}}자 선택됨"
+    "selected": "{{count}}자 선택됨",
+    "groupStatement": "문",
+    "groupTransaction": "트랜잭션",
+    "groupResult": "결과",
+    "runScope": "실행 대상",
+    "resultsBar": "이 결과",
+    "formatFailed": "정렬하지 못했습니다",
+    "rowLimit": "{{rows}}행",
+    "elapsed": "{{time}} 실행 중",
+    "bar": "문",
+    "formatHint": "이 엔진의 방언으로 문을 정렬합니다",
+    "autoCommit": "자동 커밋",
+    "autoCommitHint": "끄면 문이 직접 커밋하는 트랜잭션 안에서 실행됩니다.",
+    "beginHint": "트랜잭션을 엽니다. 커밋하기 전까지는 기록되지 않습니다",
+    "rowLimitNone": "제한 없음",
+    "summaryRows": "{{rows}}행",
+    "summaryFirst": "처음 {{rows}}행",
+    "summaryAffected": "{{rows}}행 영향",
+    "summaryMs": "{{ms}} ms",
+    "summaryRow": "{{rows}}행",
+    "summaryFirstOne": "처음 {{rows}}행"
   },
   "structure": {
     "columns": "열",
@@ -182,7 +226,11 @@
     "actions": "작업",
     "noMatch": "일치하는 항목이 없습니다.",
     "outgoing": "나가는",
-    "incoming": "들어오는"
+    "incoming": "들어오는",
+    "wrap": "줄 바꿈",
+    "wrapHint": "값 전체를 필요한 만큼의 줄로 표시",
+    "wrapOn": "줄 바꿈을 켰습니다.",
+    "wrapOff": "줄 바꿈을 껐습니다."
   },
   "settings": {
     "title": "설정",
@@ -223,7 +271,31 @@
     "resetData": "데이터 설정 초기화",
     "primaryRun": "기본 실행 동작",
     "runAll": "편집기 전체",
-    "runCurrent": "커서 위치의 문장"
+    "runCurrent": "커서 위치의 문장",
+    "viewVisual": "양식",
+    "viewJson": "JSON",
+    "jsonValid": "올바른 JSON입니다.",
+    "applied": "설정을 적용했습니다.",
+    "exportTitle": "설정 내보내기",
+    "importTitle": "설정 가져오기",
+    "exported": "설정을 저장했습니다.",
+    "imported": "설정을 가져왔습니다.",
+    "exportSettings": "내보내기…",
+    "importSettings": "가져오기…",
+    "appearanceDesc": "창의 색과 화면에 담기는 정보량. 여기의 설정은 조작하는 즉시 적용됩니다.",
+    "dataDesc": "결과로 가져올 행과, 그 내용을 바꾸는 방식.",
+    "editorDesc": "SQL 편집기의 모양과 긴 줄을 다루는 방식.",
+    "file": "설정 파일",
+    "fileDesc": "이 페이지의 모든 설정을 하나의 문서로 보관하거나 다른 컴퓨터로 옮길 수 있습니다.",
+    "resetAll": "초기화",
+    "resetDesc": "데이터와 편집기 설정을 원래대로 되돌립니다. 모양 설정은 그대로 둡니다.",
+    "resetConfirm": "한 번 더 누르면 데이터와 편집기 설정이 모두 초기화됩니다.",
+    "wasReset": "설정을 초기화했습니다.",
+    "copy": "복사",
+    "exportRow": "모든 설정을 파일로 저장",
+    "importRow": "파일에서 읽어 대체",
+    "jsonLines": "{{count}}줄",
+    "copyHint": "문서 전체를 클립보드로 복사"
   },
   "palette": {
     "placeholder": "테이블, 탭, 동작 검색…",
@@ -300,7 +372,13 @@
     "written": "기록했습니다.",
     "working": "처리 중…",
     "run": "내보내기",
-    "wroteTo": "{{name}}에 기록했습니다."
+    "wroteTo": "{{name}}에 기록했습니다.",
+    "scope": "행",
+    "scopePage": "이 페이지({{count}})",
+    "scopeFull": "쿼리에 해당하는 전체",
+    "scopePageHint": "이미 불러온 행으로 기록합니다. 다시 실행하지 않습니다.",
+    "scopeFullHint": "미리보기 제한 없이 문을 다시 실행합니다. {{count}}행이 해당됩니다.",
+    "scopeFullHintUnknown": "미리보기 제한 없이 문을 다시 실행합니다."
   },
   "grid": {
     "oneBased": "1부터",
@@ -320,7 +398,8 @@
     "exportData": "데이터를 파일로 내보내기…",
     "actionsFor": "{{name}} 작업",
     "copiedName": "{{name}}을(를) 복사했습니다.",
-    "analyze": "성능 분석"
+    "analyze": "성능 분석",
+    "diagram": "관계 다이어그램"
   },
   "properties": {
     "rows": "행",
@@ -414,7 +493,15 @@
     "largestTables": "가장 큰 테이블",
     "deadRows": "각 막대의 짙은 부분은 데드 튜플이 차지한 공간입니다.",
     "unusedIndexes": "한 번도 쓰이지 않은 인덱스",
-    "unusedHint": "삽입과 갱신마다 쓰기 비용이 계속 발생합니다."
+    "unusedHint": "삽입과 갱신마다 쓰기 비용이 계속 발생합니다.",
+    "brushHint": "차트를 가로로 끌면 아래 내용이 해당 구간으로 좁혀집니다.",
+    "wholeRange": "전체 구간",
+    "scaleLabel": "세로 축 배율",
+    "totals": "{{calls}}회 호출에 {{time}}",
+    "noReadings": "아직 측정값이 없습니다. 이 패널이 열려 있는 동안 측정해 차이를 계산합니다. 열어 두면 채워집니다.",
+    "quietSelection": "선택한 구간에는 실행된 것이 없습니다.",
+    "scaleLinear": "선형",
+    "scaleLog": "로그"
   },
   "analyzeWindow": {
     "hour": "1시간",
@@ -427,7 +514,8 @@
   "analyzeCaveat": {
     "short": "기록된 이력이 이 기간보다 짧아 첫 판독 이후의 전부를 보여 줍니다.",
     "cumulative": "서버의 누적 값이며 기간이 아닙니다. 이 탭을 열어 두면 기간별 값이 채워집니다.",
-    "reset": "이 기간에 서버가 카운터를 초기화하여 이전 판독값을 버렸습니다."
+    "reset": "이 기간에 서버가 카운터를 초기화하여 이전 판독값을 버렸습니다.",
+    "wide": "이 구간 양쪽에서 기록된 값이 없어, 사용할 수 있는 가장 가까운 측정값이 구간보다 오래되었고 표시된 범위가 더 넓습니다."
   },
   "analyzeSpan": {
     "single": "판독 1회",
@@ -439,6 +527,46 @@
     "unsupported": "이 엔진은 문장 통계를 보관하지 않습니다.",
     "not-installed": "이 서버에는 통계 확장이 설치되어 있지 않습니다.",
     "not-permitted": "이 계정은 통계 뷰를 읽을 수 없습니다.",
-    "hint": "PostgreSQL에서는 서버 설정에 라이브러리를 추가하고 재시작한 뒤 확장을 만듭니다:"
+    "hint": "PostgreSQL에서는 서버 설정에 라이브러리를 추가하고 재시작한 뒤 확장을 만듭니다:",
+    "not-loaded": "확장이 생성되었지만 로드되지 않아 아무것도 집계하지 않았습니다.",
+    "not-tracking": "이 서버에서는 문 기록이 꺼져 있습니다.",
+    "other-database": "이 서버에 기록은 있지만 이 데이터베이스의 것은 없습니다.",
+    "nothing-recorded": "확장은 기록 중이며 아직 데이터가 없습니다."
+  },
+  "plan": {
+    "title": "실행 계획",
+    "exportSvg": "계획을 SVG로 내보내기",
+    "exportPng": "계획을 PNG로 내보내기",
+    "exported": "계획을 저장했습니다."
+  },
+  "jobs": {
+    "empty": "아직 실행한 작업이 없습니다. 백그라운드 실행은 따로 돌아가며, 결과 전체를 이 컴퓨터에 보관하고 끝나면 알려 줍니다.",
+    "dispatched": "{{name}}을(를) 실행했습니다.",
+    "finished": "완료 — {{rows}}행, 내보낼 수 있습니다.",
+    "open": "열기",
+    "openResult": "{{name}}의 행 열기",
+    "rename": "이름 바꾸기",
+    "discard": "버리기",
+    "discarded": "{{name}}을(를) 버렸습니다.",
+    "rowsIn": "{{time}} 동안 {{rows}}행",
+    "resultBar": "이 작업",
+    "showing": "전체 {{total}}개 중 {{from}}–{{to}}",
+    "previous": "이전 페이지",
+    "next": "다음 페이지",
+    "statusPending": "대기 중",
+    "statusRunning": "실행 중",
+    "statusDone": "완료",
+    "statusFailed": "실패",
+    "interrupted": "재시작으로 중단되었습니다.",
+    "rowsGone": "이 작업의 행이 더 이상 없습니다."
+  },
+  "value": {
+    "asJson": "JSON으로 정렬됨",
+    "empty": "(비어 있음)"
+  },
+  "erd": {
+    "zoomIn": "확대",
+    "zoomOut": "축소",
+    "fit": "전체 보기"
   }
 }

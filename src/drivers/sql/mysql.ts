@@ -1,3 +1,4 @@
+import { limitStatement } from '@shared/rowLimit';
 import { createPool, type Pool, type PoolConnection, type RowDataPacket } from 'mysql2/promise';
 import { capabilities } from '../capabilities';
 import { encodeRows, tagFields } from '../transcode';
@@ -697,7 +698,9 @@ export class MysqlClient implements DatabaseClient {
         if (signal?.aborted) break;
 
         const started = performance.now();
-        const [result, fields] = await connection.query<RowDataPacket[]>(statement);
+        const [result, fields] = await connection.query<RowDataPacket[]>(
+          limitStatement(statement, options.maxRows)
+        );
         const durationMs = performance.now() - started;
 
         if (Array.isArray(result)) {
@@ -713,7 +716,7 @@ export class MysqlClient implements DatabaseClient {
             ),
             rows,
             truncated,
-            rowCount: result.length,
+            rowCount: rows.length,
             statement,
             durationMs,
           });
