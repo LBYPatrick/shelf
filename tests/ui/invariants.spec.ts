@@ -7,7 +7,7 @@
  * that gets fixed and one that gets its snapshots regenerated.
  */
 import { setAppearance, stabilize, test, expect } from './fixtures';
-import { openTable, revealTables } from '../e2e/helpers';
+import { openTable, revealTables, typeQuery } from '../e2e/helpers';
 import type { Page } from '@playwright/test';
 
 test.describe('layout', () => {
@@ -1966,3 +1966,46 @@ async function frameworkClassesOn(page: Page): Promise<string[]> {
     );
   });
 }
+
+test.describe('the jobs rail', () => {
+  test('a job card is the same container as a tab, and does not grow under the pointer', async ({
+    sample,
+  }) => {
+    await sample
+      .getByRole('button', { name: /new query tab/i })
+      .first()
+      .click();
+    await typeQuery(sample, 'select id, name from music.artist');
+    await sample.getByRole('button', { name: 'What Run performs' }).click();
+    await sample.getByRole('menuitem', { name: 'Dispatch' }).click();
+    await sample.getByRole('button', { name: 'Jobs' }).click();
+
+    const card = sample.locator('.job').first();
+    await expect(card.locator('.job__status')).toHaveText(/Done/, { timeout: 20_000 });
+
+    /*
+     * Shipped as an outlined box in a column of outlined boxes, while the tabs
+     * above it — the same kind of object, a thing you click to open — were
+     * borderless tonal tiles. Two treatments for one idea is the thing that
+     * makes an interface read as assembled rather than designed.
+     */
+    const shapes = await sample.evaluate(() => {
+      const read = (selector: string) => {
+        const style = getComputedStyle(document.querySelector(selector)!);
+        return { radius: style.borderTopLeftRadius, border: style.borderTopWidth };
+      };
+      return { card: read('.job'), tab: read('.striptab') };
+    });
+    expect(shapes.card).toEqual(shapes.tab);
+    expect(shapes.card.border).toBe('0px');
+
+    // The tools open into the row on hover, which narrows the name and can
+    // re-wrap it. The name may reflow; the card may not move under the pointer
+    // that is reaching for it.
+    const height = async () => (await card.boundingBox())!.height;
+    const resting = await height();
+    await card.hover();
+    await sample.waitForTimeout(300);
+    expect(await height()).toBe(resting);
+  });
+});

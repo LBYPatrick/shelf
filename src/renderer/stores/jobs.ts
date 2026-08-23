@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import type { Field } from '@drivers/types';
 import { errorMessage } from '@shared/errors';
+import { NO_FILTER, matchesJob, type JobFilter } from '@shared/jobFilter';
 import { host } from '../lib/host';
 import { saveSetting } from '../lib/settings';
 import { i18next } from '../i18n';
@@ -73,6 +74,32 @@ export const useJobs = defineStore('jobs', () => {
 
   /** Newest first: a list of things that happened reads backwards. */
   const ordered = computed(() => [...jobs.value].sort((a, b) => b.startedAt - a.startedAt));
+
+  /*
+   * What the reader is currently asking to see, and whether the choices behind
+   * the field are open.
+   *
+   * Held here rather than in the list so that leaving the rail and coming back
+   * does not silently widen it — a filter that clears itself when you glance at
+   * the tree is one you have to notice has cleared. Not persisted, though: a
+   * narrowing that outlives the session is a list that is missing rows for a
+   * reason nobody remembers by the next launch.
+   */
+  const filter = ref<JobFilter>({ ...NO_FILTER });
+  const filtersOpen = ref(false);
+
+  function clearFilter(): void {
+    filter.value = { ...NO_FILTER };
+  }
+
+  /*
+   * The clock is passed in rather than read here, because the windows are
+   * relative and the list has to redraw when they move: the caller owns the
+   * tick, and asking with it is what makes this recompute.
+   */
+  function matching(now: number): Job[] {
+    return ordered.value.filter((job) => matchesJob(job, filter.value, now));
+  }
 
   function persist(): void {
     void saveSetting(
@@ -182,5 +209,18 @@ export const useJobs = defineStore('jobs', () => {
     persist();
   }
 
-  return { jobs, ordered, running, restore, dispatch, rename, remove, find };
+  return {
+    jobs,
+    ordered,
+    running,
+    filter,
+    filtersOpen,
+    clearFilter,
+    matching,
+    restore,
+    dispatch,
+    rename,
+    remove,
+    find,
+  };
 });

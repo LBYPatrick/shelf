@@ -1,0 +1,88 @@
+import { expect, test } from './fixtures';
+import { typeQuery } from './helpers';
+
+/**
+ * Finding one job among the hundred that are kept.
+ *
+ * The list is a log, and a log is read by searching it: the field takes the
+ * name, and the four choices behind the button take the questions a name cannot
+ * answer. The predicate itself is unit tested — this is about the wiring, which
+ * is the part unit tests cannot see: the field reaching the store, the choices
+ * reaching the same filter, the count and the empty state telling the truth
+ * about a list that is quietly missing rows.
+ */
+test('searches jobs by name, narrows them by status and length, and says so', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: /Sample database/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+
+  await page
+    .getByRole('button', { name: /new query/i })
+    .first()
+    .click();
+  await typeQuery(page, 'select id, name from music.artist');
+  await page.getByRole('button', { name: 'What Run performs' }).click();
+  await page.getByRole('menuitem', { name: 'Dispatch' }).click();
+
+  await page.getByRole('button', { name: 'Jobs' }).click();
+  const cards = page.locator('.job');
+  await expect(cards).toHaveCount(1);
+  await expect(cards.first().locator('.job__status')).toHaveText(/Done/, { timeout: 20_000 });
+
+  // The two facts a finished job is looked back at for are on the card itself,
+  // not only in the name it was given — which is the first thing a rename
+  // throws away.
+  await expect(cards.first().locator('.job__when')).toContainText('Started');
+  await expect(cards.first().locator('.job__when')).toContainText('took');
+
+  // A name of its own, so the search is looking for something a reader chose.
+  await cards.first().locator('.job__name').dblclick();
+  const rename = page.getByLabel('Rename');
+  await rename.fill('june refunds');
+  await page.getByRole('button', { name: 'Confirm' }).click();
+  await expect(cards.first().locator('.job__name')).toHaveText('june refunds');
+
+  const find = page.getByPlaceholder('Find a job');
+  await find.fill('refund');
+  await expect(cards).toHaveCount(1);
+
+  // Nothing matched is a different fact from nothing existing, and the way back
+  // is on the same surface that is missing the rows.
+  await find.fill('invoices');
+  await expect(cards).toHaveCount(0);
+  await expect(page.locator('.joblist__empty')).toContainText('No job matches');
+  await page.getByRole('button', { name: 'Clear the filters' }).click();
+  await expect(cards).toHaveCount(1);
+  await expect(find).toHaveValue('');
+
+  // The choices fold away, so the control that hides them carries their count.
+  const filters = page.getByRole('button', { name: 'Filters', exact: true });
+  await filters.click();
+  const status = page.getByRole('combobox', { name: 'Status' });
+  await status.click();
+  await page.getByRole('option', { name: 'Failed' }).click();
+
+  await expect(cards).toHaveCount(0);
+  await expect(filters).toContainText('1');
+  await expect(page.locator('.joblist__tally')).toContainText('0 of 1');
+
+  // A second dimension narrows rather than widens: a job that finished in
+  // milliseconds is not one that took over a minute, whatever its status.
+  await status.click();
+  await page.getByRole('option', { name: 'Done' }).click();
+  await expect(cards).toHaveCount(1);
+
+  await page.getByRole('combobox', { name: 'Took' }).click();
+  await page.getByRole('option', { name: 'Over a minute' }).click();
+  await expect(cards).toHaveCount(0);
+  await expect(filters).toContainText('2');
+
+  // ...and the window it did run in finds it again.
+  await page.getByRole('combobox', { name: 'Took' }).click();
+  await page.getByRole('option', { name: 'Under a second' }).click();
+  await page.getByRole('combobox', { name: 'Started', exact: true }).click();
+  await page.getByRole('option', { name: 'Last hour' }).click();
+  await expect(cards).toHaveCount(1);
+  await expect(page.locator('.joblist__tally')).toContainText('1 of 1');
+});

@@ -228,6 +228,14 @@ before considering a change finished.
   focus as well as hover — and skips the delay while another is already up,
   because moving along a row of icons is one gesture.
 - **Feedback lands on `pointerdown`,** not on click.
+- **The cost of telling two gestures apart is paid where they overlap, and
+  nowhere else.** A job card opens on one click and its name renames on two, so
+  the *name* waits out the double-click interval before opening while the rest
+  of the card opens at once. Charged to the whole card, that quarter-second is
+  added to the commonest action there is; charged nowhere, the rename could not
+  be reached at all on a finished job — the first click opened its tab, the grid
+  inside took the caret, and the box that had just opened blurred and committed
+  before a key could reach it.
 - **Anything draggable tracks the pointer one to one,** preserves the grab
   offset, resists at its limits, and hands its release velocity to the spring
   that follows. `useDrag` does all of this; use it rather than a `mousemove`

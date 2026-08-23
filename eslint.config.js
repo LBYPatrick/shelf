@@ -29,6 +29,13 @@ export default tseslint.config(
       sourceType: 'commonjs',
       globals: { ...globals.node, ...globals.commonjs },
     },
+    /*
+     * `require` is how a CommonJS file imports, and these are CommonJS because
+     * the packager and Electron's own CLI load them that way. The rule is right
+     * everywhere else and simply does not apply here — it was failing the
+     * format gate on two files that cannot be written any other way.
+     */
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
   {
     rules: {

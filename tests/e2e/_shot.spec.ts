@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { test } from './fixtures';
-import { openTable } from './helpers';
+import { openTable, typeQuery } from './helpers';
 
 /** Developer tool. Run with `pnpm shots`. */
 const OUT = process.env['SHOT_DIR'] ?? 'test-results/shots';
@@ -45,11 +45,27 @@ test('capture the interface', async ({ page }) => {
   await settle(2500);
   await page.screenshot({ path: `${OUT}/05-sample-erd.png` });
 
+  // The jobs rail: a card, and the questions it can be asked.
+  await page
+    .getByRole('button', { name: /new query/i })
+    .first()
+    .click();
+  await typeQuery(page, 'select id, name from music.artist');
+  await page.getByRole('button', { name: 'What Run performs' }).click();
+  await page.getByRole('menuitem', { name: 'Dispatch' }).click();
+  await page.getByRole('button', { name: 'Jobs' }).click();
+  await settle(1500);
+  await page.screenshot({ path: `${OUT}/06-jobs.png` });
+
+  await page.getByRole('button', { name: 'Filters', exact: true }).click();
+  await settle(600);
+  await page.screenshot({ path: `${OUT}/07-jobs-filters.png` });
+
   await page.evaluate(() => {
     const stored = JSON.parse(localStorage.getItem('shelf.appearance') ?? '{}');
     localStorage.setItem('shelf.appearance', JSON.stringify({ ...stored, mode: 'dark' }));
   });
   await page.reload();
   await settle(900);
-  await page.screenshot({ path: `${OUT}/06-dark-start.png` });
+  await page.screenshot({ path: `${OUT}/08-dark-start.png` });
 });

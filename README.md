@@ -52,6 +52,10 @@ is ever tied to a licence, because there is no licence.**
 - **Query** — CodeMirror 6 with schema-aware completion, the statement under the
   cursor highlighted, run-all or run-current, cancellation that reaches the
   server, multiple result sets, and manual transactions.
+- **Dispatch** — send a statement off to run on its own: it releases the tab at
+  once, keeps its whole answer in a spool on this machine, and says so when it
+  is done. The hundred most recent are kept, searchable by name and narrowable
+  by status, when they started, when they finished and how long they took.
 - **Inspect** — columns with their descriptions, indexes, relations, triggers and
   partitions, each shown
   only where the engine has them.

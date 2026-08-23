@@ -314,10 +314,41 @@ watch(open, async (isOpen) => {
 
 onBeforeUnmount(() => window.removeEventListener('keydown', guardKey, true));
 
+/**
+ * How many rows a page is — measured, not guessed.
+ *
+ * A list with a section heading every few entries has no single row height to
+ * divide by, so the count comes from the rows that are actually on screen. One
+ * fewer than fits, because a page that leaves nothing behind gives the reader
+ * no thread back to where they were.
+ */
+function page(): number {
+  const box = list.value;
+  const row = box?.querySelector<HTMLElement>('[data-index]');
+  if (!box || !row) return 1;
+
+  return Math.max(1, Math.floor(box.clientHeight / row.offsetHeight) - 1);
+}
+
+/** Straight to an end, without walking the rows in between. */
+function jump(index: number): void {
+  if (rows.value.length === 0) return;
+  move(index - selected.value);
+}
+
 function move(delta: number): void {
   const count = rows.value.length;
   if (count === 0) return;
-  selected.value = (selected.value + delta + count) % count;
+
+  /*
+   * One step wraps, a jump does not. Arrowing past the last row and arriving at
+   * the first is a shortcut people use on purpose; a page down that silently
+   * lands you at the top has lost your place rather than moved it.
+   */
+  selected.value =
+    Math.abs(delta) === 1
+      ? (selected.value + delta + count) % count
+      : Math.min(count - 1, Math.max(0, selected.value + delta));
 
   void nextTick(() => {
     list.value
@@ -388,6 +419,10 @@ function commit(): void {
               :aria-activedescendant="rows.length ? `palette-option-${selected}` : undefined"
               @keydown.down.prevent="move(1)"
               @keydown.up.prevent="move(-1)"
+              @keydown.page-down.prevent="move(page())"
+              @keydown.page-up.prevent="move(-page())"
+              @keydown.home.prevent="jump(0)"
+              @keydown.end.prevent="jump(rows.length - 1)"
               @keydown.enter.prevent="commit"
             >
 
@@ -606,10 +641,27 @@ function commit(): void {
   color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
 }
 
+/*
+ * The keyboard scrolls with something in front of it.
+ *
+ * `scrollIntoView({ block: 'nearest' })` moves the least it can get away with,
+ * which puts the row you just selected hard against the edge it came from —
+ * with the next one still hidden, and, at the top, under the section heading
+ * that names what you are looking at. Arrowing through a long list then feels
+ * like reading through a slot: the selection is always at the boundary and you
+ * never see where you are going.
+ *
+ * `scroll-padding` is what that method reads to decide where "visible" starts
+ * and ends. Two rows' worth at each end means selecting the last visible row
+ * brings the next two up behind it, so the list moves ahead of the selection
+ * rather than behind it. The mouse never had this problem, because a scroll
+ * wheel moves the view and the eye picks the row.
+ */
 .palette__list {
   max-height: 24rem;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scroll-padding-block: 3.25rem;
   border-top: 1px solid var(--separator);
   padding: var(--gap-tight) var(--gap-tight) var(--gap);
 }

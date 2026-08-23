@@ -30,23 +30,60 @@
   -->
 
   <defs>
+    <!--
+      A shorter gradient, and grain over it.
+
+      Eight bits per channel across four hundred pixels of near-black is fewer
+      than one step per twenty pixels, and the eye finds those steps easily —
+      which is the banding that shows up as soft stripes across the tile. Two
+      things fix it: a shorter journey between the two ends, and a fine noise
+      laid over the top so each step is broken up rather than drawn as a line.
+    -->
     <linearGradient id="ground" x1="0.15" y1="0" x2="0.85" y2="1">
-      <stop offset="0" stop-color="#262C3B" />
-      <stop offset="1" stop-color="#0F131B" />
+      <stop offset="0" stop-color="#232936" />
+      <stop offset="1" stop-color="#14181F" />
     </linearGradient>
 
-    <!-- Each column lit from above: the top of a bar is nearer the light. -->
-    <linearGradient id="slate" x1="0" y1="0" x2="0.3" y2="1">
-      <stop offset="0" stop-color="#A8B5D3" />
-      <stop offset="1" stop-color="#717EA0" />
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.10" intercept="0" />
+      </feComponentTransfer>
+    </filter>
+
+    <!--
+      One colour, three brightnesses.
+      ───────────────────────────────
+      Monotonic means the whole mark climbs together, and colour was the part
+      still arguing: a slate, a teal and an amber are three voices, and which of
+      them is "more" is a matter of taste rather than of reading. White at three
+      strengths is a scale — the eye puts them in order without being told, and
+      it is the same order as the height and the depth.
+
+      White also belongs here. The tile is nearly black, and a light mark on a
+      dark ground is the arrangement with the most contrast available; the
+      muted colours were spending that contrast on hue nobody needed.
+
+      Opaque, not white at three opacities. Translucent bars let the one behind
+      show through the one in front, which unpicks the stacking that the whole
+      arrangement rests on — the mark's depth is which column occludes which,
+      and a column you can see through occludes nothing.
+
+      Each is still lit from above, top lighter than bottom, which is what keeps
+      a flat rectangle from reading as a sticker.
+    -->
+    <linearGradient id="dim" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#8A9099" />
+      <stop offset="1" stop-color="#6B7079" />
     </linearGradient>
-    <linearGradient id="amber" x1="0" y1="0" x2="0.3" y2="1">
-      <stop offset="0" stop-color="#EDC98A" />
-      <stop offset="1" stop-color="#BA9257" />
+    <linearGradient id="mid" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#C3C8D0" />
+      <stop offset="1" stop-color="#A2A8B2" />
     </linearGradient>
-    <linearGradient id="teal" x1="0" y1="0" x2="0.3" y2="1">
-      <stop offset="0" stop-color="#92C2BB" />
-      <stop offset="1" stop-color="#5B8781" />
+    <linearGradient id="bright" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" />
+      <stop offset="1" stop-color="#DFE3EA" />
     </linearGradient>
 
     <!-- What the nearest column throws across the ones behind it. -->
@@ -85,6 +122,7 @@
     <g clip-path="url(#rounded)">
       <g transform="translate(50 50) scale(0.8047)">
         <rect width="512" height="512" fill="url(#ground)" />
+        <rect width="512" height="512" filter="url(#grain)" />
 
     <!--
       One direction, said three ways.
@@ -103,9 +141,9 @@
       *tile* — drawn to the edge of the canvas where every other app insets to
       the grid — so the columns are back at the size the composition wanted.
     -->
-    <rect x="128" y="218" width="104" height="200" rx="26" fill="url(#slate)" />
-    <rect x="204" y="154" width="104" height="264" rx="26" fill="url(#teal)" filter="url(#soft)" />
-    <rect x="280" y="88" width="104" height="330" rx="26" fill="url(#amber)" filter="url(#cast)" />
+    <rect x="128" y="218" width="104" height="200" rx="26" fill="url(#dim)" />
+    <rect x="204" y="154" width="104" height="264" rx="26" fill="url(#mid)" filter="url(#soft)" />
+    <rect x="280" y="88" width="104" height="330" rx="26" fill="url(#bright)" filter="url(#cast)" />
 
         <!-- The light catching the top edge of the whole object. -->
         <rect

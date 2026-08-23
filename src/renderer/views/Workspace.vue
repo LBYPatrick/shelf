@@ -31,6 +31,7 @@ import { useTabs } from '../stores/tabs';
 import { useHotkeys } from '../composables/useHotkeys';
 import { vTip } from '../lib/hoverTip';
 import { shortcutLabel } from '../lib/keybindings';
+import { narrowedBy } from '@shared/jobFilter';
 import { useTranslation } from 'i18next-vue';
 
 const connections = useConnections();
@@ -39,6 +40,9 @@ const tabs = useTabs();
 const queries = useQueries();
 const jobs = useJobs();
 const { t } = useTranslation();
+
+/** How many of the folded-away choices are narrowing the job list. */
+const narrowedJobs = computed(() => narrowedBy(jobs.filter));
 
 type RailItem = 'entities' | 'queries' | 'history' | 'jobs';
 
@@ -246,26 +250,89 @@ onBeforeUnmount(() => stopPersisting?.());
             <kbd class="sidebar__search-key">{{ shortcutLabel('palette.open') }}</kbd>
           </button>
           <!--
-            Jobs have neither: the list is short, ordered by when things
-            happened, and refreshed by the thing that changed it. A filter box
-            over four rows is chrome pretending to be a feature.
+            Jobs have a field of their own.
+            ───────────────────────────────
+            There used to be a name here instead, on the argument that the list
+            is short and ordered by when things happened. It stops being short:
+            a hundred are kept, they are named after the database and the minute
+            by default, and the one worth finding is rarely the newest. The
+            field searches the names; the button beside it opens the four
+            questions a log gets asked that a name cannot answer.
           -->
-          <span
+          <label
             v-else-if="rail === 'jobs'"
-            class="sidebar__title type-label"
-          >{{
-            $t('workspace.jobs')
-          }}</span>
-          <input
-            v-else
-            v-model="queries.filter"
-            class="sidebar__filter"
-            type="search"
-            ::placeholder="rail === 'queries' ? $t('workspace.filterSaved') : $t('workspace.filterHistory')"
-            spellcheck="false"
+            class="sidebar__find"
           >
+            <AppIcon
+              class="sidebar__find-icon"
+              name="search"
+              :size="13"
+            />
+            <input
+              v-model="jobs.filter.text"
+              class="sidebar__find-input"
+              type="search"
+              :placeholder="$t('jobs.find')"
+              :aria-label="$t('jobs.find')"
+              spellcheck="false"
+            >
+          </label>
+          <!--
+            A field, with the glyph that says what it is.
+            ─────────────────────────────────────────────
+            It had none of that: `::placeholder` — two colons — is not a binding
+            Vue can act on, so it silently bound nothing and the field rendered
+            as an empty black box with no word in it and no icon beside it. The
+            one thing a search field has to do before it is used is look like
+            one.
+          -->
+          <label
+            v-else
+            class="sidebar__find"
+          >
+            <AppIcon
+              class="sidebar__find-icon"
+              name="search"
+              :size="13"
+            />
+            <input
+              v-model="queries.filter"
+              class="sidebar__find-input"
+              type="search"
+              :placeholder="
+                rail === 'queries' ? $t('workspace.filterSaved') : $t('workspace.filterHistory')
+              "
+              :aria-label="
+                rail === 'queries' ? $t('workspace.filterSaved') : $t('workspace.filterHistory')
+              "
+              spellcheck="false"
+            >
+          </label>
+          <!--
+            The count rides on the control that hides them: the choices fold
+            away, and a list quietly missing rows with nothing on screen saying
+            why is the failure mode of every filter ever built.
+          -->
           <PressButton
-            v-if="rail !== 'jobs'"
+            v-if="rail === 'jobs'"
+            v-tip="$t('jobs.filters')"
+            size="sm"
+            :active="jobs.filtersOpen"
+            :aria-label="$t('jobs.filters')"
+            :aria-expanded="jobs.filtersOpen"
+            @click="jobs.filtersOpen = !jobs.filtersOpen"
+          >
+            <AppIcon
+              name="filter"
+              :size="13"
+            />
+            <span
+              v-if="narrowedJobs > 0"
+              class="sidebar__badge"
+            >{{ narrowedJobs }}</span>
+          </PressButton>
+          <PressButton
+            v-else
             size="sm"
             :aria-label="$t('action.refresh')"
             :title="$t('action.refresh')"
@@ -703,30 +770,103 @@ onBeforeUnmount(() => stopPersisting?.());
   }
 }
 
-/* A name where the filter would be, so the head keeps its height. */
-.sidebar__title {
-  flex: 1;
-  padding-inline-start: var(--gap-tight);
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+/*
+ * A count on the control, sized like the number it holds rather than like a
+ * button: no fixed width, because "1" and "4" are the only values it ever
+ * takes and a circle drawn for two digits reads as a badge waiting for one.
+ */
+.sidebar__badge {
+  min-width: 1.1em;
+  padding-inline: 0.28em;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--color-primary-content, #fff);
+  font-size: 0.625rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.45;
+  text-align: center;
 }
 
-.sidebar__filter {
+/*
+ * The same quiet field the structure popup uses: a tinted well, the glyph at
+ * the leading edge, and no drawn border at rest.
+ *
+ * What happens on focus is the whole of the animation. The well lifts toward
+ * the working surface, the glyph brightens from a hint to a label, and the
+ * focus fill arrives over the top — three properties on one curve, so it reads
+ * as the field waking rather than as a ring being switched on. A border that
+ * blinks from transparent to accent is a state change; this is a response.
+ */
+.sidebar__find {
+  display: flex;
   flex: 1;
+  align-items: center;
+  gap: var(--gap-tight);
   min-width: 0;
   height: var(--field-h);
   padding-inline: var(--gap);
-  border-radius: var(--radius-field);
-  border: 1px solid transparent;
+  border-radius: var(--control-radius);
   background: var(--fill-4);
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  transition:
+    background-color var(--t-hover) var(--ease-out),
+    color var(--t-hover) var(--ease-out),
+    box-shadow var(--t-hover) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sidebar__find:hover {
+    background: var(--fill-3);
+  }
+}
+
+.sidebar__find:focus-within {
+  background: var(--fill-2);
+  color: var(--color-base-content);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-primary) 55%, transparent);
+}
+
+.sidebar__find-icon {
+  flex: none;
+  transition: transform var(--t-pop) var(--ease-out);
+}
+
+/* It leans in by a hair when the field takes the caret — the smallest possible
+   acknowledgement that the thing under the pointer is now listening. */
+.sidebar__find:focus-within .sidebar__find-icon {
+  transform: scale(1.08);
+}
+
+.sidebar__find-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
   color: var(--color-base-content);
   font-size: 0.75rem;
 }
 
-.sidebar__filter:focus {
-  border-color: var(--color-primary);
-  background: var(--color-base-100);
+.sidebar__find-input::placeholder {
+  color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+}
+
+.sidebar__find-input:focus {
+  outline: none;
+}
+
+/* The magnifier is the affordance; the browser's own clear button is a second,
+   differently drawn one sitting beside it. */
+.sidebar__find-input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar__find,
+  .sidebar__find-icon {
+    transition: none;
+    transform: none;
+  }
 }
 
 .sidebar__counts {
