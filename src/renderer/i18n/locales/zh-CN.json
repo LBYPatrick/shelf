@@ -295,7 +295,8 @@
     "exportRow": "把全部偏好写入文件",
     "importRow": "从文件读取并替换",
     "jsonLines": "{{count}} 行",
-    "copyHint": "把整份文档复制到剪贴板"
+    "copyHint": "把整份文档复制到剪贴板",
+    "version": "版本 {{version}}"
   },
   "palette": {
     "placeholder": "搜索表、标签页和操作…",

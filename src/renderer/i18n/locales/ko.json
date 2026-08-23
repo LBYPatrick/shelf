@@ -295,7 +295,8 @@
     "exportRow": "모든 설정을 파일로 저장",
     "importRow": "파일에서 읽어 대체",
     "jsonLines": "{{count}}줄",
-    "copyHint": "문서 전체를 클립보드로 복사"
+    "copyHint": "문서 전체를 클립보드로 복사",
+    "version": "버전 {{version}}"
   },
   "palette": {
     "placeholder": "테이블, 탭, 동작 검색…",

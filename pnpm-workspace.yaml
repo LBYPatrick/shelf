@@ -1,10 +1,29 @@
-onlyBuiltDependencies:
-  - better-sqlite3
-  - electron
-  - esbuild
+# Electron's tooling reads the dependency tree off disk: the rebuild step finds
+# native modules by walking `node_modules`, and a packager collects what ships
+# the same way. It was declared in `.npmrc`, which pnpm 11 no longer reports
+# through `pnpm config` — so the tools that ask were told nothing, while the
+# install itself went on being hoisted.
+nodeLinker: hoisted
 
 minimumReleaseAgeExclude:
   - '@aws-sdk/client-dynamodb@3.1109.0'
   - '@aws-sdk/credential-providers@3.1109.0'
   - '@aws-sdk/lib-dynamodb@3.1109.0'
   - pinia@4.0.3
+
+# Which dependencies may run an install script, one deliberate answer each.
+#
+# pnpm 11 asks for a decision on each rather than inferring one from a list, and
+# most of these are a no. `better-sqlite3` is the module the whole app rests on:
+# it is compiled against Electron's ABI, and nothing works if it is not built.
+# `cpu-features` is refused rather than merely absent — it is an optional
+# dependency of ssh2 whose published tarball is missing the sources it needs to
+# compile, and ssh2 works without it. `electron-winstaller` builds Windows
+# installers on Windows; the Windows target here is NSIS, which does not use it.
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true
+  cpu-features: false
+  electron-winstaller: false
+  protobufjs: false
+  ssh2: false

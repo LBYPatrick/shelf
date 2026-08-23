@@ -1,8 +1,21 @@
-.PHONY: help install uninstall clean dev preview build test test-e2e typecheck lint format tidy commit package
+.PHONY: help install uninstall clean dev preview build test test-e2e typecheck lint format tidy commit package icon
 
 SHELL := /bin/bash
-VERSION := $(shell cat VERSION 2>/dev/null | tr -d '\n' || echo "0.1.0")
+# The one place the number lives; the build compiles it in from here too.
+# The fallback is deliberately not a plausible version: a missing file should
+# look missing rather than look like a release.
+VERSION := $(shell cat VERSION 2>/dev/null | tr -d '\n' || echo "0.0.0")
 VERBOSE ?= 0
+
+# The icon is drawn once, in `resources/icon.svg`, and reaches the two places
+# that need it by being derived: a PNG the packagers cut every size from, and a
+# copy inside the renderer, which cannot import from outside its own build root.
+# Both are real files with a real prerequisite, so they are remade when the
+# drawing changes and left alone when it has not.
+ICON := resources/icon.svg
+ICON_PNG := build/icon.png
+ICON_ASSET := src/renderer/assets/icon.svg
+
 
 help: ## Show this help message
 	@echo "Shelf v$(VERSION)"
@@ -19,17 +32,33 @@ uninstall: ## Remove dependencies, build output and caches
 clean: ## Remove build artifacts and caches (keeps node_modules)
 	@bash scripts/clean.sh
 
-dev: ## Run the app in development with hot reload
+dev: $(ICON_PNG) $(ICON_ASSET) ## Run the app in development with hot reload
 	@pnpm dev
 
-preview: build ## Build, then run the built app with no dev server and no hot reload
+preview: $(ICON_PNG) build ## Build, then run the built app with no dev server and no hot reload
 	@pnpm preview
 
-build: ## Type-check and build all three processes
+build: $(ICON_ASSET) ## Type-check and build all three processes
 	@pnpm typecheck && pnpm build
 
-package: ## Build a distributable for the host platform
-	@pnpm package
+# Which platforms to package for, as a comma-separated list: `macos`, `linux`,
+# `windows`. `P` is the short form of the same thing. Neither given, it is the
+# machine you are sitting at — cross-packaging is a thing you ask for.
+P ?=
+PLATFORM ?= $(P)
+
+$(ICON_PNG): $(ICON) scripts/icon.cjs
+	@pnpm exec electron scripts/icon.cjs
+
+$(ICON_ASSET): $(ICON)
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
+icon: $(ICON_PNG) $(ICON_ASSET) ## Redraw the app icon from resources/icon.svg
+	@:
+
+package: build ## Package for distribution (PLATFORM/P=macos,linux; SIGN=1 to sign)
+	@bash scripts/package.sh "$(PLATFORM)"
 
 typecheck: ## Type-check without emitting
 	@pnpm typecheck

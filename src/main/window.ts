@@ -1,5 +1,6 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { BrowserWindow, app, nativeTheme, screen, shell } from 'electron';
+import { BrowserWindow, app, nativeImage, nativeTheme, screen, shell } from 'electron';
 import { WINDOW_CHANNELS } from '@shared/window';
 
 /**
@@ -167,6 +168,32 @@ export function setCompactMode(window: BrowserWindow | null, compact: boolean): 
   isCompact.set(window, compact);
 }
 
+/**
+ * The app's own icon, in the two places that do not get one for free.
+ *
+ * A packaged app carries its icon in the bundle — macOS reads it from the
+ * `.icns`, Windows from the executable, Linux from the desktop entry. Run
+ * unpackaged, which is what `make dev` and `make preview` do, there is no
+ * bundle: the dock and the task switcher show Electron's own atom, and the app
+ * you are looking at is not obviously the app you are building.
+ *
+ * The file is the same 1024px render the packagers cut their sizes from, so
+ * there is one drawing behind every place the icon appears.
+ */
+function applyDevelopmentIcon(window: BrowserWindow): void {
+  // The packaged app has a better answer, and a test run has no dock to speak to.
+  if (app.isPackaged || process.env['SHELF_E2E']) return;
+
+  const path = join(app.getAppPath(), 'build', 'icon.png');
+  if (!existsSync(path)) return;
+
+  const image = nativeImage.createFromPath(path);
+  if (image.isEmpty()) return;
+
+  if (process.platform === 'darwin') app.dock?.setIcon(image);
+  else window.setIcon(image);
+}
+
 export function createMainWindow(): BrowserWindow {
   /*
    * Opened compact, because the start screen is the first thing shown. Sizing
@@ -214,6 +241,8 @@ export function createMainWindow(): BrowserWindow {
    * the developer's screen, and nothing taking their keyboard mid-sentence.
    */
   isCompact.set(window, true);
+
+  applyDevelopmentIcon(window);
 
   window.once('ready-to-show', () => {
     if (!process.env['SHELF_E2E']) window.show();

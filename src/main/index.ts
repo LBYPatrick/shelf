@@ -83,7 +83,7 @@ function registerWindowHandlers(): void {
       // Traffic lights sit at x=14 and are ~52px wide; the renderer keeps this
       // strip clear so nothing lands underneath them.
       windowControlsInset: platform === 'macos' ? 78 : 0,
-      appVersion: app.getVersion(),
+      appVersion: __APP_VERSION__,
       locale: app.getLocale(),
     };
   });

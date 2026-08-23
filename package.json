@@ -1,6 +1,6 @@
 {
   "name": "shelf",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A database client with an interface worth looking at",
   "author": {
     "name": "LBYPatrick",
@@ -25,10 +25,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "postinstall": "electron-rebuild --only better-sqlite3",
-    "package": "pnpm build && electron-builder --config electron-builder.config.cjs",
-    "package:mac": "pnpm build && electron-builder --config electron-builder.config.cjs --mac",
-    "package:win": "pnpm build && electron-builder --config electron-builder.config.cjs --win",
-    "package:linux": "pnpm build && electron-builder --config electron-builder.config.cjs --linux",
+    "package": "bash scripts/package.sh",
     "shots": "playwright test --config playwright.shots.config.ts",
     "test:drivers": "vitest run --config vitest.drivers.config.ts",
     "db:up": "docker compose up -d --wait",

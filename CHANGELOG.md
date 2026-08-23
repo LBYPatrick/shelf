@@ -6,6 +6,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-20
+
 ### Added
 
 - Start screen rebuilt as a two-pane welcome window: identity and the ways to

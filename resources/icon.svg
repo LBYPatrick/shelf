@@ -1,0 +1,125 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 512 512"
+  width="512"
+  height="512"
+  role="img"
+  aria-labelledby="title desc"
+>
+  <title id="title">Shelf</title>
+  <desc id="desc">Three overlapping vertical columns of different heights.</desc>
+
+  <!--
+    Three columns, and nothing else.
+    ────────────────────────────────
+    A column is the word both halves of this app already use: the spines
+    standing on a shelf, and the columns a table is made of. Drawn as three bars
+    of different heights it is also the shape of a reading taken — so the mark
+    says shelf, table and measurement at once without illustrating any of them.
+
+    Abstract, which means the depth is *implied* rather than built. There is no
+    isometric geometry here, no top faces and no returns: the columns are flat
+    shapes that overlap, and everything that makes them sit in space is the
+    order they overlap in, a gradient down each one, and the shadow the nearest
+    casts on the two behind it. A drawing of furniture is a picture of a
+    bookshelf; this is a mark that means one.
+
+    The tallest column is also the nearest and the only warm one, so the eye has
+    somewhere to land; the other two are held at low chroma behind it. A mark
+    with three equal voices has none.
+  -->
+
+  <defs>
+    <linearGradient id="ground" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#262C3B" />
+      <stop offset="1" stop-color="#0F131B" />
+    </linearGradient>
+
+    <!-- Each column lit from above: the top of a bar is nearer the light. -->
+    <linearGradient id="slate" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#A8B5D3" />
+      <stop offset="1" stop-color="#717EA0" />
+    </linearGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#EDC98A" />
+      <stop offset="1" stop-color="#BA9257" />
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#92C2BB" />
+      <stop offset="1" stop-color="#5B8781" />
+    </linearGradient>
+
+    <!-- What the nearest column throws across the ones behind it. -->
+    <filter id="cast" x="-50%" y="-30%" width="200%" height="160%">
+      <feDropShadow dx="-7" dy="6" stdDeviation="11" flood-color="#080B12" flood-opacity="0.32" />
+    </filter>
+    <filter id="soft" x="-50%" y="-30%" width="200%" height="160%">
+      <feDropShadow dx="-4" dy="5" stdDeviation="8" flood-color="#080B12" flood-opacity="0.22" />
+    </filter>
+
+    <clipPath id="rounded">
+      <rect x="50" y="50" width="412" height="412" rx="93" ry="93" />
+    </clipPath>
+
+    <!-- What the tile drops onto whatever is behind it, in the room the
+         padding leaves. -->
+    <filter id="tile" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#05070C" flood-opacity="0.26" />
+    </filter>
+  </defs>
+
+  <!--
+    The tile is inset, not full-bleed.
+
+    macOS gives every icon the same grid: on a 1024 canvas the artwork occupies
+    824 with a hundred pixels of nothing on each side, and the system leans on
+    that padding for the shadow and for making a dock of unrelated apps look
+    evenly sized. Drawn to the edge instead, this one came out visibly bigger
+    than Spotify and Chrome beside it — not because it was drawn large but
+    because everything else was drawn to the template.
+
+    Everything inside is still laid out against a 512 square; the group carries
+    it into the tile, so the composition never has to know.
+  -->
+  <g filter="url(#tile)">
+    <g clip-path="url(#rounded)">
+      <g transform="translate(50 50) scale(0.8047)">
+        <rect width="512" height="512" fill="url(#ground)" />
+
+    <!--
+      One direction, said three ways.
+
+      Left to right the columns get taller, and left to right they come forward
+      — so height, depth and the warmth of the colour all climb together instead
+      of arguing. A mark whose parts disagree about which way to read is one the
+      eye has to work out; this one is read in the direction it is written in.
+
+      They overlap by a quarter of their width: enough to be unmistakably in
+      front of one another, not so much that the one behind stops being a
+      column.
+
+      They were briefly drawn much larger than this, to fix an apparent
+      smallness beside the other icons in the dock. The smallness was the
+      *tile* — drawn to the edge of the canvas where every other app insets to
+      the grid — so the columns are back at the size the composition wanted.
+    -->
+    <rect x="128" y="218" width="104" height="200" rx="26" fill="url(#slate)" />
+    <rect x="204" y="154" width="104" height="264" rx="26" fill="url(#teal)" filter="url(#soft)" />
+    <rect x="280" y="88" width="104" height="330" rx="26" fill="url(#amber)" filter="url(#cast)" />
+
+        <!-- The light catching the top edge of the whole object. -->
+        <rect
+          x="0.9"
+          y="0.9"
+          width="510.2"
+          height="510.2"
+          rx="113.2"
+          fill="none"
+          stroke="#DCE4F2"
+          stroke-opacity="0.14"
+          stroke-width="1.9"
+        />
+      </g>
+    </g>
+  </g>
+</svg>

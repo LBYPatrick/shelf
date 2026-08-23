@@ -295,7 +295,8 @@
     "exportRow": "すべての設定をファイルに書き出す",
     "importRow": "ファイルから読み込んで置き換える",
     "jsonLines": "{{count}} 行",
-    "copyHint": "書類全体をクリップボードにコピー"
+    "copyHint": "書類全体をクリップボードにコピー",
+    "version": "バージョン {{version}}"
   },
   "palette": {
     "placeholder": "テーブル・タブ・操作を検索…",

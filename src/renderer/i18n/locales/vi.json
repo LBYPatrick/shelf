@@ -295,7 +295,8 @@
     "exportRow": "Ghi mọi tuỳ chọn ra một tệp",
     "importRow": "Thay thế chúng từ một tệp",
     "jsonLines": "{{count}} dòng",
-    "copyHint": "Sao chép toàn bộ tài liệu vào clipboard"
+    "copyHint": "Sao chép toàn bộ tài liệu vào clipboard",
+    "version": "Phiên bản {{version}}"
   },
   "palette": {
     "placeholder": "Tìm bảng, thẻ và thao tác…",

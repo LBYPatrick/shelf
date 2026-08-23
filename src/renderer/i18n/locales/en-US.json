@@ -295,7 +295,8 @@
     "exportRow": "Write every preference to a file",
     "importRow": "Replace them from a file",
     "jsonLines": "{{count}} lines",
-    "copyHint": "Copy the whole document to the clipboard"
+    "copyHint": "Copy the whole document to the clipboard",
+    "version": "Version {{version}}"
   },
   "palette": {
     "placeholder": "Search tables, tabs and actions…",

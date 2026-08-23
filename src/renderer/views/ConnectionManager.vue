@@ -29,6 +29,7 @@ import { engineDescriptor } from '@shared/engines';
 import ConnectionEditor from '../components/connection/ConnectionEditor.vue';
 import LineupRow from '../components/connection/LineupRow.vue';
 import AppIcon from '../components/ui/AppIcon.vue';
+import AppMark from '../components/ui/AppMark.vue';
 import DisclosureGroup from '../components/ui/DisclosureGroup.vue';
 import SettingsSheet from '../components/settings/SettingsSheet.vue';
 import { useConnections } from '../stores/connections';
@@ -274,15 +275,7 @@ watch(
           class="identity"
           style="--step: 0"
         >
-          <span
-            class="identity__mark"
-            aria-hidden="true"
-          >
-            <AppIcon
-              name="database"
-              :size="22"
-            />
-          </span>
+          <AppMark class="identity__mark" />
           <h1 class="identity__title">
             {{ $t('app.name') }}
           </h1>
@@ -622,29 +615,21 @@ watch(
   text-align: center;
 }
 
+/*
+ * The mark itself is `AppMark`; its place in this column is set here — and its
+ * size, which is larger than the mark it replaced. That one was a glyph on a
+ * tinted square and could afford to be small; this one is a drawing with three
+ * things in it, and at the old size the shortest column was a few pixels wide.
+ */
 .identity__mark {
-  display: grid;
-  place-items: center;
-  width: 3.6em;
-  height: 3.6em;
-  margin-bottom: 0.7em;
-  border-radius: 1.1em;
-  color: var(--color-primary-content);
-  background: linear-gradient(
-    145deg,
-    color-mix(in oklab, var(--color-primary) 88%, white),
-    var(--color-primary)
-  );
-  box-shadow:
-    inset 0 1px 0 oklch(100% 0 0 / 0.35),
-    var(--elev-thumb);
-}
-
-/* Drawn at a fixed pixel size, so it is the one part of the mark that would
-   not grow with the rest. */
-.identity__mark .icon {
-  width: 1.8em;
-  height: 1.8em;
+  /*
+   * Wider than the mark looks, because a fifth of the artwork is the padding
+   * macOS wants around an icon — the same file draws the dock tile, and the box
+   * grows so the *drawing* stays the size the composition wants.
+   */
+  width: 6em;
+  height: 6em;
+  margin-bottom: 0.35em;
 }
 
 /* Large text wants negative tracking; at this size the default reads loose. */

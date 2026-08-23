@@ -11,6 +11,7 @@ import { BINDINGS, displayKeys } from '../../lib/keybindings';
 import { LOCALES } from '../../i18n';
 import { useTranslation } from 'i18next-vue';
 import { useTheme } from '../../composables/useTheme';
+import { usePlatform } from '../../composables/usePlatform';
 import { rowLimitOptions, useSettings } from '../../stores/settings';
 import { useToasts } from '../../stores/toasts';
 import { parseSettings, serializeSettings, type SettingsState } from '@shared/settingsFile';
@@ -18,6 +19,7 @@ import { documentFileName } from '@shared/fileNames';
 import { errorMessage } from '@shared/errors';
 import { DEFAULT_MATERIALS, MATERIAL_LIMITS, oklch } from '../../styles/theme';
 import AppIcon from '../ui/AppIcon.vue';
+import AppMark from '../ui/AppMark.vue';
 import CheckBox from '../ui/CheckBox.vue';
 import JsonEditor from '../ui/JsonEditor.vue';
 import PressButton from '../ui/PressButton.vue';
@@ -30,6 +32,7 @@ const open = defineModel<boolean>({ required: true });
 
 const theme = useTheme();
 const settings = useSettings();
+const platform = usePlatform();
 
 const toasts = useToasts();
 const { t } = useTranslation();
@@ -671,6 +674,28 @@ const languageOptions = computed(() => [
           </div>
         </div>
       </section>
+
+      <!--
+        Which app this is, and which one of it.
+        ──────────────────────────────────────
+        At the foot rather than the head: settings are opened to change
+        something, and a banner above the first control spends the top of the
+        sheet on a fact read once. It is not a section either — there is nothing
+        here to set — so it takes no heading and no card, and sits centred and
+        quiet under the last of them, the way an About pane does.
+
+        The version comes from the running app rather than from a constant
+        compiled in beside it, so a build can only ever report what it is.
+      -->
+      <footer class="about">
+        <AppMark :size="80" />
+        <p class="about__name">
+          {{ $t('app.name') }}
+        </p>
+        <p class="about__version">
+          {{ $t('settings.version', { version: platform.info.appVersion }) }}
+        </p>
+      </footer>
     </div>
 
     <!--
@@ -801,6 +826,34 @@ const languageOptions = computed(() => [
   gap: var(--gap-section);
   padding: var(--gap-loose) var(--gap-section) var(--gap-section);
   border-top: 1px solid var(--separator);
+}
+
+/*
+ * Type that grows tightens: the name is set a step above body copy with the
+ * tracking pulled in, and the version sits under it at the size of a caption in
+ * the muted colour. Weight carries the difference between them rather than
+ * another size step — the two lines are one block, not two headings.
+ */
+.about {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-tight);
+  padding-block: var(--gap-section) var(--gap-loose);
+  text-align: center;
+}
+
+.about__name {
+  margin-top: var(--gap-tight);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+
+.about__version {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
 }
 
 .panel-section {

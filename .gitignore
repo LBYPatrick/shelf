@@ -8,3 +8,13 @@ release/
 coverage/
 test-results/
 playwright-report/
+
+# Which certificate this machine signs with: a keychain identity and a
+# notarytool profile, both local facts. See scripts/signing.sh.
+.signing.local
+
+# A preview of the icon at the size it is judged at, drawn by `make icon`.
+build/icon-64.png
+
+# Copied in from resources/icon.svg by make; the drawing itself is tracked there.
+src/renderer/assets/icon.svg
