@@ -15,7 +15,13 @@ export default defineConfig({
   // nothing here is shared and nothing has to be serialised. See the note in
   // `playwright.config.ts`.
   fullyParallel: true,
-  workers: process.env['CI'] ? 4 : '75%',
+  /*
+   * Fewer in CI than the machine could nominally take. A runner has three
+   * cores and every test is a whole Electron app: at four, three of them
+   * failed to launch at all rather than failing an assertion, which is the
+   * shape of a suite that has been asked for more than the box has.
+   */
+  workers: process.env['CI'] ? 2 : '75%',
   timeout: 90_000,
   expect: {
     timeout: 10_000,

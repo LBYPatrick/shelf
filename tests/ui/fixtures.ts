@@ -39,6 +39,30 @@ export const test = base.extend<UiFixtures>({
   page: async ({ app }, use) => {
     const page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');
+
+    /*
+     * Say what the machine thinks of translucency, rather than asking it.
+     *
+     * Half of what this suite checks is the material layer — three surfaces a
+     * measured distance apart, and screenshots taken with `omitBackground` so
+     * they record that distance. All of it collapses under
+     * `prefers-reduced-transparency: reduce`, which is correct behaviour and
+     * exactly what the app is supposed to do: every panel goes opaque.
+     *
+     * A headless macOS runner reports `reduce`. So the suite passed on a
+     * developer's desk and failed twenty-one ways in CI, on an app that was
+     * behaving properly in both places — the tests had simply never said which
+     * of the two appearances they were about. This is the same thing
+     * `setAppearance` does for light and dark: pin it, so a difference in the
+     * result is a difference in the code.
+     *
+     * A test that wants the other appearance emulates it for itself.
+     */
+    const cdp = await app.context().newCDPSession(page);
+    await cdp.send('Emulation.setEmulatedMedia', {
+      features: [{ name: 'prefers-reduced-transparency', value: 'no-preference' }],
+    });
+
     await use(page);
   },
 
