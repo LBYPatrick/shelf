@@ -86,7 +86,6 @@ export const useJobs = defineStore('jobs', () => {
    * reason nobody remembers by the next launch.
    */
   const filter = ref<JobFilter>({ ...NO_FILTER });
-  const filtersOpen = ref(false);
 
   function clearFilter(): void {
     filter.value = { ...NO_FILTER };
@@ -214,7 +213,6 @@ export const useJobs = defineStore('jobs', () => {
     ordered,
     running,
     filter,
-    filtersOpen,
     clearFilter,
     matching,
     restore,

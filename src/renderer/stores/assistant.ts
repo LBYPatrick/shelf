@@ -1,0 +1,400 @@
+import { defineStore } from 'pinia';
+import i18next from 'i18next';
+import { computed, markRaw, ref } from 'vue';
+import type { AiItem, AiMessage, AiProvider, AiProviderInput } from '@shared/ai';
+import type { SavedChat } from '@shared/appdb';
+import { chatTitle } from '@shared/chatTitle';
+import type { SchemaScope } from '@shared/schemaDoc';
+import { RpcCancelled } from '@shared/rpc';
+import { host } from '../lib/host';
+import { saveSetting } from '../lib/settings';
+
+/**
+ * The assistant, as the interface holds it.
+ *
+ * Two things live here. One is the list of configured providers, which is
+ * settings — read once, written when edited. The other is the conversations.
+ *
+ * Those were once deliberately *not* kept, on the argument that a transcript
+ * holds whatever rows were read on the way to an answer and that filing them
+ * beside the connection list is a promise this feature had not earned. The
+ * argument loses to the obvious: a conversation you cannot get back is one you
+ * have to have again, and the app already records every statement anyone runs.
+ * So they are saved, per connection, and the cost is made plain instead of
+ * hidden — a saved chat includes the rows it looked at, and deleting the card
+ * deletes them.
+ *
+ * A conversation is written when a turn finishes, never while one is streaming:
+ * a partial answer is not worth a row, and writing per token would be a write
+ * per token.
+ */
+
+/** One exchange, as the chat draws it. */
+export interface ChatTurn {
+  readonly id: string;
+  /** What the reader asked. Absent on the opening note. */
+  readonly question?: string;
+  items: AiItem[];
+  state: 'running' | 'done' | 'failed' | 'stopped';
+  error?: string;
+}
+
+export interface Conversation {
+  readonly tabId: string;
+  /** The row this is saved as. Stable across renames and reopenings. */
+  id: string;
+  title: string;
+  scope: SchemaScope;
+  turns: ChatTurn[];
+  createdAt: number;
+  updatedAt: number;
+  /** The abort for whatever is in flight, so the tab can stop it. */
+  controller?: AbortController;
+}
+
+/** What is written to the row, and read back out of it. */
+interface StoredChat {
+  readonly scope: SchemaScope;
+  readonly turns: readonly ChatTurn[];
+}
+
+const PREFERRED = 'assistant:provider';
+
+let counter = 0;
+const nextTurnId = () => `turn-${Date.now().toString(36)}-${++counter}`;
+
+export const useAssistant = defineStore('assistant', () => {
+  const providers = ref<AiProvider[]>([]);
+  const preferredId = ref<string | null>(null);
+  const loaded = ref(false);
+
+  const conversations = ref(new Map<string, Conversation>());
+  /** The cards, newest first. Bodies are not loaded until one is opened. */
+  const chats = ref<SavedChat[]>([]);
+
+  /*
+   * What the sidebar is searching for.
+   *
+   * Here rather than in the list, because the field is in the panel's header
+   * row — where every other panel's field is — and the list is a sibling of it.
+   * The jobs panel keeps its term in its own store for the same reason.
+   */
+  const search = ref('');
+
+  /**
+   * The provider a new turn uses.
+   *
+   * Falls through to the first configured one rather than refusing to act,
+   * because "you have one provider and it is not selected" is not a state worth
+   * having an error message for.
+   */
+  const active = computed<AiProvider | null>(
+    () =>
+      providers.value.find((provider) => provider.id === preferredId.value) ??
+      providers.value[0] ??
+      null
+  );
+
+  const configured = computed(() => providers.value.length > 0);
+
+  async function refresh(): Promise<void> {
+    const [list, stored] = await Promise.all([
+      window.shelf.db.listAiProviders(),
+      window.shelf.db.getSetting<string | null>(PREFERRED, null),
+    ]);
+    providers.value = list;
+    preferredId.value = stored;
+    loaded.value = true;
+  }
+
+  function choose(id: string): void {
+    preferredId.value = id;
+    void saveSetting(PREFERRED, id);
+  }
+
+  async function save(input: AiProviderInput): Promise<AiProvider> {
+    const saved = await window.shelf.db.saveAiProvider(input);
+    await refresh();
+    // A provider added when there were none becomes the one in use, so adding
+    // one is the whole of setting the feature up rather than the first half.
+    if (!preferredId.value) choose(saved.id);
+    return saved;
+  }
+
+  async function remove(id: string): Promise<void> {
+    await window.shelf.db.removeAiProvider(id);
+    if (preferredId.value === id) {
+      preferredId.value = null;
+      void saveSetting(PREFERRED, null);
+    }
+    await refresh();
+  }
+
+  /** A single-use handle for the provider in use, staged with the host. */
+  async function handle(): Promise<string> {
+    const provider = active.value;
+    if (!provider) throw new Error('No assistant provider is configured.');
+    return window.shelf.db.prepareAiProvider(provider.id);
+  }
+
+  async function probe(id: string): Promise<{ ok: true } | { ok: false; message: string }> {
+    const token = await window.shelf.db.prepareAiProvider(id);
+    return host.call('ai/probe', { handle: token });
+  }
+
+  // ----------------------------------------------------------- conversations
+
+  function conversation(tabId: string, scope: SchemaScope): Conversation {
+    const existing = conversations.value.get(tabId);
+    if (existing) return existing;
+
+    const now = Date.now();
+    const created: Conversation = {
+      tabId,
+      id: '',
+      title: '',
+      scope,
+      turns: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    conversations.value.set(tabId, created);
+    // The map is the reactive value, and mutating it in place does not notify.
+    conversations.value = new Map(conversations.value);
+    return conversations.value.get(tabId)!;
+  }
+
+  /** Puts a saved conversation into a tab, ready to be continued. */
+  async function adopt(tabId: string, chat: SavedChat): Promise<Conversation> {
+    const full = chat.body ? chat : ((await window.shelf.db.readChat(chat.id)) ?? chat);
+
+    const stored = ((): StoredChat | null => {
+      try {
+        return JSON.parse(full.body) as StoredChat;
+      } catch {
+        // A body written by a newer version, or a half-written one. The card is
+        // still real; it simply opens empty rather than refusing to open.
+        return null;
+      }
+    })();
+
+    const restored: Conversation = {
+      tabId,
+      id: full.id,
+      title: full.title,
+      scope: stored?.scope ?? { kind: 'connection' },
+      turns: (stored?.turns ?? []).map((turn) => ({ ...turn, items: [...turn.items] })),
+      createdAt: full.createdAt,
+      updatedAt: full.updatedAt,
+    };
+
+    conversations.value.set(tabId, restored);
+    conversations.value = new Map(conversations.value);
+    return conversations.value.get(tabId)!;
+  }
+
+  async function refreshChats(connectionId: string | null): Promise<void> {
+    chats.value = await window.shelf.db.listChats(connectionId).catch(() => []);
+  }
+
+  /**
+   * Writes the conversation, and names it if it has no name yet.
+   *
+   * The title comes from the first question and is set once. Renaming it later
+   * is the reader's to do; regenerating it from a conversation that has moved
+   * on would rename a card someone had already learned to find.
+   */
+  async function persist(chat: Conversation, connectionId: string | null): Promise<void> {
+    const first = chat.turns.find((turn) => turn.question)?.question ?? '';
+    if (!first) return;
+
+    const title = chat.title || chatTitle(first) || 'Chat';
+    const body: StoredChat = { scope: chat.scope, turns: chat.turns };
+
+    const saved = await window.shelf.db.saveChat({
+      ...(chat.id ? { id: chat.id } : {}),
+      connectionId,
+      title,
+      // Serialised here rather than at the bridge: a turn holds reactive
+      // proxies, and the context bridge rejects one outright.
+      body: JSON.stringify(body),
+    });
+
+    chat.id = saved.id;
+    chat.title = saved.title;
+    chat.updatedAt = saved.updatedAt;
+    await refreshChats(connectionId);
+  }
+
+  async function rename(id: string, title: string): Promise<void> {
+    await window.shelf.db.renameChat(id, title);
+    for (const chat of conversations.value.values()) {
+      if (chat.id === id) chat.title = title.trim();
+    }
+    chats.value = chats.value.map((chat) =>
+      chat.id === id ? { ...chat, title: title.trim() } : chat
+    );
+  }
+
+  async function discard(id: string, connectionId: string | null): Promise<void> {
+    await window.shelf.db.removeChat(id);
+    await refreshChats(connectionId);
+  }
+
+  function forget(tabId: string): void {
+    const existing = conversations.value.get(tabId);
+    existing?.controller?.abort();
+    conversations.value.delete(tabId);
+    conversations.value = new Map(conversations.value);
+  }
+
+  /** Everything said so far, as the model needs it: prose only, in order. */
+  function historyOf(chat: Conversation): AiMessage[] {
+    const messages: AiMessage[] = [];
+    for (const turn of chat.turns) {
+      if (turn.question) messages.push({ role: 'user', text: turn.question });
+      const said = turn.items
+        .filter((item) => item.kind === 'text' || item.kind === 'sql')
+        .map((item) => (item.kind === 'sql' ? `\`\`\`sql\n${item.sql}\n\`\`\`` : item.text))
+        .join('\n\n');
+      if (said) messages.push({ role: 'assistant', text: said });
+    }
+    return messages;
+  }
+
+  function apply(turn: ChatTurn, item: AiItem): void {
+    const at = turn.items.findIndex((existing) => existing.id === item.id);
+    if (at === -1) turn.items.push(item);
+    else turn.items.splice(at, 1, item);
+  }
+
+  /**
+   * Asks, and streams the answer into the turn.
+   *
+   * The listeners are attached before the request and detached in `finally`,
+   * never left on: every turn in every open chat tab shares one host client, so
+   * a listener that outlives its turn writes another conversation's tokens into
+   * this one's.
+   */
+  async function ask(tabId: string, connectionId: string, question: string): Promise<void> {
+    const chat = conversations.value.get(tabId);
+    if (!chat) return;
+
+    const turnId = nextTurnId();
+    chat.turns.push({ id: turnId, question, items: [], state: 'running' });
+
+    /*
+     * The turn as the interface sees it, not the object that was pushed.
+     *
+     * `conversations` is a ref holding a Map, so everything reachable through
+     * it is deeply reactive: what the template renders is a *proxy* of this
+     * turn. Writing to the object that was handed to `push` writes through the
+     * raw value, which changes the data and notifies nothing — the answer
+     * arrived, the store held it, and the chat sat on its spinner. Read it back
+     * out of the array and every write goes through the proxy.
+     */
+    const turn = chat.turns[chat.turns.length - 1]!;
+
+    /*
+     * Not reactive, and deliberately so. An AbortController is an object with
+     * identity and a live signal; wrapping it in a proxy buys nothing and
+     * invites a listener to be registered on one identity and fired on another.
+     */
+    const controller = markRaw(new AbortController());
+    chat.controller = controller;
+
+    const mine = <T extends { turnId: string }>(payload: T) => payload.turnId === turnId;
+
+    const stop = [
+      host.on('ai/item', (payload) => {
+        if (mine(payload)) apply(turn, payload.item);
+      }),
+      host.on('ai/delta', (payload) => {
+        if (!mine(payload)) return;
+        const at = turn.items.findIndex((item) => item.id === payload.itemId);
+        const item = turn.items[at];
+        if (!item || (item.kind !== 'text' && item.kind !== 'thinking')) return;
+        turn.items.splice(at, 1, { ...item, text: item.text + payload.text });
+      }),
+      host.on('ai/replace', (payload) => {
+        if (!mine(payload)) return;
+        const at = turn.items.findIndex((item) => item.id === payload.itemId);
+        if (at === -1) return;
+        turn.items.splice(at, 1, ...payload.items);
+      }),
+    ];
+
+    try {
+      const token = await handle();
+      const result = await host.call(
+        'ai/turn',
+        {
+          connectionId,
+          handle: token,
+          turnId,
+          scope: chat.scope,
+          // The turn being added is not part of its own history.
+          history: historyOf(chat).slice(0, -1),
+          question,
+          /*
+           * Which language the reader reads. The host cannot work this out: it
+           * is a renderer setting, and a utility process's own OS locale is not
+           * the one anybody chose. `resolvedLanguage` is what "follow the
+           * system" has already been resolved to.
+           */
+          locale: i18next.resolvedLanguage ?? 'en-US',
+        },
+        controller.signal
+      );
+      /*
+       * The events already built the items, and the result carries the same
+       * ones. Taking the result as authoritative closes the gap where an event
+       * arrived after the reply — which happens, because they travel the same
+       * port but are not ordered against each other by anything.
+       */
+      turn.items = [...result.items];
+      turn.state = 'done';
+    } catch (error) {
+      if (error instanceof RpcCancelled || controller.signal.aborted) {
+        turn.state = 'stopped';
+      } else {
+        turn.state = 'failed';
+        turn.error = error instanceof Error ? error.message : String(error);
+      }
+    } finally {
+      for (const off of stop) off();
+      if (chat.controller === controller) chat.controller = undefined;
+      // Written once the turn has stopped moving, whatever it ended as: a
+      // failed or interrupted exchange is still one the reader may want back.
+      await persist(chat, connectionId).catch(() => undefined);
+    }
+  }
+
+  function interrupt(tabId: string): void {
+    conversations.value.get(tabId)?.controller?.abort();
+  }
+
+  return {
+    providers,
+    search,
+    preferredId,
+    loaded,
+    active,
+    configured,
+    conversations,
+    chats,
+    adopt,
+    refreshChats,
+    rename,
+    discard,
+    refresh,
+    choose,
+    save,
+    remove,
+    probe,
+    conversation,
+    forget,
+    ask,
+    interrupt,
+  };
+});

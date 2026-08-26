@@ -4,6 +4,7 @@ import { handlers, type Handler } from './handlers';
 import { Session, sessions } from './session';
 import type { HostChannel } from '@shared/contract';
 import type { ConnectionConfig } from '@drivers/types';
+import type { AiProvider } from '@shared/ai';
 
 /**
  * The connection host.
@@ -37,7 +38,19 @@ interface StageCredentials {
   config: ConnectionConfig;
 }
 
-type HostMessage = SessionOpen | SessionClose | StageCredentials;
+/**
+ * A provider's key, pushed by main for the same reason a password is: the
+ * interface process is never given one.
+ */
+interface StageProvider {
+  type: 'session:stageProvider';
+  sessionId: string;
+  handle: string;
+  provider: AiProvider;
+  apiKey?: string;
+}
+
+type HostMessage = SessionOpen | SessionClose | StageCredentials | StageProvider;
 
 function attachPort(session: Session, port: Electron.MessagePortMain): void {
   const reply = (message: unknown) => {
@@ -47,6 +60,14 @@ function attachPort(session: Session, port: Electron.MessagePortMain): void {
       // The window went away mid-request; nothing to deliver the answer to.
     }
   };
+
+  /*
+   * The channel the host pushes down without being asked — a turn's tokens as
+   * they arrive, an export's progress. Assigned here rather than passed to each
+   * handler because a handler that needs it is deep inside an agent loop, and
+   * threading a callback through would put the transport in every signature.
+   */
+  session.emit = (channel, payload) => reply({ kind: 'event', channel, payload });
 
   port.on('message', (event) => {
     const message = event.data as RpcOutbound;
@@ -102,6 +123,14 @@ process.parentPort?.on('message', (event) => {
 
   if (message.type === 'session:stage') {
     sessions.get(message.sessionId)?.stage(message.handle, message.config);
+    return;
+  }
+
+  if (message.type === 'session:stageProvider') {
+    sessions.get(message.sessionId)?.stageProvider(message.handle, {
+      provider: message.provider,
+      ...(message.apiKey ? { apiKey: message.apiKey } : {}),
+    });
     return;
   }
 

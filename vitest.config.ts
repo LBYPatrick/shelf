@@ -8,6 +8,7 @@ export default defineConfig({
     alias: {
       '@shared': r('src/shared'),
       '@drivers': r('src/drivers'),
+      '@ai': r('src/ai'),
       '@renderer': r('src/renderer'),
       '@utility': r('src/utility'),
     },

@@ -11,9 +11,12 @@ import CommandPalette from '../components/chrome/CommandPalette.vue';
 import ConnectionSwitcher from '../components/sidebar/ConnectionSwitcher.vue';
 import StatusBar from '../components/chrome/StatusBar.vue';
 import TabStrip from '../components/chrome/TabStrip.vue';
+import ChatList from '../components/sidebar/ChatList.vue';
 import EntityTree from '../components/sidebar/EntityTree.vue';
 import HistoryList from '../components/sidebar/HistoryList.vue';
 import SavedQueryList from '../components/sidebar/SavedQueryList.vue';
+import ChatTab from '../components/assistant/ChatTab.vue';
+import ProviderSheet from '../components/assistant/ProviderSheet.vue';
 import ErdTab from '../components/tabs/ErdTab.vue';
 import JobList from '../components/sidebar/JobList.vue';
 import JobTab from '../components/tabs/JobTab.vue';
@@ -23,6 +26,7 @@ import SettingsSheet from '../components/settings/SettingsSheet.vue';
 import AppIcon from '../components/ui/AppIcon.vue';
 import PressButton from '../components/ui/PressButton.vue';
 import ResizeHandle from '../components/ui/ResizeHandle.vue';
+import { useAssistant } from '../stores/assistant';
 import { useConnections } from '../stores/connections';
 import { useEntities } from '../stores/entities';
 import { useQueries } from '../stores/queries';
@@ -31,9 +35,9 @@ import { useTabs } from '../stores/tabs';
 import { useHotkeys } from '../composables/useHotkeys';
 import { vTip } from '../lib/hoverTip';
 import { shortcutLabel } from '../lib/keybindings';
-import { narrowedBy } from '@shared/jobFilter';
 import { useTranslation } from 'i18next-vue';
 
+const assistant = useAssistant();
 const connections = useConnections();
 const entities = useEntities();
 const tabs = useTabs();
@@ -41,16 +45,14 @@ const queries = useQueries();
 const jobs = useJobs();
 const { t } = useTranslation();
 
-/** How many of the folded-away choices are narrowing the job list. */
-const narrowedJobs = computed(() => narrowedBy(jobs.filter));
-
-type RailItem = 'entities' | 'queries' | 'history' | 'jobs';
+type RailItem = 'entities' | 'queries' | 'history' | 'jobs' | 'chats';
 
 const rail = ref<RailItem>('entities');
 const sidebarWidth = ref(248);
 const sidebarCollapsed = ref(false);
 const paletteOpen = ref(false);
 const settingsOpen = ref(false);
+const providersOpen = ref(false);
 
 // Built as a computed so the labels follow a language change rather than
 // keeping whichever language the component happened to mount in.
@@ -59,6 +61,7 @@ const railItems = computed<readonly { id: RailItem; label: string; icon: string 
   { id: 'queries', label: t('workspace.savedQueries'), icon: 'star' },
   { id: 'history', label: t('workspace.history'), icon: 'history' },
   { id: 'jobs', label: t('workspace.jobs'), icon: 'jobs' },
+  { id: 'chats', label: t('chats.title'), icon: 'assistant' },
 ]);
 
 /**
@@ -97,6 +100,7 @@ useHotkeys({
   'schema.refresh': () => void entities.refresh(),
   'sidebar.toggle': () => (sidebarCollapsed.value = !sidebarCollapsed.value),
   'tab.new': () => tabs.openQuery(),
+  'assistant.open': () => tabs.openChat(),
   'tab.close': () => tabs.activeId && tabs.close(tabs.activeId),
   'tab.reopen': () => tabs.reopenLastClosed(),
   'tab.next': () => tabs.nextTab(1),
@@ -107,6 +111,10 @@ let stopPersisting: (() => void) | undefined;
 
 onMounted(async () => {
   void entities.refresh();
+  // The provider list is read once per window: every chat tab and every Ask
+  // sheet reads the same store rather than each asking main for the list.
+  void assistant.refresh();
+  void assistant.refreshChats(connections.active?.id ?? null);
   // The history of what has been dispatched outlives the window that started
   // it, so it is read back before anything can add to it.
   void jobs.restore();
@@ -125,7 +133,10 @@ onBeforeUnmount(() => stopPersisting?.());
 </script>
 
 <template>
-  <div class="workspace">
+  <div
+    class="workspace"
+    :style="{ '--sidebar-w': sidebarCollapsed ? '0px' : `${sidebarWidth}px` }"
+  >
     <!--
       One bar across the whole window, and the traffic lights sit on it.
       
@@ -139,19 +150,25 @@ onBeforeUnmount(() => stopPersisting?.());
       once rather than managing them: the controls have one surface under them,
       the tabs get the window, and the columns below start under a clean edge.
     -->
-    <header
-      class="topbar mat-regular panel-sidebar drag-region"
-      :style="{ paddingInlineStart: `max(var(--gap-tight), var(--controls-inset, 0px))` }"
-    >
-      <button
-        v-tip="`${t('workspace.toggleSidebar')} — ${shortcutLabel('sidebar.toggle')}`"
-        class="topbar__toggle no-drag"
-        :aria-label="$t('workspace.toggleSidebar')"
-        :aria-pressed="!sidebarCollapsed"
-        @click="sidebarCollapsed = !sidebarCollapsed"
-      >
-        <AppIcon name="sidebar" />
-      </button>
+    <header class="topbar mat-regular panel-bar drag-region">
+      <!--
+        The controls, the toggle, and the room the columns take up.
+        ──────────────────────────────────────────────────────────
+        The tabs used to begin immediately after the toggle, which put the first
+        tab's leading edge at an offset that matched nothing — a vertical line a
+        hundred pixels from the left, with the rail/sidebar boundary at forty
+        and the pane's edge at three hundred. Every other edge in this window
+        lines up with one of those two.
+
+        So this region *is* the columns' width, and the strip starts where the
+        working pane starts. `min-width` rather than `width`, because collapsing
+        the sidebar takes that offset down to the rail alone — which is narrower
+        than the traffic lights and the toggle beside them — and a tab strip
+        sliding under the window controls is the one thing this bar exists to
+        prevent. It travels on the sidebar's own curve, so the two move as one
+        thing rather than as two that happen to agree at each end.
+      -->
+      <div class="topbar__lead" />
 
       <TabStrip />
     </header>
@@ -173,9 +190,6 @@ onBeforeUnmount(() => stopPersisting?.());
       -->
       <span
         class="notch mat-regular panel-sidebar"
-        :style="{
-          insetInlineStart: `calc(var(--rail-w) + ${sidebarCollapsed ? 0 : sidebarWidth}px)`,
-        }"
         aria-hidden="true"
       />
 
@@ -204,6 +218,30 @@ onBeforeUnmount(() => stopPersisting?.());
         </button>
 
         <!--
+          The sidebar's own switch, in the sidebar's own column.
+          ─────────────────────────────────────────────────────
+          It sat on the top bar beside the traffic lights, where it was the one
+          control in that row that acted on something *below* the row — and it
+          pushed the tab strip along to an offset that lined up with nothing.
+          Here it is at the foot of the column it opens and shuts, under the
+          five things that column can show, which is where a control belongs
+          when it governs the thing beside it.
+
+          Above the cog rather than below it, because the cog is the last thing
+          in the window: everything else in this column is about the database,
+          and settings is about the app.
+        -->
+        <button
+          v-tip="`${t('workspace.toggleSidebar')} — ${shortcutLabel('sidebar.toggle')}`"
+          class="rail__item rail__item--bottom"
+          :aria-label="$t('workspace.toggleSidebar')"
+          :aria-pressed="!sidebarCollapsed"
+          @click="sidebarCollapsed = !sidebarCollapsed"
+        >
+          <AppIcon name="sidebar" />
+        </button>
+
+        <!--
           The cog turns a quarter under the pointer. It is the one icon in the
           rail whose shape *means* something mechanical, so it is the one where
           movement reads as the object behaving rather than as decoration — and
@@ -212,7 +250,7 @@ onBeforeUnmount(() => stopPersisting?.());
         -->
         <button
           v-tip="`${t('action.settings')} — ${shortcutLabel('settings.open')}`"
-          class="rail__item rail__item--bottom rail__item--gear"
+          class="rail__item rail__item--gear"
           :aria-label="$t('action.settings')"
           @click="settingsOpen = true"
         >
@@ -223,7 +261,6 @@ onBeforeUnmount(() => stopPersisting?.());
       <aside
         class="sidebar mat-regular panel-sidebar"
         :class="{ 'sidebar--collapsed': sidebarCollapsed }"
-        :style="{ width: sidebarCollapsed ? '0px' : `${sidebarWidth}px` }"
         :inert="sidebarCollapsed"
       >
         <ConnectionSwitcher />
@@ -259,8 +296,17 @@ onBeforeUnmount(() => stopPersisting?.());
             field searches the names; the button beside it opens the four
             questions a log gets asked that a name cannot answer.
           -->
+          <!--
+            Chats search from the same row every other panel searches from.
+            ───────────────────────────────────────────────────────────────
+            The field used to sit inside the list, which left this row holding
+            nothing but a `+` floating against the right edge — a band of empty
+            sidebar above the panel, and a button with no row to belong to. Two
+            search fields in two places for five panels is two things to learn
+            where there was one.
+          -->
           <label
-            v-else-if="rail === 'jobs'"
+            v-else-if="rail === 'chats' || rail === 'jobs'"
             class="sidebar__find"
           >
             <AppIcon
@@ -269,6 +315,16 @@ onBeforeUnmount(() => stopPersisting?.());
               :size="13"
             />
             <input
+              v-if="rail === 'chats'"
+              v-model="assistant.search"
+              class="sidebar__find-input"
+              type="search"
+              :placeholder="$t('chats.find')"
+              :aria-label="$t('chats.find')"
+              spellcheck="false"
+            >
+            <input
+              v-else
               v-model="jobs.filter.text"
               class="sidebar__find-input"
               type="search"
@@ -314,22 +370,16 @@ onBeforeUnmount(() => stopPersisting?.());
             why is the failure mode of every filter ever built.
           -->
           <PressButton
-            v-if="rail === 'jobs'"
-            v-tip="$t('jobs.filters')"
+            v-if="rail === 'chats'"
+            v-tip="$t('assistant.newChat')"
             size="sm"
-            :active="jobs.filtersOpen"
-            :aria-label="$t('jobs.filters')"
-            :aria-expanded="jobs.filtersOpen"
-            @click="jobs.filtersOpen = !jobs.filtersOpen"
+            :aria-label="$t('assistant.newChat')"
+            @click="tabs.openChat()"
           >
             <AppIcon
-              name="filter"
+              name="plus"
               :size="13"
             />
-            <span
-              v-if="narrowedJobs > 0"
-              class="sidebar__badge"
-            >{{ narrowedJobs }}</span>
           </PressButton>
           <PressButton
             v-else
@@ -359,6 +409,7 @@ onBeforeUnmount(() => stopPersisting?.());
         </div>
 
         <EntityTree v-if="rail === 'entities'" />
+        <ChatList v-else-if="rail === 'chats'" />
         <JobList v-else-if="rail === 'jobs'" />
         <SavedQueryList v-else-if="rail === 'queries'" />
         <HistoryList v-else />
@@ -404,6 +455,13 @@ onBeforeUnmount(() => stopPersisting?.());
                 :active="tab.id === tabs.activeId"
                 :scope="tab.scope ?? null"
               />
+              <ChatTab
+                v-else-if="tab.kind === 'chat'"
+                :tab-id="tab.id"
+                :active="tab.id === tabs.activeId"
+                :scope="tab.ask"
+                @configure="providersOpen = true"
+              />
             </div>
           </template>
 
@@ -425,6 +483,12 @@ onBeforeUnmount(() => stopPersisting?.());
               >
                 {{ $t('workspace.newQuery') }}
               </PressButton>
+              <PressButton
+                size="sm"
+                @click="tabs.openChat()"
+              >
+                {{ $t('assistant.newChat') }}
+              </PressButton>
             </div>
           </div>
         </div>
@@ -437,12 +501,33 @@ onBeforeUnmount(() => stopPersisting?.());
       v-model="paletteOpen"
       @open-settings="settingsOpen = true"
     />
-    <SettingsSheet v-model="settingsOpen" />
+    <SettingsSheet
+      v-model="settingsOpen"
+      @manage-providers="providersOpen = true"
+    />
+    <ProviderSheet v-model="providersOpen" />
   </div>
 </template>
 
 <style scoped>
+/*
+ * How wide the two glass columns are, declared once.
+ *
+ * Four things have to agree on this number: the sidebar is it, the notch sits
+ * at it, the working pane begins after it, and the tab strip starts where the
+ * pane starts. Each of them used to work it out for itself — three inline
+ * `calc(var(--rail-w) + Npx)` expressions and a width — which is three chances
+ * for one of them to be left behind when the sidebar moves, and the tab strip
+ * was the one that had been: it began after the toggle button, at an offset
+ * that matched nothing else in the window.
+ *
+ * `--sidebar-w` is the only part that comes from the interface, because it is
+ * the only part a reader can drag. Everything below is derived from it, so the
+ * collapse animates every dependent property from the same source on the same
+ * curve.
+ */
 .workspace {
+  --columns-w: calc(var(--rail-w) + var(--sidebar-w, 0px));
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -458,38 +543,37 @@ onBeforeUnmount(() => stopPersisting?.());
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: var(--gap-tight);
   height: max(var(--tab-h), var(--controls-h, 0px));
   padding-inline-end: var(--gap-tight);
 }
 
-.topbar__toggle {
-  display: grid;
+/*
+ * The bar's first region is the columns' width, so its second begins where the
+ * working pane begins.
+ *
+ * Empty, and deliberately so: it is the traffic lights' room and the columns'
+ * width, and it holds nothing because nothing in this bar acts on the columns
+ * any more. Sized in `border-box`, so the inset for the controls and the gap
+ * before the first tab are both *inside* that width rather than added to it.
+ *
+ * `min-width` rather than `width`, because collapsing the sidebar takes the
+ * offset down to the rail alone — narrower than the traffic lights — and a tab
+ * strip sliding under the window controls is the one thing this bar exists to
+ * prevent.
+ */
+.topbar__lead {
+  box-sizing: border-box;
   flex: 0 0 auto;
-  place-items: center;
-  width: var(--hit-min);
-  height: var(--hit-min);
-  border-radius: var(--control-radius);
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
-  transition:
-    color var(--t-hover) var(--ease-out),
-    background-color var(--t-hover) var(--ease-out),
-    transform var(--t-press) var(--ease-out);
+  min-width: var(--columns-w);
+  height: 100%;
+  padding-inline: max(var(--gap-tight), var(--controls-inset, 0px)) var(--gap-tight);
+  transition: min-width 260ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-.topbar__toggle:hover {
-  background: var(--fill-3);
-  color: var(--color-base-content);
-}
-
-.topbar__toggle:active {
-  transform: scale(0.92);
-}
-
-/* Pressed means the sidebar is showing — the same tonal "this mode is on" the
-   tab toolbars use, rather than a second kind of selected state. */
-.topbar__toggle[aria-pressed='true'] {
-  color: var(--color-base-content);
+@media (prefers-reduced-motion: reduce) {
+  .topbar__lead {
+    transition: none;
+  }
 }
 
 .workspace__main {
@@ -515,6 +599,7 @@ onBeforeUnmount(() => stopPersisting?.());
   position: absolute;
   z-index: 0;
   top: 0;
+  inset-inline-start: var(--columns-w);
   width: var(--radius-box);
   height: var(--radius-box);
   pointer-events: none;
@@ -636,9 +721,25 @@ onBeforeUnmount(() => stopPersisting?.());
   color: var(--color-base-content);
 }
 
+/* Pushed to the foot of the column; whatever follows it sits under it. */
 .rail__item--bottom {
   margin-top: auto;
-  /* Above the status bar rather than tucked into the window's corner. */
+}
+
+/*
+ * Pressed means the sidebar is showing.
+ *
+ * The glyph brightens and nothing else. The rail's *selected* state is a tonal
+ * tile with a marker travelling to it, and that state means "this is the panel
+ * you are looking at" — a sixth tile lit in the same way would say the sidebar
+ * is a destination beside the five, when it is the switch that shows them.
+ */
+.rail__item[aria-pressed='true'] {
+  color: var(--color-base-content);
+}
+
+/* Above the status bar rather than tucked into the window's corner. */
+.rail__item--gear {
   margin-bottom: var(--gap);
 }
 
@@ -687,6 +788,7 @@ onBeforeUnmount(() => stopPersisting?.());
    * workspace during the travel — at 0 width they are still laid out.
    */
   overflow: hidden;
+  width: var(--sidebar-w, 0px);
   transition: width 260ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
@@ -775,6 +877,7 @@ onBeforeUnmount(() => stopPersisting?.());
  * button: no fixed width, because "1" and "4" are the only values it ever
  * takes and a circle drawn for two digits reads as a badge waiting for one.
  */
+/* Holds the row's height while the chat panel supplies its own field below. */
 .sidebar__badge {
   min-width: 1.1em;
   padding-inline: 0.28em;

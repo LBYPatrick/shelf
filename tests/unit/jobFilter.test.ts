@@ -1,168 +1,226 @@
 import { describe, expect, it } from 'vitest';
 import {
-  NO_FILTER,
+  addCriterion,
   jobDuration,
   matchesJob,
   narrowedBy,
+  NO_FILTER,
+  removeCriterion,
+  toggleCriterion,
   tracksTheClock,
   type FilterableJob,
   type JobFilter,
 } from '@shared/jobFilter';
 
-/** Midday, so "today" has a morning behind it and an afternoon in front. */
-const NOW = new Date('2026-08-23T12:00:00').getTime();
+/*
+ * A filter over a log, and the reason it is tested rather than eyeballed: every
+ * mistake it can make produces a *shorter list*, not an error. A job that drops
+ * out of "last hour" four seconds early looks exactly like a job that was never
+ * there.
+ *
+ * The clock is a parameter throughout, so these can ask about a Tuesday.
+ */
+
+const NOON = new Date('2026-03-10T12:00:00').getTime();
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 
-function job(over: Partial<FilterableJob> = {}): FilterableJob {
-  return {
-    name: 'production-20260823-090405',
-    status: 'done',
-    startedAt: NOW - 5 * MINUTE,
-    finishedAt: NOW - 5 * MINUTE + 2000,
-    ...over,
-  };
-}
+const job = (over: Partial<FilterableJob> = {}): FilterableJob => ({
+  name: 'production-20260310-090405',
+  status: 'done',
+  startedAt: NOON - MINUTE,
+  finishedAt: NOON - MINUTE + 2_000,
+  ...over,
+});
 
-function filter(over: Partial<JobFilter> = {}): JobFilter {
-  return { ...NO_FILTER, ...over };
-}
+const filterOf = (...criteria: [kind: string, value: string][]): JobFilter =>
+  criteria.reduce<JobFilter>(
+    (filter, [kind, value]) => addCriterion(filter, kind as never, value),
+    { ...NO_FILTER, criteria: [] }
+  );
 
-describe('an unfiltered list', () => {
+describe('an empty filter', () => {
   it('admits everything', () => {
-    expect(matchesJob(job(), NO_FILTER, NOW)).toBe(true);
-    expect(matchesJob(job({ status: 'failed', finishedAt: undefined }), NO_FILTER, NOW)).toBe(
-      true
-    );
-  });
-
-  it('is not narrowed by anything, and does not track the clock', () => {
+    expect(matchesJob(job(), NO_FILTER, NOON)).toBe(true);
     expect(narrowedBy(NO_FILTER)).toBe(0);
     expect(tracksTheClock(NO_FILTER)).toBe(false);
   });
 });
 
-describe('searching by name', () => {
-  it('matches anywhere in it, ignoring case and surrounding space', () => {
-    expect(matchesJob(job({ name: 'June refunds' }), filter({ text: 'refund' }), NOW)).toBe(
-      true
-    );
-    expect(matchesJob(job({ name: 'June refunds' }), filter({ text: '  REFUND ' }), NOW)).toBe(
-      true
-    );
-    expect(matchesJob(job({ name: 'June refunds' }), filter({ text: 'invoice' }), NOW)).toBe(
+describe('the name', () => {
+  const named = (text: string): JobFilter => ({ ...NO_FILTER, text, criteria: [] });
+
+  it('matches anywhere in it, ignoring case', () => {
+    expect(matchesJob(job(), named('PRODUCTION'), NOON)).toBe(true);
+    expect(matchesJob(job(), named('0310'), NOON)).toBe(true);
+    expect(matchesJob(job(), named('staging'), NOON)).toBe(false);
+  });
+
+  it('ignores surrounding space, so a stray one does not empty the list', () => {
+    expect(matchesJob(job(), named('  production  '), NOON)).toBe(true);
+  });
+
+  it('is not counted by the badge — it is visible in its own field', () => {
+    expect(narrowedBy(named('anything'))).toBe(0);
+  });
+});
+
+describe('status', () => {
+  it('matches the state exactly', () => {
+    expect(matchesJob(job({ status: 'done' }), filterOf(['status', 'done']), NOON)).toBe(true);
+    expect(matchesJob(job({ status: 'failed' }), filterOf(['status', 'done']), NOON)).toBe(
       false
     );
   });
 
-  it('is not counted as one of the folded-away choices', () => {
-    expect(narrowedBy(filter({ text: 'refund' }))).toBe(0);
+  it('treats running and pending as one answer', () => {
+    // Both mean "not finished yet", which is the question being asked.
+    const active = filterOf(['status', 'active']);
+    expect(matchesJob(job({ status: 'running' }), active, NOON)).toBe(true);
+    expect(matchesJob(job({ status: 'pending' }), active, NOON)).toBe(true);
+    expect(matchesJob(job({ status: 'done' }), active, NOON)).toBe(false);
   });
 });
 
-describe('filtering by status', () => {
-  it('takes one state at a time', () => {
-    expect(matchesJob(job({ status: 'failed' }), filter({ status: 'failed' }), NOW)).toBe(true);
-    expect(matchesJob(job({ status: 'done' }), filter({ status: 'failed' }), NOW)).toBe(false);
-  });
-
-  it('treats pending and running as one answer', () => {
-    for (const status of ['pending', 'running'] as const) {
-      expect(
-        matchesJob(job({ status, finishedAt: undefined }), filter({ status: 'active' }), NOW)
-      ).toBe(true);
-    }
-    expect(matchesJob(job({ status: 'done' }), filter({ status: 'active' }), NOW)).toBe(false);
-  });
-});
-
-describe('filtering by when it started', () => {
-  it('holds the hour open to exactly an hour', () => {
-    const within = filter({ started: 'hour' });
-    expect(matchesJob(job({ startedAt: NOW - HOUR + 1 }), within, NOW)).toBe(true);
-    expect(matchesJob(job({ startedAt: NOW - HOUR - 1 }), within, NOW)).toBe(false);
+describe('when it started', () => {
+  it('admits the last hour by the hour, not by the clock face', () => {
+    const lastHour = filterOf(['started', 'hour']);
+    expect(matchesJob(job({ startedAt: NOON - 59 * MINUTE }), lastHour, NOON)).toBe(true);
+    expect(matchesJob(job({ startedAt: NOON - 61 * MINUTE }), lastHour, NOON)).toBe(false);
   });
 
   it('means midnight by "today", not twenty-four hours ago', () => {
-    const today = filter({ started: 'today' });
-    // Half past nine this morning is today; half past nine last night is not,
-    // and both are inside the last twenty-four hours.
-    expect(matchesJob(job({ startedAt: NOW - 3 * HOUR }), today, NOW)).toBe(true);
-    expect(matchesJob(job({ startedAt: NOW - 15 * HOUR }), today, NOW)).toBe(false);
+    const today = filterOf(['started', 'today']);
+    const nineThisMorning = new Date('2026-03-10T09:00:00').getTime();
+    const nineYesterday = new Date('2026-03-09T09:00:00').getTime();
+
+    expect(matchesJob(job({ startedAt: nineThisMorning }), today, NOON)).toBe(true);
+    // The distinction the word actually carries.
+    expect(matchesJob(job({ startedAt: nineYesterday }), today, NOON)).toBe(false);
   });
 
-  it('counts a week as the seven days behind now', () => {
-    const week = filter({ started: 'week' });
-    expect(matchesJob(job({ startedAt: NOW - 6 * 24 * HOUR }), week, NOW)).toBe(true);
-    expect(matchesJob(job({ startedAt: NOW - 8 * 24 * HOUR }), week, NOW)).toBe(false);
+  it('admits a week', () => {
+    const week = filterOf(['started', 'week']);
+    expect(matchesJob(job({ startedAt: NOON - 6 * 24 * HOUR }), week, NOON)).toBe(true);
+    expect(matchesJob(job({ startedAt: NOON - 8 * 24 * HOUR }), week, NOON)).toBe(false);
   });
 });
 
-describe('filtering by when it finished', () => {
+describe('when it finished', () => {
   it('excludes anything that has not', () => {
+    // Asking when something finished is asking about finished things.
     const running = job({ status: 'running', finishedAt: undefined });
-    expect(matchesJob(running, filter({ finished: 'today' }), NOW)).toBe(false);
-    expect(matchesJob(running, filter({ finished: 'any' }), NOW)).toBe(true);
+    expect(matchesJob(running, filterOf(['finished', 'hour']), NOON)).toBe(false);
   });
 
-  it('reads the finish, not the start', () => {
-    // Started before the window and finished inside it: a long job answers
-    // "finished in the last hour" with yes.
-    const long = job({ startedAt: NOW - 5 * HOUR, finishedAt: NOW - MINUTE });
-    expect(matchesJob(long, filter({ finished: 'hour' }), NOW)).toBe(true);
-    expect(matchesJob(long, filter({ started: 'hour' }), NOW)).toBe(false);
+  it('measures from the finish, not the start', () => {
+    const longRun = job({ startedAt: NOON - 3 * HOUR, finishedAt: NOON - 10 * MINUTE });
+    expect(matchesJob(longRun, filterOf(['finished', 'hour']), NOON)).toBe(true);
+    expect(matchesJob(longRun, filterOf(['started', 'hour']), NOON)).toBe(false);
   });
 });
 
-describe('filtering by how long it took', () => {
-  const took = (ms: number) => job({ startedAt: NOW - ms, finishedAt: NOW });
+describe('how long it took', () => {
+  const took = (ms: number) => job({ startedAt: NOON - ms, finishedAt: NOON });
 
-  it('puts every length in exactly one band', () => {
-    const bands = ['instant', 'seconds', 'minute', 'long'] as const;
-    for (const ms of [0, 999, 1000, 9_999, 10_000, 59_999, 60_000, 10 * MINUTE]) {
-      const hits = bands.filter((band) => matchesJob(took(ms), filter({ took: band }), NOW));
-      expect(hits, `${ms}ms landed in ${hits.length} bands`).toHaveLength(1);
+  it('puts every job in exactly one band', () => {
+    // Bands partition, so picking a second is a different set rather than a
+    // subset of the first.
+    const bands = ['instant', 'seconds', 'minute', 'long'];
+    for (const ms of [500, 5_000, 30_000, 120_000]) {
+      const hits = bands.filter((band) => matchesJob(took(ms), filterOf(['took', band]), NOON));
+      expect(hits, `${ms}ms landed in ${hits.join(', ')}`).toHaveLength(1);
     }
   });
 
-  it('names the bands at the boundaries they claim', () => {
-    expect(matchesJob(took(999), filter({ took: 'instant' }), NOW)).toBe(true);
-    expect(matchesJob(took(1000), filter({ took: 'seconds' }), NOW)).toBe(true);
-    expect(matchesJob(took(10_000), filter({ took: 'minute' }), NOW)).toBe(true);
-    expect(matchesJob(took(60_000), filter({ took: 'long' }), NOW)).toBe(true);
-  });
-
-  it('measures a running job against how long it has taken so far', () => {
+  it('measures a job that is still going from now', () => {
+    // Otherwise the job somebody filtering by length is looking for — the one
+    // that has been running for ten minutes — is the one that cannot be found.
     const running = job({
       status: 'running',
-      startedAt: NOW - 3 * MINUTE,
+      startedAt: NOON - 5 * MINUTE,
       finishedAt: undefined,
     });
-    expect(jobDuration(running, NOW)).toBe(3 * MINUTE);
-    expect(matchesJob(running, filter({ took: 'long' }), NOW)).toBe(true);
-  });
-
-  it('never reports a negative length, whatever the clocks say', () => {
-    expect(jobDuration(job({ startedAt: NOW + 5000, finishedAt: undefined }), NOW)).toBe(0);
+    expect(jobDuration(running, NOON)).toBe(5 * MINUTE);
+    expect(matchesJob(running, filterOf(['took', 'long']), NOON)).toBe(true);
   });
 });
 
-describe('the dimensions together', () => {
-  it('narrow rather than widen', () => {
-    const failedToday = filter({ status: 'failed', started: 'today' });
-    expect(matchesJob(job({ status: 'failed' }), failedToday, NOW)).toBe(true);
-    expect(matchesJob(job({ status: 'done' }), failedToday, NOW)).toBe(false);
-    expect(
-      matchesJob(job({ status: 'failed', startedAt: NOW - 30 * HOUR }), failedToday, NOW)
-    ).toBe(false);
+describe('several criteria at once', () => {
+  it('requires every one of them', () => {
+    const both = filterOf(['status', 'done'], ['took', 'seconds']);
+    expect(matchesJob(job(), both, NOON)).toBe(true);
+    expect(matchesJob(job({ status: 'failed' }), both, NOON)).toBe(false);
   });
 
-  it('are counted for the badge, and say when the list moves on its own', () => {
-    expect(narrowedBy(filter({ status: 'failed', took: 'long' }))).toBe(2);
-    expect(
-      narrowedBy(filter({ status: 'failed', started: 'week', finished: 'hour', took: 'long' }))
-    ).toBe(4);
-    expect(tracksTheClock(filter({ status: 'failed' }))).toBe(false);
-    expect(tracksTheClock(filter({ took: 'long' }))).toBe(true);
+  it('lets two of a kind contradict rather than silently replacing one', () => {
+    // Both chips are on screen and either can be switched off, which is what
+    // the switch is for. Choosing for the reader would be worse.
+    const contradiction = filterOf(['status', 'done'], ['status', 'failed']);
+    expect(matchesJob(job({ status: 'done' }), contradiction, NOON)).toBe(false);
+    expect(matchesJob(job({ status: 'failed' }), contradiction, NOON)).toBe(false);
+  });
+});
+
+describe('switching a criterion off', () => {
+  it('stops applying it without forgetting it', () => {
+    const filter = filterOf(['status', 'failed']);
+    expect(matchesJob(job({ status: 'done' }), filter, NOON)).toBe(false);
+
+    const off = toggleCriterion(filter, 0);
+    expect(matchesJob(job({ status: 'done' }), off, NOON)).toBe(true);
+    // Still there, still remembering what it was.
+    expect(off.criteria[0]).toMatchObject({ kind: 'status', value: 'failed', enabled: false });
+  });
+
+  it('goes back on with the same value', () => {
+    const filter = toggleCriterion(toggleCriterion(filterOf(['took', 'long']), 0), 0);
+    expect(filter.criteria[0]).toMatchObject({ value: 'long', enabled: true });
+  });
+
+  it('is not counted while it is off', () => {
+    const filter = filterOf(['status', 'done'], ['took', 'long']);
+    expect(narrowedBy(filter)).toBe(2);
+    expect(narrowedBy(toggleCriterion(filter, 0))).toBe(1);
+  });
+
+  it('stops the list tracking the clock', () => {
+    const filter = filterOf(['started', 'hour']);
+    expect(tracksTheClock(filter)).toBe(true);
+    expect(tracksTheClock(toggleCriterion(filter, 0))).toBe(false);
+  });
+});
+
+describe('adding and removing', () => {
+  it('keeps them in the order they were thought of', () => {
+    const filter = filterOf(['took', 'long'], ['status', 'done'], ['started', 'hour']);
+    expect(filter.criteria.map((criterion) => criterion.kind)).toEqual([
+      'took',
+      'status',
+      'started',
+    ]);
+  });
+
+  it('removes the one named and leaves the rest alone', () => {
+    const filter = filterOf(['status', 'done'], ['took', 'long'], ['started', 'hour']);
+    const fewer = removeCriterion(filter, 1);
+    expect(fewer.criteria.map((criterion) => criterion.kind)).toEqual(['status', 'started']);
+  });
+
+  it('never mutates what it was given', () => {
+    // The store holds this in a ref; an in-place edit would change it without
+    // telling anyone.
+    const filter = filterOf(['status', 'done']);
+    const before = JSON.stringify(filter);
+    addCriterion(filter, 'took', 'long');
+    removeCriterion(filter, 0);
+    toggleCriterion(filter, 0);
+    expect(JSON.stringify(filter)).toBe(before);
+  });
+
+  it('only status is free of the clock', () => {
+    expect(tracksTheClock(filterOf(['status', 'done']))).toBe(false);
+    expect(tracksTheClock(filterOf(['took', 'instant']))).toBe(true);
+    expect(tracksTheClock(filterOf(['finished', 'today']))).toBe(true);
   });
 });

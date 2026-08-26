@@ -19,6 +19,7 @@ import ContainerPropertiesSheet from '../tabs/ContainerPropertiesSheet.vue';
 import TablePropertiesSheet from '../tabs/TablePropertiesSheet.vue';
 import { slugify } from '@shared/fileNames';
 import { host } from '../../lib/host';
+import type { SchemaScope } from '@shared/schemaDoc';
 import { useConnections } from '../../stores/connections';
 import { useEntities, type TreeRow } from '../../stores/entities';
 import { useTabs } from '../../stores/tabs';
@@ -262,12 +263,40 @@ const docsOf = ref<EntityRef | null>(null);
 const docsOpen = ref(false);
 const exportOf = ref<EntityRef | null>(null);
 const exportOpen = ref(false);
+/**
+ * What the assistant was pointed at.
+ *
+ * Held rather than derived from `menuOn`, because the menu is closed by the
+ * time the sheet opens — reading the selection through it would give the sheet
+ * a scope of null a frame after it appeared.
+ */
 
 const canDescribeContainers = computed(
   () => connections.active?.capabilities.containers ?? false
 );
 const canAnalyse = computed(() => connections.active?.capabilities.statistics ?? false);
 const canRelate = computed(() => connections.active?.capabilities.relations ?? false);
+
+/**
+ * The way to reach the assistant from a row.
+ *
+ * There were two — a one-shot "ask for a query" that wrote a statement into a
+ * new tab, and this. The first was the lesser of them in every case that
+ * matters: it could not look at a row before answering, could not be told it
+ * had misread the question, and produced a statement whose only recourse was
+ * to ask again from the beginning. Everything it did, a conversation does on
+ * its first turn and then keeps doing. Two doors to one room, one of them
+ * narrower, is a menu that makes the reader choose before they know enough to
+ * choose.
+ *
+ * Identical on a table and on a schema — what changes is only the scope it
+ * carries — so it is written once. It is always offered, even with no provider
+ * configured: an action that is missing until you have set something up is an
+ * action nobody discovers they could set up.
+ */
+const ASSISTANT_ITEMS = computed<MenuItem[]>(() => [
+  { id: 'chat', label: t('menu.chatHere'), icon: 'assistant', startsGroup: true },
+]);
 
 const menuItems = computed<MenuItem[]>(() => {
   const on = menuOn.value;
@@ -295,6 +324,7 @@ const menuItems = computed<MenuItem[]>(() => {
       ...(canRelate.value
         ? [{ id: 'diagram', label: t('menu.diagram'), icon: 'diagram', startsGroup: true }]
         : []),
+      ...ASSISTANT_ITEMS.value,
     ];
   }
 
@@ -303,6 +333,7 @@ const menuItems = computed<MenuItem[]>(() => {
     { id: 'docs', label: t('menu.quickDocs'), icon: 'info', startsGroup: true },
     { id: 'properties', label: t('menu.properties'), icon: 'structure' },
     { id: 'export', label: t('menu.exportData'), icon: 'download', startsGroup: true },
+    ...ASSISTANT_ITEMS.value,
   ];
 });
 
@@ -328,6 +359,15 @@ function openMenu(event: MouseEvent, row: TreeRow): void {
   menuOpen.value = true;
 }
 
+/** What a chat tab is called: the thing it is about, not "Assistant 3". */
+function scopeTitle(scope: SchemaScope): string {
+  return scope.kind === 'entity'
+    ? scope.entity.name
+    : scope.kind === 'connection'
+      ? t('assistant.newChat')
+      : scope.name;
+}
+
 function qualified(entity: Entity): string {
   return entity.schema ? `${entity.schema}.${entity.name}` : entity.name;
 }
@@ -340,6 +380,16 @@ function copyName(name: string): void {
 function onChoose(id: string): void {
   const on = menuOn.value;
   if (!on) return;
+
+  if (id === 'chat') {
+    const scope: SchemaScope =
+      'container' in on
+        ? { kind: on.container.kind, name: on.container.name }
+        : { kind: 'entity', entity: refOf(on.entity) };
+
+    tabs.openChat(scope, scopeTitle(scope));
+    return;
+  }
 
   if ('container' in on) {
     if (id === 'copy') copyName(on.container.name);

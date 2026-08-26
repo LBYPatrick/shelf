@@ -98,14 +98,23 @@ function registerHostHandlers(): void {
   });
 }
 
+/*
+ * Under test, stay out of the foreground entirely.
+ *
+ * Before `whenReady`, and that is the whole point of where this line sits. Done
+ * inside the ready handler the icon is already in the dock by the time it runs,
+ * so every launch put one there and took it away again a moment later — and a
+ * suite is a hundred launches, run several times while someone is working at
+ * the same desk. A flash per app is a flash nobody asked for.
+ *
+ * `LSUIElement` would be the packaged app's way of saying this; an unpackaged
+ * Electron run has no `Info.plist` of its own to say it in, so it is said here.
+ */
+if (process.env['SHELF_E2E']) app.dock?.hide();
+
 app.on('second-instance', focusExistingWindow);
 
 app.whenReady().then(() => {
-  // Under test, stay out of the foreground entirely: no dock icon, and no
-  // becoming the active application when a window opens. The suites run on a
-  // real desktop while someone is using it.
-  if (process.env['SHELF_E2E']) app.dock?.hide();
-
   const db = openAppDatabase();
   const secrets = createSecretStore(db);
   const connections = new ConnectionRepository(db, secrets);

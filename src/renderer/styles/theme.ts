@@ -57,7 +57,7 @@ export interface Materials {
  * the surface covering most of the window — lands on the dial's own number at
  * the bottom of the range.
  */
-export const CONTENT_ALPHA = 0.9;
+export const CONTENT_ALPHA = 0.74;
 
 /** The dial position at which every material is exactly as designed. */
 export const DESIGNED_OPACITY = 0.5;

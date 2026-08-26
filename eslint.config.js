@@ -15,12 +15,32 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/renderer/**/*.{ts,vue}'],
+    // The stories and the storybook's mocks render in a browser, like the
+    // renderer they are showing.
+    files: [
+      'src/renderer/**/*.{ts,vue}',
+      '.storybook/{mocks,fixtures}/*.ts',
+      '.storybook/seed.ts',
+    ],
     languageOptions: { globals: globals.browser },
   },
   {
-    files: ['src/{main,preload,utility,drivers}/**/*.ts', '*.ts', 'tests/**/*.ts'],
-    languageOptions: { globals: globals.node },
+    files: [
+      'src/{main,preload,utility,drivers,ai}/**/*.ts',
+      '*.ts',
+      'tests/**/*.ts',
+      // Node scripts, and the storybook's own configuration, which runs in Node
+      // to build a bundle that runs in a browser.
+      'scripts/**/*.mjs',
+      '.storybook/*.ts',
+    ],
+    /*
+     * Both environments, for the scripts that drive a browser: the body runs in
+     * Node and the callbacks handed to `page.evaluate` run in the page. There
+     * is no way to say that per-function, and a file-level disable would turn
+     * the rule off for the Node half as well.
+     */
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {
     // Build configuration runs in CommonJS under Node, not as an ES module.

@@ -6,6 +6,10 @@ import {
   type PrepareConnectionRequest,
   type SaveQueryInput,
 } from '@shared/appdb';
+import type { AiProviderInput } from '@shared/ai';
+import type { SaveChatInput } from '@shared/appdb';
+import { ChatRepository } from '../appdb/chats';
+import { ProviderRepository } from '../appdb/providers';
 import type { SaveConnectionInput } from '@shared/connections';
 import type { ConnectionConfig } from '@drivers/types';
 import type { ConnectionRepository } from '../appdb/connections';
@@ -113,6 +117,46 @@ export function registerAppDbHandlers(
       return handle;
     }
   );
+
+  const providers = new ProviderRepository(db, secrets);
+
+  ipcMain.handle(APPDB_CHANNELS.listAiProviders, () => providers.list());
+  ipcMain.handle(APPDB_CHANNELS.saveAiProvider, (_event, input: AiProviderInput) =>
+    providers.save(input)
+  );
+  ipcMain.handle(APPDB_CHANNELS.removeAiProvider, (_event, id: string) => {
+    providers.remove(id);
+  });
+  ipcMain.handle(
+    APPDB_CHANNELS.revealAiKey,
+    (_event, id: string) => providers.apiKey(id) ?? ''
+  );
+
+  ipcMain.handle(APPDB_CHANNELS.prepareAiProvider, (event, id: string): string => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (!window) throw new Error('No window for this request');
+
+    const provider = providers.get(id);
+    if (!provider) throw new Error('That assistant provider no longer exists.');
+
+    const handle = randomUUID();
+    host.stageProvider(sessionIdFor(window), handle, provider, providers.apiKey(id));
+    return handle;
+  });
+
+  const chats = new ChatRepository(db);
+
+  ipcMain.handle(APPDB_CHANNELS.listChats, (_event, connectionId: string | null) =>
+    chats.list(connectionId)
+  );
+  ipcMain.handle(APPDB_CHANNELS.readChat, (_event, id: string) => chats.read(id));
+  ipcMain.handle(APPDB_CHANNELS.saveChat, (_event, input: SaveChatInput) => chats.save(input));
+  ipcMain.handle(APPDB_CHANNELS.renameChat, (_event, id: string, title: string) => {
+    chats.rename(id, title);
+  });
+  ipcMain.handle(APPDB_CHANNELS.removeChat, (_event, id: string) => {
+    chats.remove(id);
+  });
 
   const readSetting = db.prepare('SELECT value FROM setting WHERE key = ?');
   const writeSetting = db.prepare(

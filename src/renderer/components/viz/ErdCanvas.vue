@@ -461,7 +461,18 @@ defineExpose({ fit });
   background: var(--fill-4);
   height: 100%;
   min-height: 0;
-  overflow: hidden;
+  /*
+   * Not clipped here.
+   *
+   * It used to be, and the only thing that clip ever cut was the zoom control's
+   * own shadow: the diagram is drawn inside an outermost `<svg>`, which clips
+   * to its own viewport by specification, so a pan that carries a node off the
+   * edge is already contained without help. The control floats a gap in from
+   * the corner, and an elevation shadow is wider than the gap — so it was
+   * sliced flat along two edges, which is the one thing a shadow must never
+   * be, because a shadow with a straight cut in it reads as a seam in the
+   * surface rather than as depth.
+   */
 }
 
 .erd__svg {

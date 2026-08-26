@@ -53,6 +53,22 @@ export interface UseDragOptions {
   threshold?: number;
   /** Inverts the delta, for handles that grow the opposite way to the pointer. */
   invert?: boolean;
+  /**
+   * Where to capture the pointer, when the thing being dragged is not somewhere
+   * a capture can survive.
+   *
+   * The capture normally goes on whatever the gesture started on, which is
+   * right for a handle: it is the thing being moved and it stays where it is.
+   * It is wrong for anything that reorders a *list*, because applying the
+   * reorder moves the dragged element in the DOM — and a node that leaves the
+   * document, even for the instant it takes to reinsert it, loses its capture.
+   * The tab strip was exactly this: the first reorder landed and the drag then
+   * died mid-gesture, so a tab could be carried one place and no further.
+   *
+   * Point this at an ancestor that does not move, and the gesture outlives what
+   * it is rearranging.
+   */
+  surface?: () => HTMLElement | null | undefined;
 }
 
 /**
@@ -81,6 +97,7 @@ export function useDrag(options: UseDragOptions) {
     extent,
     threshold = DEFAULT_THRESHOLD,
     invert = false,
+    surface,
   } = options;
 
   const dragging = ref(false);
@@ -245,7 +262,7 @@ export function useDrag(options: UseDragOptions) {
     // Secondary buttons open menus; they are not drags.
     if (event.button !== 0 || pointerId !== null) return;
 
-    target = event.currentTarget as HTMLElement;
+    target = surface?.() ?? (event.currentTarget as HTMLElement);
     pointerId = event.pointerId;
     origin = coordinate(event);
     startValue = getValue();

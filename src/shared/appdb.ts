@@ -1,3 +1,4 @@
+import type { AiProvider, AiProviderInput } from './ai';
 import type { ConnectionConfig } from '../drivers/types';
 import type { ConnectionFolder, SaveConnectionInput, SavedConnection } from './connections';
 
@@ -26,6 +27,29 @@ export interface SavedQuery extends SaveQueryInput {
   readonly connectionId: string | null;
   readonly createdAt: number;
   readonly updatedAt: number;
+}
+
+/**
+ * A conversation as it is stored.
+ *
+ * `body` is the transcript, serialised — opaque to the main process, which has
+ * no business knowing what a turn looks like. It is empty in a listing: forty
+ * cards do not need forty transcripts to draw forty titles.
+ */
+export interface SavedChat {
+  readonly id: string;
+  readonly connectionId: string | null;
+  readonly title: string;
+  readonly body: string;
+  readonly createdAt: number;
+  readonly updatedAt: number;
+}
+
+export interface SaveChatInput {
+  readonly id?: string;
+  readonly connectionId: string | null;
+  readonly title: string;
+  readonly body: string;
 }
 
 /**
@@ -62,6 +86,16 @@ export const APPDB_CHANNELS = {
   listSavedQueries: 'appdb:saved:list',
   saveQuery: 'appdb:saved:save',
   removeSavedQuery: 'appdb:saved:remove',
+  listAiProviders: 'appdb:ai:list',
+  saveAiProvider: 'appdb:ai:save',
+  removeAiProvider: 'appdb:ai:remove',
+  revealAiKey: 'appdb:ai:reveal',
+  prepareAiProvider: 'appdb:ai:prepare',
+  listChats: 'appdb:chats:list',
+  readChat: 'appdb:chats:read',
+  saveChat: 'appdb:chats:save',
+  renameChat: 'appdb:chats:rename',
+  removeChat: 'appdb:chats:remove',
   getSetting: 'appdb:settings:get',
   setSetting: 'appdb:settings:set',
 } as const;
@@ -98,6 +132,30 @@ export interface AppDbApi {
   listSavedQueries(connectionId: string | null): Promise<SavedQuery[]>;
   saveQuery(input: SaveQueryInput): Promise<SavedQuery>;
   removeSavedQuery(id: string): Promise<void>;
+  /** Configured assistant providers. Never carries a key. */
+  listAiProviders(): Promise<AiProvider[]>;
+  saveAiProvider(input: AiProviderInput): Promise<AiProvider>;
+  removeAiProvider(id: string): Promise<void>;
+  /**
+   * The key of the provider currently open in its editor.
+   *
+   * The same deliberate exception the connection editor takes, for the same
+   * reason: a field that will not show what it holds turns changing a model
+   * name into an act of finding your API key again, and "leave blank to keep
+   * the saved one" is a rule the reader has to be told and then remember.
+   */
+  revealAiKey(id: string): Promise<string>;
+  /**
+   * Stages a provider and its key with the host and hands back an opaque,
+   * single-use handle — the assistant's counterpart of `prepareConnection`.
+   */
+  prepareAiProvider(id: string): Promise<string>;
+  /** Conversations with the assistant, newest first. Listings carry no body. */
+  listChats(connectionId: string | null): Promise<SavedChat[]>;
+  readChat(id: string): Promise<SavedChat | undefined>;
+  saveChat(input: SaveChatInput): Promise<SavedChat>;
+  renameChat(id: string, title: string): Promise<void>;
+  removeChat(id: string): Promise<void>;
   getSetting<T>(key: string, fallback: T): Promise<T>;
   setSetting(key: string, value: unknown): Promise<void>;
 }

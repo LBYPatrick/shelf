@@ -11,8 +11,11 @@ import { defineConfig } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests/ui',
-  workers: 1,
-  fullyParallel: false,
+  // Each test launches its own app against its own user-data directory, so
+  // nothing here is shared and nothing has to be serialised. See the note in
+  // `playwright.config.ts`.
+  fullyParallel: true,
+  workers: process.env['CI'] ? 4 : '75%',
   timeout: 90_000,
   expect: {
     timeout: 10_000,

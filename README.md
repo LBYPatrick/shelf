@@ -66,6 +66,16 @@ is ever tied to a licence, because there is no licence.**
   bloat, and indexes the planner has never chosen. No engine keeps a history, so
   the app records its own readings and differences them, and says so when a
   window is wider than the history behind it.
+- **Ask** — describe what you want in plain language and get the SQL. Right-click
+  a table, a schema or a database and chat scoped to it: it reads your schema,
+  runs read-only queries to check its own answer, and draws the rows it got back.
+  Each query says whether it was working or the answer, so the counting it did on
+  the way folds out of your reading and the table you asked for does not. Any
+  statement can be lifted into a query tab, under the name the assistant gave it.
+  It never writes. Anything that would change data or shape comes back as a
+  statement for you to run yourself. Providers are Claude Code — which needs no
+  key if you already have it signed in — Anthropic, OpenAI, Gemini, or anything
+  speaking the OpenAI protocol, including Ollama on your own machine.
 - **Diagram** — a D3 force-directed ERD with draggable, position-remembering
   nodes and relationship highlighting.
 - **Change the shape** — add, rename and drop columns and indexes, with the
@@ -177,11 +187,29 @@ absence is asserted, not skipped.
 | `make build` | Type-check and build all processes |
 | `make package` | Build a distributable for the host platform |
 | `make test` | Unit tests |
+| `make storybook` | Browse every component in isolation |
+| `make storybook-check` | Open every story and fail on any that throws |
+| `make test-assistant` | Ask a real model end to end (needs Claude Code signed in) |
 | `make test-e2e` | End-to-end tests against the built app |
 | `make format` | Format and lint-fix |
 | `make clean` | Remove build artifacts |
 | `make uninstall` | Remove dependencies and artifacts |
 | `pnpm shots` | Screenshot the interface for design review |
+
+### Storybook
+
+Every component has a story beside it, and `make storybook` opens them. It is
+worth having for the states the app makes hard to reach on demand: a grid with
+two thousand rows, a schema tree with five thousand tables, a conversation that
+refused to run a `DELETE`, a card whose name is long enough to wrap. The
+appearance, density and language toolbars drive the real theme, so a story is
+checked in the same environment the app runs in rather than an approximation of
+it.
+
+`window.shelf` and the connection host are replaced with in-memory fakes that
+remember what is written to them, so a control that changes something is a story
+where the interface answers. `make storybook-check` opens all of them and fails
+on any that throws or renders nothing.
 
 ## Architecture
 
@@ -229,6 +257,10 @@ src/
 What exists is complete and tested. What is missing is missing rather than
 half-present:
 
+- **Tool use for the Claude Code provider.** It writes queries but cannot run
+  them to check itself, because the two tools are functions inside the app and
+  reaching them from a subprocess needs an MCP server. Every key-based provider
+  has the full loop.
 - **A create-table builder.** Columns and indexes can be added, altered and
   dropped from the structure tab, but a new table still needs `CREATE TABLE` in
   the query editor.

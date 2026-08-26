@@ -131,6 +131,21 @@ textarea,
 }
 
 /*
+ * Except its controls, which are not part of the document it contains.
+ *
+ * A transcript is selectable so an answer can be copied out of it, and the
+ * buttons inside one — a chevron, a copy, an open-in-a-tab — would otherwise
+ * inherit that and select their own labels on a double click, in a place where
+ * a double click on a *word* is how people select a word.
+ */
+.selectable button,
+.selectable [role='button'],
+.selectable summary {
+  user-select: none;
+  cursor: default;
+}
+
+/*
  * Focus is always visible and always clears 3:1 against its surroundings, but
  * only for keyboard users — a ring on every mouse click is noise.
  */

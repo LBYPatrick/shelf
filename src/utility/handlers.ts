@@ -1,5 +1,6 @@
 import { createClient } from '@drivers/registry';
 import type { HostChannel, HostContract } from '@shared/contract';
+import { probe, schemaFor, turn } from './assistant';
 import { runExport } from './export';
 import { cellToValue, readTable } from './import';
 import { discardSpool, readSpoolPage, spool, spoolCursor, spoolPath } from './spool';
@@ -244,6 +245,13 @@ export const handlers: Registry = {
 
     return { inserted };
   },
+
+  'ai/schema': (session, { connectionId, scope, budget }, signal) =>
+    schemaFor(session, connectionId, scope, budget, signal),
+
+  'ai/turn': (session, payload, signal) => turn(session, payload, signal),
+
+  'ai/probe': (session, { handle }, signal) => probe(session, handle, signal),
 
   'txn/begin': (session, { connectionId, tabId }) =>
     session.require(connectionId).beginTransaction(tabId),

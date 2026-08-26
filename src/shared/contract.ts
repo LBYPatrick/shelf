@@ -22,6 +22,8 @@ import type {
   StatementReport,
   Trigger,
 } from '../drivers/types';
+import type { AiDeltaEvent, AiItemEvent, AiMessage, AiReplaceEvent, AiTurn } from './ai';
+import type { SchemaDocument, SchemaScope } from './schemaDoc';
 
 /**
  * Every channel the connection host answers, with the shape of what goes in and
@@ -182,6 +184,51 @@ export interface HostContract {
   /** Drops a spool from disk; a job whose rows are gone is history, not a result. */
   'job/discard': { payload: { path: string }; result: void };
 
+  /**
+   * The database as a document, for the assistant to read.
+   *
+   * Gathered in the host because that is where the connection is, and because
+   * a schema with six hundred tables is eighteen hundred round trips — work
+   * that has no business queueing behind the interface's own.
+   */
+  'ai/schema': {
+    payload: { connectionId: string; scope: SchemaScope; budget?: number };
+    result: SchemaDocument;
+  };
+
+  /**
+   * One turn of a conversation.
+   *
+   * The request stays open for the whole turn and resolves with everything it
+   * produced; what arrives in between comes as `ai/*` events. That is what
+   * makes cancellation work without a second channel — the existing RPC cancel
+   * aborts the request, and the abort reaches the provider's socket and the
+   * database cursor alike.
+   */
+  'ai/turn': {
+    payload: {
+      connectionId: string;
+      handle: string;
+      turnId: string;
+      scope: SchemaScope;
+      history: readonly AiMessage[];
+      question: string;
+      /**
+       * The interface's language, as a BCP-47 tag, so the reply can default to
+       * it. The host has no way to know this: it is a renderer setting and the
+       * OS locale of a utility process is not the one the reader chose.
+       */
+      locale?: string;
+    };
+    result: AiTurn;
+  };
+
+  /** Does this provider answer, with these credentials, for this model. */
+  'ai/probe': {
+    payload: { handle: string };
+    result: { ok: true } | { ok: false; message: string };
+  };
+
   'txn/begin': { payload: { connectionId: string; tabId: string }; result: void };
   'txn/commit': { payload: { connectionId: string; tabId: string }; result: void };
   'txn/rollback': { payload: { connectionId: string; tabId: string }; result: void };
@@ -195,6 +242,9 @@ export type HostResult<K extends HostChannel> = HostContract[K]['result'];
 export interface HostEvents {
   'connection/lost': { connectionId: string; message: string };
   'export/progress': { exportId: string; rowsWritten: number; done: boolean };
+  'ai/item': AiItemEvent;
+  'ai/delta': AiDeltaEvent;
+  'ai/replace': AiReplaceEvent;
 }
 
 export type HostEventName = keyof HostEvents;

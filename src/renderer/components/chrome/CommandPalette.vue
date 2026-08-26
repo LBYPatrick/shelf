@@ -56,6 +56,21 @@ const navigation = computed<Command[]>(() => [
     run: () => tabs.openQuery(),
   },
   {
+    /*
+     * The assistant lost its button beside the new-tab plus, which was one
+     * glyph too many in a bar that is mostly window chrome. It keeps a
+     * shortcut, a place in every table's menu, and this — a palette row is
+     * where an action with no permanent home is supposed to live.
+     */
+    id: 'nav.new-chat',
+    section: 'navigation',
+    icon: 'assistant',
+    title: t('palette.newChat'),
+    slash: '/chat new',
+    keywords: 'assistant ai ask question sql',
+    run: () => tabs.openChat(),
+  },
+  {
     id: 'nav.diagram',
     section: 'navigation',
     icon: 'diagram',

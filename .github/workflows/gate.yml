@@ -1,0 +1,46 @@
+name: gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    # macOS, and not for the platform's sake: the visual snapshots are pixels,
+    # and pixels are a function of the font rasteriser. Baselines taken on a Mac
+    # and compared on Linux differ everywhere there is text, which is a suite
+    # that fails on every run and is therefore a suite nobody reads.
+    runs-on: macos-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # `make install` rather than `pnpm install`: better-sqlite3 is compiled
+      # against Electron's ABI, and a plain install leaves it built for Node —
+      # which fails at the first query rather than at install time.
+      - run: make install
+
+      - run: make gate
+
+      # The traces are the only way to read a failure that did not reproduce
+      # locally, and Playwright writes them only for the tests that failed.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: traces
+          path: test-results/
+          retention-days: 7

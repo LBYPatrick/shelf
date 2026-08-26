@@ -410,8 +410,9 @@ defineExpose({ toSvg, toPng });
 .plan {
   position: relative;
   min-height: 0;
-  overflow: hidden;
   padding: var(--gap-loose);
+  /* Not clipped, for the reason given on `.erd`: the only thing it cut was the
+     zoom control's shadow. The `<svg>` clips its own viewport. */
 }
 
 .plan__svg {

@@ -466,3 +466,88 @@
   font-size: 0.625rem;
   font-weight: 600;
 }
+
+/* ---------------------------------------------------------------------------
+ * A list that drops out of a field.
+ *
+ * One definition, because there are two controls that open one — the select,
+ * and the text input that suggests — and a list that looks like a menu in one
+ * place and like a browser's own autocomplete in the other is how an interface
+ * starts reading as assembled rather than designed. That is not hypothetical:
+ * the model field on the provider editor was a `<datalist>`, which is drawn by
+ * the engine and cannot be styled at all, so it opened a white box with a black
+ * triangle and a bold-matched line in it over a sheet built from these tokens.
+ *
+ * It lives here rather than in a component because the list is teleported to
+ * the body, out of reach of anything scoped.
+ * ------------------------------------------------------------------------- */
+
+.menulist {
+  position: fixed;
+  z-index: 200;
+  margin-block: var(--gap-tight);
+  max-height: 15rem;
+  padding: var(--gap-tight);
+  overflow-y: auto;
+  border-radius: var(--radius-box);
+  /* Scales from the control rather than from its own centre, so the
+     relationship between the two is visible in the movement. */
+  transform-origin: top center;
+  animation: menulist-in 160ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Opening upwards, it grows from the edge nearest the control. */
+.menulist--above {
+  transform-origin: bottom center;
+}
+
+@keyframes menulist-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-0.25rem);
+  }
+}
+
+.menulist__option {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-tight);
+  min-height: var(--hit-min);
+  padding-inline: var(--gap-tight) var(--gap-loose);
+  border-radius: calc(var(--radius-box) - 0.25rem);
+  font-size: 0.8125rem;
+  cursor: default;
+}
+
+/*
+ * The highlight follows the keyboard and the pointer as one thing: two separate
+ * highlights in one list is how you lose track of what Enter will do.
+ */
+.menulist__option--active {
+  background-color: var(--fill-3);
+}
+
+.menulist__tick {
+  flex: 0 0 auto;
+  opacity: 0;
+  color: var(--color-primary-text, var(--color-primary));
+}
+
+.menulist__tick--on {
+  opacity: 1;
+}
+
+/* A line of prose in the list, not a choice: "nothing matched", or a note about
+   what the list is. Never highlighted, because it cannot be picked. */
+.menulist__note {
+  padding: var(--gap-tight) var(--gap-loose);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menulist {
+    animation: none;
+  }
+}

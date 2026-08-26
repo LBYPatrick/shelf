@@ -22,9 +22,13 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useTabs, type Tab } from '../../stores/tabs';
 import { useDrag } from '../../composables/useDrag';
+import { useTranslation } from 'i18next-vue';
+import { shortcutLabel } from '../../lib/keybindings';
+import { vTip } from '../../lib/hoverTip';
 import AppIcon from '../ui/AppIcon.vue';
 
 const tabs = useTabs();
+const { t } = useTranslation();
 
 /**
  * Which tab the pointer went down on, and where it has carried it.
@@ -43,6 +47,33 @@ const listEl = ref<HTMLElement>();
 
 /** Measured on grab so a density change never desyncs the reorder maths. */
 let tabWidth = 160;
+
+/**
+ * How many places the held tab has already been moved this drag.
+ *
+ * The one number the reorder cannot be done without, and it was missing. The
+ * drag reports the *total* distance from where the pointer went down, so the
+ * number of places to move is `round(total / width)` — but the list had already
+ * been rearranged by the previous frame, so that same total was applied again
+ * against the tab's *new* index, and again the frame after. One tab-width of
+ * travel moved a tab two places, two widths moved it four, and a tab dragged
+ * across a strip of four ran off the end and stopped.
+ *
+ * Keeping the count is what makes the two agree: what the pointer has asked for
+ * is a function of the total, what has been done is this, and the difference is
+ * what to do now.
+ */
+let shifted = 0;
+
+/**
+ * Where the tab was picked up from, which is what the travel is measured
+ * against.
+ *
+ * Not `heldIndex`: that moves as the list rearranges, so bounds derived from it
+ * shrink under the drag and clamp it after a single place — the tab stopped
+ * dead one slot from where it started while the pointer carried on.
+ */
+let grabIndex = 0;
 
 /**
  * Where the selection sits, in the list's own coordinates.
@@ -100,21 +131,49 @@ const markerStyle = computed(() => {
 const { start, dragging } = useDrag({
   axis: 'x',
   getValue: () => 0,
+  /*
+   * The pointer is captured on the strip, not on the tab.
+   *
+   * Applying a reorder moves the dragged tab in the DOM, and a node that leaves
+   * the document — even for the instant it takes to reinsert it — loses its
+   * capture. So the first reorder landed and the gesture died there: a tab
+   * could be carried exactly one place, and the pointer went on travelling with
+   * nothing following it. The strip does not move.
+   */
+  surface: () => stripEl.value,
+  /*
+   * The ends of the strip resist rather than stop.
+   *
+   * The travel a tab has is the distance to the first slot and the distance to
+   * the last, both measured from where it was picked up. Past those there is
+   * nowhere for it to go — and a tab that simply freezes under a moving pointer
+   * reads as the drag having been dropped, where one that follows with
+   * increasing reluctance reads as the end of the row, which is what it is.
+   */
+  bounds: () => ({
+    min: -grabIndex * tabWidth,
+    max: (tabs.tabs.length - 1 - grabIndex) * tabWidth,
+  }),
   onDrag: ({ value }) => {
-    dragOffset.value = value;
+    if (heldIndex.value !== null) {
+      // What the pointer is asking for, against what has already been done.
+      const wanted = Math.round(value / tabWidth);
+      const target = heldIndex.value + (wanted - shifted);
 
-    if (heldIndex.value === null) return;
-    const shift = Math.round(value / tabWidth);
-    const target = heldIndex.value + shift;
-    if (shift === 0 || target < 0 || target >= tabs.tabs.length) return;
+      if (wanted !== shifted && target >= 0 && target < tabs.tabs.length) {
+        tabs.move(heldIndex.value, target);
+        heldIndex.value = target;
+        shifted = wanted;
+      }
+    }
 
-    tabs.move(heldIndex.value, target);
-    heldIndex.value = target;
-    // Re-anchor so the tab stays under the pointer after the list shifted.
-    dragOffset.value = value - shift * tabWidth;
+    // Re-anchored by however far the list has moved under it, so the tab stays
+    // under the pointer rather than running away from it a width at a time.
+    dragOffset.value = value - shifted * tabWidth;
   },
   onRelease: () => {
     heldIndex.value = null;
+    shifted = 0;
     dragOffset.value = 0;
     void nextTick(measure);
   },
@@ -126,6 +185,8 @@ function beginDrag(event: PointerEvent, index: number): void {
   const element = (event.currentTarget as HTMLElement).getBoundingClientRect();
   tabWidth = element.width || tabWidth;
   heldIndex.value = index;
+  grabIndex = index;
+  shifted = 0;
   dragOffset.value = 0;
   start(event);
 }
@@ -341,10 +402,17 @@ watch(
   { flush: 'post' }
 );
 
+/*
+ * Every kind, exhaustively. Typed as a total record so that adding a tab kind
+ * and forgetting its glyph is a compile error rather than a tab with a blank
+ * square where its icon goes — which is how `job` shipped without one.
+ */
 const KIND_ICON: Record<Tab['kind'], string> = {
   table: 'table',
   query: 'query',
   erd: 'diagram',
+  job: 'jobs',
+  chat: 'assistant',
 };
 </script>
 
@@ -459,8 +527,9 @@ const KIND_ICON: Record<Tab['kind'], string> = {
     </div>
 
     <button
+      v-tip="`${t('workspace.newQuery')} — ${shortcutLabel('tab.new')}`"
       class="strip__new no-drag"
-      aria-label="New query tab"
+      :aria-label="t('workspace.newQueryTab')"
       @click="tabs.openQuery()"
     >
       <AppIcon

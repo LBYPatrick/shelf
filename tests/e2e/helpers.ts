@@ -1,4 +1,47 @@
+import { mkdir, rm, stat } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { expect, type Page } from '@playwright/test';
+
+/**
+ * Holds the system clipboard for the length of one copy-and-read.
+ *
+ * Everything else about a test in this suite is its own — its app, its window,
+ * its user-data directory — and the clipboard is the one thing that is not.
+ * There is exactly one of it per machine, and six tests here copy something and
+ * read it straight back, so running the suite in parallel had them overwriting
+ * each other's copy in the window between the two. It failed about one run in
+ * three, always on a different test, which is the shape of a flake that gets
+ * re-run rather than fixed.
+ *
+ * A directory is the lock because `mkdir` is atomic on every platform we run
+ * on. A crashed test would otherwise leave one behind forever, so a lock older
+ * than the longest a copy could take is taken to be abandoned rather than held.
+ */
+const CLIPBOARD_LOCK = join(tmpdir(), 'shelf-clipboard.lock');
+const STALE_MS = 30_000;
+
+export async function withClipboard<T>(run: () => Promise<T>): Promise<T> {
+  for (;;) {
+    try {
+      await mkdir(CLIPBOARD_LOCK);
+      break;
+    } catch {
+      const held = await stat(CLIPBOARD_LOCK).catch(() => null);
+      if (held && Date.now() - held.ctimeMs > STALE_MS) {
+        await rm(CLIPBOARD_LOCK, { recursive: true, force: true });
+        continue;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 40));
+    }
+  }
+
+  try {
+    return await run();
+  } finally {
+    await rm(CLIPBOARD_LOCK, { recursive: true, force: true });
+  }
+}
 
 /**
  * Creating a connection now happens in a sheet, so every test that needs an

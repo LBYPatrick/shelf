@@ -5,8 +5,10 @@ import {
   type AppDbApi,
   type HistoryInput,
   type PrepareConnectionRequest,
+  type SaveChatInput,
   type SaveQueryInput,
 } from '@shared/appdb';
+import type { AiProviderInput } from '@shared/ai';
 import type { SaveConnectionInput } from '@shared/connections';
 import {
   DIALOG_CHANNELS,
@@ -85,6 +87,19 @@ const appDb: AppDbApi = {
     ipcRenderer.invoke(APPDB_CHANNELS.listSavedQueries, connectionId),
   saveQuery: (input: SaveQueryInput) => ipcRenderer.invoke(APPDB_CHANNELS.saveQuery, input),
   removeSavedQuery: (id: string) => ipcRenderer.invoke(APPDB_CHANNELS.removeSavedQuery, id),
+  listAiProviders: () => ipcRenderer.invoke(APPDB_CHANNELS.listAiProviders),
+  saveAiProvider: (input: AiProviderInput) =>
+    ipcRenderer.invoke(APPDB_CHANNELS.saveAiProvider, input),
+  removeAiProvider: (id: string) => ipcRenderer.invoke(APPDB_CHANNELS.removeAiProvider, id),
+  revealAiKey: (id: string) => ipcRenderer.invoke(APPDB_CHANNELS.revealAiKey, id),
+  prepareAiProvider: (id: string) => ipcRenderer.invoke(APPDB_CHANNELS.prepareAiProvider, id),
+  listChats: (connectionId: string | null) =>
+    ipcRenderer.invoke(APPDB_CHANNELS.listChats, connectionId),
+  readChat: (id: string) => ipcRenderer.invoke(APPDB_CHANNELS.readChat, id),
+  saveChat: (input: SaveChatInput) => ipcRenderer.invoke(APPDB_CHANNELS.saveChat, input),
+  renameChat: (id: string, title: string) =>
+    ipcRenderer.invoke(APPDB_CHANNELS.renameChat, id, title),
+  removeChat: (id: string) => ipcRenderer.invoke(APPDB_CHANNELS.removeChat, id),
   getSetting: (key: string, fallback: unknown) =>
     ipcRenderer.invoke(APPDB_CHANNELS.getSetting, key, fallback),
   setSetting: (key: string, value: unknown) =>

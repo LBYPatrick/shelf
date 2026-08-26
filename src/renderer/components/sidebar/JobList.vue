@@ -20,21 +20,21 @@
  */
 import { computed, nextTick, onScopeDispose, ref, watch } from 'vue';
 import { useTranslation } from 'i18next-vue';
-import {
-  jobDuration,
-  narrowedBy,
-  tracksTheClock,
-  type StatusChoice,
-  type TookChoice,
-  type WhenChoice,
-} from '@shared/jobFilter';
+import { jobDuration, narrowedBy, tracksTheClock } from '@shared/jobFilter';
+import { explainStatement } from '@shared/explain';
+import { slugify } from '@shared/fileNames';
 import { useJobs, type Job } from '../../stores/jobs';
+import { useConnections } from '../../stores/connections';
 import { useTabs } from '../../stores/tabs';
 import { useToasts } from '../../stores/toasts';
+import { host } from '../../lib/host';
 import AppIcon from '../ui/AppIcon.vue';
-import SelectMenu from '../ui/SelectMenu.vue';
+import ContextMenu, { type MenuItem } from '../ui/ContextMenu.vue';
+import ExportSheet from '../grid/ExportSheet.vue';
+import FilterChips from './FilterChips.vue';
 
 const jobs = useJobs();
+const connections = useConnections();
 const tabs = useTabs();
 const toasts = useToasts();
 const { t } = useTranslation();
@@ -116,32 +116,88 @@ async function discard(job: Job): Promise<void> {
   toasts.show({ tone: 'info', message: t('jobs.discarded', { name: job.name }) });
 }
 
-/*
- * The choices, in the order the questions get asked: what happened, then when,
- * then how long. Computed rather than constant because the labels are
- * translated, and the language can change under an open panel.
+/* ------------------------------------------------------------- the menu */
+
+/**
+ * Right-click, for the things a card two lines tall has no room to offer.
+ *
+ * The card carried one button and one action. A cross in the corner is the
+ * right shape for the destructive one — it is the action you want without
+ * hunting — but "export what this returned" and "why was this slow" have
+ * nowhere to live up there, and a job that ran for four minutes is exactly the
+ * one worth asking both about.
  */
-const statusOptions = computed<{ value: StatusChoice; label: string }[]>(() => [
-  { value: 'any', label: t('jobs.anyStatus') },
-  { value: 'active', label: t('jobs.statusActive') },
-  { value: 'done', label: t('jobs.statusDone') },
-  { value: 'failed', label: t('jobs.statusFailed') },
-]);
+const menuOpen = ref(false);
+const menuAt = ref({ x: 0, y: 0 });
+const menuOn = ref<Job | null>(null);
 
-const whenOptions = computed<{ value: WhenChoice; label: string }[]>(() => [
-  { value: 'any', label: t('jobs.anyTime') },
-  { value: 'hour', label: t('jobs.whenHour') },
-  { value: 'today', label: t('jobs.whenToday') },
-  { value: 'week', label: t('jobs.whenWeek') },
-]);
+const exportOf = ref<Job | null>(null);
+const exportOpen = ref(false);
 
-const tookOptions = computed<{ value: TookChoice; label: string }[]>(() => [
-  { value: 'any', label: t('jobs.anyLength') },
-  { value: 'instant', label: t('jobs.tookInstant') },
-  { value: 'seconds', label: t('jobs.tookSeconds') },
-  { value: 'minute', label: t('jobs.tookMinute') },
-  { value: 'long', label: t('jobs.tookLong') },
-]);
+const menuItems = computed<MenuItem[]>(() => {
+  const job = menuOn.value;
+  const finished = job?.status === 'done' && job.path !== undefined;
+  return [
+    { id: 'open', label: t('jobs.openRows'), icon: 'table', disabled: !finished },
+    {
+      id: 'export',
+      label: t('menu.exportData'),
+      icon: 'download',
+      disabled: !finished,
+      startsGroup: true,
+    },
+    { id: 'explain', label: t('jobs.explain'), icon: 'chart' },
+    { id: 'discard', label: t('jobs.discard'), icon: 'trash', startsGroup: true },
+  ];
+});
+
+function openMenu(event: MouseEvent, job: Job): void {
+  event.preventDefault();
+  forgetPendingOpen();
+  menuOn.value = job;
+  menuAt.value = { x: event.clientX, y: event.clientY };
+  menuOpen.value = true;
+}
+
+function onChoose(id: string): void {
+  const job = menuOn.value;
+  if (!job) return;
+
+  if (id === 'open') open(job);
+  else if (id === 'discard') void discard(job);
+  else if (id === 'export') {
+    exportOf.value = job;
+    exportOpen.value = true;
+  } else if (id === 'explain') {
+    /*
+     * Opened as a statement rather than run here. A job outlives the connection
+     * it ran on — the list is a log — so "explain this" cannot assume there is
+     * a server to ask. Putting the statement in an editor works whether or not
+     * there is, and running it is then the same gesture as running anything.
+     */
+    const engine = connections.active?.engine ?? 'postgres';
+    const tab = tabs.openQuery(explainStatement(engine, job.sql));
+    tabs.rename(tab.id, t('jobs.explainOf', { name: job.name }));
+  }
+}
+
+/**
+ * The rows a job spooled, written to a file.
+ *
+ * Straight from the spool: nothing is re-run and no row enters this process,
+ * which is the whole reason it was dispatched rather than run.
+ */
+async function writeJobToFile(
+  path: string,
+  format: 'csv' | 'json' | 'jsonl' | 'sql'
+): Promise<void> {
+  const job = exportOf.value;
+  if (!job?.path) return;
+  await host.call('job/export', { path: job.path, target: path, format });
+}
+
+/** The sheet reads rows from the file, not from here. */
+const NO_ROWS: readonly Record<string, never>[] = [];
 
 /**
  * Twice a second while something is running, and every quarter minute while a
@@ -240,111 +296,40 @@ function startedAt(job: Job): string {
   midnight.setHours(0, 0, 0, 0);
   return (job.startedAt >= midnight.getTime() ? clock : dayAndClock).format(at);
 }
-
-/*
- * The drawer measures itself, the same way the disclosure does: a height it can
- * animate from, then back to `auto` so it grows if a select opens inside it.
- */
-function drawerEnter(element: Element): void {
-  const el = element as HTMLElement;
-  el.style.height = '0px';
-  void el.offsetHeight;
-  el.style.height = `${el.scrollHeight}px`;
-}
-
-function drawerOpened(element: Element): void {
-  (element as HTMLElement).style.height = 'auto';
-}
-
-function drawerLeave(element: Element): void {
-  const el = element as HTMLElement;
-  el.style.height = `${el.scrollHeight}px`;
-  void el.offsetHeight;
-  el.style.height = '0px';
-}
 </script>
 
 <template>
   <div class="joblist">
     <!--
-      The questions, folded away.
-      ───────────────────────────
-      Four selects permanently above a sidebar list would cost more room than
-      the list they narrow, for choices that are left alone most of the time.
-      They open on the control that carries the count of them, so the number on
-      screen and the room they take arrive together.
+      The conditions, in the open.
+      ────────────────────────────
+      They were four selects behind a fold. Four controls saying "any" is four
+      controls' worth of chrome reporting that nothing is happening, and folding
+      them away to fix that hides the one thing worth seeing — what the list is
+      currently not showing you.
     -->
-    <Transition
-      name="drawer"
-      @enter="drawerEnter"
-      @after-enter="drawerOpened"
-      @leave="drawerLeave"
-    >
-      <div
-        v-if="jobs.filtersOpen"
-        class="joblist__filters"
-      >
-        <div class="joblist__choices">
-          <div class="jobfilter">
-            <span class="jobfilter__label type-label">{{ $t('jobs.filterStatus') }}</span>
-            <SelectMenu
-              v-model="jobs.filter.status"
-              class="jobfilter__menu"
-              :options="statusOptions"
-              :aria-label="$t('jobs.filterStatus')"
-            />
-          </div>
-          <div class="jobfilter">
-            <span class="jobfilter__label type-label">{{ $t('jobs.filterStarted') }}</span>
-            <SelectMenu
-              v-model="jobs.filter.started"
-              class="jobfilter__menu"
-              :options="whenOptions"
-              :aria-label="$t('jobs.filterStarted')"
-            />
-          </div>
-          <div class="jobfilter">
-            <span class="jobfilter__label type-label">{{ $t('jobs.filterFinished') }}</span>
-            <SelectMenu
-              v-model="jobs.filter.finished"
-              class="jobfilter__menu"
-              :options="whenOptions"
-              :aria-label="$t('jobs.filterFinished')"
-            />
-          </div>
-          <div class="jobfilter">
-            <span class="jobfilter__label type-label">{{ $t('jobs.filterTook') }}</span>
-            <SelectMenu
-              v-model="jobs.filter.took"
-              class="jobfilter__menu"
-              :options="tookOptions"
-              :aria-label="$t('jobs.filterTook')"
-            />
-          </div>
-        </div>
+    <FilterChips v-model="jobs.filter" />
 
-        <!--
+    <!--
           The count, and the way back. A list that is missing rows says so on
           the same surface that is missing them — and the way to see all of them
           again is next to the sentence explaining why you cannot.
         -->
-        <div
-          v-if="narrowed"
-          class="joblist__tally"
-        >
-          <span class="type-label">{{
-            $t('jobs.matchCount', { shown: shown.length, total: jobs.ordered.length })
-          }}</span>
-          <button
-            type="button"
-            class="joblist__clear focus-fill"
-            @click="jobs.clearFilter()"
-          >
-            {{ $t('action.clear') }}
-          </button>
-        </div>
-      </div>
-    </Transition>
+    <div
+      v-if="narrowed"
+      class="joblist__tally"
+    >
+      <span class="type-label">{{
+        $t('jobs.matchCount', { shown: shown.length, total: jobs.ordered.length })
+      }}</span>
+      <button
+        type="button"
+        class="joblist__clear focus-fill"
+        @click="jobs.clearFilter()"
+      >
+        {{ $t('action.clear') }}
+      </button>
+    </div>
 
     <div class="joblist__scroll">
       <p
@@ -373,6 +358,7 @@ function drawerLeave(element: Element): void {
         v-for="job in shown"
         :key="job.id"
         class="job"
+        @contextmenu="openMenu($event, job)"
       >
         <!--
           Not a `<button>`, because the name inside it has to hear a double-click
@@ -518,6 +504,20 @@ function drawerLeave(element: Element): void {
           }}</span>
         </div>
 
+        <!--
+          An overlay, not a column.
+          ─────────────────────────
+          It used to be a flex sibling whose width animated open on hover, which
+          took that width out of the face beside it — and the name is clamped to
+          two lines, so a card whose title fitted on one line at rest wrapped to
+          two the moment the pointer touched it. The card changed height under
+          the hand that was reaching for it.
+
+          Out of the flow it cannot do that. The room it needs is reserved on
+          the face permanently instead: a constant, and a constant is something
+          the eye stops seeing, where a card that resizes is something it cannot
+          stop seeing.
+        -->
         <span class="job__tools">
           <button
             v-tip="$t('jobs.discard')"
@@ -534,6 +534,22 @@ function drawerLeave(element: Element): void {
         </span>
       </div>
     </div>
+
+    <ContextMenu
+      v-model="menuOpen"
+      :items="menuItems"
+      :at="menuAt"
+      @choose="onChoose"
+    />
+
+    <ExportSheet
+      v-if="exportOf"
+      v-model="exportOpen"
+      :fields="exportOf.fields"
+      :rows="NO_ROWS"
+      :name="slugify(exportOf.name)"
+      :write-file="writeJobToFile"
+    />
   </div>
 </template>
 
@@ -554,58 +570,6 @@ function drawerLeave(element: Element): void {
   min-height: 0;
   padding: var(--gap-tight);
   overflow-y: auto;
-}
-
-/*
- * The drawer is animated by height, which is the one property an accordion
- * cannot avoid: there is no transform that makes the rows below it move up.
- * It is a handful of rows in a sidebar, opened by hand, and the curve
- * decelerates so the room arrives rather than snapping open.
- */
-.joblist__filters {
-  flex: none;
-  overflow: hidden;
-}
-
-.drawer-enter-active,
-.drawer-leave-active {
-  transition: height 220ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .drawer-enter-active,
-  .drawer-leave-active {
-    transition: none;
-  }
-}
-
-.joblist__choices {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap-tight);
-  padding: var(--gap-tight) var(--gap-tight) var(--gap) var(--gap);
-}
-
-/*
- * Label and control on one line, with the labels in a column of their own: four
- * selects each captioned above themselves would be eight rows of chrome over a
- * list, and the words are short enough to stand beside what they name.
- */
-.jobfilter {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-tight);
-  min-width: 0;
-}
-
-.jobfilter__label {
-  flex: 0 0 4.25rem;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
-}
-
-.jobfilter__menu {
-  flex: 1;
-  min-width: 0;
 }
 
 .joblist__tally {
@@ -678,7 +642,11 @@ function drawerLeave(element: Element): void {
   align-items: flex-start;
   gap: var(--gap-hair);
   min-width: 0;
-  padding: var(--gap) var(--gap-tight) var(--gap) var(--gap);
+  /*
+   * The trailing room is the overlay's, always. Reserved rather than yielded on
+   * hover: see the note on `.job__tools`.
+   */
+  padding: var(--gap) calc(var(--hit-min) + var(--gap)) var(--gap) var(--gap);
   border-radius: var(--control-radius);
   text-align: start;
 }
@@ -905,37 +873,27 @@ function drawerLeave(element: Element): void {
  * from the edge they will leave by.
  */
 .job__tools {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
   display: flex;
-  flex: 0 0 auto;
   align-items: flex-start;
   gap: var(--gap-hair);
-  width: 0;
   /*
    * The same inset from the top as from the right. Pulling the buttons up to
    * sit optically on the first line of text put them closer to one edge of the
    * card than the other, and a corner with two different margins is the thing
    * the eye notices before anything the corner contains.
    */
-  padding-block-start: var(--gap);
-  padding-inline-end: 0;
-  overflow: hidden;
+  padding: var(--gap) var(--gap) 0 0;
   opacity: 0;
-  transition:
-    width 200ms cubic-bezier(0.32, 0.72, 0, 1),
-    padding-inline-end 200ms cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 140ms var(--ease-out);
+  /* Only opacity and the glyph's slide: neither is laid out, so neither can
+     move anything else on the card. */
+  transition: opacity 140ms var(--ease-out);
 }
 
 .job:hover .job__tools,
 .job:focus-within .job__tools {
-  /*
-   * One target and the inset — and the inset has to be counted, because the box
-   * is border-box: a padding left out of this number is a padding taken out of
-   * the button, which is what put it flat against the card's edge with its
-   * hover fill touching the border.
-   */
-  width: calc(var(--hit-min) + var(--gap));
-  padding-inline-end: var(--gap);
   opacity: 1;
 }
 

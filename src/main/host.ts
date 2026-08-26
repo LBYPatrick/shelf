@@ -7,6 +7,7 @@ import {
   type UtilityProcess,
 } from 'electron';
 import type { ConnectionConfig } from '@drivers/types';
+import type { AiProvider } from '@shared/ai';
 
 /**
  * Supervises the connection host process.
@@ -78,6 +79,27 @@ export class ConnectionHost {
   stage(sessionId: string, handle: string, config: ConnectionConfig): void {
     this.start();
     this.process?.postMessage({ type: 'session:stage', sessionId, handle, config });
+  }
+
+  /**
+   * The same arrangement for the assistant's key. It reaches the host without
+   * the window ever holding it, and the handle it is filed under is consumed on
+   * first use.
+   */
+  stageProvider(
+    sessionId: string,
+    handle: string,
+    provider: AiProvider,
+    apiKey: string | undefined
+  ): void {
+    this.start();
+    this.process?.postMessage({
+      type: 'session:stageProvider',
+      sessionId,
+      handle,
+      provider,
+      apiKey,
+    });
   }
 
   private scheduleRestart(): void {

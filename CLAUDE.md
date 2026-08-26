@@ -12,6 +12,8 @@ that is a bug.
 ## Commands
 
 ```bash
+make             # the gate — lint, unit, build, ui, e2e. ~40s. What CI runs.
+make gate-full   # the gate plus the storybook sweep (~2½ min)
 make install     # install everything, rebuild native modules
 make dev         # hot-reload development
 make preview     # run the built app, no dev server and no hot reload
@@ -24,8 +26,21 @@ make format      # prettier + eslint --fix
 pnpm shots       # screenshot the interface for design review
 ```
 
-Run `make format`, `make build`, `make test`, `make test-e2e` and `make ui`
-before considering a change finished.
+Run `make format` and then `make` before considering a change finished.
+
+**The gate runs in about forty seconds, and that is the point.** It used to take
+six minutes, which is long enough that it stopped being run before a change and
+started being run after one — so it found things a day late, in a diff that had
+moved on. Almost all of that was two Playwright configs pinned to one worker
+with `fullyParallel: false`, for a reason that had stopped being true: the
+fixtures hand every test its own `mkdtemp` user-data directory, so there is
+nothing left to serialise. The rest was a single end-to-end test whose last line
+clicked a control that does not exist on SQLite and swallowed the failure, which
+cost thirty seconds a run and asserted nothing.
+
+Only the storybook sweep is outside the gate, and only because building the
+static storybook is two minutes on its own. Run `make gate-full` when a
+component's props or a mock's shape has changed.
 
 ## Architecture rules
 
@@ -97,6 +112,16 @@ before considering a change finished.
   comes from a fill a clear step away from the columns behind them, a shadow,
   and the light-catching edge. The window is a material; the things in front of
   it are objects.
+- **The anchor is one number, and moving it moves everything by the same
+  amount.** The dial's middle is where every material paints exactly the alpha
+  it was designed at, and those alphas were set too high — at the middle of a
+  slider whose whole subject is translucency, the window read as painted rather
+  than as glass. They came down by sixteen points, all of them, which is the
+  same arithmetic the dial itself does below its anchor: the distances that
+  carry the depth are untouched and only the whole window sits further back.
+  `CONTENT_ALPHA` in `theme.ts` is the pane's designed value and has to move
+  with it, or the offset stops landing the pane on the dial's own number at the
+  floor.
 - **The opacity dial subtracts; it does not scale.** Scaling every alpha toward
   zero closes the *gaps* between the surfaces as it thins them, so at the bottom
   of the range the working pane and the columns beside it converge on one colour
@@ -113,6 +138,17 @@ before considering a change finished.
   the row is the same height and shape; *loudness* carries the difference —
   quiet by default, a tonal surface for a mode that is on, and a filled accent
   for the one action that commits, never more than one per bar.
+- **No control hands its popup to the engine to draw.** A `<select>` and a
+  `<datalist>` look finished until they are opened, at which point the OS draws
+  the list with its own focus ring, its own selection colour and its own idea of
+  where the list goes. `appearance: none` restyles the closed control and leaves
+  the open one native, which is worse: the app looks finished right up to the
+  click. `SelectMenu` replaces the first and `SuggestInput` the second — the
+  latter for a field that must stay typeable, like a model name we have never
+  heard of on someone's local server — and both open the *same* list, from one
+  `.menulist` definition in `controls.css` and one `useAnchoredList`. The list
+  is teleported to the body, because an absolutely positioned child is cut by
+  every ancestor that clips, and in a settings row two of them do.
 - **Never take a framework component's class name — or a Tailwind utility's.**
   daisyUI ships `.select`, `.input`, `.btn`, `.card`; a component of ours
   wearing one inherits its border, height and width clamp on top of whatever we
@@ -130,6 +166,26 @@ before considering a change finished.
   much fits on screen, it never shrinks a target below the floor. The grid is
   the single exception, documented where it is declared. iOS's 44pt was tried
   and is the wrong number for a pointer-driven app this dense.
+- **How wide the columns are is declared once.** Four things have to agree on
+  it: the sidebar is that width, the notch sits at it, the working pane begins
+  after it, and the tab strip starts where the pane starts. Each used to work it
+  out for itself — three inline `calc(var(--rail-w) + Npx)` expressions and a
+  width — which is three chances for one to be left behind, and the tab strip
+  was the one that had been: it began after the sidebar toggle, at an offset
+  matching nothing else in the window. `--sidebar-w` is the only part that comes
+  from the interface, because it is the only part anyone can drag; `--columns-w`
+  is derived from it, and every dependent property animates from the one source
+  on the one curve.
+- **A control belongs in the column it governs.** The sidebar's switch sat on
+  the top bar beside the traffic lights, where it was the only control in that
+  row acting on something *below* the row — and it pushed the tab strip along to
+  that offset that lined up with nothing. It is at the foot of the rail now,
+  under the five things that column can show and above the cog, which stays last
+  because everything else there is about the database and settings is about the
+  app. Its pressed state brightens the glyph and nothing more: the rail's tonal
+  tile means "this is the panel you are looking at", and a sixth lit tile would
+  say the sidebar is a destination beside the five rather than the switch that
+  shows them.
 - **One bar spans the window, and the window controls sit on it.** The tab strip
   is a region of `.topbar`, not a band inside the content pane. This is what
   makes the controls safe: they are wider than the rail and overhang the
@@ -147,8 +203,32 @@ before considering a change finished.
 - **The rail and the sidebar are one surface.** They are near-neighbours in tone
   by design; matching alphas does not achieve it, because two surfaces sharing a
   tint but differing in opacity diverge by an amount that depends on what is
-  behind the window. The depth comes from glass columns against the opaque
+  behind the window. The depth comes from glass columns against the more present
   content pane instead, and from the one rounded corner where the three meet.
+- **The window is three shades: the columns, the bar, the pane.** The bar wore
+  the columns' surface, which made the window two shades and the bar simply the
+  top of the left one — a fair description of a sidebar that runs to the top
+  edge, and a poor one of a bar that spans the whole window and carries the tab
+  strip and the controls. `panel-bar` sits a step *in front of* the columns,
+  because the bar is chrome laid over the window rather than another well cut
+  into it, and because a surface that recedes under the traffic lights reads as
+  a hole in the title bar. One shade across its whole width, which is a
+  different claim from having one: no *region* of it may carry a tint of its
+  own.
+- **A conversation card is a job card.** Not a resemblance — the same object: a
+  thing that ran, has a name you can change, and can be thrown away. It drifted
+  once, into a row with a sparkle glyph on it saying "this is a chat" in a list
+  of nothing but chats, a delete button in the text flow, and two timestamps
+  that wrapped onto a second line on one card in three so that card stood taller
+  than its neighbours. Two lines of room for the name whether or not both are
+  used, one time rather than two, and the tools as an overlay: a column of
+  even rows can be swept, where a column of three different heights has to be
+  read.
+- **Every panel searches from the same row.** The chats list carried a field of
+  its own, which left the panel header holding nothing but a `+` floating
+  against the right edge — a band of empty sidebar, and a button with no row to
+  belong to. Two fields in two places across five panels is two things to learn
+  where there was one.
 - **Sizes come from the density scale.** Use the `--gap-*`, `--row-h`,
   `--field-h` custom properties rather than fixed pixels, and express spacing in
   `rem` so a larger OS text size scales the layout instead of breaking it.
@@ -169,6 +249,10 @@ before considering a change finished.
   itself, so the content pane's corner was cut on a table tab and square on a
   query tab. Sixty-four pixels is far under the snapshot diff threshold, which
   is why it has its own clipped screenshot rather than relying on the full one.
+  The arc is backed by a masked wedge of the sidebar's own surface: nothing
+  under the pane paints anything, so an unbacked corner shows the material the
+  OS draws *outside* the window — raw where the column an eighth of an inch away
+  shows it blurred and tinted.
 - **The grid's column widths are measured in a canvas, never by the layout.**
   Tabulator's `fitData` family sizes a column by clearing its width and reading
   `offsetWidth` off every cell — a forced reflow each — and `fitDataStretch`
@@ -222,6 +306,57 @@ before considering a change finished.
   left to `overflow: auto`: a classic scrollbar takes its width out of the
   content, so a body overflowing by a few pixels narrows its own text, wraps a
   line, and overflows further.
+- **A statement is one container, and the model says which ones open.** A turn
+  that answers a question properly may run four queries on the way to it, and
+  four tables of intermediate counting bury the one table that was asked for —
+  so `run_sql` carries an `intent`, and the model declares each query as working
+  or as the answer. A working query collapses to one row: its name, what it
+  returned, a chevron at the end. Both open onto the *same* thing — one
+  `SqlBlock`, coloured by `shared/sqlHighlight.ts`, with copy and open-in-a-tab.
+  What opens *first* is the rows: someone expanding a query that ran wants to
+  see what came back, and the SQL is how it came back — a different question and
+  a rarer one — so it sits behind a second fold inside the first, and closing
+  the outer one closes it too. A step with no rows to put in front of it shows
+  its statement directly; a fold kept for the sake of symmetry is two clicks to
+  reach the one thing there is. Two containers for one idea is how an interface
+  starts reading as assembled rather than designed. The fold is a third state,
+  not a boolean seeded from the intent: a step is emitted the moment the call
+  starts and updated when it returns, so a fold initialised from the early value
+  snaps shut under a reader who had already opened it. A model that omits the
+  intent is read as still working, which is the quieter mistake — an answer
+  shown as working is one chevron away, where the reverse is a table nobody
+  asked for.
+- **A fold fades its content in; it does not only grow a box.** Height alone was
+  the whole animation, and a box growing to reveal content already at full
+  opacity reads as a clipping mask sliding off rather than as something
+  appearing — the table's first row is fully drawn before there is room for a
+  second. Opacity and a quarter-rem of travel give it somewhere to come from,
+  both composited, so a table with two hundred cells costs no more to reveal
+  than an empty box. The travel goes *with* the edge that is moving, not
+  against it.
+- **A transcript is a document; the chrome around it is not.** The root sets
+  `user-select: none`, which is what stops a drag across the sidebar painting
+  half the tree blue — and the one view in this app made of prose, statements
+  and someone's own rows has to opt back in. `.selectable` does that, and its
+  own controls opt out again: a chevron whose label highlights on a double click
+  is a control in the one place where double-clicking a word is how a word gets
+  selected.
+- **A statement is laid out before it is shown.** A model writes SQL the way it
+  writes a sentence — one long line, or whatever indentation the last example it
+  saw happened to use — and the statement is the part of an answer people read
+  closely. `SqlBlock` runs it through the same `sql-formatter` call and the same
+  `formatterDialect` table the query tab's Format button uses, so a statement
+  lifted out of a conversation looks like one typed into an editor, and the copy
+  and the tab both get the laid-out text. A parse failure falls back to what the
+  model wrote, silently: the button says so because somebody pressed it and
+  nothing happened, where here the statement is on screen and correct either way.
+- **A tab is named for what is in it.** The statement lifted out of a
+  conversation opens under the name the model gave that query — "Albums per
+  artist" — never under a label about where it came from. A strip of tabs all
+  called "From the assistant" tells the reader the one thing they already know
+  while withholding the one thing they need. That name is asked for in the
+  prompt (`purpose` on the tool, `title=` on a fence) rather than derived from
+  the SQL, because the model knows what it was counting and a parser does not.
 - **An icon-only control carries a drawn label, not a `title`.** The OS tooltip
   arrives after a second and a half, in a corner of its own choosing, styled by
   the platform. `v-tip` from `lib/hoverTip.ts` puts it beside the control, on
@@ -240,9 +375,150 @@ before considering a change finished.
   offset, resists at its limits, and hands its release velocity to the spring
   that follows. `useDrag` does all of this; use it rather than a `mousemove`
   handler.
+- **A drag that rearranges a list captures the pointer on the list, not on the
+  item.** The capture normally goes on whatever the gesture started on, which is
+  right for a handle — it is the thing being moved and it stays where it is —
+  and wrong for a reorder, because applying one moves the dragged element in the
+  DOM and a node that leaves the document, even for the instant it takes to
+  reinsert it, loses its capture. The tab strip was exactly this: the first
+  reorder landed and the gesture died there, so a tab could be carried one place
+  and no further. `useDrag`'s `surface` points the capture at an ancestor that
+  does not move.
+- **A reorder counts what it has already done.** The drag reports the *total*
+  distance from where the pointer went down, so the number of places to move is
+  `round(total / width)` — but the list has already been rearranged by the
+  previous frame, and applying that same total again against the item's new
+  index moves it twice, then four times. Keep the count: what the pointer is
+  asking for is a function of the total, what has been done is the count, and
+  the difference is what to do now. Bounds come from the index the item was
+  *picked up* at, never from where it currently is — bounds that move with it
+  shrink under the drag and clamp it after a single place.
 - **Every animation must survive `prefers-reduced-motion`,** every translucent
   surface must survive `prefers-reduced-transparency`, and every colour pair must
   clear its contrast threshold.
+
+## The assistant
+
+- **It reads. It does not write.** That is the whole trust proposition, and it
+  is enforced in `src/ai/agent.ts` rather than asked for in the prompt: every
+  statement is classified by `shared/sqlSafety.ts` before it reaches a database,
+  and only a `read` runs. Anything else — including a statement whose leading
+  verb we do not recognise — comes back as SQL in the conversation with an offer
+  to open it in a query tab. The alternative considered and rejected was a
+  permission prompt per statement: one that appears for `SELECT 1` is one people
+  learn to click through, so the time it says `DROP` they click through that
+  too. A rule told once beats a dialog nobody reads.
+- **One door to the assistant, not two.** A row's menu offered "Ask for a
+  query…" beside "Chat" — a one-shot request that wrote a statement into a new
+  tab, and a conversation. The first was the lesser of the two in every case
+  that mattered: it could not look at a row before answering, could not be told
+  it had misread the question, and produced a statement whose only recourse was
+  to ask again from the beginning. Everything it did, a conversation does on its
+  first turn and then keeps doing. It is gone — the sheet, the `ai/ask` channel,
+  `runAsk` and the extractor behind it — rather than merely unreachable, because
+  the menu was its only door. Two entries to one room, one of them narrower,
+  makes the reader choose before they know enough to choose.
+- **The refusal tells the model what to do instead.** "Denied" produces an
+  apology and a stop; the wording in `runSql` produces the statement written out
+  for the reader. It is asserted in the unit suite because it is load-bearing.
+- **A driver is an implementation; an instance is a configuration.** Ported from
+  the sibling project. `AI_DRIVERS` in `shared/aiDrivers.ts` is what the
+  interface can offer and `src/ai/registry.ts` is what the host can build; they
+  name the same set, and a row in one without the other is a menu item that
+  fails when chosen. Two accounts of one provider are two instances, not a
+  setting toggled back and forth.
+- **Provider differences are declared, not thrown** — the same rule the database
+  drivers follow. Claude Code declares `tools: false` because our tools are
+  functions in this process and handing them to a subprocess would mean standing
+  up an MCP server; the agent reads the capability and asks for a query without
+  offering to run one. It is not a defect to be fixed by a `try`.
+- **Keys go keyring → main → host, and the renderer gets a handle.** Exactly the
+  arrangement `prepareConnection` uses, down to the single-use handle. The one
+  deliberate exception is the same one the connection editor takes: the provider
+  editor shows the key it already holds, because a field that hides its value
+  turns changing a model name into an act of finding your API key again.
+- **Claude Code is driven as a subprocess, and its credentials are never read.**
+  It signs itself in. `--system-prompt` replaces the built-in prompt, `--tools`
+  with nothing after it leaves the session with no tools, and empty
+  `--setting-sources` plus `--strict-mcp-config` keep the reader's own memory
+  files and MCP servers out of a prompt about their database. It runs in a temp
+  directory for the same reason.
+- **A document narrower than the database says so.** `narrowSchemaDocument`
+  drops whole tables rather than trimming columns — a table with half its
+  columns is worse than an absent one, because the model cannot tell "this
+  column does not exist" from "you were not shown it" — and writes what it
+  dropped into `omissions`, which the prompt reads out. Relations to tables that
+  did not make it are pruned with them, so the document never references
+  something it does not contain. The same rule the statistics view follows: the
+  caveat goes where the answer is, not in a footnote.
+- **Gathering a schema is bounded, because it is N+1.** Columns, indexes and
+  relations are a round trip per entity, so six hundred tables is eighteen
+  hundred queries before a word has been sent. `src/ai/schema.ts` caps the
+  depth, says so in the document, and lets `inspect_schema` read any table in
+  full on demand.
+- **The reply's language defaults to the interface's, and is decided by the
+  question.** The distinction is the rule: an interface in Japanese does not
+  mean the question was asked in Japanese, and answering in a language the
+  question was not asked in is worse than any amount of not knowing which to
+  use. So the question decides, and the interface's language settles what the
+  question cannot — one word, or a bare table name. The tag comes from the
+  renderer in the `ai/turn` payload, because it is a renderer setting and a
+  utility process's own OS locale is not the one anybody chose. And identifiers
+  are exempted explicitly: told to answer in Chinese, a model will translate
+  `play_count` in the prose around a query and leave the reader hunting for a
+  column that does not exist.
+- **Types are the engine's own spelling.** A model writing `::jsonb` has been
+  told it is talking to Postgres by the data rather than by an adjective.
+- **A tool call closes off whatever is streaming.** An adapter that runs its own
+  tools — Claude Code does, over the loopback bridge — streams prose, calls a
+  tool, and goes on streaming, all inside one `send`. The text item is created
+  on the first delta, so without this it is appended to for the whole session
+  and a sentence written *after* a query lands above the table that query
+  returned: the reader sees "here are the results" with nothing under it, and
+  the table arrives above the sentence a moment later. The round's text is
+  accumulated separately from the item's buffer, because closing an item empties
+  that buffer and the wire message still has to carry the whole of what the
+  model said.
+- **Text streams as one item and is split when it stops.** Re-parsing fences on
+  every token means re-rendering a half-arrived code block many times a second;
+  the agent emits one text item, streams into it, and replaces it with its parts
+  once the round is done.
+- **The transcript follows the bottom only while the reader is at it.** Scrolling
+  up to re-read something must not be undone by the next token. Jumped, never
+  smooth-scrolled — a smooth scroll re-requested every few milliseconds never
+  arrives anywhere.
+- **A conversation is not persisted.** It would be a copy of whatever rows the
+  assistant read on the way to an answer, sitting in the application database
+  beside the connection list. What is worth keeping out of a chat is a query,
+  and a query has a query tab.
+
+## The storybook
+
+- **Every component has a story**, in `*.stories.ts` beside it. It is not a
+  gallery: it is the only place several of these can be looked at in a state
+  that is hard to reach in the app — a grid with two thousand rows, a chat that
+  refused a write, a card whose name is long enough to wrap.
+- **A story is a *store*, not an argument list**, for the many components that
+  read one and draw it. `.storybook/seed.ts` puts a store into the state a story
+  is about; the setup does not belong in each file.
+- **`window.shelf` and the host client are faked, not stubbed.**
+  `.storybook/mocks/shelf.ts` is typed as `ShelfApi`, so a channel added to the
+  preload script and not added there is a type error. It *remembers* what is
+  written to it, because a bridge that forgets everything can only ever show the
+  empty state. `mocks/host.ts` answers from fixtures with deliberate latency —
+  resolving synchronously would hide every skeleton in the app.
+- **`make storybook-check` opens all of them and fails on any that throws or
+  draws nothing.** A storybook that builds is not a storybook that works; the
+  first run of that check found twelve broken stories and a mock that had fallen
+  a feature behind the preload script. It looks at the whole document rather
+  than the story's container, because half the surfaces here are teleported.
+- **Two stories are deliberately less than the component can do**, and say so in
+  their own docblock: `TableTab` is shown without its grid populated and
+  `QueryTab` without a multi-statement script, because Storybook mounts a story
+  more than once while settling and the second pass patches Vue's tree around
+  DOM that Tabulator and Monaco own. Both were checked against the built app
+  with a page-error listener attached before that note was written. The
+  populated versions live in `Pages/Workspace`.
 
 ## Statistics
 
@@ -261,7 +537,8 @@ before considering a change finished.
 
 ## Testing
 
-- Pure logic — SQL generation, colour maths, motion physics — is unit tested.
+- Pure logic — SQL generation, colour maths, motion physics, schema documents,
+  statement classification — is unit tested.
 - Anything touching `better-sqlite3` cannot run under plain Node, because the
   module is compiled against Electron's ABI. Cover it with an end-to-end test
   instead.
@@ -272,6 +549,13 @@ before considering a change finished.
   looking at still settles its layout and animations.
 - End-to-end tests run against the *built* app and use a throwaway user-data
   directory, so they never touch real saved connections.
+- **The assistant's rule is tested with a hostile model, not a real one.** A
+  well-behaved model never breaks it, so `tests/unit/assistant.test.ts` scripts
+  an adapter that insists on running a `DELETE` and asks twice. `make
+  test-assistant` is the other half — a real model, end to end, through the
+  Claude Code CLI — and is deliberately outside `make test`: it spends money,
+  needs the CLI signed in, and can fail because a network is down. It skips
+  itself rather than failing where the CLI is absent.
 - **`make ui` is the design gate**, and it is the one to extend when a visual
   bug is found by eye: add the invariant that names it, in
   `tests/ui/invariants.spec.ts`, so it cannot come back silently. Each invariant

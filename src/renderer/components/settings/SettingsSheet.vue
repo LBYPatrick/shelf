@@ -10,6 +10,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { BINDINGS, displayKeys } from '../../lib/keybindings';
 import { LOCALES } from '../../i18n';
 import { useTranslation } from 'i18next-vue';
+import { useAssistant } from '../../stores/assistant';
 import { useTheme } from '../../composables/useTheme';
 import { usePlatform } from '../../composables/usePlatform';
 import { rowLimitOptions, useSettings } from '../../stores/settings';
@@ -29,7 +30,14 @@ import SelectMenu from '../ui/SelectMenu.vue';
 import Sheet from '../ui/Sheet.vue';
 
 const open = defineModel<boolean>({ required: true });
+/*
+ * The provider list is a sheet of its own rather than a section here, because
+ * it is a list with an editor behind it — two levels of navigation inside a
+ * pane that is already a long scroll. Settings names it and hands it over.
+ */
+const emit = defineEmits<{ 'manage-providers': [] }>();
 
+const assistant = useAssistant();
 const theme = useTheme();
 const settings = useSettings();
 const platform = usePlatform();
@@ -586,6 +594,42 @@ const languageOptions = computed(() => [
                 displayKeys(accelerator)
               }}</kbd>
             </span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-section">
+        <div class="panel-section__head">
+          <h3 class="type-title">
+            {{ $t('assistant.title') }}
+          </h3>
+          <p class="panel-section__desc">
+            {{ $t('assistant.settingsDesc') }}
+          </p>
+        </div>
+
+        <div class="rows">
+          <div class="row">
+            <span class="row__label">{{
+              assistant.configured
+                ? $t('assistant.configuredCount', { count: assistant.providers.length })
+                : $t('assistant.noProviderYet')
+            }}</span>
+            <PressButton
+              class="row__control"
+              size="sm"
+              @click="
+                open = false;
+                emit('manage-providers');
+              "
+            >
+              <AppIcon
+                name="assistant"
+                filled
+                :size="13"
+              />
+              {{ $t('assistant.manageProviders') }}
+            </PressButton>
           </div>
         </div>
       </section>

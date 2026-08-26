@@ -45,6 +45,13 @@ export const BINDINGS: readonly Binding[] = [
   },
 
   { id: 'tab.new', label: 'New query tab', group: 'Tabs', keys: ['mod+t'], global: true },
+  {
+    id: 'assistant.open',
+    label: 'New assistant chat',
+    group: 'Tabs',
+    keys: ['mod+shift+a'],
+    global: true,
+  },
   { id: 'tab.close', label: 'Close tab', group: 'Tabs', keys: ['mod+w'], global: true },
   {
     id: 'tab.reopen',

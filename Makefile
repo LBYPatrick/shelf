@@ -1,4 +1,4 @@
-.PHONY: help install uninstall clean dev preview build test test-e2e typecheck lint format tidy commit package icon
+.PHONY: help gate gate-full install uninstall clean dev preview build test test-assistant test-e2e typecheck lint format tidy commit package icon storybook storybook-build storybook-check
 
 SHELL := /bin/bash
 # The one place the number lives; the build compiles it in from here too.
@@ -16,6 +16,21 @@ ICON := resources/icon.svg
 ICON_PNG := build/icon.png
 ICON_ASSET := src/renderer/assets/icon.svg
 
+
+# The gate is what `make` on its own runs, and what CI runs. Everything else in
+# here is a way of running part of it.
+.DEFAULT_GOAL := gate
+
+gate: ## Everything that has to pass, in about forty seconds (default)
+	@$(MAKE) --no-print-directory lint
+	@$(MAKE) --no-print-directory test
+	@$(MAKE) --no-print-directory build
+	@$(MAKE) --no-print-directory ui
+	@$(MAKE) --no-print-directory test-e2e
+	@echo "gate: clean"
+
+gate-full: gate ## The gate, plus the storybook sweep (two minutes; the build is the cost)
+	@$(MAKE) --no-print-directory storybook-check
 
 help: ## Show this help message
 	@echo "Shelf v$(VERSION)"
@@ -65,6 +80,18 @@ typecheck: ## Type-check without emitting
 
 test: ## Run unit tests
 	@pnpm test
+
+test-assistant: ## Ask a real model, end to end (needs Claude Code signed in; costs money)
+	@pnpm test:assistant
+
+storybook: ## Browse every component in isolation, with hot reload
+	@pnpm storybook
+
+storybook-build: ## Build the static storybook into out/storybook
+	@pnpm storybook:build
+
+storybook-check: storybook-build ## Open every story and fail on any that throws or draws nothing
+	@pnpm storybook:check
 
 ui: ## Run the UI quality gate (visual, accessibility, design invariants)
 	@pnpm exec playwright test -c playwright.ui.config.ts

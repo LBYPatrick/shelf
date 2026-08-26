@@ -2,7 +2,7 @@ import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from './fixtures';
-import { createConnection, openTable, revealTables, typeQuery } from './helpers';
+import { createConnection, openTable, revealTables, typeQuery, withClipboard } from './helpers';
 
 /**
  * Exercises the entire path in one go: the renderer talks to main, main stages
@@ -310,13 +310,16 @@ test('adds and drops a column, showing the SQL before it runs', async ({ page })
   });
 });
 
-test('requires the name to be typed before destroying anything', async ({ page }) => {
+test('confirms a schema change, and says what the engine will not do', async ({ page }) => {
   const file = join(await mkdtemp(join(tmpdir(), 'shelf-drop-')), 'x.db');
 
   await createConnection(page, { engine: 'SQLite', file, name: 'Drop' });
 
   await page.getByRole('button', { name: 'New query', exact: true }).click();
-  await typeQuery(page, 'CREATE TABLE z (id INTEGER PRIMARY KEY);');
+  // Two columns, because the one thing this test is named for can only be
+  // reached on a column that is *not* the key: the drop control is not offered
+  // on a primary key, and a table with nothing else in it has nothing to drop.
+  await typeQuery(page, 'CREATE TABLE z (id INTEGER PRIMARY KEY, note TEXT);');
   await page.keyboard.press('ControlOrMeta+Enter');
   await page.getByRole('button', { name: 'Refresh' }).click();
 
@@ -337,13 +340,24 @@ test('requires the name to be typed before destroying anything', async ({ page }
   await expect(confirm).toContainText('CREATE INDEX');
   await expect(confirm.getByRole('button', { name: 'Apply', exact: true })).toBeEnabled();
 
-  // Dropping the table is, so the button stays disabled until the name is typed.
   await confirm.getByRole('button', { name: 'Cancel' }).click();
+
+  /*
+   * And the other half: a change this engine cannot make is *said*, not
+   * attempted.
+   *
+   * SQLite drops a column by rewriting the table, which the driver declines to
+   * do behind someone's back — so the control is offered, pressing it explains
+   * why nothing will happen, and no confirmation sheet opens. This used to be a
+   * click with `.catch(() => undefined)` on the end of it, which asserted
+   * nothing and spent thirty seconds of every run waiting for a dialog that was
+   * never going to appear.
+   */
   await page.getByRole('radio', { name: 'Columns' }).click();
-  await page
-    .getByRole('button', { name: 'Drop column id' })
-    .click()
-    .catch(() => undefined);
+  await page.getByRole('button', { name: 'Drop column note' }).click();
+
+  await expect(page.getByText(/cannot do that without rewriting the table/i)).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'This cannot be undone' })).toHaveCount(0);
 });
 
 test('imports a CSV file into an existing table', async ({ app, page }) => {
@@ -518,12 +532,15 @@ test('a clipboard write says so', async ({ page }) => {
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
   await revealTables(page);
-  await page.getByRole('treeitem', { name: 'album' }).first().click({ button: 'right' });
-  await page.getByRole('menuitem', { name: 'Copy table name' }).click();
-
   const notice = page.locator('.notices [role="status"]');
-  await expect(notice).toContainText('Copied music.album');
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('music.album');
+
+  await withClipboard(async () => {
+    await page.getByRole('treeitem', { name: 'album' }).first().click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Copy table name' }).click();
+
+    await expect(notice).toContainText('Copied music.album');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('music.album');
+  });
 
   // And it leaves on its own rather than sitting there needing dismissal.
   await expect(notice).toBeHidden({ timeout: 15_000 });
@@ -597,6 +614,12 @@ test('every table carries a menu, from the button and from right-click', async (
     'Quick docs',
     'Properties',
     'Export data to file…',
+    // The assistant is offered whether or not a provider has been configured:
+    // an action that appears only once you have set something up is an action
+    // nobody discovers they could set up. One entry, not two — the one-shot
+    // "ask for a query" was everything a conversation does on its first turn,
+    // minus the ability to be told it had misread the question.
+    'Chat',
   ]);
 
   // Properties carries the sections that used to be a tab of their own.
@@ -620,8 +643,10 @@ test('every table carries a menu, from the button and from right-click', async (
   await page.getByRole('button', { name: /Actions for album/ }).click();
   await expect(page.getByRole('menu')).toBeVisible();
 
-  await page.getByRole('menuitem', { name: 'Copy table name' }).click();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('music.album');
+  await withClipboard(async () => {
+    await page.getByRole('menuitem', { name: 'Copy table name' }).click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('music.album');
+  });
 });
 
 /*
@@ -719,16 +744,18 @@ test('cells copy out of the grid, and say so', async ({ page }) => {
     steps: 8,
   });
   await page.mouse.up();
-  await page.keyboard.press('ControlOrMeta+c');
 
-  await expect(page.locator('.notices [role="status"]')).toContainText('Copied');
+  await withClipboard(async () => {
+    await page.keyboard.press('ControlOrMeta+c');
+    await expect(page.locator('.notices [role="status"]')).toContainText('Copied');
 
-  const expected = [
-    [await cell(0, 0).innerText(), await cell(0, 1).innerText()].join('\t'),
-    [await cell(1, 0).innerText(), await cell(1, 1).innerText()].join('\t'),
-  ].join('\n');
+    const expected = [
+      [await cell(0, 0).innerText(), await cell(0, 1).innerText()].join('\t'),
+      [await cell(1, 0).innerText(), await cell(1, 1).innerText()].join('\t'),
+    ].join('\n');
 
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
+  });
 });
 
 /*
@@ -828,10 +855,12 @@ test('exports a table through the same sheet the query tab uses', async ({ page 
 
   await sheet.getByRole('radio', { name: 'Clipboard' }).click();
   await sheet.getByRole('radio', { name: 'CSV' }).click();
-  await sheet.getByRole('button', { name: 'Export' }).click();
 
-  await expect(sheet.getByRole('status')).toContainText('Copied', { timeout: 10_000 });
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('name');
+  await withClipboard(async () => {
+    await sheet.getByRole('button', { name: 'Export' }).click();
+    await expect(sheet.getByRole('status')).toContainText('Copied', { timeout: 10_000 });
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('name');
+  });
 });
 
 /*
@@ -863,13 +892,15 @@ test('exports query results, choosing a format and a destination', async ({ page
 
   await sheet.getByRole('radio', { name: 'Clipboard' }).click();
   await sheet.getByRole('radio', { name: 'Markdown' }).click();
-  await sheet.getByRole('button', { name: 'Export' }).click();
 
-  await expect(sheet.getByRole('status')).toContainText('Copied', { timeout: 10_000 });
+  await withClipboard(async () => {
+    await sheet.getByRole('button', { name: 'Export' }).click();
+    await expect(sheet.getByRole('status')).toContainText('Copied', { timeout: 10_000 });
 
-  const copied = await page.evaluate(() => navigator.clipboard.readText());
-  expect(copied).toContain('| name');
-  expect(copied).toContain('Talk Talk');
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copied).toContain('| name');
+    expect(copied).toContain('Talk Talk');
+  });
 });
 
 /*
@@ -895,11 +926,13 @@ test('a snippet can be selected and copied, and says so', async ({ page }) => {
   // Selectable, so the reader can take part of it rather than all of it.
   await expect(snippet.locator('pre')).toHaveCSS('user-select', 'text');
 
-  await snippet.getByRole('button', { name: 'Copy' }).click();
-  await expect(page.locator('.notices [role="status"]')).toContainText('Copied', {
-    timeout: 10_000,
+  await withClipboard(async () => {
+    await snippet.getByRole('button', { name: 'Copy' }).click();
+    await expect(page.locator('.notices [role="status"]')).toContainText('Copied', {
+      timeout: 10_000,
+    });
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('SELECT');
   });
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('SELECT');
 });
 
 /*

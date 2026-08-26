@@ -5,11 +5,11 @@ import { typeQuery } from './helpers';
  * Finding one job among the hundred that are kept.
  *
  * The list is a log, and a log is read by searching it: the field takes the
- * name, and the four choices behind the button take the questions a name cannot
- * answer. The predicate itself is unit tested — this is about the wiring, which
- * is the part unit tests cannot see: the field reaching the store, the choices
- * reaching the same filter, the count and the empty state telling the truth
- * about a list that is quietly missing rows.
+ * name, and a chip per condition takes the questions a name cannot answer. The
+ * predicate itself is unit tested — this is about the wiring, which is the part
+ * unit tests cannot see: the field reaching the store, a chip reaching the same
+ * filter, the switch on a chip parking a condition rather than discarding it,
+ * and the count telling the truth about a list that is quietly missing rows.
  */
 test('searches jobs by name, narrows them by status and length, and says so', async ({
   page,
@@ -56,33 +56,47 @@ test('searches jobs by name, narrows them by status and length, and says so', as
   await expect(cards).toHaveCount(1);
   await expect(find).toHaveValue('');
 
-  // The choices fold away, so the control that hides them carries their count.
-  const filters = page.getByRole('button', { name: 'Filters', exact: true });
-  await filters.click();
-  const status = page.getByRole('combobox', { name: 'Status' });
-  await status.click();
-  await page.getByRole('option', { name: 'Failed' }).click();
+  // A condition is a chip, added through one popup that asks what and then
+  // which — because "status" on its own is not a filter, and sending the reader
+  // to a second menu asks the same question twice.
+  await page.getByRole('button', { name: /add a filter/i }).click();
+  await page.getByRole('button', { name: 'Status', exact: true }).click();
+  await page.getByRole('button', { name: 'Failed', exact: true }).click();
 
+  const chips = page.locator('.chip');
+  await expect(chips).toHaveCount(1);
   await expect(cards).toHaveCount(0);
-  await expect(filters).toContainText('1');
   await expect(page.locator('.joblist__tally')).toContainText('0 of 1');
+
+  /*
+   * Clicking the body parks the condition without forgetting it — the whole
+   * reason a chip beats a dropdown that only knows "any". The list comes back
+   * and the chip is still there, crossed out.
+   */
+  await chips.first().locator('.chip__body').click();
+  await expect(chips.first()).toHaveClass(/chip--off/);
+  await expect(cards).toHaveCount(1);
+
+  await chips.first().locator('.chip__body').click();
+  await expect(cards).toHaveCount(0);
+
+  // The cross discards it, which is the other gesture.
+  await chips.first().locator('.chip__drop').click();
+  await expect(chips).toHaveCount(0);
+  await expect(cards).toHaveCount(1);
 
   // A second dimension narrows rather than widens: a job that finished in
   // milliseconds is not one that took over a minute, whatever its status.
-  await status.click();
-  await page.getByRole('option', { name: 'Done' }).click();
-  await expect(cards).toHaveCount(1);
-
-  await page.getByRole('combobox', { name: 'Took' }).click();
-  await page.getByRole('option', { name: 'Over a minute' }).click();
+  await page.locator('.chips__button').click();
+  await page.getByRole('button', { name: 'Took', exact: true }).click();
+  await page.getByRole('button', { name: 'Over a minute', exact: true }).click();
   await expect(cards).toHaveCount(0);
-  await expect(filters).toContainText('2');
 
   // ...and the window it did run in finds it again.
-  await page.getByRole('combobox', { name: 'Took' }).click();
-  await page.getByRole('option', { name: 'Under a second' }).click();
-  await page.getByRole('combobox', { name: 'Started', exact: true }).click();
-  await page.getByRole('option', { name: 'Last hour' }).click();
+  await chips.first().locator('.chip__drop').click();
+  await page.locator('.chips__button').click();
+  await page.getByRole('button', { name: 'Started', exact: true }).click();
+  await page.getByRole('button', { name: 'Last hour', exact: true }).click();
   await expect(cards).toHaveCount(1);
   await expect(page.locator('.joblist__tally')).toContainText('1 of 1');
 });

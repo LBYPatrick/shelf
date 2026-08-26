@@ -277,12 +277,10 @@ test.describe('layout', () => {
         bar: region('.topbar'),
         strip: region('.strip'),
         tab: region('.striptab'),
-        toggle: region('.topbar__toggle'),
       };
     });
 
     expect(regions.bar).toBe('drag');
-    expect(regions.toggle).toBe('no-drag');
     expect(regions.strip).toBe('drag');
     expect(regions.tab).toBe('no-drag');
   });
@@ -1670,7 +1668,7 @@ test.describe('cost', () => {
       };
       requestAnimationFrame(tick);
 
-      document.querySelector<HTMLElement>('.topbar__toggle')!.click();
+      document.querySelector<HTMLElement>('.rail__item--bottom')!.click();
       await new Promise((resolve) => setTimeout(resolve, 700));
       running = false;
       return count;
@@ -1751,6 +1749,62 @@ test.describe('corner', () => {
 
     expect(corner.covers).toBe(true);
     expect(corner.notch).toEqual(corner.sidebar);
+  });
+
+  test('the columns, the bar and the pane are three shades, in that order', async ({
+    sample,
+  }) => {
+    /*
+     * The bar wore the columns' surface, so the window was made of two shades
+     * and the bar was simply the top of the left one — a fair description of a
+     * sidebar that runs to the top edge, and a poor one of a bar that spans the
+     * whole window and carries the tab strip and the window controls.
+     *
+     * The order matters as much as the count. The bar is a step *in front of*
+     * the columns because it is chrome laid over the window rather than another
+     * well cut into it, and because the window controls sit on it: a surface
+     * that recedes under them reads as a hole in the title bar.
+     */
+    const alpha = await sample.evaluate(() => {
+      const of = (selector: string) => {
+        const value = getComputedStyle(document.querySelector(selector)!).backgroundColor;
+        const parts = value.match(/[\d.]+/g)!.map(Number);
+        return parts[3] ?? 1;
+      };
+      return {
+        columns: of('.sidebar'),
+        bar: of('.topbar'),
+        pane: of('.content'),
+      };
+    });
+
+    // Three, and far enough apart to be told apart.
+    expect(alpha.bar).toBeGreaterThan(alpha.columns + 0.05);
+    expect(alpha.pane).toBeGreaterThan(alpha.bar + 0.05);
+  });
+
+  test('the pane still stands in front of the columns beside it', async ({ sample }) => {
+    /*
+     * The corner shows the depth between the glass and the working surface as
+     * *geometry*, and it can only show what the tone already carries — the arc
+     * is eight pixels of sidebar seen through a gap in the pane, so if the two
+     * surfaces converge there is nothing in the gap to see. The pane is the
+     * most present of the three and the columns the least, and a change to the
+     * material weights that quietly closed that distance would leave a window
+     * that is one flat sheet with a curve cut in it.
+     */
+    const alpha = await sample.evaluate(() => {
+      const of = (selector: string) => {
+        const value = getComputedStyle(document.querySelector(selector)!).backgroundColor;
+        const parts = value.match(/[\d.]+/g)!.map(Number);
+        return parts[3] ?? 1;
+      };
+      return { pane: of('.content'), sidebar: of('.sidebar'), rail: of('.rail') };
+    });
+
+    expect(alpha.pane).toBeGreaterThan(alpha.sidebar + 0.2);
+    // Rail and sidebar are one surface, and stay one.
+    expect(alpha.rail).toBeCloseTo(alpha.sidebar, 2);
   });
 });
 
@@ -1967,6 +2021,226 @@ async function frameworkClassesOn(page: Page): Promise<string[]> {
   });
 }
 
+test.describe('the tab strip', () => {
+  async function openTabs(sample: Page, count: number): Promise<void> {
+    for (let i = 0; i < count; i += 1) {
+      await sample
+        .locator('.strip')
+        .getByRole('button', { name: /new query tab/i })
+        .click();
+    }
+    await stabilize(sample);
+  }
+
+  const titles = (sample: Page) => sample.locator('.strip .striptab__title').allInnerTexts();
+
+  /** Carries a tab `widths` tab-widths along the strip and lets go. */
+  async function dragTab(sample: Page, from: number, widths: number): Promise<void> {
+    const box = (await sample.locator('.strip .striptab').nth(from).boundingBox())!;
+    const y = box.y + box.height / 2;
+    const startX = box.x + box.width / 2;
+
+    await sample.mouse.move(startX, y);
+    await sample.mouse.down();
+    // In steps, because the reorder happens *during* the drag: one jump to the
+    // far end would prove only that the release lands somewhere.
+    for (let step = 1; step <= 16; step += 1) {
+      await sample.mouse.move(startX + (box.width * widths * step) / 16, y);
+      await sample.waitForTimeout(15);
+    }
+    await sample.mouse.up();
+    await stabilize(sample);
+  }
+
+  test('a tab dragged one width along moves exactly one place', async ({ sample }) => {
+    /*
+     * It moved two, and four for two widths, and a tab dragged across a strip
+     * of four ran off the end and stuck there.
+     *
+     * The drag reports the *total* distance from where the pointer went down,
+     * so the number of places to move is `round(total / width)` — but the list
+     * had already been rearranged by the previous frame, and that same total
+     * was applied again against the tab's new index, and again the frame after.
+     * The count of what has already been done is the one number the arithmetic
+     * cannot be written without.
+     */
+    await openTabs(sample, 3);
+    expect(await titles(sample)).toEqual(['Query', 'Query 2', 'Query 3']);
+
+    await dragTab(sample, 0, 1.1);
+    expect(await titles(sample)).toEqual(['Query 2', 'Query', 'Query 3']);
+  });
+
+  test('it moves as many places as it was carried, in both directions', async ({ sample }) => {
+    await openTabs(sample, 3);
+
+    await dragTab(sample, 0, 2.1);
+    expect(await titles(sample)).toEqual(['Query 2', 'Query 3', 'Query']);
+
+    await dragTab(sample, 2, -2.1);
+    expect(await titles(sample)).toEqual(['Query', 'Query 2', 'Query 3']);
+  });
+
+  test('carried past the end it stops at the end, and is still holding it', async ({
+    sample,
+  }) => {
+    // Not "stops responding": the bounds are resistance, not a wall, and the
+    // tab has to still be the one that lands where it was let go.
+    await openTabs(sample, 3);
+
+    await dragTab(sample, 0, 9);
+    expect(await titles(sample)).toEqual(['Query 2', 'Query 3', 'Query']);
+  });
+
+  test('the strip begins where the working pane begins', async ({ sample }) => {
+    /*
+     * The tabs used to start immediately after the sidebar toggle, which put
+     * the first tab's leading edge at an offset matching nothing else in the
+     * window — the rail/sidebar boundary is at one place and the pane's edge at
+     * another, and this was at neither.
+     */
+    const edges = await sample.evaluate(() => {
+      const strip = document.querySelector('.strip')!.getBoundingClientRect();
+      const pane = document.querySelector('.content')!.getBoundingClientRect();
+      return { strip: strip.left, pane: pane.left };
+    });
+
+    expect(Math.abs(edges.strip - edges.pane)).toBeLessThanOrEqual(1);
+  });
+
+  test('collapsing the sidebar never takes the strip under the controls', async ({
+    sample,
+  }) => {
+    /*
+     * The offset the strip follows is the columns' width, and collapsed that is
+     * the rail alone — narrower than the traffic lights. A tab strip sliding
+     * under the window controls is the one thing this bar exists to prevent, so
+     * the lead region is a `min-width` and never gives back more than it has.
+     */
+    await sample.getByRole('button', { name: /toggle sidebar/i }).click();
+    await stabilize(sample);
+
+    const clear = await sample.evaluate(() => {
+      const strip = document.querySelector('.strip')!.getBoundingClientRect();
+      const lead = document.querySelector('.topbar__lead')!.getBoundingClientRect();
+      const inset = Number.parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--controls-inset') || '0'
+      );
+      return { strip: strip.left, lead: lead.right, inset };
+    });
+
+    expect(clear.strip, 'the tabs run back over the lead region').toBeGreaterThanOrEqual(
+      clear.lead - 1
+    );
+    expect(clear.strip, 'the tabs run back under the traffic lights').toBeGreaterThanOrEqual(
+      clear.inset
+    );
+  });
+});
+
+test.describe('pickers', () => {
+  test('no control hands its popup to the engine to draw', async ({ sample }) => {
+    /*
+     * A `<select>` and a `<datalist>` look finished until they are opened, at
+     * which point the operating system draws the list — its own focus ring, its
+     * own selection colour, its own idea of where the list goes. The model
+     * field on the provider editor was a `<datalist>`, so a sheet built from
+     * these tokens opened a white box with a black triangle in it and a
+     * bold-matched line under it.
+     *
+     * Both are checked at once because they are one mistake: a picker whose
+     * open state is not ours. `SelectMenu` replaces the first and `SuggestInput`
+     * the second, and they draw the same list.
+     *
+     * Swept across the whole document rather than one view — the sheets are
+     * teleported, and the point is that the app contains none of these
+     * anywhere.
+     */
+    await sample.getByRole('button', { name: 'Settings', exact: true }).click();
+    await expect(sample.getByRole('dialog')).toBeVisible();
+
+    const native = await sample.evaluate(() =>
+      ['select', 'datalist'].filter((tag) => document.querySelector(tag) !== null)
+    );
+    expect(native, 'a control is letting the engine draw its list').toEqual([]);
+  });
+
+  test('a field that suggests still takes a value nobody suggested', async ({ sample }) => {
+    /*
+     * The whole reason this is a field and not a select. The names we ship
+     * cover almost everyone; anyone pointing this at a local server has a model
+     * name we have never heard of, and a list that refuses it would make the
+     * driver we added *for* local servers the one driver that cannot be
+     * configured.
+     */
+    await sample.getByRole('button', { name: 'Settings', exact: true }).click();
+    await expect(sample.getByRole('dialog')).toBeVisible();
+
+    await sample.getByRole('button', { name: 'Manage providers' }).click();
+    await sample.getByRole('button', { name: 'Add provider' }).click();
+
+    const field = sample.getByRole('combobox', { name: 'Model' });
+    await expect(field).toBeVisible();
+
+    await field.fill('my-finetune:latest');
+    await expect(field).toHaveValue('my-finetune:latest');
+
+    // And the list it opens is ours, drawn from our own tokens.
+    const list = sample.locator('.menulist');
+    await expect(list).toBeVisible();
+    const surface = await list.evaluate((el) => getComputedStyle(el).position);
+    expect(surface).toBe('fixed');
+  });
+});
+
+test.describe('a diagram', () => {
+  async function openDiagram(sample: Page): Promise<void> {
+    await sample.keyboard.press('ControlOrMeta+k');
+    await sample.getByPlaceholder(/Search tables/).fill('diagram');
+    await sample.keyboard.press('Enter');
+    await sample.locator('.erd').waitFor({ timeout: 30_000 });
+    await stabilize(sample);
+  }
+
+  test('nothing clips the floating control, so its shadow is whole', async ({ sample }) => {
+    /*
+     * The zoom control sits a gap in from the corner of the diagram, and an
+     * elevation shadow is wider than that gap — so the surface it floats over
+     * sliced it flat along two edges. A shadow with a straight cut in it does
+     * not read as a shorter shadow; it reads as a seam in the surface, which is
+     * the one thing a shadow must never say.
+     *
+     * The clip was doing nothing else. A diagram is drawn inside an outermost
+     * `<svg>`, which clips to its own viewport by specification, so a pan that
+     * carries a node off the edge was already contained without help.
+     */
+    await openDiagram(sample);
+
+    const clipping = await sample.locator('.zoomer').evaluate((el) => {
+      const cut: string[] = [];
+      /*
+       * Up to the working pane and no further. The pane's own rounded clip is
+       * the one documented exception — it is what cuts the corner where the
+       * three columns meet — and it sits at the window's edge, where there is
+       * nothing beyond for a shadow to fall on.
+       */
+      for (
+        let node = el.parentElement;
+        node && !node.classList.contains('panel-content');
+        node = node.parentElement
+      ) {
+        const style = getComputedStyle(node);
+        if (style.overflow !== 'visible' || style.clipPath !== 'none') {
+          cut.push(`${node.className || node.tagName} (${style.overflow}, ${style.clipPath})`);
+        }
+      }
+      return cut;
+    });
+
+    expect(clipping, 'something between the control and the pane clips it').toEqual([]);
+  });
+});
+
 test.describe('the jobs rail', () => {
   test('a job card is the same container as a tab, and does not grow under the pointer', async ({
     sample,
@@ -1999,13 +2273,630 @@ test.describe('the jobs rail', () => {
     expect(shapes.card).toEqual(shapes.tab);
     expect(shapes.card.border).toBe('0px');
 
-    // The tools open into the row on hover, which narrows the name and can
-    // re-wrap it. The name may reflow; the card may not move under the pointer
-    // that is reaching for it.
+    /*
+     * And it must not move under the pointer reaching for it — with a *long*
+     * name, which is the case that actually failed.
+     *
+     * The tools used to be a flex sibling whose width opened on hover, taking
+     * that width out of the face beside it. The name is clamped to two lines,
+     * so a title that fitted on one line at rest wrapped to two the moment the
+     * pointer touched it, and the card grew. This check passed for a year
+     * because the sample's default name is short enough to fit either way —
+     * a gate that only exercises the easy case is a gate that reports nothing.
+     */
+    await card.locator('.job__name').dblclick();
+    const field = card.locator('.job__rename');
+    await field.waitFor();
+    await field.fill('client5 batch 004 shard 000 rebuild');
+    await field.press('Enter');
+    await expect(card.locator('.job__name')).toContainText('client5');
+
     const height = async () => (await card.boundingBox())!.height;
     const resting = await height();
     await card.hover();
     await sample.waitForTimeout(300);
     expect(await height()).toBe(resting);
+  });
+
+  test('the filter is the conditions it is made of', async ({ sample }) => {
+    await sample.getByRole('button', { name: 'Jobs' }).click();
+
+    // Nothing is drawn until a condition exists — that is the whole argument
+    // for chips over four permanent dropdowns saying "any".
+    await expect(sample.locator('.chip')).toHaveCount(0);
+
+    await sample.getByRole('button', { name: /add a filter/i }).click();
+    await sample.getByRole('button', { name: 'Status', exact: true }).click();
+    // Both steps in one popup: picking a kind is not a filter on its own, and
+    // sending the reader to a second menu asks the same question twice.
+    await sample.getByRole('button', { name: 'Done', exact: true }).click();
+
+    const chip = sample.locator('.chip').first();
+    await expect(chip).toHaveCount(1);
+    await expect(chip).toContainText('Status');
+    await expect(chip).toContainText('Done');
+
+    /*
+     * Clicking the body parks the condition rather than discarding it. "Off"
+     * and "gone" have to be two gestures: narrowing a log is iterative, and a
+     * model where switching a condition off loses its value makes every one of
+     * those a retype.
+     */
+    await chip.locator('.chip__body').click();
+    await expect(chip).toHaveClass(/chip--off/);
+    const struck = await chip
+      .locator('.chip__body')
+      .evaluate((el) => getComputedStyle(el).textDecorationLine);
+    expect(struck).toContain('line-through');
+
+    await chip.locator('.chip__body').click();
+    await expect(chip).not.toHaveClass(/chip--off/);
+
+    // The cross discards it.
+    await chip.locator('.chip__drop').click();
+    await expect(sample.locator('.chip')).toHaveCount(0);
+  });
+
+  test('a job card holds its three actions on a right-click', async ({ sample }) => {
+    // A card two lines tall has room for one button. Export and explain are
+    // exactly the questions a job that ran for four minutes raises, and they
+    // had nowhere to live.
+    await sample
+      .getByRole('button', { name: /new query tab/i })
+      .first()
+      .click();
+    await typeQuery(sample, 'select id, name from music.artist');
+    await sample.getByRole('button', { name: 'What Run performs' }).click();
+    await sample.getByRole('menuitem', { name: 'Dispatch' }).click();
+    await sample.getByRole('button', { name: 'Jobs' }).click();
+
+    const card = sample.locator('.job').first();
+    await expect(card.locator('.job__status')).toHaveText(/Done/, { timeout: 20_000 });
+
+    await card.click({ button: 'right' });
+    // The last one opened: a query tab left behind by the dispatch has a menu
+    // of its own in the document, and `getByRole('menu')` sees both.
+    const menu = sample.locator('.popmenu').last();
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole('menuitem')).toHaveText([
+      'Open the rows',
+      'Export data to file…',
+      'Explain this query',
+      'Discard',
+    ]);
+  });
+});
+
+test.describe('the assistant', () => {
+  /**
+   * Opens a chat tab, without configuring anything.
+   *
+   * From the empty workspace rather than the tab strip: the strip's assistant
+   * button was removed — one glyph too many in a bar that is mostly window
+   * chrome — and the remaining ways in are this, the palette, and a shortcut.
+   */
+  async function openChat(sample: Page): Promise<void> {
+    await sample.getByRole('button', { name: /^new chat$/i }).click();
+    await sample.locator('.chat').waitFor({ timeout: 20_000 });
+    await stabilize(sample);
+  }
+
+  test('says what it will not do, before it has been set up', async ({ sample }) => {
+    // The one claim this feature makes about someone's database. It is not a
+    // paragraph in a settings pane: it is on the composer, where the question
+    // is typed, and it is there before a provider exists — because the moment
+    // to decide whether to trust this is the moment you first see it.
+    await openChat(sample);
+
+    await expect(sample.locator('.composer__note')).toBeVisible();
+    await expect(sample.locator('.composer__note')).toContainText(/read/i);
+    await expect(sample.getByRole('button', { name: /set up the assistant/i })).toBeVisible();
+  });
+
+  test('the transcript keeps a measure', async ({ app, sample }) => {
+    // Prose the width of a workspace is prose nobody reads, and this is the
+    // only view in the app with paragraphs in it. Widened deliberately, because
+    // the failure only appears on a window wider than the measure.
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.setSize(1600, 900);
+    });
+    await openChat(sample);
+
+    const widths = await sample.evaluate(() => {
+      const column = document.querySelector<HTMLElement>('.chat__column');
+      const scroll = document.querySelector<HTMLElement>('.chat__scroll');
+      if (!column || !scroll) return null;
+      return { column: column.getBoundingClientRect().width, scroll: scroll.clientWidth };
+    });
+
+    expect(widths).not.toBeNull();
+    expect(widths!.column).toBeLessThan(widths!.scroll);
+  });
+
+  test('the composer grows with its content and then stops', async ({ sample }) => {
+    // A field that never grows hides the question being asked; one that grows
+    // without limit eats the answer above it.
+    await openChat(sample);
+    const field = sample.locator('.composer__field');
+
+    const resting = await field.evaluate((el) => el.getBoundingClientRect().height);
+    await field.fill(Array.from({ length: 40 }, (_u, i) => `line ${i}`).join('\n'));
+    await stabilize(sample);
+
+    const grown = await field.evaluate((el) => el.getBoundingClientRect().height);
+    const ceiling = await field.evaluate((el) =>
+      Number.parseFloat(getComputedStyle(el).maxHeight)
+    );
+
+    expect(grown).toBeGreaterThan(resting);
+    expect(grown).toBeLessThanOrEqual(ceiling + 1);
+  });
+
+  /**
+   * A conversation seeded straight into the store of saved chats.
+   *
+   * There is no provider in a test run and there never will be — the point of
+   * these invariants is the *drawing*, and a real turn would make them depend on
+   * a model's mood. Writing the body and opening it from the rail exercises the
+   * same path a returning reader takes, restore included.
+   */
+  async function seedChat(sample: Page, turns: unknown): Promise<void> {
+    // Filed against the connection the rail is listing, which for this fixture
+    // is the built-in sample. A chat filed anywhere else is simply not shown.
+    await sample.evaluate(async (body) => {
+      await window.shelf.db.saveChat({
+        connectionId: 'sample',
+        title: 'Albums, counted',
+        body: JSON.stringify({ scope: { kind: 'connection' }, turns: body }),
+      });
+    }, turns);
+    await sample.getByRole('button', { name: 'Chats' }).click();
+    await sample.locator('.chats .chatcard').first().click();
+    await sample.locator('.chat').waitFor({ timeout: 20_000 });
+    await stabilize(sample);
+  }
+
+  test('working folds away and the answer does not', async ({ sample }) => {
+    /*
+     * The rule that keeps a turn readable. A question answered properly may
+     * take four queries to reach, and four tables of intermediate counting bury
+     * the one table that was asked for — so the model marks each query, and the
+     * marking has to actually reach the fold. Both mistakes are silent: an
+     * answer that folds looks like a turn that ran nothing, and a check that
+     * opens looks like an assistant that cannot tell what was asked.
+     */
+    const rows = {
+      fields: [{ name: 'count' }],
+      rows: [{ count: 50 }],
+      truncated: false,
+      durationMs: 4,
+    };
+    await seedChat(sample, [
+      {
+        id: 't1',
+        question: 'How many albums per artist?',
+        state: 'done',
+        items: [
+          {
+            kind: 'step',
+            id: 's1',
+            tool: 'run_sql',
+            state: 'done',
+            intent: 'check',
+            label: 'Rows in music.album',
+            sql: 'SELECT count(*) FROM music.album;',
+            rows,
+          },
+          {
+            kind: 'step',
+            id: 's2',
+            tool: 'run_sql',
+            state: 'done',
+            intent: 'answer',
+            label: 'Albums per artist',
+            sql: 'SELECT artist_id, count(*) FROM music.album GROUP BY artist_id;',
+            rows,
+          },
+        ],
+      },
+    ]);
+
+    // The step's own fold, not the statement's fold nested inside it.
+    const folds = sample.locator('.chat .aside > .aside__fold');
+    await expect(folds).toHaveCount(2);
+
+    const heights = await folds.evaluateAll((els) =>
+      els.map((el) => el.getBoundingClientRect().height)
+    );
+    expect(heights[0]).toBe(0);
+    expect(heights[1]).toBeGreaterThan(0);
+
+    // And the reader can overrule the model in both directions.
+    await sample.locator('.chat .aside__head').first().click();
+    await stabilize(sample);
+    const opened = await folds.first().evaluate((el) => el.getBoundingClientRect().height);
+    expect(opened).toBeGreaterThan(0);
+  });
+
+  test('a statement is the same container whether or not it was folded', async ({ sample }) => {
+    /*
+     * Two containers for one idea is how an interface starts reading as
+     * assembled rather than designed. The working query and the answer open
+     * onto the same block, coloured the same way, carrying the same two
+     * actions — the fold decides only where each one starts.
+     */
+    const rows = {
+      fields: [{ name: 'count' }],
+      rows: [{ count: 50 }],
+      truncated: false,
+      durationMs: 4,
+    };
+    await seedChat(sample, [
+      {
+        id: 't1',
+        question: 'How many albums?',
+        state: 'done',
+        items: [
+          {
+            kind: 'step',
+            id: 's1',
+            tool: 'run_sql',
+            state: 'done',
+            intent: 'check',
+            label: 'Rows in music.album',
+            sql: 'SELECT count(*) FROM music.album;',
+            rows,
+          },
+          {
+            kind: 'step',
+            id: 's2',
+            tool: 'run_sql',
+            state: 'done',
+            intent: 'answer',
+            label: 'Albums per artist',
+            sql: 'SELECT artist_id, count(*) FROM music.album GROUP BY artist_id;',
+            rows,
+          },
+        ],
+      },
+    ]);
+
+    // Two opens per step: the outer one for the rows, the inner one for the
+    // statement behind them.
+    await sample.locator('.chat .aside__head').first().click();
+    await stabilize(sample);
+    for (const head of await sample.locator('.chat .aside__inner-head').all()) {
+      await head.click();
+    }
+    await stabilize(sample);
+
+    const blocks = sample.locator('.chat .sqlblock');
+    await expect(blocks).toHaveCount(2);
+
+    // Coloured, not a wall of monospace: the one thing a plain <pre> would lose.
+    await expect(blocks.first().locator('.tok--keyword').first()).toBeVisible();
+    await expect(blocks.last().locator('.tok--keyword').first()).toBeVisible();
+
+    for (const block of await blocks.all()) {
+      await expect(block.getByRole('button', { name: /copy/i })).toBeVisible();
+      await expect(block.getByRole('button', { name: /open in query tab/i })).toBeVisible();
+    }
+  });
+
+  test('the rows come first and the statement is a fold inside them', async ({ sample }) => {
+    /*
+     * What a step is opened *for*. Someone expanding a query that ran wants to
+     * see what came back; the SQL is how it came back, which is a different
+     * question and a rarer one — so it goes behind a second fold rather than
+     * above the table, where it pushed the rows off the bottom of the pane.
+     *
+     * And closing the step closes the statement with it: a step reopened later
+     * is the step as it was first offered, not however it was last left.
+     */
+    const rows = {
+      fields: [{ name: 'count' }],
+      rows: [{ count: 50 }],
+      truncated: false,
+      durationMs: 4,
+    };
+    await seedChat(sample, [
+      {
+        id: 't1',
+        question: 'How many albums?',
+        state: 'done',
+        items: [
+          {
+            kind: 'step',
+            id: 's1',
+            tool: 'run_sql',
+            state: 'done',
+            intent: 'answer',
+            label: 'Albums per artist',
+            sql: 'SELECT artist_id, count(*) FROM music.album GROUP BY artist_id;',
+            rows,
+          },
+        ],
+      },
+    ]);
+
+    const table = sample.locator('.chat .rows');
+    /*
+     * The fold, not the block inside it: `overflow: hidden` clips what is
+     * painted and leaves the descendant's own box at its natural height, so
+     * measuring the `.sqlblock` would report a statement that is nowhere on
+     * screen as eighty pixels tall.
+     */
+    const block = sample.locator('.chat .aside__body > .aside__fold');
+    const inner = sample.locator('.chat .aside__inner-head');
+
+    // Open on arrival, because the model called it the answer — and showing the
+    // rows, not the SQL.
+    await expect(table).toBeVisible();
+    await expect(inner).toBeVisible();
+    expect(await block.evaluate((el) => el.getBoundingClientRect().height)).toBe(0);
+
+    // The rows are above the statement's own control, not below it.
+    const order = await sample.evaluate(() => {
+      const rowsAt = document.querySelector('.chat .rows')?.getBoundingClientRect().top ?? 0;
+      const sqlAt =
+        document.querySelector('.chat .aside__inner-head')?.getBoundingClientRect().top ?? 0;
+      return { rowsAt, sqlAt };
+    });
+    expect(order.rowsAt).toBeLessThan(order.sqlAt);
+
+    await inner.click();
+    await stabilize(sample);
+    expect(await block.evaluate((el) => el.getBoundingClientRect().height)).toBeGreaterThan(0);
+
+    // Shut the step; reopen it; the statement is folded away again.
+    await sample.locator('.chat .aside__head').first().click();
+    await stabilize(sample);
+    await sample.locator('.chat .aside__head').first().click();
+    await stabilize(sample);
+    expect(await block.evaluate((el) => el.getBoundingClientRect().height)).toBe(0);
+  });
+
+  test('a fold fades its content in rather than only growing a box', async ({ sample }) => {
+    /*
+     * Height alone was the whole animation, and a box growing to reveal content
+     * already at full opacity reads as a mask sliding off rather than as
+     * something appearing — the table's first row is fully drawn before there
+     * is room for a second. Both properties here are composited, so a table
+     * with two hundred cells costs no more to reveal than an empty box.
+     */
+    const rows = {
+      fields: [{ name: 'count' }],
+      rows: [{ count: 50 }],
+      truncated: false,
+      durationMs: 4,
+    };
+    await seedChat(sample, [
+      {
+        id: 't1',
+        question: 'How many albums?',
+        state: 'done',
+        items: [
+          {
+            kind: 'step',
+            id: 's1',
+            tool: 'run_sql',
+            state: 'done',
+            intent: 'check',
+            label: 'Rows in music.album',
+            sql: 'SELECT count(*) FROM music.album;',
+            rows,
+          },
+        ],
+      },
+    ]);
+
+    const drawn = await sample
+      .locator('.chat .aside__body')
+      .first()
+      .evaluate((el) => {
+        const style = getComputedStyle(el);
+        return {
+          opacity: Number.parseFloat(style.opacity),
+          transitions: style.transitionProperty,
+        };
+      });
+
+    // Folded: not merely clipped, but not painted either.
+    expect(drawn.opacity).toBe(0);
+    expect(drawn.transitions).toContain('opacity');
+    expect(drawn.transitions).toContain('transform');
+  });
+
+  test('a statement opens under the name the model gave it', async ({ sample }) => {
+    /*
+     * A strip of tabs all called "From the assistant" tells the reader the one
+     * thing they already know while withholding the one thing they need.
+     */
+    await seedChat(sample, [
+      {
+        id: 't1',
+        question: 'Albums per artist?',
+        state: 'done',
+        items: [
+          {
+            kind: 'sql',
+            id: 'q1',
+            sql: 'SELECT artist_id, count(*) FROM music.album GROUP BY artist_id;',
+            title: 'Albums per artist',
+          },
+        ],
+      },
+    ]);
+
+    await sample
+      .locator('.chat .sqlblock')
+      .getByRole('button', { name: /open in query tab/i })
+      .click();
+    await stabilize(sample);
+
+    await expect(sample.locator('.striptab--on')).toContainText('Albums per artist');
+  });
+
+  /*
+   * It was a `--fill-1`, and a fill is mixed toward mid grey: on the dark theme
+   * that lightens the box and it rose off the transcript correctly, and on the
+   * light theme the same mix darkened it — so the one thing on the page you
+   * write into was the dimmest thing on it, sunk into the pane rather than laid
+   * on it. Raised is a direction away from the field, and that direction is not
+   * the same in both appearances.
+   *
+   * Checked as opacity and luminance rather than by eye: a translucent surface
+   * takes its colour from whatever is behind it, which is exactly how a value
+   * can be right in one theme and inverted in the other while looking
+   * deliberate in both.
+   */
+  for (const appearance of ['light', 'dark'] as const) {
+    test(`the box you type into stands off the page (${appearance})`, async ({ page }) => {
+      await setAppearance(page, appearance);
+      await page
+        .getByRole('button', { name: /sample database/i })
+        .first()
+        .click();
+      await page.locator('.workspace').waitFor({ timeout: 30_000 });
+      await openChat(page);
+
+      const paint = await page.locator('.composer__box').evaluate((el) => {
+        const read = (value: string) => {
+          const parts = value.match(/[\d.]+/g)!.map(Number);
+          return {
+            alpha: parts[3] ?? 1,
+            // Rough relative luminance; the comparison only needs an ordering.
+            lum: 0.2126 * parts[0]! + 0.7152 * parts[1]! + 0.0722 * parts[2]!,
+          };
+        };
+        const probe = document.createElement('div');
+        probe.style.backgroundColor = 'var(--color-base-100)';
+        el.append(probe);
+        const pane = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return { box: read(getComputedStyle(el).backgroundColor), pane: read(pane) };
+      });
+
+      // A tint of whatever is behind it is the failure, so: its own surface.
+      expect(paint.box.alpha, 'the composer is translucent').toBe(1);
+      // And that surface is at least as light as the pane's own paper — on the
+      // dark theme a step up from it, on the light theme not sinking below it.
+      expect(paint.box.lum, 'the composer is darker than the pane').toBeGreaterThanOrEqual(
+        paint.pane.lum - 1
+      );
+    });
+  }
+
+  test('an answer can be selected and copied out of the transcript', async ({ sample }) => {
+    /*
+     * The chrome of this app is not a document and does not select — a root
+     * `user-select: none` is what keeps a drag across a sidebar from painting
+     * half the tree blue. A transcript *is* a document: it is prose, a
+     * statement, and a table of someone's own rows, and the first thing anybody
+     * does with an answer is take part of it somewhere else.
+     *
+     * Its controls are the exception inside the exception. A chevron whose
+     * label highlights on a double click is a control in a place where double
+     * clicking a word is how a word gets selected.
+     */
+    const rows = {
+      fields: [{ name: 'count' }],
+      rows: [{ count: 50 }],
+      truncated: false,
+      durationMs: 4,
+    };
+    await seedChat(sample, [
+      {
+        id: 't1',
+        question: 'How many albums?',
+        state: 'done',
+        items: [
+          { kind: 'text', id: 'x1', text: 'There are fifty albums.' },
+          {
+            kind: 'step',
+            id: 's1',
+            tool: 'run_sql',
+            state: 'done',
+            intent: 'answer',
+            label: 'Albums',
+            sql: 'SELECT count(*) FROM music.album;',
+            rows,
+          },
+        ],
+      },
+    ]);
+
+    const selectable = await sample.evaluate(() => {
+      const at = (selector: string) =>
+        getComputedStyle(document.querySelector(selector)!).userSelect;
+      return {
+        prose: at('.chat .prose'),
+        statement: at('.chat .sqlcode'),
+        table: at('.chat .rows'),
+        control: at('.chat .aside__head'),
+      };
+    });
+
+    expect(selectable.prose).toBe('text');
+    expect(selectable.statement).toBe('text');
+    expect(selectable.table).toBe('text');
+    expect(selectable.control).toBe('none');
+
+    // And it actually selects — a computed value is a claim about the CSS, not
+    // about what a pointer does with it.
+    const taken = await sample.evaluate(() => {
+      const node = document.querySelector('.chat .prose')!;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const selection = getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return selection.toString();
+    });
+    expect(taken).toContain('fifty albums');
+  });
+
+  test('a statement is laid out before it is shown', async ({ sample }) => {
+    /*
+     * A model writes a statement the way it writes a sentence — one long line,
+     * or whatever indentation the last example it saw happened to use — and the
+     * statement is the part of an answer people read closely. The same
+     * formatter and the same dialect table the query tab's Format button uses,
+     * so a statement lifted out of a conversation looks like one typed into an
+     * editor.
+     */
+    await seedChat(sample, [
+      {
+        id: 't1',
+        question: 'Albums per artist?',
+        state: 'done',
+        items: [
+          {
+            kind: 'sql',
+            id: 'q1',
+            sql: 'select a.name, count(*) from music.album al join music.artist a on a.id = al.artist_id group by a.name',
+            title: 'Albums per artist',
+          },
+        ],
+      },
+    ]);
+
+    const shown = await sample.locator('.chat .sqlcode').innerText();
+    expect(shown, 'the statement was shown exactly as the model wrote it').not.toContain(
+      'select a.name, count(*) from'
+    );
+    expect(shown).toMatch(/SELECT/);
+    expect(shown.split('\n').length).toBeGreaterThan(2);
+  });
+
+  test('the transcript turns off scroll anchoring', async ({ sample }) => {
+    // The browser holds a scroll position steady by adjusting scrollTop when
+    // content above changes size — and while an answer streams, every token
+    // *is* that content changing. The same rule the virtualised tree follows.
+    await openChat(sample);
+    const anchoring = await sample
+      .locator('.chat__scroll')
+      .evaluate((el) => getComputedStyle(el).overflowAnchor);
+    expect(anchoring).toBe('none');
   });
 });

@@ -74,6 +74,27 @@ const PATHS: Record<string, string> = {
   eye: 'M1.8 8s2.5-4 6.2-4 6.2 4 6.2 4-2.5 4-6.2 4-6.2-4-6.2-4zM8 9.9a1.9 1.9 0 1 0 0-3.8 1.9 1.9 0 0 0 0 3.8z',
   eyeOff:
     'M1.8 8s2.5-4 6.2-4c1 0 1.9.3 2.7.7M14.2 8s-2.5 4-6.2 4c-1 0-1.9-.3-2.7-.7M6.7 6.7a1.9 1.9 0 0 0 2.6 2.6M2.5 2.5l11 11',
+  /*
+   * A four-pointed star with a smaller one beside it: the shape that has come
+   * to mean "a model wrote this", which is exactly the thing an icon here has
+   * to say without a label. Concave sides rather than a diamond — a diamond at
+   * this size reads as a warning marker.
+   *
+   * Filled, unlike everything else in the set, because a 1.5 stroke around a
+   * shape with four cusps closes up at 12px and turns into a blob. It is drawn
+   * with `filled` in the places it appears.
+   */
+  assistant:
+    'M7 1.6c.45 3.2 1.75 4.5 4.95 4.95-3.2.45-4.5 1.75-4.95 4.95-.45-3.2-1.75-4.5-4.95-4.95C5.25 6.1 6.55 4.8 7 1.6ZM12.3 9.4c.24 1.55.85 2.16 2.4 2.4-1.55.24-2.16.85-2.4 2.4-.24-1.55-.85-2.16-2.4-2.4 1.55-.24 2.16-.85 2.4-2.4Z',
+  // A paper plane, pointing where the message is going.
+  send: 'M13.8 2.2L7.2 9M13.8 2.2L9.6 13.8l-2.4-4.8-4.8-2.4z',
+  // Straight up, with a chevron head: "send this". The same shape every
+  // composer in every messaging app has settled on, which is the argument for
+  // it — a control nobody has to be taught.
+  arrowUp: 'M8 13V3.5M4 7.5L8 3.5l4 4',
+  // A bin with a lid and a handle. Three lines, no hatching: the shape is
+  // recognisable at 12px and the detail is not.
+  trash: 'M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.6 8.5h4.8l.6-8.5',
 };
 
 withDefaults(

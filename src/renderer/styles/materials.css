@@ -46,6 +46,7 @@
 .mat-thin,
 .mat-regular,
 .mat-thick,
+.panel-bar,
 .panel-content {
   position: relative;
   background-color: color-mix(
@@ -256,8 +257,17 @@
    * what the ordering means: the columns are furthest back, so they let the
    * most through — and the dial preserves this distance rather than closing it,
    * so the two never converge however much glass the window is made of.
+   *
+   * Sixteen points thinner than they were designed at, and every surface in
+   * this file moved by the same sixteen. The dial's anchor was simply set too
+   * high: at the middle of a slider whose whole subject is translucency, the
+   * window was reading as painted rather than as glass. Moving all three by one
+   * offset is the same arithmetic the dial itself does below the anchor, so the
+   * distances that carry the depth are untouched — the columns are exactly as
+   * far behind the working pane as they ever were, and the whole window simply
+   * sits further back.
    */
-  --mat-alpha: 38%;
+  --mat-alpha: 22%;
 }
 
 /*
@@ -282,7 +292,38 @@
 [data-theme='shelf-dark'] .panel-sidebar {
   --panel-tint: var(--color-recessed);
   --mat-tint: var(--panel-tint);
-  --mat-alpha: 44%;
+  --mat-alpha: 28%;
+}
+
+/*
+ * The bar across the top, which is neither of the other two.
+ *
+ * It wore the columns' surface, so the window was made of two shades and the
+ * bar was simply the top of the left one — which is a fair description of a
+ * sidebar that runs to the top edge, and a poor one of a bar that spans the
+ * whole window and carries the tab strip and the window controls. Three
+ * regions, three shades: the columns furthest back, the bar a step in front of
+ * them, the working pane in front of both.
+ *
+ * A step *forward* of the columns rather than behind them, because the bar is
+ * chrome laid over the window rather than another well cut into it, and because
+ * the window controls sit on it — a surface that recedes under them reads as a
+ * hole in the title bar.
+ *
+ * One shade across its whole width, and that is not the same claim: no region
+ * of this bar may carry a tint of its own, or the seam that rule exists to
+ * prevent comes straight back as a vertical line under the traffic lights.
+ */
+.panel-bar {
+  --panel-tint: var(--color-recessed);
+  --mat-tint: var(--panel-tint);
+  --mat-alpha: 36%;
+}
+
+[data-theme='shelf-dark'] .panel-bar {
+  --panel-tint: var(--color-recessed);
+  --mat-tint: var(--panel-tint);
+  --mat-alpha: 42%;
 }
 
 /*
@@ -301,11 +342,11 @@
  */
 .panel-content {
   --mat-tint: var(--color-base-100);
-  --mat-alpha: 90%;
+  --mat-alpha: 74%;
 }
 
 [data-theme='shelf-dark'] .panel-content {
-  --mat-alpha: 88%;
+  --mat-alpha: 72%;
 }
 
 /*
@@ -314,6 +355,7 @@
  */
 :root[data-translucency='none'] .panel-recessed,
 :root[data-translucency='none'] .panel-sidebar,
+:root[data-translucency='none'] .panel-bar,
 :root[data-translucency='none'] .panel-content {
   --mat-alpha: 100%;
 }

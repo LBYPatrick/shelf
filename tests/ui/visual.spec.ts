@@ -36,6 +36,30 @@ test.describe('light', () => {
   });
 
   test('settings sheet', async ({ sample }) => {
+    /*
+     * The dial put back where it started, first.
+     *
+     * The appearance settings persist for the life of the worker, and one of
+     * the invariants drags the opacity slider to prove it paints the number it
+     * shows — so this frame photographed whatever that test happened to leave
+     * behind, and the baseline was whatever it had left behind on the day the
+     * snapshot was taken. A snapshot that depends on the order of the suite is
+     * a snapshot that fails for no reason and gets accepted for no reason.
+     */
+    await sample.evaluate(() => {
+      const key = 'shelf.appearance';
+      const stored: Record<string, unknown> = JSON.parse(localStorage.getItem(key) ?? '{}');
+      localStorage.setItem(key, JSON.stringify({ ...stored, materials: { opacity: 0.5 } }));
+    });
+    // A reload drops the connection with everything else, so the sample is
+    // opened again — the same dance `setAppearance` leaves its callers.
+    await sample.reload();
+    await sample
+      .getByRole('button', { name: /sample database/i })
+      .first()
+      .click();
+    await sample.locator('.workspace').waitFor({ timeout: 30_000 });
+
     await sample.getByRole('button', { name: /settings/i }).click();
     await sample.getByRole('dialog').waitFor();
     await stabilize(sample);

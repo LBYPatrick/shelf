@@ -57,9 +57,13 @@ test('capture the interface', async ({ page }) => {
   await settle(1500);
   await page.screenshot({ path: `${OUT}/06-jobs.png` });
 
-  await page.getByRole('button', { name: 'Filters', exact: true }).click();
+  // The drawer this used to open is gone; the conditions are chips, and the
+  // popup that adds one is what is worth a frame.
+  await page.getByRole('button', { name: 'Add a filter' }).first().click();
   await settle(600);
   await page.screenshot({ path: `${OUT}/07-jobs-filters.png` });
+  await page.keyboard.press('Escape');
+  await settle(300);
 
   await page.evaluate(() => {
     const stored = JSON.parse(localStorage.getItem('shelf.appearance') ?? '{}');

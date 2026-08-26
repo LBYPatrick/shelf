@@ -20,6 +20,7 @@
     "paths": {
       "@shared/*": ["src/shared/*"],
       "@drivers/*": ["src/drivers/*"],
+      "@ai/*": ["src/ai/*"],
       "@renderer/*": ["src/renderer/*"]
     }
   },
@@ -28,6 +29,7 @@
     "src/preload/**/*.ts",
     "src/utility/**/*.ts",
     "src/drivers/**/*.ts",
+    "src/ai/**/*.ts",
     "src/shared/**/*.ts",
     "tests/**/*.ts",
     "electron.vite.config.ts",

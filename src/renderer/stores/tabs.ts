@@ -9,7 +9,7 @@ import { entityKey } from './entities';
  * nothing can open is dead weight the compiler cannot see, so it went — and
  * `restore` drops any that a session saved before it did.
  */
-export type TabKind = 'table' | 'query' | 'erd' | 'job';
+export type TabKind = 'table' | 'query' | 'erd' | 'job' | 'chat';
 
 export interface Tab {
   readonly id: string;
@@ -30,6 +30,21 @@ export interface Tab {
    * diagram is opened from a database or a schema, and shows that.
    */
   scope?: { readonly kind: 'database' | 'schema'; readonly name: string };
+  /**
+   * What a conversation was opened *on*.
+   *
+   * Wider than `scope` — a chat can be about one table, which a diagram cannot
+   * usefully be — so it is its own field rather than a widening of that one.
+   * The tab carries it; the conversation itself lives in the assistant store and
+   * is deliberately not persisted.
+   */
+  /** The saved conversation this tab is showing, once it has been written. */
+  chatId?: string;
+  ask?:
+    | { readonly kind: 'connection' }
+    | { readonly kind: 'database'; readonly name: string }
+    | { readonly kind: 'schema'; readonly name: string }
+    | { readonly kind: 'entity'; readonly entity: EntityRef };
   unsaved: boolean;
 }
 
@@ -150,6 +165,29 @@ export const useTabs = defineStore('tabs', () => {
   }
 
   /**
+   * A conversation, always a new one.
+   *
+   * Unlike a table or a diagram, opening a second chat about the same schema is
+   * a thing people mean to do: the first one has a thread of questions in it
+   * that a new question would be changing the subject of. So this makes one
+   * every time and does not look for an existing tab to focus.
+   */
+  function openChat(ask?: Tab['ask'], title?: string): Tab {
+    const count = tabs.value.filter((tab) => tab.kind === 'chat').length;
+    const tab: Tab = {
+      id: nextId(),
+      kind: 'chat',
+      title: title ?? (count === 0 ? 'Assistant' : `Assistant ${count + 1}`),
+      ...(ask ? { ask } : {}),
+      unsaved: false,
+    };
+
+    tabs.value = [...tabs.value, tab];
+    focus(tab.id);
+    return tab;
+  }
+
+  /**
    * Opens a dispatched job's rows, or focuses the tab already showing them.
    *
    * Keyed by the job rather than by position, so clicking the same job twice
@@ -256,6 +294,12 @@ export const useTabs = defineStore('tabs', () => {
      * may not be there. The job itself survives in the jobs list, which is
      * where its state belongs.
      */
+    /*
+     * A chat tab is not restored either, and for a reason of its own rather
+     * than the spool's: the conversation is not saved anywhere. Bringing back
+     * the tab would bring back an empty one under a title that promises a
+     * thread, which is worse than not bringing it back at all.
+     */
     const KINDS: readonly string[] = ['table', 'query', 'erd'];
     // A session saved before a tab kind was removed still restores; it just
     // restores the tabs that still exist.
@@ -302,6 +346,7 @@ export const useTabs = defineStore('tabs', () => {
     openEntity,
     openErd,
     openQuery,
+    openChat,
     rename,
     openJob,
     closeJob,
