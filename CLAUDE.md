@@ -93,6 +93,13 @@ component's props or a mock's shape has changed.
   "12% tint" of it is 12% white and composites far lighter than the same alpha
   of dark over white. The fill ramp is mixed from one neutral grey with
   per-theme alphas.
+- **A surface that is sunk into the pane is `--surface-well`; one that stands
+  off it is `--surface-raised`.** Both were spelled at their call sites — the
+  query editor and the assistant's transcript were each `--fill-4`, so the two
+  largest surfaces in the app agreed by coincidence and would have stopped
+  agreeing the first time either was touched. Raised needs a per-theme value
+  because "away from the field" is a different direction in each; sunk does not,
+  because a fill is a tint of grey either way.
 - **The accent as type is `--color-primary-text`, not `--color-primary`.**
   Setting the fill colour as text on a wash of itself is the one combination
   guaranteed to be low contrast.
@@ -186,15 +193,18 @@ component's props or a mock's shape has changed.
   tile means "this is the panel you are looking at", and a sixth lit tile would
   say the sidebar is a destination beside the five rather than the switch that
   shows them.
-- **One bar spans the window, and the window controls sit on it.** The tab strip
-  is a region of `.topbar`, not a band inside the content pane. This is what
-  makes the controls safe: they are wider than the rail and overhang the
-  sidebar, so while any column boundary reached the top edge it ran directly
-  under them, and every fix moved the seam rather than removing it. Nothing
-  below the bar may be positioned back over it, and no *region* of the bar may
-  carry a shade of its own — a tint across part of one bar is the same line
-  again. A control's own selected state is not a region; a track behind a group
-  of them is.
+- **The bar is its two columns, not a band across them.** The tab strip is a
+  region of `.topbar` rather than a band inside the content pane — that is what
+  makes the window controls safe, because they are wider than the rail and
+  overhang the sidebar, so while any column boundary reached the top edge it ran
+  directly under them. But the bar is not a surface of its own either: its
+  leading region wears the sidebar's material and the strip wears the pane's, so
+  the window reads as two columns running its full height with the tabs sitting
+  on the working pane, which is where a tab strip belongs. The seam between them
+  falls at the columns' trailing edge, and the rule that matters is unchanged:
+  nothing draws a line where the traffic lights are. Under the *controls* the
+  surface is one surface, and the invariant sweeps that region rather than the
+  whole bar. Nothing below the bar may be positioned back over it.
 - **The open tab is tonal, and one marker travels between them.** A raised thumb
   is only legible as raised against the recessed track it came out of, and the
   bar may not carry a track — so the elevation was a card hovering over nothing,
@@ -204,17 +214,14 @@ component's props or a mock's shape has changed.
   by design; matching alphas does not achieve it, because two surfaces sharing a
   tint but differing in opacity diverge by an amount that depends on what is
   behind the window. The depth comes from glass columns against the more present
-  content pane instead, and from the one rounded corner where the three meet.
-- **The window is three shades: the columns, the bar, the pane.** The bar wore
-  the columns' surface, which made the window two shades and the bar simply the
-  top of the left one — a fair description of a sidebar that runs to the top
-  edge, and a poor one of a bar that spans the whole window and carries the tab
-  strip and the controls. `panel-bar` sits a step *in front of* the columns,
-  because the bar is chrome laid over the window rather than another well cut
-  into it, and because a surface that recedes under the traffic lights reads as
-  a hole in the title bar. One shade across its whole width, which is a
-  different claim from having one: no *region* of it may carry a tint of its
-  own.
+  content pane instead — which is why the gap between the two is asserted rather
+  than admired.
+- **The window is two shades, and the bar is made of both.** It was three for a
+  while — the columns, a bar with a tint of its own, the pane — and that stacks
+  the window in a T: two columns below and a band laid over the top of them. Two
+  columns running the full height is the shape the thing actually has. Deleting
+  `panel-bar` is part of the rule: a material nothing wears is a material
+  somebody will wear again.
 - **A conversation card is a job card.** Not a resemblance — the same object: a
   thing that ran, has a name you can change, and can be thrown away. It drifted
   once, into a row with a sparkle glyph on it saying "this is a chat" in a list
@@ -243,16 +250,17 @@ component's props or a mock's shape has changed.
   focus lands elsewhere, which is when people reach for Escape. But listeners on
   one node in one phase all run, and `stopPropagation` does not stop the
   siblings beside it, so one press collapsed the whole pile.
-- **A rounded clip over a composited child is a `clip-path`, not `overflow`.**
-  Chromium does not apply an ancestor's rounded overflow clip to a descendant
-  promoted to its own layer — the clip degrades to a rectangle. Monaco promotes
-  itself, so the content pane's corner was cut on a table tab and square on a
-  query tab. Sixty-four pixels is far under the snapshot diff threshold, which
-  is why it has its own clipped screenshot rather than relying on the full one.
-  The arc is backed by a masked wedge of the sidebar's own surface: nothing
-  under the pane paints anything, so an unbacked corner shows the material the
-  OS draws *outside* the window — raw where the column an eighth of an inch away
-  shows it blurred and tinted.
+- **The working pane is square.** There was one rounded corner where it met the
+  chrome, backed by a masked wedge of the sidebar's own surface so the arc did
+  not show the material the OS draws *outside* the window — raw, where the
+  column an eighth of an inch away showed it blurred and tinted. It softened the
+  one place the opaque pane butted into something above it, and there is no such
+  place now: the strip wears the pane's surface and sits directly on it, so the
+  two are one column with a row of tabs at the top rather than two things
+  meeting at a corner. If a rounded clip ever comes back over a *composited*
+  child it must be a `clip-path`, not `overflow`: Chromium drops an ancestor's
+  rounded overflow clip on a layer of its own, Monaco promotes itself, and the
+  corner was correspondingly cut on a table tab and square on a query tab.
 - **The grid's column widths are measured in a canvas, never by the layout.**
   Tabulator's `fitData` family sizes a column by clearing its width and reading
   `offsetWidth` off every cell — a forced reflow each — and `fitDataStretch`

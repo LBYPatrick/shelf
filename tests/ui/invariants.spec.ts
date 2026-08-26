@@ -721,6 +721,13 @@ test.describe('materials', () => {
        * introduced a horizontal one directly above the first rail icon. The bar
        * replaced the whole argument: there is one surface under the controls,
        * and what is checked is that it stays one.
+       *
+       * The band swept is the bar's leading region, not the whole bar. The bar
+       * is deliberately two shades now — the columns' surface continued up on
+       * one side of the seam and the pane's on the other — and that seam falls
+       * at the columns' trailing edge, three hundred pixels in. The rule was
+       * never "the bar is one colour"; it is that nothing draws a line where
+       * the traffic lights are, and this is the region they are in.
        */
       const step = await page.evaluate(() => {
         const canvas = document.createElement('canvas');
@@ -736,8 +743,8 @@ test.describe('materials', () => {
           return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
         };
 
-        const bar = document.querySelector('.topbar')!.getBoundingClientRect();
-        const y = bar.top + bar.height / 2;
+        const lead = document.querySelector('.topbar__lead')!.getBoundingClientRect();
+        const y = lead.top + lead.height / 2;
 
         const sample_ = (x: number) => {
           for (const el of document.elementsFromPoint(x, y)) {
@@ -747,15 +754,11 @@ test.describe('materials', () => {
           return 0;
         };
 
-        // Every fourth pixel across the bar, skipping the raised tab that marks
-        // which one is open — it is meant to be a different shade.
+        // Every fourth pixel across it, stopping short of the seam at its
+        // trailing edge, which is the one boundary that is supposed to be there.
         let worst = 0;
         let previous: number | undefined;
-        for (let x = 2; x < bar.width - 2; x += 4) {
-          if (document.elementFromPoint(x, y)?.closest('.striptab')) {
-            previous = undefined;
-            continue;
-          }
+        for (let x = lead.left + 2; x < lead.right - 4; x += 4) {
           const here = sample_(x);
           if (previous !== undefined) worst = Math.max(worst, Math.abs(here - previous));
           previous = here;
@@ -1708,117 +1711,83 @@ test.describe('cost', () => {
   });
 });
 
-test.describe('corner', () => {
-  test('the notch fills the cut corner and nothing behind the pane', async ({ sample }) => {
+test.describe('the columns and the pane', () => {
+  test('the bar is its two columns, not a band across them', async ({ sample }) => {
     /*
-     * It was a full square sitting behind the pane's cut corner, and the pane is
-     * glass — so across the quarter-disc the two surfaces stacked and
-     * composited to a shade darker than either. A small dark rectangle pinned
-     * to the corner of the working pane, on every theme, for as long as the
-     * element has existed.
+     * The bar had a shade of its own, which made the window three surfaces
+     * stacked in a T: two columns below and one band over the top of them. It
+     * reads as two columns running the full height instead, with the tab strip
+     * sitting on the working pane the way a tab strip does everywhere else.
      *
-     * Asserted by hiding the notch and comparing the pixels rather than by
-     * looking at the mask, because the mask is one way to fix it and the rule
-     * is that the notch contributes nothing where the pane is drawn. The corner
-     * is eight pixels across, which is far under the screenshot threshold —
-     * this is invisible to the snapshot that exists to guard this very corner.
+     * So the bar is divided where the columns end: its leading half wears the
+     * sidebar's surface and the strip wears the pane's, and the seam between
+     * them is the same vertical line that runs all the way down the window.
      */
-    const box = (await sample.locator('.content').boundingBox())!;
-    // Inside the pane and inside the arc: comfortably within the square the
-    // notch occupies, and comfortably covered by the pane.
-    const clip = { x: box.x + 4, y: box.y + 4, width: 4, height: 4 };
-
-    const withNotch = await sample.screenshot({ clip });
-    await sample.addStyleTag({ content: '.notch { display: none !important }' });
-    const without = await sample.screenshot({ clip });
-
-    expect(
-      withNotch.equals(without),
-      'the notch is painting under the content pane and darkening it'
-    ).toBe(true);
-  });
-
-  test('the notch is backed by the same surface as the column beside it', async ({
-    sample,
-  }) => {
-    /*
-     * The content pane cuts a corner out of itself where it meets the glass,
-     * and nothing under it painted anything — so the arc showed the material
-     * the OS draws outside the window, raw, while the sidebar beside it showed
-     * that material blurred, saturated and tinted. Two surfaces meeting along
-     * an eight-pixel curve is exactly where a difference reads as a drawn edge.
-     *
-     * Compared rather than photographed: a test window has no vibrancy behind
-     * it, so both sides come out identical however wrong they are.
-     */
-    const corner = await sample.evaluate(() => {
-      const surface = (selector: string) => {
-        const style = getComputedStyle(document.querySelector(selector)!);
-        return { bg: style.backgroundColor, filter: style.backdropFilter };
-      };
-
-      const notch = document.querySelector('.notch')!.getBoundingClientRect();
-      const pane = document.querySelector('.content')!;
-      const content = pane.getBoundingClientRect();
-      const radius = Number.parseFloat(getComputedStyle(pane).borderStartStartRadius);
-
+    const paint = await sample.evaluate(() => {
+      const of = (selector: string) =>
+        getComputedStyle(document.querySelector(selector)!).backgroundColor;
       return {
-        notch: surface('.notch'),
-        sidebar: surface('.sidebar'),
-        // Under the arc, or it is backing nothing.
-        covers:
-          Math.abs(notch.left - content.left) < 1 &&
-          Math.abs(notch.top - content.top) < 1 &&
-          notch.width >= radius &&
-          notch.height >= radius,
-      };
-    });
-
-    expect(corner.covers).toBe(true);
-    expect(corner.notch).toEqual(corner.sidebar);
-  });
-
-  test('the columns, the bar and the pane are three shades, in that order', async ({
-    sample,
-  }) => {
-    /*
-     * The bar wore the columns' surface, so the window was made of two shades
-     * and the bar was simply the top of the left one — a fair description of a
-     * sidebar that runs to the top edge, and a poor one of a bar that spans the
-     * whole window and carries the tab strip and the window controls.
-     *
-     * The order matters as much as the count. The bar is a step *in front of*
-     * the columns because it is chrome laid over the window rather than another
-     * well cut into it, and because the window controls sit on it: a surface
-     * that recedes under them reads as a hole in the title bar.
-     */
-    const alpha = await sample.evaluate(() => {
-      const of = (selector: string) => {
-        const value = getComputedStyle(document.querySelector(selector)!).backgroundColor;
-        const parts = value.match(/[\d.]+/g)!.map(Number);
-        return parts[3] ?? 1;
-      };
-      return {
-        columns: of('.sidebar'),
-        bar: of('.topbar'),
+        lead: of('.topbar__lead'),
+        sidebar: of('.sidebar'),
+        strip: of('.strip'),
         pane: of('.content'),
       };
     });
 
-    // Three, and far enough apart to be told apart.
-    expect(alpha.bar).toBeGreaterThan(alpha.columns + 0.05);
-    expect(alpha.pane).toBeGreaterThan(alpha.bar + 0.05);
+    expect(paint.lead, 'the bar does not continue the columns').toBe(paint.sidebar);
+    expect(paint.strip, 'the strip does not continue the pane').toBe(paint.pane);
+    expect(paint.lead, 'the two halves of the bar are the same shade').not.toBe(paint.strip);
+  });
+
+  test('the seam in the bar lines up with the seam below it', async ({ sample }) => {
+    // One line down the window, or it is two lines that nearly agree — which is
+    // worse than either, and is what a boundary an eighth of an inch out looks
+    // like.
+    const edges = await sample.evaluate(() => {
+      const lead = document.querySelector('.topbar__lead')!.getBoundingClientRect();
+      const strip = document.querySelector('.strip')!.getBoundingClientRect();
+      const pane = document.querySelector('.content')!.getBoundingClientRect();
+      return { lead: lead.right, strip: strip.left, pane: pane.left };
+    });
+
+    expect(Math.abs(edges.strip - edges.pane)).toBeLessThanOrEqual(1);
+    expect(Math.abs(edges.lead - edges.pane)).toBeLessThanOrEqual(1);
+  });
+
+  test('the pane is square, now that the strip is its top edge', async ({ sample }) => {
+    /*
+     * There was one rounded corner here, backed by a masked wedge of the
+     * sidebar's surface so the arc did not show raw window backdrop. It
+     * softened the one place the opaque pane butted into the chrome above it,
+     * and there is no such place any more — the strip wears the pane's surface
+     * and sits directly on it.
+     */
+    const edge = await sample.locator('.content').evaluate((el) => {
+      const style = getComputedStyle(el);
+      return {
+        radii: [
+          style.borderStartStartRadius,
+          style.borderStartEndRadius,
+          style.borderEndStartRadius,
+          style.borderEndEndRadius,
+        ],
+        clip: style.clipPath,
+      };
+    });
+
+    for (const radius of edge.radii) expect(Number.parseFloat(radius)).toBe(0);
+    // And not a curve smuggled back in as a mask, which is how it was drawn the
+    // last time: Chromium drops an ancestor's rounded overflow clip on a
+    // composited child, so it had to be a path.
+    expect(edge.clip).toBe('none');
   });
 
   test('the pane still stands in front of the columns beside it', async ({ sample }) => {
     /*
-     * The corner shows the depth between the glass and the working surface as
-     * *geometry*, and it can only show what the tone already carries — the arc
-     * is eight pixels of sidebar seen through a gap in the pane, so if the two
-     * surfaces converge there is nothing in the gap to see. The pane is the
-     * most present of the three and the columns the least, and a change to the
-     * material weights that quietly closed that distance would leave a window
-     * that is one flat sheet with a curve cut in it.
+     * With no corner and no band, the whole difference between the two columns
+     * is carried by tone — so the tone had better carry it. A change to the
+     * material weights that quietly closed the gap would leave a window that is
+     * one flat sheet with a hairline drawn on it.
      */
     const alpha = await sample.evaluate(() => {
       const of = (selector: string) => {

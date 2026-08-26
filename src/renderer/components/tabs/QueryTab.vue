@@ -1115,7 +1115,7 @@ watch(
   flex: 0 0 auto;
   min-height: 0;
   overflow: hidden;
-  background-color: var(--fill-4);
+  background-color: var(--surface-well);
 }
 
 /*

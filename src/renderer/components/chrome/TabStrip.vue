@@ -419,7 +419,7 @@ const KIND_ICON: Record<Tab['kind'], string> = {
 <template>
   <div
     ref="stripEl"
-    class="strip drag-region"
+    class="strip panel-content drag-region"
   >
     <!--
       The tablist holds tabs and nothing else. The new-tab button used to sit
@@ -553,6 +553,13 @@ const KIND_ICON: Record<Tab['kind'], string> = {
  * be a second shade drawn across part of one bar, which is exactly the line
  * under the window controls that the bar exists to remove.
  */
+/*
+ * The strip wears the working pane's surface, and is the top of it.
+ *
+ * The bar used to be one shade across its whole width, which made the window
+ * read as two columns with a band laid over them. Continuing the pane up
+ * through the bar puts the tabs on the thing they belong to.
+ */
 .strip {
   display: flex;
   flex: 1;
@@ -560,6 +567,9 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   gap: var(--gap-tight);
   min-width: 0;
   height: 100%;
+  /* Both ends, not just the trailing one. The first tab used to sit flush
+     against the seam with the columns while the last had room to spare. */
+  padding-inline: var(--gap-tight);
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;

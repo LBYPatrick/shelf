@@ -60,6 +60,18 @@
    */
   --surface-raised: var(--color-base-100);
 
+  /*
+   * The other direction: a shallow well sunk into the working pane.
+   *
+   * Something you type into or read a long way down — the query editor, the
+   * assistant's transcript. Both were spelled `--fill-4` at their own call
+   * sites, which meant the two largest surfaces in the app agreed by
+   * coincidence and would have stopped agreeing the first time either was
+   * touched. A fill is a tint of grey and works in both appearances, so unlike
+   * `--surface-raised` this one needs no per-theme value.
+   */
+  --surface-well: var(--fill-4);
+
   /* Shadows are cast by light, so they are ink — never a tint of the text
      colour, which on a dark theme turns every shadow into a pale halo. */
   --shadow-ink: 0 0 0;

@@ -150,7 +150,7 @@ onBeforeUnmount(() => stopPersisting?.());
       once rather than managing them: the controls have one surface under them,
       the tabs get the window, and the columns below start under a clean edge.
     -->
-    <header class="topbar mat-regular panel-bar drag-region">
+    <header class="topbar drag-region">
       <!--
         The controls, the toggle, and the room the columns take up.
         ──────────────────────────────────────────────────────────
@@ -168,31 +168,12 @@ onBeforeUnmount(() => stopPersisting?.());
         prevent. It travels on the sidebar's own curve, so the two move as one
         thing rather than as two that happen to agree at each end.
       -->
-      <div class="topbar__lead" />
+      <div class="topbar__lead mat-regular panel-sidebar" />
 
       <TabStrip />
     </header>
 
     <div class="workspace__main">
-      <!--
-        The corner the content pane cuts out of itself, backed by the same
-        surface as the column beside it.
-        
-        The notch was a hole. Nothing under the content pane paints anything, so
-        the arc showed the material the OS draws outside the window — raw,
-        unblurred and untinted — while the sidebar an eighth of an inch away
-        showed that material blurred, saturated and tinted. Two surfaces meeting
-        along an eight-pixel curve is precisely where a difference reads as a
-        drawn edge, which is what it looked like, worst on the dark theme where
-        the tint carries most of the tone. It is invisible to a test with no
-        vibrancy behind the window, which is why the invariant compares it to
-        the sidebar rather than looking at it.
-      -->
-      <span
-        class="notch mat-regular panel-sidebar"
-        aria-hidden="true"
-      />
-
       <nav
         class="rail mat-regular panel-recessed"
         :aria-label="$t('workspace.entities')"
@@ -513,13 +494,12 @@ onBeforeUnmount(() => stopPersisting?.());
 /*
  * How wide the two glass columns are, declared once.
  *
- * Four things have to agree on this number: the sidebar is it, the notch sits
- * at it, the working pane begins after it, and the tab strip starts where the
- * pane starts. Each of them used to work it out for itself — three inline
- * `calc(var(--rail-w) + Npx)` expressions and a width — which is three chances
- * for one of them to be left behind when the sidebar moves, and the tab strip
- * was the one that had been: it began after the toggle button, at an offset
- * that matched nothing else in the window.
+ * Three things have to agree on this number: the sidebar is it, the working
+ * pane begins after it, and the bar above is divided at it — the columns'
+ * surface on one side, the pane's on the other. Each used to work it out for
+ * itself, which is that many chances for one to be left behind when the
+ * sidebar moves, and the tab strip was the one that had been: it began after
+ * the toggle button, at an offset that matched nothing else in the window.
  *
  * `--sidebar-w` is the only part that comes from the interface, because it is
  * the only part a reader can drag. Everything below is derived from it, so the
@@ -544,17 +524,26 @@ onBeforeUnmount(() => stopPersisting?.());
   flex: 0 0 auto;
   align-items: center;
   height: max(var(--tab-h), var(--controls-h, 0px));
-  padding-inline-end: var(--gap-tight);
 }
 
 /*
- * The bar's first region is the columns' width, so its second begins where the
- * working pane begins.
+ * The bar's first region is the columns' width, and wears the columns' surface.
  *
- * Empty, and deliberately so: it is the traffic lights' room and the columns'
- * width, and it holds nothing because nothing in this bar acts on the columns
- * any more. Sized in `border-box`, so the inset for the controls and the gap
- * before the first tab are both *inside* that width rather than added to it.
+ * The bar had a shade of its own, which made the window three surfaces stacked
+ * in a T: two columns below, one band across the top. It reads better as two
+ * columns that run the full height, with the tab strip sitting on the working
+ * pane the way a tab strip does everywhere else — so this half continues the
+ * sidebar upward and the strip continues the pane upward, and the seam between
+ * them is the same vertical line all the way down.
+ *
+ * That line is nowhere near the traffic lights: it falls at the columns'
+ * trailing edge, three hundred pixels in. The rule this looks like it breaks is
+ * about a boundary running *under the controls*, and it still holds.
+ *
+ * Empty, deliberately: it is the controls' room and the columns' width, and
+ * nothing in this bar acts on the columns any more. Sized in `border-box`, so
+ * the inset for the controls and the gap before the first tab are both inside
+ * that width rather than added to it.
  *
  * `min-width` rather than `width`, because collapsing the sidebar takes the
  * offset down to the rail alone — narrower than the traffic lights — and a tab
@@ -582,57 +571,6 @@ onBeforeUnmount(() => stopPersisting?.());
   flex: 1;
   min-height: 0;
   min-width: 0;
-}
-
-/*
- * Exactly the corner, and no more: the rest of it is under the opaque pane and
- * never seen. Travels with the sidebar on the same curve, so the collapse does
- * not leave it behind.
- */
-/*
- * Behind the pane, said explicitly. A positioned element paints above an
- * in-flow one whatever the source order, so the notch was drawn *over* the
- * content rather than under its cut corner — a tinted square sitting on the
- * grid instead of a surface showing through it.
- */
-.notch {
-  position: absolute;
-  z-index: 0;
-  top: 0;
-  inset-inline-start: var(--columns-w);
-  width: var(--radius-box);
-  height: var(--radius-box);
-  pointer-events: none;
-  /*
-   * Only the wedge, never the disc.
-   *
-   * It was a full square sitting behind the pane's cut corner, and the pane is
-   * glass — so across the quarter-disc the two surfaces stacked and composited
-   * to a shade darker than either, which read as a small dark rectangle pinned
-   * to the corner. Masking the disc away leaves the notch filling exactly the
-   * area the clip removed and nothing else. The half-pixel of overlap is
-   * deliberate: the mask and the pane's `clip-path` antialias independently,
-   * and a gap between them shows the window's backdrop as a bright hairline
-   * along the arc, which is the defect this element exists to prevent.
-   */
-  --notch-cut: calc(100% - 0.5px);
-  -webkit-mask-image: radial-gradient(
-    circle var(--radius-box) at 100% 100%,
-    transparent 0 var(--notch-cut),
-    #000 var(--notch-cut)
-  );
-  mask-image: radial-gradient(
-    circle var(--radius-box) at 100% 100%,
-    transparent 0 var(--notch-cut),
-    #000 var(--notch-cut)
-  );
-  transition: inset-inline-start 260ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .notch {
-    transition: none;
-  }
 }
 
 .rail {
@@ -1002,13 +940,14 @@ onBeforeUnmount(() => stopPersisting?.());
 }
 
 /*
- * One rounded corner, where the opaque pane meets the two glass edges.
+ * Square, because the tab strip is now the pane's own top edge.
  *
- * The other three are the window's own. This one had nothing to soften it and
- * the pane butted into the bar above and the column beside it as a hard right
- * angle, which read as the content being clipped by the chrome rather than
- * sitting in front of it. The glass shows through the notch, which is the
- * whole point — it is the only place the depth between the two is visible.
+ * There was one rounded corner here, backed by a masked wedge of the sidebar's
+ * surface so the arc did not show raw window backdrop through it. It was there
+ * to soften the one place the opaque pane butted into the chrome above it — and
+ * there is no such place any more: the strip wears the pane's surface and sits
+ * directly on it, so the two are one column with a row of tabs at the top of it
+ * rather than two things meeting at a corner.
  */
 .content {
   position: relative;
@@ -1018,20 +957,8 @@ onBeforeUnmount(() => stopPersisting?.());
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  border-start-start-radius: var(--radius-box);
   /* The grid and the editor both paint to their own edges. */
   overflow: hidden;
-  /*
-   * The clip is a path, not the rounded overflow above it.
-   *
-   * Chromium does not apply an ancestor's rounded overflow clip to a descendant
-   * that has been promoted to its own compositing layer — the clip degrades to
-   * a rectangle. Monaco promotes itself, so the corner was cut on a table tab
-   * and square on a query tab, with a white wedge in it where the pane's own
-   * rounded background showed behind the editor painting straight over it. A
-   * clip path is applied as a mask and reaches the composited layer.
-   */
-  clip-path: inset(0 round var(--radius-box) 0 0 0);
 }
 
 .content__body {

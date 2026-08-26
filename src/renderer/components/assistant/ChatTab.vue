@@ -494,6 +494,10 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  /* The same shallow well the query editor sits in. A transcript and an editor
+     are the same kind of surface — a long thing you read down — and they were
+     two different ones only because neither had been named. */
+  background-color: var(--surface-well);
 }
 
 .chat__scroll {
