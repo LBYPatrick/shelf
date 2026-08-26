@@ -1,6 +1,7 @@
 {
   "name": "shelf",
   "version": "1.0.0",
+  "packageManager": "pnpm@11.22.0",
   "description": "A database client with an interface worth looking at",
   "author": {
     "name": "LBYPatrick",

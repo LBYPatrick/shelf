@@ -20,13 +20,21 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      # No `version` here on purpose. `packageManager` in `package.json` is the
+      # one place that says which pnpm this project is built with, and it says
+      # it to corepack on a developer's machine as well as to this action — a
+      # version pinned in the workflow would be a second place to remember, and
+      # the one that silently disagrees.
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          # An LTS the runners actually carry, and comfortably inside the
+          # `engines` range. Nothing here needs the newest Node; the app ships
+          # with Electron's own.
+          node-version: 24
           cache: pnpm
 
       # `make install` rather than `pnpm install`: better-sqlite3 is compiled
@@ -38,7 +46,7 @@ jobs:
 
       # The traces are the only way to read a failure that did not reproduce
       # locally, and Playwright writes them only for the tests that failed.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: traces
