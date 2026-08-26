@@ -15,8 +15,10 @@ export default defineConfig({
    * and not by CPU: rather more workers than cores is the right number.
    */
   fullyParallel: true,
-  // See the note in `playwright.ui.config.ts` on the CI number.
+  // See the notes in `playwright.ui.config.ts` on the CI worker count and on
+  // retrying a launch rather than an assertion.
   workers: process.env['CI'] ? 2 : '75%',
+  retries: process.env['CI'] ? 1 : 0,
   timeout: 60_000,
   expect: { timeout: 8_000 },
   reporter: process.env['CI'] ? 'github' : 'list',

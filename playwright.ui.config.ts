@@ -11,6 +11,36 @@ import { defineConfig } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests/ui',
+  /*
+   * The screenshots are a local gate, not a CI one.
+   *
+   * A pixel is a function of the rasteriser that drew it, and a GitHub runner
+   * is not the machine the baselines were taken on — a different macOS, a
+   * different font set, a different backing scale. The differences measure two
+   * to seven per cent of the image, which is not antialiasing noise and is not
+   * something a threshold can be widened past without also swallowing the
+   * regressions these exist to catch.
+   *
+   * Regenerating them on the runner instead would trade one problem for two:
+   * baselines nobody can review by eye, and a suite that goes red every time
+   * the runner image is updated. And a screenshot is the one test here that
+   * needs a person — `ui-accept` exists because the answer to a diff is
+   * *look at it*, and nothing on CI looks at anything.
+   *
+   * What CI keeps is the half that measures rather than photographs. Every
+   * rule the screenshots back up has an invariant beside it for exactly this
+   * reason.
+   */
+  testIgnore: process.env['CI'] ? ['**/visual.spec.ts'] : [],
+  /*
+   * One retry, for launching rather than for asserting.
+   *
+   * Every test here starts a whole Electron app, and on a shared runner one
+   * occasionally fails to start at all — `Process failed to launch!`, before a
+   * line of the test has run. That is the machine, not the app. An assertion
+   * that fails twice in a row is still a failure.
+   */
+  retries: process.env['CI'] ? 1 : 0,
   // Each test launches its own app against its own user-data directory, so
   // nothing here is shared and nothing has to be serialised. See the note in
   // `playwright.config.ts`.

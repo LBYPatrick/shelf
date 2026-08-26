@@ -565,6 +565,25 @@ component's props or a mock's shape has changed.
   translucency but are blind to the *root* background — that one is covered by
   an invariant instead.
 
+## How to write
+
+Direct and plain. Write so a non-native speaker gets it on the first read.
+
+- Paragraphs are one to three sentences. Bullets are for distinct items, never
+  for prose broken into pieces.
+- No opening pleasantries, no closing summary, no "Moreover", "Furthermore",
+  "In summary".
+- Banned: delve, tapestry, testament, realm, navigate, foster, intricate,
+  dynamic, holistic, landscape.
+- Technical answers put the code first and the explanation after it. Keep code
+  comments functional; do not explain how the language works.
+- When comparing options, show them side by side with the real trade-offs. Do
+  not blend them into one compromise.
+
+This is about the prose *around* the work — chat replies, PR descriptions,
+issue comments. It is not about the comments in this codebase, which are
+deliberately long because they carry the reason a line is the way it is.
+
 ## Commits
 
 **Every commit follows Conventional Commits.** `type(scope): summary`, where the

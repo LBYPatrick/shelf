@@ -1329,14 +1329,30 @@ test.describe('controls', () => {
     const tip = sample.locator('.hovertip');
     await expect(tip).toHaveCount(0);
 
+    /*
+     * The two waits, compared to each other rather than to a stopwatch.
+     *
+     * This used to assert the second one took under 250ms, which is a fact
+     * about the machine as much as about the code: on a CI runner sharing
+     * three cores with another Electron app it measured 435ms and failed, on
+     * an app whose behaviour was correct. What the rule actually says is that
+     * the second label does not wait *again* — a comparison, and one that
+     * holds however slow the box is.
+     */
+    const firstAt = Date.now();
     await sample.locator('.rail__item').nth(1).hover();
     await expect(tip).toBeVisible({ timeout: 3000 });
     await expect(tip).not.toBeEmpty();
+    const first = Date.now() - firstAt;
 
-    const started = Date.now();
+    const secondAt = Date.now();
     await sample.locator('.rail__item').nth(2).hover();
     await expect(tip).toContainText(/\w/, { timeout: 1500 });
-    expect(Date.now() - started, 'the second label waited again').toBeLessThan(250);
+    const second = Date.now() - secondAt;
+
+    expect(second, `the second label waited again (${first}ms then ${second}ms)`).toBeLessThan(
+      first / 2
+    );
 
     // And it goes away rather than following the pointer around.
     await sample.locator('.tree').hover();
@@ -1641,6 +1657,15 @@ test.describe('cost', () => {
 test.describe('cost', () => {
   test('collapsing the sidebar does not stall the window', async ({ sample }) => {
     /*
+     * Not in CI, and not because it is flaky there.
+     *
+     * A runner has three cores and is running two of these at once, so the
+     * healthy number falls to about eighteen — and the janky case this exists
+     * to catch was sixteen. The two are indistinguishable on a contended
+     * machine, which makes the test unable to say the thing it is for rather
+     * than merely unreliable. It stays in the local gate, where a frame count
+     * means something.
+     *
      * The panel animates a width for a quarter of a second, and every frame of
      * it resizes the pane the grid is in. Three things answered each of those
      * frames: Tabulator's own resize observer, ours, and a forced redraw that
@@ -1652,6 +1677,8 @@ test.describe('cost', () => {
      * The number below has a lot of room in it. It is not a frame-rate target,
      * it is the difference between answering a resize and sitting it out.
      */
+    test.skip(Boolean(process.env['CI']), 'a frame count needs a machine to itself');
+
     await openTable(sample, 'daily_metrics');
     await sample.locator('.tabulator-row').first().waitFor();
     await sample.waitForTimeout(600);
