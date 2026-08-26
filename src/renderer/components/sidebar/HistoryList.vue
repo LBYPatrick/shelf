@@ -6,6 +6,8 @@
  * is usually how you recognise the one you are looking for, faster than reading
  * the SQL back.
  */
+import { useTranslation } from 'i18next-vue';
+import { elapsedSince } from '@shared/elapsed';
 import { useQueries } from '../../stores/queries';
 import { useTabs } from '../../stores/tabs';
 import AppIcon from '../ui/AppIcon.vue';
@@ -13,19 +15,35 @@ import CheckBox from '../ui/CheckBox.vue';
 
 const queries = useQueries();
 const tabs = useTabs();
+const { t } = useTranslation();
 
 function excerpt(text: string): string {
   const flat = text.replace(/\s+/g, ' ').trim();
   return flat.length > 90 ? `${flat.slice(0, 90)}…` : flat;
 }
 
+/**
+ * When it happened, as a person would say it.
+ *
+ * The arithmetic is `shared/elapsed.ts`; only the wording is here, and it is
+ * the same wording the other two lists use. Relative up to a week, because that
+ * is the range in which "yesterday" is more use than a date, and absolute after
+ * — "37 days ago" is not a fact anyone can do anything with.
+ */
 function ago(at: number): string {
-  const minutes = Math.round((Date.now() - at) / 60_000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-  return `${Math.round(hours / 24)}d`;
+  const since = elapsedSince(at, Date.now());
+  switch (since.unit) {
+    case 'now':
+      return t('time.justNow');
+    case 'minutes':
+      return t('time.minutesAgo', { count: since.count });
+    case 'hours':
+      return t('time.hoursAgo', { count: since.count });
+    case 'days':
+      return t('time.daysAgo', { count: since.count });
+    case 'date':
+      return new Date(since.at).toLocaleDateString();
+  }
 }
 </script>
 

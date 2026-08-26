@@ -16,7 +16,7 @@ const model = defineModel<EngineId | null>({ required: true });
   <div
     class="engines"
     role="radiogroup"
-    aria-label="Database engine"
+    :aria-label="$t('connection.engineLabel')"
   >
     <button
       v-for="engine in ENGINES"

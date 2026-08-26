@@ -19,6 +19,7 @@
  */
 
 import { UNLIMITED } from './rowLimit';
+import { isObject } from './json';
 
 export const SETTINGS_DOCUMENT_KIND = 'shelf.settings';
 export const SETTINGS_DOCUMENT_VERSION = 1;
@@ -76,7 +77,7 @@ const BOUNDS: Readonly<Record<string, { readonly min: number; readonly max: numb
   rowIndexBase: { min: 0, max: 1 },
 };
 
-export function toSettingsDocument(state: SettingsState): SettingsDocument {
+function toSettingsDocument(state: SettingsState): SettingsDocument {
   return {
     kind: SETTINGS_DOCUMENT_KIND,
     version: SETTINGS_DOCUMENT_VERSION,
@@ -92,10 +93,6 @@ export function serializeSettings(state: SettingsState): string {
 export type ApplyResult =
   | { readonly ok: true; readonly state: SettingsState }
   | { readonly ok: false; readonly error: string };
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function clamp(key: string, value: number): number {
   const bounds = BOUNDS[key];
@@ -142,7 +139,7 @@ function readAccent(current: AppearanceState['accent'], incoming: unknown) {
   return { l: Math.min(1, Math.max(0, l)), c: Math.max(0, c), h };
 }
 
-export function applySettingsDocument(input: unknown, current: SettingsState): ApplyResult {
+function applySettingsDocument(input: unknown, current: SettingsState): ApplyResult {
   if (!isObject(input)) return { ok: false, error: 'Expected a JSON object of settings.' };
 
   const appearance = isObject(input['appearance']) ? input['appearance'] : {};

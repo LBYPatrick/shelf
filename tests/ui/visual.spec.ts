@@ -112,6 +112,14 @@ test.describe('density', () => {
  * which is how it went square over the editor and stayed that way. Monaco is
  * the case that matters, because a composited descendant is what defeats a
  * rounded overflow clip.
+ *
+ * The frame starts at the pane's own top edge and takes the glass to its left.
+ * It used to reach sixteen pixels up into the bar, which was fine while the bar
+ * was empty there and stopped being fine the day the tab strip was aligned to
+ * the pane: a tab's own rounded corner moved into the shot, bringing its width,
+ * its arrival animation and the number of open tabs with it. None of that is
+ * what this frame is for, and that the strip meets the pane is asserted by an
+ * invariant that measures it rather than photographs it.
  */
 test.describe('corners', () => {
   test('the content pane is cut where it meets the glass, over the editor too', async ({
@@ -122,11 +130,21 @@ test.describe('corners', () => {
       .first()
       .click();
     await sample.locator('.monaco-editor').waitFor();
+    /*
+     * Until the new tab has finished arriving.
+     *
+     * The frame is forty-eight pixels of the junction, sixteen of them above
+     * the pane — and the strip begins exactly at the pane's leading edge, so a
+     * tab's own rounded corner is *in* this shot. A tab grows out of nothing on
+     * the way in, and caught mid-arrival it is a few pixels narrower than the
+     * baseline: enough to fail, not enough to look like anything but noise.
+     * `stabilize` settles animations, not a class removed on a timer.
+     */
     await stabilize(sample);
 
     const box = (await sample.locator('.content').boundingBox())!;
     await expect(sample).toHaveScreenshot('corner-editor.png', {
-      clip: { x: box.x - 16, y: box.y - 16, width: 48, height: 48 },
+      clip: { x: box.x - 16, y: box.y, width: 48, height: 48 },
     });
   });
 
@@ -148,7 +166,7 @@ test.describe('corners', () => {
 
     const box = (await page.locator('.content').boundingBox())!;
     await expect(page).toHaveScreenshot('corner-editor-dark.png', {
-      clip: { x: box.x - 16, y: box.y - 16, width: 48, height: 48 },
+      clip: { x: box.x - 16, y: box.y, width: 48, height: 48 },
     });
   });
 });

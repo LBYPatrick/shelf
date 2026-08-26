@@ -29,7 +29,6 @@
     "update": "Update",
     "settings": "Settings",
     "collapseAll": "Collapse all",
-    "resetView": "Reset view",
     "copied": "Copied to the clipboard.",
     "reset": "Reset",
     "confirm": "Confirm",
@@ -38,6 +37,12 @@
     "saveQuery": "Save Query",
     "back": "Back",
     "showSuggestions": "Show suggestions"
+  },
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago"
   },
   "start": {
     "search": "Paste a connection URL, or search your connections",
@@ -66,10 +71,6 @@
     "sampleOpening": "Opening…",
     "noKeyring": "No system keyring was found, so passwords cannot be saved on this machine.",
     "neverOpened": "never opened",
-    "justNow": "just now",
-    "minutesAgo": "{{n}}m ago",
-    "hoursAgo": "{{n}}h ago",
-    "daysAgo": "{{n}}d ago",
     "connectTo": "Connect to {{name}}",
     "edit": "Edit {{name}}",
     "remove": "Delete {{name}}"
@@ -77,7 +78,6 @@
   "connection": {
     "new": "New connection",
     "engine": "Engine",
-    "engineLabel": "Database engine",
     "host": "Host",
     "port": "Port",
     "user": "User",
@@ -85,29 +85,32 @@
     "database": "Database",
     "file": "Database file",
     "name": "Name",
-    "nameHelp": "Leave blank to use “{{suggested}}”.",
     "advanced": "Advanced",
-    "useSsl": "Use SSL/TLS",
-    "useSsh": "Connect through an SSH tunnel",
     "sshHost": "SSH host",
     "sshPort": "SSH port",
     "sshUser": "SSH user",
-    "sshAuth": "Authentication",
-    "sshAgent": "SSH agent",
     "sshKeyfile": "Key file",
     "sshPassword": "SSH password",
     "readOnly": "Read-only",
     "readOnlyHelp": "Refuses anything that writes, at the driver.",
-    "savePassword": "Save password",
-    "savePasswordHelp": "Stored in the system keychain, never in the app database.",
-    "noKeyringHelp": "Unavailable: no system keyring was found on this machine.",
     "testing": "Testing…",
     "connected": "Connected — {{version}}",
     "chooseEngine": "Choose a database engine.",
     "chooseFile": "Choose a database file.",
     "needHost": "Enter a host, a socket path, or a connection URL.",
     "required": "{{field}} is required.",
-    "testOk": "Connected — {{version}}"
+    "testOk": "Connected — {{version}}",
+    "engineLabel": "Database engine",
+    "nameHelp": "Leave blank to use “{{suggested}}”.",
+    "useSsl": "Use SSL/TLS",
+    "useSsh": "Connect through an SSH tunnel",
+    "sshAuth": "Authentication",
+    "sshAgent": "SSH agent",
+    "savePassword": "Save password",
+    "savePasswordHelp": "Stored in the system keychain, never in the app database.",
+    "noKeyringHelp": "Unavailable: no system keyring was found on this machine.",
+    "sshKeyFile": "Key file",
+    "sshPasswordMode": "Password"
   },
   "workspace": {
     "entities": "Entities",
@@ -124,7 +127,6 @@
     "noTables": "This database has no tables yet.",
     "noMatch": "Nothing matches that filter.",
     "loadingColumns": "Loading columns…",
-    "noColumns": "No columns",
     "disconnect": "{{version}} — click to disconnect",
     "readOnly": "read-only",
     "disconnectHint": "click to disconnect",
@@ -136,18 +138,16 @@
   "table": {
     "filterPlaceholder": "Filter — e.g. name like 'A%'",
     "rows": "{{count}} rows",
-    "noRows": "No rows",
     "firstPage": "First page",
     "previousPage": "Previous page",
     "nextPage": "Next page",
     "lastPage": "Last page",
     "imported": "{{count}} imported",
     "discardChanges": "Discard {{count}} unsaved changes?",
-    "nullValue": "NULL",
-    "emptyValue": "empty",
     "editData": "Edit data",
     "editHint": "Turn on to change values in the grid",
-    "sqlCopied": "Copied the SQL for {{count}} changes."
+    "sqlCopied": "Copied the SQL for {{count}} changes.",
+    "noRows": "No rows"
   },
   "query": {
     "manualCommit": "Manual commit",
@@ -159,13 +159,11 @@
     "planning": "Planning…",
     "writeAndPress": "Write a query and press",
     "result": "Result {{index}}",
-    "resultRows": "Result {{index}}: {{count}} rows",
     "completed": "Statement completed.",
     "saveTitle": "Save query",
     "saveNameHelp": "Saved against this connection, and listed under the star in the sidebar.",
     "affected": "{{count}} affected",
     "showingFirst": "showing first {{count}}",
-    "planUnreadable": "This engine returned a plan Shelf could not read.",
     "explainHint": "Show how the database would run this",
     "saveHint": "Save this query",
     "caret": "Ln {{line}}, Col {{column}} of {{lines}}",
@@ -189,7 +187,9 @@
     "summaryAffected": "{{rows}} affected",
     "summaryMs": "{{ms}} ms",
     "summaryRow": "{{rows}} row",
-    "summaryFirstOne": "first {{rows}} row"
+    "summaryFirstOne": "first {{rows}} row",
+    "resultRows": "Result {{index}}: {{count}} rows",
+    "planUnreadable": "This engine returned a plan Shelf could not read."
   },
   "structure": {
     "columns": "Columns",
@@ -233,7 +233,8 @@
     "wrap": "Wrap lines",
     "wrapHint": "Show the whole value on as many lines as it needs",
     "wrapOn": "Line wrapping on.",
-    "wrapOff": "Line wrapping off."
+    "wrapOff": "Line wrapping off.",
+    "copySql": "Copy SQL"
   },
   "settings": {
     "title": "Settings",
@@ -244,7 +245,6 @@
     "dark": "Dark",
     "accent": "Accent",
     "accentHelp": "Every colour is adjusted until text on it stays readable.",
-    "customHue": "Custom accent hue",
     "density": "Density",
     "materials": "Materials",
     "opacity": "Opacity",
@@ -328,7 +328,8 @@
     "replace": "Replace what is already there",
     "replaceHelp": "Deletes every existing row before importing. This cannot be undone.",
     "importRows": "Import {{count}} rows",
-    "importing": "Importing…"
+    "importing": "Importing…",
+    "chooseFile": "Choose a file to import"
   },
   "noun": {
     "table": "table",
@@ -429,7 +430,6 @@
     "wrapOff": "Do not wrap long lines",
     "sectionCommands": "Commands",
     "sectionTables": "Tables",
-    "sectionActions": "Actions",
     "placeholder": "Search tables, or type / for commands",
     "commandPlaceholder": "Type a command",
     "openHint": "to open",
@@ -599,7 +599,9 @@
   "erd": {
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
-    "fit": "Fit"
+    "fit": "Fit",
+    "reading": "Reading the schema…",
+    "nothing": "There is nothing to diagram yet."
   },
   "assistant": {
     "title": "Assistant",
@@ -661,10 +663,6 @@
     "rename": "Rename this chat",
     "discard": "Delete this chat",
     "updated": "updated {{when}}",
-    "started": "started {{when}}",
-    "justNow": "just now",
-    "minutesAgo": "{{count}}m ago",
-    "hoursAgo": "{{count}}h ago",
-    "daysAgo": "{{count}}d ago"
+    "started": "started {{when}}"
   }
 }

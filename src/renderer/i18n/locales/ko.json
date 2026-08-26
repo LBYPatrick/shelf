@@ -29,7 +29,6 @@
     "update": "업데이트",
     "settings": "설정",
     "collapseAll": "모두 접기",
-    "resetView": "보기 초기화",
     "copied": "클립보드에 복사했습니다.",
     "reset": "초기화",
     "confirm": "확인",
@@ -38,6 +37,12 @@
     "saveQuery": "쿼리 저장",
     "back": "뒤로",
     "showSuggestions": "제안 보기"
+  },
+  "time": {
+    "justNow": "방금",
+    "minutesAgo": "{{count}}분 전",
+    "hoursAgo": "{{count}}시간 전",
+    "daysAgo": "{{count}}일 전"
   },
   "start": {
     "search": "연결 URL을 붙여넣거나 저장된 연결을 검색하세요",
@@ -66,10 +71,6 @@
     "sampleOpening": "여는 중…",
     "noKeyring": "시스템 키체인을 찾을 수 없어 이 기기에서는 비밀번호를 저장할 수 없습니다.",
     "neverOpened": "열어본 적 없음",
-    "justNow": "방금",
-    "minutesAgo": "{{n}}분 전",
-    "hoursAgo": "{{n}}시간 전",
-    "daysAgo": "{{n}}일 전",
     "connectTo": "{{name}}에 연결",
     "edit": "{{name}} 편집",
     "remove": "{{name}} 삭제"
@@ -77,7 +78,6 @@
   "connection": {
     "new": "새 연결",
     "engine": "엔진",
-    "engineLabel": "데이터베이스 엔진",
     "host": "호스트",
     "port": "포트",
     "user": "사용자",
@@ -85,29 +85,32 @@
     "database": "데이터베이스",
     "file": "데이터베이스 파일",
     "name": "이름",
-    "nameHelp": "비워 두면 “{{suggested}}”을(를) 사용합니다.",
     "advanced": "고급",
-    "useSsl": "SSL/TLS 사용",
-    "useSsh": "SSH 터널로 연결",
     "sshHost": "SSH 호스트",
     "sshPort": "SSH 포트",
     "sshUser": "SSH 사용자",
-    "sshAuth": "인증 방식",
-    "sshAgent": "SSH 에이전트",
     "sshKeyfile": "키 파일",
     "sshPassword": "SSH 비밀번호",
     "readOnly": "읽기 전용",
     "readOnlyHelp": "쓰기 작업을 드라이버 단계에서 거부합니다.",
-    "savePassword": "비밀번호 저장",
-    "savePasswordHelp": "시스템 키체인에 저장되며 앱 데이터베이스에는 남지 않습니다.",
-    "noKeyringHelp": "사용할 수 없음: 이 기기에는 시스템 키체인이 없습니다.",
     "testing": "테스트 중…",
     "connected": "연결됨 — {{version}}",
     "chooseEngine": "데이터베이스 엔진을 선택하세요.",
     "chooseFile": "데이터베이스 파일을 선택하세요.",
     "needHost": "호스트, 소켓 경로 또는 연결 URL을 입력하세요.",
     "required": "{{field}}은(는) 필수입니다.",
-    "testOk": "연결됨 — {{version}}"
+    "testOk": "연결됨 — {{version}}",
+    "engineLabel": "데이터베이스 엔진",
+    "nameHelp": "비워 두면 “{{suggested}}”을(를) 사용합니다.",
+    "useSsl": "SSL/TLS 사용",
+    "useSsh": "SSH 터널로 연결",
+    "sshAuth": "인증 방식",
+    "sshAgent": "SSH 에이전트",
+    "savePassword": "비밀번호 저장",
+    "savePasswordHelp": "시스템 키체인에 저장되며 앱 데이터베이스에는 남지 않습니다.",
+    "noKeyringHelp": "사용할 수 없음: 이 기기에는 시스템 키체인이 없습니다.",
+    "sshKeyFile": "키 파일",
+    "sshPasswordMode": "비밀번호"
   },
   "workspace": {
     "entities": "객체",
@@ -124,7 +127,6 @@
     "noTables": "이 데이터베이스에는 아직 테이블이 없습니다.",
     "noMatch": "필터와 일치하는 항목이 없습니다.",
     "loadingColumns": "열을 불러오는 중…",
-    "noColumns": "열 없음",
     "disconnect": "{{version}} — 클릭하면 연결 해제",
     "readOnly": "읽기 전용",
     "disconnectHint": "클릭하면 연결 해제",
@@ -136,18 +138,16 @@
   "table": {
     "filterPlaceholder": "필터 — 예: name like 'A%'",
     "rows": "{{count}}행",
-    "noRows": "행 없음",
     "firstPage": "첫 페이지",
     "previousPage": "이전 페이지",
     "nextPage": "다음 페이지",
     "lastPage": "마지막 페이지",
     "imported": "{{count}}행 가져옴",
     "discardChanges": "저장하지 않은 변경 {{count}}건을 버릴까요?",
-    "nullValue": "NULL",
-    "emptyValue": "빈 값",
     "editData": "데이터 편집",
     "editHint": "켜면 그리드에서 값을 바꿀 수 있습니다",
-    "sqlCopied": "변경 사항 {{count}}건의 SQL을 복사했습니다."
+    "sqlCopied": "변경 사항 {{count}}건의 SQL을 복사했습니다.",
+    "noRows": "행 없음"
   },
   "query": {
     "manualCommit": "수동 커밋",
@@ -159,13 +159,11 @@
     "planning": "계획을 가져오는 중…",
     "writeAndPress": "쿼리를 작성하고 누르세요",
     "result": "결과 {{index}}",
-    "resultRows": "결과 {{index}}: {{count}}행",
     "completed": "문이 실행되었습니다.",
     "saveTitle": "쿼리 저장",
     "saveNameHelp": "이 연결에 저장되며 사이드바의 별표 아래에 표시됩니다.",
     "affected": "{{count}}행 영향",
     "showingFirst": "처음 {{count}}행만 표시",
-    "planUnreadable": "이 엔진이 반환한 실행 계획은 Shelf가 읽지 못했습니다.",
     "explainHint": "데이터베이스가 이를 어떻게 실행하는지 보기",
     "saveHint": "이 쿼리 저장",
     "caret": "{{line}}행 {{column}}열 / 총 {{lines}}행",
@@ -189,7 +187,9 @@
     "summaryAffected": "{{rows}}행 영향",
     "summaryMs": "{{ms}} ms",
     "summaryRow": "{{rows}}행",
-    "summaryFirstOne": "처음 {{rows}}행"
+    "summaryFirstOne": "처음 {{rows}}행",
+    "resultRows": "결과 {{index}}: {{count}}행",
+    "planUnreadable": "이 엔진이 반환한 실행 계획은 Shelf가 읽지 못했습니다."
   },
   "structure": {
     "columns": "열",
@@ -233,7 +233,8 @@
     "wrap": "줄 바꿈",
     "wrapHint": "값 전체를 필요한 만큼의 줄로 표시",
     "wrapOn": "줄 바꿈을 켰습니다.",
-    "wrapOff": "줄 바꿈을 껐습니다."
+    "wrapOff": "줄 바꿈을 껐습니다.",
+    "copySql": "SQL 복사"
   },
   "settings": {
     "title": "설정",
@@ -244,7 +245,6 @@
     "dark": "어둡게",
     "accent": "강조 색",
     "accentHelp": "모든 색은 그 위의 글자가 읽히도록 자동으로 조정됩니다.",
-    "customHue": "사용자 지정 색상",
     "density": "밀도",
     "materials": "재질",
     "opacity": "불투명도",
@@ -328,7 +328,8 @@
     "replace": "기존 데이터 교체",
     "replaceHelp": "가져오기 전에 기존 행을 모두 삭제합니다. 되돌릴 수 없습니다.",
     "importRows": "{{count}}행 가져오기",
-    "importing": "가져오는 중…"
+    "importing": "가져오는 중…",
+    "chooseFile": "가져올 파일 선택"
   },
   "noun": {
     "table": "테이블",
@@ -429,7 +430,6 @@
     "wrapOff": "긴 줄 줄바꿈 안 함",
     "sectionCommands": "명령",
     "sectionTables": "테이블",
-    "sectionActions": "동작",
     "placeholder": "테이블 검색, 또는 / 로 명령",
     "commandPlaceholder": "명령 입력",
     "openHint": "열기",
@@ -599,7 +599,9 @@
   "erd": {
     "zoomIn": "확대",
     "zoomOut": "축소",
-    "fit": "전체 보기"
+    "fit": "전체 보기",
+    "reading": "스키마를 읽는 중…",
+    "nothing": "아직 다이어그램으로 그릴 것이 없습니다."
   },
   "assistant": {
     "title": "어시스턴트",
@@ -661,10 +663,6 @@
     "rename": "이 대화 이름 바꾸기",
     "discard": "이 대화 삭제",
     "updated": "{{when}} 업데이트",
-    "started": "{{when}} 시작",
-    "justNow": "방금",
-    "minutesAgo": "{{count}}분 전",
-    "hoursAgo": "{{count}}시간 전",
-    "daysAgo": "{{count}}일 전"
+    "started": "{{when}} 시작"
   }
 }

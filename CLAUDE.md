@@ -565,6 +565,26 @@ component's props or a mock's shape has changed.
   translucency but are blind to the *root* background — that one is covered by
   an invariant instead.
 
+## Commits
+
+**Every commit follows Conventional Commits.** `type(scope): summary`, where the
+type is one of `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build`,
+`ci`, `style` or `chore`, and a breaking change is marked `!` before the colon
+with a `BREAKING CHANGE:` footer. The scope is the part of the app the change is
+about — `assistant`, `grid`, `drivers`, `i18n`, `gate` — and is omitted rather
+than invented when a change is genuinely global.
+
+The subject line is the machine-readable half and it is deliberately dull.
+Everything this repository's commit messages are actually for goes in the body:
+what was wrong, what was tried, and why the chosen fix is the one that holds. A
+subject that says `fix(tabs): a tab dragged one width moved two places` and a
+body that explains that the drag reports a total while the list had already
+moved is worth more than either half alone.
+
+One idea per commit. If the body needs the word "also", it is two commits —
+unless the parts genuinely cannot compile apart, which is worth saying in the
+body rather than working around.
+
 ## Style
 
 Google's TypeScript style guide, 2-space indent, single quotes, named exports.

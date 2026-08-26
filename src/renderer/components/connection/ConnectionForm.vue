@@ -18,6 +18,7 @@ import FormField from '../ui/FormField.vue';
 import PressButton from '../ui/PressButton.vue';
 import AppIcon from '../ui/AppIcon.vue';
 import SegmentedControl from '../ui/SegmentedControl.vue';
+import SelectMenu from '../ui/SelectMenu.vue';
 import TextInput from '../ui/TextInput.vue';
 import EnginePicker from './EnginePicker.vue';
 
@@ -125,6 +126,17 @@ const proxyKinds = [
   { value: 'socks4' as const, label: 'SOCKS4a' },
   { value: 'http' as const, label: 'HTTP' },
 ];
+
+/*
+ * How the tunnel proves who it is. Named here rather than as three `<option>`
+ * elements so the list is translated once and the control drawing it is the
+ * same one every other list in the app uses.
+ */
+const sshModes = computed(() => [
+  { value: 'agent' as const, label: t('connection.sshAgent') },
+  { value: 'keyfile' as const, label: t('connection.sshKeyFile') },
+  { value: 'password' as const, label: t('connection.sshPasswordMode') },
+]);
 
 const descriptor = computed(() => (draft.engine ? engineDescriptor(draft.engine) : null));
 const shows = (field: string) => descriptor.value?.fields.includes(field as never) ?? false;
@@ -479,20 +491,19 @@ async function pickFile(): Promise<void> {
           :label="option.label"
           :help="option.help"
         >
-          <select
+          <!--
+            The app's own list. These are a driver's own options — a Postgres
+            SSL mode, a DynamoDB region — and a native `<select>` here hands
+            the popup to the operating system to draw in the middle of a sheet
+            built from our own tokens.
+          -->
+          <SelectMenu
             v-if="option.kind === 'select'"
             :id="id"
             v-model="draft.options[option.key]"
-            class="textfield"
-          >
-            <option
-              v-for="choice in option.choices"
-              :key="choice.value"
-              :value="choice.value"
-            >
-              {{ choice.label }}
-            </option>
-          </select>
+            :options="option.choices ?? []"
+            :aria-label="option.label"
+          />
           <TextInput
             v-else
             :id="id"
@@ -511,13 +522,13 @@ async function pickFile(): Promise<void> {
           <CheckBox
             v-if="descriptor.supportsSsl"
             v-model="draft.sslEnabled"
-            label="Use SSL/TLS"
+            :label="$t('connection.useSsl')"
           />
 
           <CheckBox
             v-if="descriptor.supportsSsh"
             v-model="draft.sshEnabled"
-            label="Connect through an SSH tunnel"
+            :label="$t('connection.useSsh')"
           />
 
           <div
@@ -555,23 +566,14 @@ async function pickFile(): Promise<void> {
             </FormField>
             <FormField
               v-slot="{ id }"
-              label="Authentication"
+              :label="$t('connection.sshAuth')"
             >
-              <select
+              <SelectMenu
                 :id="id"
                 v-model="draft.sshMode"
-                class="textfield"
-              >
-                <option value="agent">
-                  SSH agent
-                </option>
-                <option value="keyfile">
-                  Key file
-                </option>
-                <option value="password">
-                  Password
-                </option>
-              </select>
+                :options="sshModes"
+                :aria-label="$t('connection.sshAuth')"
+              />
             </FormField>
             <FormField
               v-if="draft.sshMode === 'keyfile'"
@@ -691,12 +693,12 @@ async function pickFile(): Promise<void> {
         <CheckBox
           v-if="draft.engine && !isFileEngine(draft.engine)"
           v-model="draft.rememberSecrets"
-          label="Save password"
+          :label="$t('connection.savePassword')"
           :disabled="!keyringAvailable"
           :hint="
             keyringAvailable
-              ? 'Stored in the system keychain, never in the app database.'
-              : 'Unavailable: no system keyring was found on this machine.'
+              ? $t('connection.savePasswordHelp')
+              : $t('connection.noKeyringHelp')
           "
         />
       </div>
@@ -704,7 +706,7 @@ async function pickFile(): Promise<void> {
       <FormField
         v-slot="{ id }"
         label="Name"
-        :help="`Leave blank to use “${suggestedName}”.`"
+        :help="$t('connection.nameHelp', { suggested: suggestedName })"
       >
         <TextInput
           :id="id"

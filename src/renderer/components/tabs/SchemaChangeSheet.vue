@@ -8,8 +8,14 @@
  *
  * Destructive changes require the object's name to be typed. It is deliberate
  * friction, spent only where the action cannot be undone.
+ *
+ * Every word here is a key. It used to be a literal, in a sheet that opens over
+ * an interface translated into five languages — and the translations for these
+ * particular words already existed, written and reviewed, and had simply never
+ * been read by anything. A string with two homes has one of them wrong.
  */
 import { computed, ref, watch } from 'vue';
+import { useTranslation } from 'i18next-vue';
 import { buildDdl, describe, isDestructive, type SchemaChange } from '@shared/ddl';
 import type { EngineId } from '@drivers/types';
 import FormField from '../ui/FormField.vue';
@@ -21,6 +27,8 @@ const props = defineProps<{ change: SchemaChange; engine: EngineId; running?: bo
 const emit = defineEmits<{ apply: [string]; cancel: [] }>();
 
 const open = defineModel<boolean>({ required: true });
+
+const { t } = useTranslation();
 
 const typed = ref('');
 
@@ -44,7 +52,7 @@ async function copy(): Promise<void> {
 <template>
   <Sheet
     v-model="open"
-    :title="destructive ? 'This cannot be undone' : 'Apply schema change'"
+    :title="destructive ? t('structure.cannotUndo') : t('structure.applyChange')"
   >
     <p
       class="summary"
@@ -54,15 +62,15 @@ async function copy(): Promise<void> {
     </p>
 
     <p class="label type-label">
-      What will run
+      {{ $t('structure.whatWillRun') }}
     </p>
     <pre class="sql">{{ sql }}</pre>
 
     <FormField
       v-if="destructive"
       v-slot="{ id }"
-      label="Type the name to confirm"
-      :help="`Enter “${target}” to enable the button.`"
+      :label="$t('structure.typeToConfirm')"
+      :help="$t('structure.typeToConfirmHelp', { name: target })"
     >
       <TextInput
         :id="id"
@@ -74,7 +82,7 @@ async function copy(): Promise<void> {
 
     <template #footer>
       <PressButton @click="copy">
-        Copy SQL
+        {{ $t('structure.copySql') }}
       </PressButton>
       <PressButton
         @click="
@@ -82,14 +90,20 @@ async function copy(): Promise<void> {
           emit('cancel');
         "
       >
-        Cancel
+        {{ $t('action.cancel') }}
       </PressButton>
       <PressButton
         :variant="destructive ? 'danger' : 'primary'"
         :disabled="!confirmed || running"
         @click="emit('apply', sql)"
       >
-        {{ running ? 'Applying…' : destructive ? 'Delete' : 'Apply' }}
+        {{
+          running
+            ? $t('structure.applying')
+            : destructive
+              ? $t('action.delete')
+              : $t('action.apply')
+        }}
       </PressButton>
     </template>
   </Sheet>

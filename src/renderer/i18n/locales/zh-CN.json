@@ -29,7 +29,6 @@
     "update": "更新",
     "settings": "设置",
     "collapseAll": "全部折叠",
-    "resetView": "重置视图",
     "copied": "已复制到剪贴板。",
     "reset": "重置",
     "confirm": "确认",
@@ -38,6 +37,12 @@
     "saveQuery": "保存查询",
     "back": "返回",
     "showSuggestions": "显示建议"
+  },
+  "time": {
+    "justNow": "刚刚",
+    "minutesAgo": "{{count}} 分钟前",
+    "hoursAgo": "{{count}} 小时前",
+    "daysAgo": "{{count}} 天前"
   },
   "start": {
     "search": "粘贴连接 URL，或搜索已保存的连接",
@@ -66,10 +71,6 @@
     "sampleOpening": "正在打开…",
     "noKeyring": "未找到系统钥匙串，因此无法在这台机器上保存密码。",
     "neverOpened": "从未打开",
-    "justNow": "刚刚",
-    "minutesAgo": "{{n}} 分钟前",
-    "hoursAgo": "{{n}} 小时前",
-    "daysAgo": "{{n}} 天前",
     "connectTo": "连接到 {{name}}",
     "edit": "编辑 {{name}}",
     "remove": "删除 {{name}}"
@@ -77,7 +78,6 @@
   "connection": {
     "new": "新建连接",
     "engine": "引擎",
-    "engineLabel": "数据库引擎",
     "host": "主机",
     "port": "端口",
     "user": "用户",
@@ -85,29 +85,32 @@
     "database": "数据库",
     "file": "数据库文件",
     "name": "名称",
-    "nameHelp": "留空则使用“{{suggested}}”。",
     "advanced": "高级",
-    "useSsl": "使用 SSL/TLS",
-    "useSsh": "通过 SSH 隧道连接",
     "sshHost": "SSH 主机",
     "sshPort": "SSH 端口",
     "sshUser": "SSH 用户",
-    "sshAuth": "认证方式",
-    "sshAgent": "SSH agent",
     "sshKeyfile": "密钥文件",
     "sshPassword": "SSH 密码",
     "readOnly": "只读",
     "readOnlyHelp": "在驱动层拒绝任何写入操作。",
-    "savePassword": "保存密码",
-    "savePasswordHelp": "存放在系统钥匙串中，不会写入应用数据库。",
-    "noKeyringHelp": "不可用：这台机器上没有系统钥匙串。",
     "testing": "测试中…",
     "connected": "已连接 — {{version}}",
     "chooseEngine": "请选择一种数据库引擎。",
     "chooseFile": "请选择数据库文件。",
     "needHost": "请填写主机、套接字路径或连接 URL。",
     "required": "{{field}} 为必填项。",
-    "testOk": "已连接 — {{version}}"
+    "testOk": "已连接 — {{version}}",
+    "engineLabel": "数据库引擎",
+    "nameHelp": "留空则使用“{{suggested}}”。",
+    "useSsl": "使用 SSL/TLS",
+    "useSsh": "通过 SSH 隧道连接",
+    "sshAuth": "认证方式",
+    "sshAgent": "SSH agent",
+    "savePassword": "保存密码",
+    "savePasswordHelp": "存放在系统钥匙串中，不会写入应用数据库。",
+    "noKeyringHelp": "不可用：这台机器上没有系统钥匙串。",
+    "sshKeyFile": "密钥文件",
+    "sshPasswordMode": "密码"
   },
   "workspace": {
     "entities": "对象",
@@ -124,7 +127,6 @@
     "noTables": "这个数据库里还没有表。",
     "noMatch": "没有匹配的内容。",
     "loadingColumns": "正在加载列…",
-    "noColumns": "没有列",
     "disconnect": "{{version}} — 点击断开连接",
     "readOnly": "只读",
     "disconnectHint": "点击断开连接",
@@ -136,18 +138,16 @@
   "table": {
     "filterPlaceholder": "筛选 — 例如 name like 'A%'",
     "rows": "{{count}} 行",
-    "noRows": "没有数据",
     "firstPage": "第一页",
     "previousPage": "上一页",
     "nextPage": "下一页",
     "lastPage": "最后一页",
     "imported": "已导入 {{count}} 行",
     "discardChanges": "放弃 {{count}} 项未保存的更改？",
-    "nullValue": "NULL",
-    "emptyValue": "空",
     "editData": "编辑数据",
     "editHint": "开启后可以在表格中修改值",
-    "sqlCopied": "已复制 {{count}} 项更改的 SQL。"
+    "sqlCopied": "已复制 {{count}} 项更改的 SQL。",
+    "noRows": "没有数据"
   },
   "query": {
     "manualCommit": "手动提交",
@@ -159,13 +159,11 @@
     "planning": "正在获取执行计划…",
     "writeAndPress": "写下查询然后按",
     "result": "结果 {{index}}",
-    "resultRows": "结果 {{index}}：{{count}} 行",
     "completed": "语句已执行。",
     "saveTitle": "保存查询",
     "saveNameHelp": "保存在当前连接下，会出现在侧栏的星标里。",
     "affected": "影响 {{count}} 行",
     "showingFirst": "仅显示前 {{count}} 行",
-    "planUnreadable": "该引擎返回的执行计划 Shelf 无法解析。",
     "explainHint": "查看数据库将如何执行此查询",
     "saveHint": "保存此查询",
     "caret": "第 {{line}} 行第 {{column}} 列 / 共 {{lines}} 行",
@@ -189,7 +187,9 @@
     "summaryAffected": "影响 {{rows}} 行",
     "summaryMs": "{{ms}} 毫秒",
     "summaryRow": "{{rows}} 行",
-    "summaryFirstOne": "前 {{rows}} 行"
+    "summaryFirstOne": "前 {{rows}} 行",
+    "resultRows": "结果 {{index}}：{{count}} 行",
+    "planUnreadable": "该引擎返回的执行计划 Shelf 无法解析。"
   },
   "structure": {
     "columns": "列",
@@ -233,7 +233,8 @@
     "wrap": "自动换行",
     "wrapHint": "完整显示内容，需要几行就用几行",
     "wrapOn": "已开启自动换行。",
-    "wrapOff": "已关闭自动换行。"
+    "wrapOff": "已关闭自动换行。",
+    "copySql": "复制 SQL"
   },
   "settings": {
     "title": "设置",
@@ -244,7 +245,6 @@
     "dark": "深色",
     "accent": "强调色",
     "accentHelp": "每种颜色都会自动调整，直到其上的文字清晰可读。",
-    "customHue": "自定义色相",
     "density": "密度",
     "materials": "材质",
     "opacity": "不透明度",
@@ -328,7 +328,8 @@
     "replace": "替换现有数据",
     "replaceHelp": "导入前会删除所有现有行。此操作无法撤销。",
     "importRows": "导入 {{count}} 行",
-    "importing": "导入中…"
+    "importing": "导入中…",
+    "chooseFile": "选择要导入的文件"
   },
   "noun": {
     "table": "表",
@@ -429,7 +430,6 @@
     "wrapOff": "不自动换行",
     "sectionCommands": "命令",
     "sectionTables": "表",
-    "sectionActions": "操作",
     "placeholder": "搜索表，或输入 / 使用命令",
     "commandPlaceholder": "输入命令",
     "openHint": "打开",
@@ -599,7 +599,9 @@
   "erd": {
     "zoomIn": "放大",
     "zoomOut": "缩小",
-    "fit": "适应"
+    "fit": "适应",
+    "reading": "正在读取结构…",
+    "nothing": "暂时没有可绘制的内容。"
   },
   "assistant": {
     "title": "助手",
@@ -661,10 +663,6 @@
     "rename": "重命名此对话",
     "discard": "删除此对话",
     "updated": "更新于 {{when}}",
-    "started": "开始于 {{when}}",
-    "justNow": "刚刚",
-    "minutesAgo": "{{count}} 分钟前",
-    "hoursAgo": "{{count}} 小时前",
-    "daysAgo": "{{count}} 天前"
+    "started": "开始于 {{when}}"
   }
 }

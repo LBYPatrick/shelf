@@ -1,6 +1,7 @@
 import type { ConnectionConfig, EngineId } from '../drivers/types';
 import type { SaveConnectionInput, SavedConnection } from './connections';
 import { ENGINES } from './engines';
+import { isObject } from './json';
 
 /**
  * Connections as a file.
@@ -53,9 +54,7 @@ function presetOf(connection: SavedConnection): ConnectionPreset {
   };
 }
 
-export function toConnectionDocument(
-  connections: readonly SavedConnection[]
-): ConnectionDocument {
+function toConnectionDocument(connections: readonly SavedConnection[]): ConnectionDocument {
   return {
     kind: CONNECTION_DOCUMENT_KIND,
     version: CONNECTION_DOCUMENT_VERSION,
@@ -71,10 +70,6 @@ export function serializeConnections(connections: readonly SavedConnection[]): s
 export type ParseResult =
   | { readonly ok: true; readonly connections: readonly SaveConnectionInput[] }
   | { readonly ok: false; readonly error: string };
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 /**
  * Reads one entry, or says why it could not.

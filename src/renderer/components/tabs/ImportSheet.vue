@@ -8,11 +8,13 @@
  * unset rather than guessed at by position.
  */
 import { computed, ref, watch } from 'vue';
+import { useTranslation } from 'i18next-vue';
 import type { Column, EntityRef } from '@drivers/types';
 import { host } from '../../lib/host';
 import CheckBox from '../ui/CheckBox.vue';
 import FormField from '../ui/FormField.vue';
 import PressButton from '../ui/PressButton.vue';
+import SelectMenu from '../ui/SelectMenu.vue';
 import Sheet from '../ui/Sheet.vue';
 import { errorMessage } from '@shared/errors';
 
@@ -36,9 +38,21 @@ const error = ref<string | null>(null);
 
 const SKIP = '';
 
+const { t } = useTranslation();
+
+/*
+ * One list for every row, because every row offers the same choice: a column
+ * from the file, or nothing. Built here rather than in the template so it is
+ * assembled once per file rather than once per column per render.
+ */
+const sourceOptions = computed(() => [
+  { value: SKIP, label: t('import.skip') },
+  ...header.value.map((name) => ({ value: name, label: name })),
+]);
+
 async function choose(): Promise<void> {
   const chosen = await window.shelf.dialogs.openFile({
-    title: 'Choose a file to import',
+    title: t('import.chooseFile'),
     extensions: ['csv', 'tsv', 'json', 'jsonl', 'ndjson', 'txt'],
   });
   if (!chosen) return;
@@ -108,31 +122,31 @@ watch(open, (isOpen) => {
 <template>
   <Sheet
     v-model="open"
-    :title="`Import into ${entity.name}`"
+    :title="$t('import.title', { name: entity.name })"
     wide
   >
     <FormField
-      label="File"
-      help="CSV, TSV, JSON or JSON Lines."
+      :label="$t('import.file')"
+      :help="$t('import.fileHelp')"
     >
       <div class="file">
-        <span class="file__path">{{ path || 'Nothing chosen yet' }}</span>
+        <span class="file__path">{{ path || $t('import.nothingChosen') }}</span>
         <PressButton
           variant="glass"
           @click="choose"
         >
-          Choose…
+          {{ $t('action.choose') }}
         </PressButton>
       </div>
     </FormField>
 
     <template v-if="header.length">
       <p class="count">
-        {{ total.toLocaleString() }} rows found.
+        {{ $t('import.rowsFound', { count: total }) }}
       </p>
 
       <p class="import__label type-label">
-        First rows
+        {{ $t('import.firstRows') }}
       </p>
       <div class="preview">
         <table>
@@ -163,7 +177,7 @@ watch(open, (isOpen) => {
       </div>
 
       <p class="import__label type-label">
-        Columns
+        {{ $t('import.columns') }}
       </p>
       <div class="map">
         <div
@@ -176,22 +190,21 @@ watch(open, (isOpen) => {
             <span class="map__type">{{ column.dataType }}</span>
           </span>
 
-          <select
+          <!--
+            The app's own list, not the engine's.
+            ────────────────────────────────────
+            This was the last native `<select>` left in the window, and it is
+            the one control that gives its popup to the operating system to
+            draw — its own focus ring, its own selection colour, its own idea of
+            where the list goes. It survived because the sweep that found the
+            others only looked at the settings sheet, which this is not.
+          -->
+          <SelectMenu
             v-model="mapping[column.name]"
-            class="textfield map__select"
-            :aria-label="`Source for ${column.name}`"
-          >
-            <option :value="SKIP">
-              — skip —
-            </option>
-            <option
-              v-for="name in header"
-              :key="name"
-              :value="name"
-            >
-              {{ name }}
-            </option>
-          </select>
+            class="map__select"
+            :options="sourceOptions"
+            :aria-label="$t('import.sourceFor', { name: column.name })"
+          />
         </div>
       </div>
 
@@ -199,14 +212,13 @@ watch(open, (isOpen) => {
         v-if="unmatched.length"
         class="note"
       >
-        {{ unmatched.length }} column{{ unmatched.length === 1 ? '' : 's' }} will be left to the
-        database's default: {{ unmatched.join(', ') }}.
+        {{ $t('import.unmatched', { count: unmatched.length, names: unmatched.join(', ') }) }}
       </p>
 
       <CheckBox
         v-model="truncateFirst"
-        label="Replace what is already there"
-        hint="Deletes every existing row before importing. This cannot be undone."
+        :label="$t('import.replace')"
+        :hint="$t('import.replaceHelp')"
       />
     </template>
 
@@ -220,14 +232,14 @@ watch(open, (isOpen) => {
 
     <template #footer>
       <PressButton @click="open = false">
-        Cancel
+        {{ $t('action.cancel') }}
       </PressButton>
       <PressButton
         variant="primary"
         :disabled="!path || mapped.length === 0 || running"
         @click="run"
       >
-        {{ running ? 'Importing…' : `Import ${total.toLocaleString()} rows` }}
+        {{ running ? $t('import.importing') : $t('import.importRows', { count: total }) }}
       </PressButton>
     </template>
   </Sheet>

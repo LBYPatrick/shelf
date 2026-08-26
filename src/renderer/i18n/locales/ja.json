@@ -29,7 +29,6 @@
     "update": "更新",
     "settings": "設定",
     "collapseAll": "すべて折りたたむ",
-    "resetView": "表示をリセット",
     "copied": "クリップボードにコピーしました。",
     "reset": "リセット",
     "confirm": "確定",
@@ -38,6 +37,12 @@
     "saveQuery": "クエリを保存",
     "back": "戻る",
     "showSuggestions": "候補を表示"
+  },
+  "time": {
+    "justNow": "たった今",
+    "minutesAgo": "{{count}}分前",
+    "hoursAgo": "{{count}}時間前",
+    "daysAgo": "{{count}}日前"
   },
   "start": {
     "search": "接続 URL を貼り付けるか、保存済みの接続を検索",
@@ -66,10 +71,6 @@
     "sampleOpening": "起動中…",
     "noKeyring": "システムのキーチェーンが見つからないため、このマシンではパスワードを保存できません。",
     "neverOpened": "未使用",
-    "justNow": "たった今",
-    "minutesAgo": "{{n}} 分前",
-    "hoursAgo": "{{n}} 時間前",
-    "daysAgo": "{{n}} 日前",
     "connectTo": "{{name}} に接続",
     "edit": "{{name}} を編集",
     "remove": "{{name}} を削除"
@@ -77,7 +78,6 @@
   "connection": {
     "new": "新しい接続",
     "engine": "エンジン",
-    "engineLabel": "データベースエンジン",
     "host": "ホスト",
     "port": "ポート",
     "user": "ユーザー",
@@ -85,29 +85,32 @@
     "database": "データベース",
     "file": "データベースファイル",
     "name": "名前",
-    "nameHelp": "空欄にすると「{{suggested}}」が使われます。",
     "advanced": "詳細設定",
-    "useSsl": "SSL/TLS を使う",
-    "useSsh": "SSH トンネル経由で接続",
     "sshHost": "SSH ホスト",
     "sshPort": "SSH ポート",
     "sshUser": "SSH ユーザー",
-    "sshAuth": "認証方式",
-    "sshAgent": "SSH エージェント",
     "sshKeyfile": "鍵ファイル",
     "sshPassword": "SSH パスワード",
     "readOnly": "読み取り専用",
     "readOnlyHelp": "書き込みを伴う操作をドライバの段階で拒否します。",
-    "savePassword": "パスワードを保存",
-    "savePasswordHelp": "OS のキーチェーンに保存され、アプリのデータベースには残りません。",
-    "noKeyringHelp": "利用できません。このマシンにはシステムのキーチェーンがありません。",
     "testing": "テスト中…",
     "connected": "接続できました — {{version}}",
     "chooseEngine": "データベースエンジンを選んでください。",
     "chooseFile": "データベースファイルを選んでください。",
     "needHost": "ホスト、ソケットのパス、または接続 URL を入力してください。",
     "required": "{{field}} は必須です。",
-    "testOk": "接続しました — {{version}}"
+    "testOk": "接続しました — {{version}}",
+    "engineLabel": "データベースエンジン",
+    "nameHelp": "空欄にすると「{{suggested}}」が使われます。",
+    "useSsl": "SSL/TLS を使う",
+    "useSsh": "SSH トンネル経由で接続",
+    "sshAuth": "認証方式",
+    "sshAgent": "SSH エージェント",
+    "savePassword": "パスワードを保存",
+    "savePasswordHelp": "OS のキーチェーンに保存され、アプリのデータベースには残りません。",
+    "noKeyringHelp": "利用できません。このマシンにはシステムのキーチェーンがありません。",
+    "sshKeyFile": "鍵ファイル",
+    "sshPasswordMode": "パスワード"
   },
   "workspace": {
     "entities": "オブジェクト",
@@ -124,7 +127,6 @@
     "noTables": "このデータベースにはまだテーブルがありません。",
     "noMatch": "条件に一致するものがありません。",
     "loadingColumns": "列を読み込み中…",
-    "noColumns": "列がありません",
     "disconnect": "{{version}} — クリックで切断",
     "readOnly": "読み取り専用",
     "disconnectHint": "クリックで切断",
@@ -136,18 +138,16 @@
   "table": {
     "filterPlaceholder": "絞り込み — 例: name like 'A%'",
     "rows": "{{count}} 行",
-    "noRows": "行がありません",
     "firstPage": "最初のページ",
     "previousPage": "前のページ",
     "nextPage": "次のページ",
     "lastPage": "最後のページ",
     "imported": "{{count}} 行を取り込みました",
     "discardChanges": "未保存の変更 {{count}} 件を破棄しますか？",
-    "nullValue": "NULL",
-    "emptyValue": "空",
     "editData": "データを編集",
     "editHint": "オンにするとグリッド上で値を変更できます",
-    "sqlCopied": "{{count}} 件の変更の SQL をコピーしました。"
+    "sqlCopied": "{{count}} 件の変更の SQL をコピーしました。",
+    "noRows": "行がありません"
   },
   "query": {
     "manualCommit": "手動コミット",
@@ -159,13 +159,11 @@
     "planning": "計画を取得中…",
     "writeAndPress": "クエリを書いて押してください",
     "result": "結果 {{index}}",
-    "resultRows": "結果 {{index}}: {{count}} 行",
     "completed": "文を実行しました。",
     "saveTitle": "クエリを保存",
     "saveNameHelp": "この接続に紐づけて保存され、サイドバーの星印に表示されます。",
     "affected": "{{count}} 行に影響",
     "showingFirst": "先頭 {{count}} 行を表示",
-    "planUnreadable": "このエンジンが返した実行計画は Shelf では読み取れませんでした。",
     "explainHint": "データベースがこれをどう実行するかを表示",
     "saveHint": "このクエリを保存",
     "caret": "{{line}} 行 {{column}} 列 / 全 {{lines}} 行",
@@ -189,7 +187,9 @@
     "summaryAffected": "{{rows}} 件に影響",
     "summaryMs": "{{ms}} ミリ秒",
     "summaryRow": "{{rows}} 行",
-    "summaryFirstOne": "先頭 {{rows}} 行"
+    "summaryFirstOne": "先頭 {{rows}} 行",
+    "resultRows": "結果 {{index}}: {{count}} 行",
+    "planUnreadable": "このエンジンが返した実行計画は Shelf では読み取れませんでした。"
   },
   "structure": {
     "columns": "列",
@@ -233,7 +233,8 @@
     "wrap": "折り返し",
     "wrapHint": "値の全体を必要な行数で表示する",
     "wrapOn": "折り返しを有効にしました。",
-    "wrapOff": "折り返しを無効にしました。"
+    "wrapOff": "折り返しを無効にしました。",
+    "copySql": "SQL をコピー"
   },
   "settings": {
     "title": "設定",
@@ -244,7 +245,6 @@
     "dark": "ダーク",
     "accent": "アクセントカラー",
     "accentHelp": "どの色も、その上の文字が読めるまで自動で調整されます。",
-    "customHue": "アクセントの色相",
     "density": "表示密度",
     "materials": "マテリアル",
     "opacity": "不透明度",
@@ -328,7 +328,8 @@
     "replace": "既存のデータを置き換える",
     "replaceHelp": "取り込む前に既存の行をすべて削除します。この操作は取り消せません。",
     "importRows": "{{count}} 行を取り込む",
-    "importing": "取り込み中…"
+    "importing": "取り込み中…",
+    "chooseFile": "インポートするファイルを選択"
   },
   "noun": {
     "table": "テーブル",
@@ -429,7 +430,6 @@
     "wrapOff": "長い行を折り返さない",
     "sectionCommands": "コマンド",
     "sectionTables": "テーブル",
-    "sectionActions": "操作",
     "placeholder": "テーブルを検索、/ でコマンド",
     "commandPlaceholder": "コマンドを入力",
     "openHint": "で開く",
@@ -599,7 +599,9 @@
   "erd": {
     "zoomIn": "拡大",
     "zoomOut": "縮小",
-    "fit": "全体表示"
+    "fit": "全体表示",
+    "reading": "スキーマを読み込み中…",
+    "nothing": "まだ図にできるものがありません。"
   },
   "assistant": {
     "title": "アシスタント",
@@ -661,10 +663,6 @@
     "rename": "このチャットの名前を変更",
     "discard": "このチャットを削除",
     "updated": "更新 {{when}}",
-    "started": "開始 {{when}}",
-    "justNow": "たった今",
-    "minutesAgo": "{{count}}分前",
-    "hoursAgo": "{{count}}時間前",
-    "daysAgo": "{{count}}日前"
+    "started": "開始 {{when}}"
   }
 }

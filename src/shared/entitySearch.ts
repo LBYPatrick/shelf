@@ -64,7 +64,7 @@ export function parseQuery(query: string): Query {
  * rank higher: adjacent characters are worth more than scattered ones, and a
  * match at a word boundary more than one in the middle.
  */
-export function scoreWord(text: string, needle: string): number | null {
+function scoreWord(text: string, needle: string): number | null {
   if (!needle) return 0;
 
   const haystack = text.toLowerCase();

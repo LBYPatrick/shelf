@@ -137,6 +137,28 @@ let controller: AbortController | null = null;
 const capabilities = computed(() => connections.active?.capabilities);
 const activeResult = computed(() => results.value[selectedResult.value]);
 
+/*
+ * The result picker, as the app's own list rather than the engine's.
+ *
+ * `SelectMenu` is keyed by string because that is what an option's value is in
+ * HTML and what every other list in the app carries; the index is a number
+ * here, so the two meet in a writable computed rather than by making one of
+ * them pretend to be the other.
+ */
+const resultOptions = computed(() =>
+  results.value.map((set, index) => ({
+    value: String(index),
+    label: t('query.resultRows', { index: index + 1, count: set.rowCount }),
+  }))
+);
+
+const selectedResultValue = computed({
+  get: () => String(selectedResult.value),
+  set: (value: string) => {
+    selectedResult.value = Number(value);
+  },
+});
+
 /** Completions come from the schema the sidebar already loaded. */
 const schema = computed<SchemaMap>(() => {
   const namespace: Record<string, string[]> = {};
@@ -368,7 +390,7 @@ async function explain(): Promise<void> {
     const parsed = parsePlan(engine, rows);
 
     if (!parsed) {
-      error.value = 'This engine returned a plan Shelf could not read.';
+      error.value = t('query.planUnreadable');
       return;
     }
 
@@ -1044,20 +1066,18 @@ watch(
           $t('query.selected', { count: editorStats.selected })
         }}</span>
 
-        <select
+        <!--
+          The app's own list. A native `<select>` gives its popup to the
+          operating system to draw, and this one sat in the status bar where a
+          system menu opening over the working pane is at its most obvious.
+        -->
+        <SelectMenu
           v-if="results.length > 1"
-          v-model.number="selectedResult"
+          v-model="selectedResultValue"
           class="tabstatus__select"
+          :options="resultOptions"
           :aria-label="$t('query.result', { index: selectedResult + 1 })"
-        >
-          <option
-            v-for="(set, index) in results"
-            :key="index"
-            :value="index"
-          >
-            Result {{ index + 1 }}: {{ set.rowCount }} rows
-          </option>
-        </select>
+        />
         <span
           v-if="summary"
           class="tabstatus__item"

@@ -29,7 +29,6 @@
     "update": "Cập nhật",
     "settings": "Cài đặt",
     "collapseAll": "Thu gọn tất cả",
-    "resetView": "Đặt lại khung nhìn",
     "copied": "Đã sao chép vào bảng nhớ tạm.",
     "reset": "Đặt lại",
     "confirm": "Xác nhận",
@@ -38,6 +37,12 @@
     "saveQuery": "Lưu truy vấn",
     "back": "Quay lại",
     "showSuggestions": "Hiện gợi ý"
+  },
+  "time": {
+    "justNow": "vừa xong",
+    "minutesAgo": "{{count}} phút trước",
+    "hoursAgo": "{{count}} giờ trước",
+    "daysAgo": "{{count}} ngày trước"
   },
   "start": {
     "search": "Dán URL kết nối, hoặc tìm trong các kết nối đã lưu",
@@ -66,10 +71,6 @@
     "sampleOpening": "Đang mở…",
     "noKeyring": "Không tìm thấy keychain của hệ thống, nên không thể lưu mật khẩu trên máy này.",
     "neverOpened": "chưa mở lần nào",
-    "justNow": "vừa xong",
-    "minutesAgo": "{{n}} phút trước",
-    "hoursAgo": "{{n}} giờ trước",
-    "daysAgo": "{{n}} ngày trước",
     "connectTo": "Kết nối tới {{name}}",
     "edit": "Sửa {{name}}",
     "remove": "Xoá {{name}}"
@@ -77,7 +78,6 @@
   "connection": {
     "new": "Kết nối mới",
     "engine": "Engine",
-    "engineLabel": "Engine cơ sở dữ liệu",
     "host": "Máy chủ",
     "port": "Cổng",
     "user": "Người dùng",
@@ -85,29 +85,32 @@
     "database": "Cơ sở dữ liệu",
     "file": "Tệp cơ sở dữ liệu",
     "name": "Tên",
-    "nameHelp": "Để trống sẽ dùng “{{suggested}}”.",
     "advanced": "Nâng cao",
-    "useSsl": "Dùng SSL/TLS",
-    "useSsh": "Kết nối qua đường hầm SSH",
     "sshHost": "Máy chủ SSH",
     "sshPort": "Cổng SSH",
     "sshUser": "Người dùng SSH",
-    "sshAuth": "Cách xác thực",
-    "sshAgent": "SSH agent",
     "sshKeyfile": "Tệp khoá",
     "sshPassword": "Mật khẩu SSH",
     "readOnly": "Chỉ đọc",
     "readOnlyHelp": "Từ chối mọi thao tác ghi, ngay tại driver.",
-    "savePassword": "Lưu mật khẩu",
-    "savePasswordHelp": "Lưu trong keychain của hệ thống, không bao giờ nằm trong cơ sở dữ liệu của ứng dụng.",
-    "noKeyringHelp": "Không khả dụng: máy này không có keychain hệ thống.",
     "testing": "Đang kiểm tra…",
     "connected": "Đã kết nối — {{version}}",
     "chooseEngine": "Hãy chọn một engine cơ sở dữ liệu.",
     "chooseFile": "Hãy chọn tệp cơ sở dữ liệu.",
     "needHost": "Nhập máy chủ, đường dẫn socket, hoặc URL kết nối.",
     "required": "{{field}} là bắt buộc.",
-    "testOk": "Đã kết nối — {{version}}"
+    "testOk": "Đã kết nối — {{version}}",
+    "engineLabel": "Engine cơ sở dữ liệu",
+    "nameHelp": "Để trống sẽ dùng “{{suggested}}”.",
+    "useSsl": "Dùng SSL/TLS",
+    "useSsh": "Kết nối qua đường hầm SSH",
+    "sshAuth": "Cách xác thực",
+    "sshAgent": "SSH agent",
+    "savePassword": "Lưu mật khẩu",
+    "savePasswordHelp": "Lưu trong keychain của hệ thống, không bao giờ nằm trong cơ sở dữ liệu của ứng dụng.",
+    "noKeyringHelp": "Không khả dụng: máy này không có keychain hệ thống.",
+    "sshKeyFile": "Tệp khóa",
+    "sshPasswordMode": "Mật khẩu"
   },
   "workspace": {
     "entities": "Đối tượng",
@@ -124,7 +127,6 @@
     "noTables": "Cơ sở dữ liệu này chưa có bảng nào.",
     "noMatch": "Không có gì khớp với bộ lọc.",
     "loadingColumns": "Đang tải các cột…",
-    "noColumns": "Không có cột",
     "disconnect": "{{version}} — nhấp để ngắt kết nối",
     "readOnly": "chỉ đọc",
     "disconnectHint": "nhấp để ngắt kết nối",
@@ -136,18 +138,16 @@
   "table": {
     "filterPlaceholder": "Lọc — ví dụ name like 'A%'",
     "rows": "{{count}} hàng",
-    "noRows": "Không có hàng nào",
     "firstPage": "Trang đầu",
     "previousPage": "Trang trước",
     "nextPage": "Trang sau",
     "lastPage": "Trang cuối",
     "imported": "đã nhập {{count}} hàng",
     "discardChanges": "Bỏ {{count}} thay đổi chưa lưu?",
-    "nullValue": "NULL",
-    "emptyValue": "rỗng",
     "editData": "Sửa dữ liệu",
     "editHint": "Bật để thay đổi giá trị trong bảng",
-    "sqlCopied": "Đã sao chép SQL cho {{count}} thay đổi."
+    "sqlCopied": "Đã sao chép SQL cho {{count}} thay đổi.",
+    "noRows": "Không có hàng nào"
   },
   "query": {
     "manualCommit": "Commit thủ công",
@@ -159,13 +159,11 @@
     "planning": "Đang lấy kế hoạch…",
     "writeAndPress": "Viết một truy vấn rồi nhấn",
     "result": "Kết quả {{index}}",
-    "resultRows": "Kết quả {{index}}: {{count}} hàng",
     "completed": "Câu lệnh đã chạy xong.",
     "saveTitle": "Lưu truy vấn",
     "saveNameHelp": "Lưu theo kết nối này, và hiển thị dưới biểu tượng sao ở thanh bên.",
     "affected": "{{count}} hàng bị ảnh hưởng",
     "showingFirst": "chỉ hiện {{count}} hàng đầu",
-    "planUnreadable": "Shelf không đọc được kế hoạch mà engine này trả về.",
     "explainHint": "Xem cách cơ sở dữ liệu chạy truy vấn này",
     "saveHint": "Lưu truy vấn này",
     "caret": "Dòng {{line}}, Cột {{column}} / {{lines}}",
@@ -189,7 +187,9 @@
     "summaryAffected": "ảnh hưởng {{rows}} hàng",
     "summaryMs": "{{ms}} ms",
     "summaryRow": "{{rows}} hàng",
-    "summaryFirstOne": "{{rows}} hàng đầu"
+    "summaryFirstOne": "{{rows}} hàng đầu",
+    "resultRows": "Kết quả {{index}}: {{count}} hàng",
+    "planUnreadable": "Shelf không đọc được kế hoạch mà engine này trả về."
   },
   "structure": {
     "columns": "Cột",
@@ -233,7 +233,8 @@
     "wrap": "Xuống dòng",
     "wrapHint": "Hiện toàn bộ giá trị trên số dòng cần thiết",
     "wrapOn": "Đã bật xuống dòng.",
-    "wrapOff": "Đã tắt xuống dòng."
+    "wrapOff": "Đã tắt xuống dòng.",
+    "copySql": "Sao chép SQL"
   },
   "settings": {
     "title": "Cài đặt",
@@ -244,7 +245,6 @@
     "dark": "Tối",
     "accent": "Màu nhấn",
     "accentHelp": "Mỗi màu được điều chỉnh cho đến khi chữ trên nền đó vẫn đọc được.",
-    "customHue": "Sắc độ tuỳ chọn",
     "density": "Mật độ",
     "materials": "Vật liệu",
     "opacity": "Độ đục",
@@ -328,7 +328,8 @@
     "replace": "Thay thế dữ liệu hiện có",
     "replaceHelp": "Xoá toàn bộ hàng hiện có trước khi nhập. Không thể hoàn tác.",
     "importRows": "Nhập {{count}} hàng",
-    "importing": "Đang nhập…"
+    "importing": "Đang nhập…",
+    "chooseFile": "Chọn tệp để nhập"
   },
   "noun": {
     "table": "bảng",
@@ -429,7 +430,6 @@
     "wrapOff": "Không ngắt dòng dài",
     "sectionCommands": "Lệnh",
     "sectionTables": "Bảng",
-    "sectionActions": "Hành động",
     "placeholder": "Tìm bảng, hoặc gõ / để dùng lệnh",
     "commandPlaceholder": "Nhập một lệnh",
     "openHint": "để mở",
@@ -599,7 +599,9 @@
   "erd": {
     "zoomIn": "Phóng to",
     "zoomOut": "Thu nhỏ",
-    "fit": "Vừa khung"
+    "fit": "Vừa khung",
+    "reading": "Đang đọc lược đồ…",
+    "nothing": "Chưa có gì để vẽ sơ đồ."
   },
   "assistant": {
     "title": "Trợ lý",
@@ -661,10 +663,6 @@
     "rename": "Đổi tên cuộc trò chuyện này",
     "discard": "Xóa cuộc trò chuyện này",
     "updated": "cập nhật {{when}}",
-    "started": "bắt đầu {{when}}",
-    "justNow": "vừa xong",
-    "minutesAgo": "{{count}} phút trước",
-    "hoursAgo": "{{count}} giờ trước",
-    "daysAgo": "{{count}} ngày trước"
+    "started": "bắt đầu {{when}}"
   }
 }

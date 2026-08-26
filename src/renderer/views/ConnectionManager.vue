@@ -21,6 +21,7 @@
  */
 import { computed, onMounted, ref, watch } from 'vue';
 import { useTranslation } from 'i18next-vue';
+import { elapsedSince, FOREVER } from '@shared/elapsed';
 import type { SavedConnection } from '@shared/connections';
 import { looksLikeUrl, parseConnectionUrl, type ParsedConnection } from '@shared/connectionUrl';
 import { parseConnections, serializeConnections } from '@shared/connectionFile';
@@ -149,13 +150,23 @@ function lastUsed(connection: SavedConnection): string {
   const at = connection.lastUsedAt;
   if (!at) return t('start.neverOpened');
 
-  const minutes = Math.round((Date.now() - at) / 60_000);
-  if (minutes < 1) return t('start.justNow');
-  if (minutes < 60) return t('start.minutesAgo', { n: minutes });
-
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return t('start.hoursAgo', { n: hours });
-  return t('start.daysAgo', { n: Math.round(hours / 24) });
+  /*
+   * The same arithmetic and the same words the sidebar's lists use. This one
+   * keeps counting past a week rather than falling back to a date: a
+   * connection last opened four hundred days ago is a connection you have
+   * stopped using, and that is the useful thing to say about it.
+   */
+  const since = elapsedSince(at, Date.now(), { until: FOREVER });
+  switch (since.unit) {
+    case 'now':
+      return t('time.justNow');
+    case 'minutes':
+      return t('time.minutesAgo', { count: since.count });
+    case 'hours':
+      return t('time.hoursAgo', { count: since.count });
+    default:
+      return t('time.daysAgo', { count: since.count });
+  }
 }
 
 /**

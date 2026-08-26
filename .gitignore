@@ -9,6 +9,11 @@ coverage/
 test-results/
 playwright-report/
 
+# Incremental type-check state. It is a cache keyed by absolute paths on the
+# machine that wrote it, so a tracked copy is a file that changes on every
+# build and is useful to nobody else.
+*.tsbuildinfo
+
 # Which certificate this machine signs with: a keychain identity and a
 # notarytool profile, both local facts. See scripts/signing.sh.
 .signing.local

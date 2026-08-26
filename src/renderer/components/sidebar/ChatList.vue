@@ -19,6 +19,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue';
 import { useTranslation } from 'i18next-vue';
 import type { SavedChat } from '@shared/appdb';
+import { elapsedSince } from '@shared/elapsed';
 import AppIcon from '../ui/AppIcon.vue';
 import { useAssistant } from '../../stores/assistant';
 import { useConnections } from '../../stores/connections';
@@ -101,17 +102,25 @@ function discard(chat: SavedChat): void {
 /**
  * When it happened, as a person would say it.
  *
- * Relative up to a week, because that is the range in which "yesterday" is more
- * use than a date; absolute after, because "37 days ago" is not a fact anyone
- * can do anything with.
+ * The arithmetic is `shared/elapsed.ts`; only the wording is here, and it is
+ * the same wording the other two lists use. Relative up to a week, because that
+ * is the range in which "yesterday" is more use than a date, and absolute after
+ * — "37 days ago" is not a fact anyone can do anything with.
  */
 function when(at: number): string {
-  const seconds = Math.max(0, Math.round((Date.now() - at) / 1000));
-  if (seconds < 60) return t('chats.justNow');
-  if (seconds < 3600) return t('chats.minutesAgo', { count: Math.floor(seconds / 60) });
-  if (seconds < 86_400) return t('chats.hoursAgo', { count: Math.floor(seconds / 3600) });
-  if (seconds < 604_800) return t('chats.daysAgo', { count: Math.floor(seconds / 86_400) });
-  return new Date(at).toLocaleDateString();
+  const since = elapsedSince(at, Date.now());
+  switch (since.unit) {
+    case 'now':
+      return t('time.justNow');
+    case 'minutes':
+      return t('time.minutesAgo', { count: since.count });
+    case 'hours':
+      return t('time.hoursAgo', { count: since.count });
+    case 'days':
+      return t('time.daysAgo', { count: since.count });
+    case 'date':
+      return new Date(since.at).toLocaleDateString();
+  }
 }
 </script>
 

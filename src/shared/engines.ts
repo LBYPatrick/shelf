@@ -178,7 +178,7 @@ export const ENGINES: readonly EngineDescriptor[] = [
  * Sample mode is a real engine to the driver layer but not a choice in the
  * picker — it is offered as its own entry point on the start screen instead.
  */
-export const MOCK_ENGINE: EngineDescriptor = {
+const MOCK_ENGINE: EngineDescriptor = {
   id: 'mock',
   name: 'Sample data',
   mark: '◐',

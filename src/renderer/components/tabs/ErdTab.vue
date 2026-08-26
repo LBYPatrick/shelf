@@ -145,13 +145,13 @@ onMounted(load);
       v-else-if="loading"
       class="erd-tab__note"
     >
-      Reading the schema…
+      {{ $t('erd.reading') }}
     </p>
     <p
       v-else-if="tables.length === 0"
       class="erd-tab__note"
     >
-      There is nothing to diagram yet.
+      {{ $t('erd.nothing') }}
     </p>
 
     <ErdCanvas

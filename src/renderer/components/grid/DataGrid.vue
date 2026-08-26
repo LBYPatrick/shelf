@@ -242,7 +242,7 @@ function build(): void {
     // scroll distance on any table wider than the pane. Vertical virtualisation
     // is what actually matters — that is where the row counts are.
     renderHorizontal: 'basic',
-    placeholder: 'No rows',
+    placeholder: t('table.noRows'),
     selectableRange: true,
     selectableRangeColumns: true,
     selectableRangeRows: true,
