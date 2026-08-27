@@ -264,7 +264,14 @@ export function createMainWindow(): BrowserWindow {
   applyDevelopmentIcon(window);
 
   window.once('ready-to-show', () => {
-    if (!process.env['SHELF_E2E']) window.show();
+    /*
+     * Shown unless a test is driving it — and shown anyway when `SHELF_SHOW`
+     * asks, which is how the screenshots are taken. The window's own material
+     * is drawn by the compositor *behind* it, so a capture of the page shows
+     * everything except the two things that make it a window: the vibrancy and
+     * the traffic lights. Those need a real window on a real screen.
+     */
+    if (!process.env['SHELF_E2E'] || process.env['SHELF_SHOW']) window.show();
   });
 
   const notifyMaximized = () =>
