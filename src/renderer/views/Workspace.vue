@@ -495,7 +495,34 @@ onBeforeUnmount(() => stopPersisting?.());
         @collapse-toggle="sidebarCollapsed = true"
       />
 
-      <section class="content panel-content">
+      <!--
+        The corner, and the thing that fills what it cuts away.
+        ──────────────────────────────────────────────────────
+        An arc taken out of an opaque pane shows whatever is behind it, and
+        behind it is the root — which is transparent, so the notch showed the
+        material the OS draws outside the window: raw, where the column an
+        eighth of an inch away shows it tinted. That patch is the rectangle
+        behind the rounded corner.
+
+        So the notch is filled by a wedge wearing the columns' own material,
+        masked to the arc so it never overlaps the pane — glass laid over an
+        opaque surface composites against *it* rather than against the window,
+        and comes out a shade off the bar it is meant to continue.
+
+        Only while the sidebar is shut. Open, the pane's top edge is the strip
+        wearing the pane's own material, and a corner between them would be a
+        seam inside one surface.
+      -->
+      <div
+        v-if="sidebarCollapsed"
+        class="content__notch mat-regular panel-sidebar"
+        aria-hidden="true"
+      />
+
+      <section
+        class="content panel-content"
+        :class="{ 'content--alone': sidebarCollapsed }"
+      >
         <div class="content__body">
           <template
             v-for="tab in tabs.tabs"
@@ -1101,21 +1128,44 @@ onBeforeUnmount(() => stopPersisting?.());
 }
 
 /*
- * Square at every width, and the collapsed case is why.
+ * Rounded only where there is something for a corner to mean.
  *
- * A corner was tried here for the state where the sidebar is shut, on the
- * theory that the pane is then a rounded panel with a bar over it rather than
- * one column with tabs at the top. Two things were wrong with it. The strip was
- * made transparent to match, which shows the window's own material — and
- * against an opaque pane that reads as a floating band, exactly the seam the
- * corner was meant to soften. And an arc over an opaque surface shows whatever
- * is behind it: the columns' square edge sat in the corner's gap, which is the
- * rectangle behind the rounded corner.
+ * Open, the pane's top edge *is* the strip, wearing the pane's own material, so
+ * a corner between them would be a seam inside one surface. Shut, the bar above
+ * and the rail beside are both the columns' material and the pane is an opaque
+ * panel sitting in front of them — which is the one arrangement where softening
+ * the meeting point is softening something.
  *
- * The strip wears a surface at every width and the pane meets it flat. What
- * changes on collapse is *which* surface the bar wears — see `TabStrip`'s
- * `tight` — and one material across the whole bar has no seam to soften.
+ * `clip-path`, never `overflow`: Chromium drops an ancestor's rounded overflow
+ * clip on a layer of its own, Monaco promotes itself, and the corner was
+ * correspondingly cut on a table tab and square on a query tab.
  */
+.content--alone {
+  clip-path: inset(0 round var(--radius-box) 0 0 0);
+}
+
+/*
+ * The wedge that fills what the arc cuts away.
+ *
+ * Exactly the corner box, painting everywhere in it except inside the arc, so
+ * it meets the clipped pane edge to edge and never laps over it. Its neighbours
+ * are the bar directly above and the rail directly beside, both wearing this
+ * same material, so the three read as one surface with the pane in front of it.
+ */
+.content__notch {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  inset-inline-start: var(--columns-w);
+  width: var(--radius-box);
+  height: var(--radius-box);
+  pointer-events: none;
+  mask-image: radial-gradient(
+    circle at 100% 100%,
+    transparent calc(var(--radius-box) - 0.5px),
+    #000 var(--radius-box)
+  );
+}
 
 /*
  * Square, because the tab strip is now the pane's own top edge.

@@ -1833,7 +1833,53 @@ test.describe('the columns and the pane', () => {
     expect(Math.abs(edges.lead - edges.pane)).toBeLessThanOrEqual(1);
   });
 
-  test('the pane is square, now that the strip is its top edge', async ({ sample }) => {
+  test('the corner it cuts away is filled by the columns, not by the desktop', async ({
+    sample,
+  }) => {
+    /*
+     * An arc taken out of an opaque pane shows whatever is behind it, and
+     * behind it is the root — which is transparent, so the notch showed the
+     * material the OS draws *outside* the window: raw, where the column an
+     * eighth of an inch away shows it tinted. That patch is the rectangle
+     * behind the rounded corner.
+     *
+     * A wedge wearing the columns' own material fills it. Two things have to
+     * hold: it is the same material as the bar it continues, and it does not
+     * lap over the pane — glass laid on an opaque surface composites against
+     * *it* and comes out a shade off the thing it is matching.
+     */
+    await sample.getByRole('button', { name: /sidebar/i }).first().click();
+    await sample.waitForTimeout(500);
+
+    const corner = await sample.evaluate(() => {
+      const pane = document.querySelector('.content')!;
+      const notch = document.querySelector('.content__notch');
+      if (!notch) return null;
+      const box = notch.getBoundingClientRect();
+      const paneBox = pane.getBoundingClientRect();
+      return {
+        notch: getComputedStyle(notch).backgroundColor,
+        bar: getComputedStyle(document.querySelector('.topbar__lead')!).backgroundColor,
+        pane: getComputedStyle(pane).backgroundColor,
+        clip: getComputedStyle(pane).clipPath,
+        sits: Math.abs(box.left - paneBox.left) <= 1 && Math.abs(box.top - paneBox.top) <= 1,
+        square: Math.abs(box.width - box.height) <= 1 && box.width > 2,
+      };
+    });
+
+    expect(corner, 'there is no wedge behind the corner').not.toBeNull();
+    expect(corner!.notch, 'the wedge is not the material it continues').toBe(corner!.bar);
+    expect(corner!.notch, 'the wedge wears the pane instead of the columns').not.toBe(
+      corner!.pane
+    );
+    expect(corner!.sits, 'the wedge is not on the corner it fills').toBe(true);
+    expect(corner!.square).toBe(true);
+    // `clip-path`, never `overflow`: Chromium drops an ancestor's rounded
+    // overflow clip on a layer of its own, and Monaco promotes itself.
+    expect(corner!.clip).not.toBe('none');
+  });
+
+  test('the pane is square while the sidebar is open', async ({ sample }) => {
     /*
      * There was one rounded corner here, backed by a masked wedge of the
      * sidebar's surface so the arc did not show raw window backdrop. It

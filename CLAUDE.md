@@ -259,8 +259,18 @@ component's props or a mock's shape has changed.
   Making the strip *transparent* there is the mistake that looks like the same
   idea: it shows the window's own material, which against an opaque pane reads
   as a floating band.
-- **The working pane is square.** There was one rounded corner where it met the
-  chrome, backed by a masked wedge of the sidebar's own surface so the arc did
+- **The pane's corner is cut, and what it cuts away is filled.** An arc taken
+  out of an opaque pane shows whatever is behind it, and behind it is the root —
+  transparent, so the notch showed the material the OS draws *outside* the
+  window: raw, where the column an eighth of an inch away shows it tinted. That
+  patch is the rectangle behind the rounded corner. A wedge wearing the columns'
+  own material fills it, masked to the arc so it never laps over the pane —
+  glass laid on an opaque surface composites against *it* and comes out a shade
+  off the bar it is matching. Only while the sidebar is shut: open, the pane's
+  top edge is the strip wearing the pane's own material, and a corner between
+  them is a seam inside one surface.
+- **The working pane is square while the sidebar is open.** There was one
+  rounded corner where it met the chrome, backed by a masked wedge of the sidebar's own surface so the arc did
   not show the material the OS draws *outside* the window — raw, where the
   column an eighth of an inch away showed it blurred and tinted. It softened the
   one place the opaque pane butted into something above it, and there is no such
