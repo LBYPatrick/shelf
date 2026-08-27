@@ -21,7 +21,7 @@ interface ShelfFixtures {
  * never read or write the developer's real connections and settings.
  */
 export const test = base.extend<ShelfFixtures>({
-  // eslint-disable-next-line no-empty-pattern -- Playwright requires the destructured fixture parameter
+  // oxlint-disable-next-line no-empty-pattern -- Playwright requires the destructured fixture parameter
   app: async ({}, use) => {
     const userDataDir = await mkdtemp(join(tmpdir(), 'shelf-e2e-'));
 

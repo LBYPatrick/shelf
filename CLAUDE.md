@@ -22,7 +22,7 @@ make test        # unit tests (vitest)
 make test-e2e    # end-to-end tests against the built app (playwright)
 make ui          # UI quality gate: visual, accessibility, design invariants
 make ui-accept   # regenerate the visual snapshots — read the diff first
-make format      # prettier + eslint --fix
+make format      # prettier + oxlint --fix
 pnpm shots       # screenshot the interface for design review
 ```
 

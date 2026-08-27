@@ -24,7 +24,7 @@ interface UiFixtures {
  * screenshot to a stored one meaningful rather than flaky.
  */
 export const test = base.extend<UiFixtures>({
-  // eslint-disable-next-line no-empty-pattern -- Playwright requires the destructured form
+  // oxlint-disable-next-line no-empty-pattern -- Playwright requires the destructured form
   app: async ({}, use) => {
     const userDataDir = await mkdtemp(join(tmpdir(), 'shelf-ui-'));
     const app = await electron.launch({

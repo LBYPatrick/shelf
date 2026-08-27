@@ -13,6 +13,6 @@ if ! command -v pnpm &>/dev/null; then
     fi
 fi
 
-pnpm add -D prettier eslint typescript-eslint eslint-plugin-vue @eslint/js globals
+pnpm add -D prettier oxlint
 
 echo "Formatter installed."
