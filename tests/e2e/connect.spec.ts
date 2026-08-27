@@ -48,7 +48,7 @@ test('browses a table and reads its rows', async ({ page }) => {
 
   // An empty database still gives a usable workspace: the sidebar says so
   // rather than showing a spinner forever, and no tab is open.
-  await expect(page.getByText('Nothing open')).toBeVisible();
+  await expect(page.getByText('Nothing is open')).toBeVisible();
   await expect(page.getByRole('button', { name: /Search tables/ })).toBeVisible();
   await expect(page.getByText('This database has no tables yet.')).toBeVisible();
 });

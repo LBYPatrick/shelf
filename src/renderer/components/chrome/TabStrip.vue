@@ -570,7 +570,15 @@ const KIND_ICON: Record<Tab['kind'], string> = {
       that skips the menu — which is the thing a menu is for once you have
       found it twice.
     -->
+    <!--
+      Gone when there is nothing open.
+      ────────────────────────────────
+      An empty pane already lists the ways to start, each with its keystroke, so
+      a `+` floating in the corner above it is the same offer made twice — and
+      made worst, as a lone glyph on an otherwise empty bar.
+    -->
     <button
+      v-if="tabs.tabs.length > 0"
       ref="newButton"
       v-tip="t('workspace.newTab')"
       class="strip__new no-drag"

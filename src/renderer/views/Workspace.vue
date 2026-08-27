@@ -6,7 +6,7 @@
  * status bar the active tab contributes to. Chrome is translucent and the
  * content scrolls beneath it rather than beside it.
  */
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import CommandPalette from '../components/chrome/CommandPalette.vue';
 import ConnectionSwitcher from '../components/sidebar/ConnectionSwitcher.vue';
 import StatusBar from '../components/chrome/StatusBar.vue';
@@ -34,6 +34,7 @@ import { useJobs } from '../stores/jobs';
 import { useTabs } from '../stores/tabs';
 import { useHotkeys } from '../composables/useHotkeys';
 import { vTip } from '../lib/hoverTip';
+import { engineDescriptor } from '@shared/engines';
 import { shortcutLabel } from '../lib/keybindings';
 import { useTranslation } from 'i18next-vue';
 
@@ -41,6 +42,41 @@ const assistant = useAssistant();
 const connections = useConnections();
 const entities = useEntities();
 const tabs = useTabs();
+
+/**
+ * A tab that has just been opened, and is still arriving.
+ *
+ * A new tab used to be *there* — the whole apparatus of an editor, a divider,
+ * two toolbars and an empty grid, painted complete in one frame, which reads as
+ * a jump cut rather than as something opening. So the pane's regions arrive in
+ * order, top to bottom, over about a third of a second.
+ *
+ * Held per tab id rather than run on every mount, because the pane is kept in
+ * the tree while its tab is in the background: a CSS animation on a box that
+ * goes `display: none` and back restarts each time, which would replay the
+ * whole cascade on every switch between two tabs. This runs when the tab is
+ * *new*, which is the thing being animated.
+ */
+const opening = ref(new Set<string>());
+const OPENING_MS = 700;
+
+watch(
+  () => tabs.tabs.map((tab) => tab.id),
+  (ids, before) => {
+    const had = new Set(before ?? []);
+    for (const id of ids) {
+      if (had.has(id)) continue;
+      opening.value.add(id);
+      // A `Set` mutated in place is reactive in Vue 3, but the timer has to
+      // trigger the render itself.
+      setTimeout(() => {
+        opening.value.delete(id);
+        opening.value = new Set(opening.value);
+      }, OPENING_MS);
+    }
+    opening.value = new Set(opening.value);
+  }
+);
 const queries = useQueries();
 const jobs = useJobs();
 const { t } = useTranslation();
@@ -56,6 +92,44 @@ const providersOpen = ref(false);
 
 // Built as a computed so the labels follow a language change rather than
 // keeping whichever language the component happened to mount in.
+const engineMark = computed(() =>
+  connections.active ? engineDescriptor(connections.active.engine).mark : ''
+);
+const engineHue = computed(() =>
+  connections.active ? engineDescriptor(connections.active.engine).hue : 250
+);
+
+/** The ways in, in the order they are worth offering. */
+const openings = computed(() => [
+  {
+    id: 'query',
+    icon: 'query',
+    label: t('workspace.newQuery'),
+    hint: shortcutLabel('tab.new'),
+    run: () => tabs.openQuery(),
+  },
+  {
+    id: 'chat',
+    icon: 'assistant',
+    label: t('assistant.newChat'),
+    hint: shortcutLabel('assistant.open'),
+    run: () => tabs.openChat(),
+  },
+  {
+    id: 'find',
+    icon: 'search',
+    /*
+     * Its own words, not the sidebar's. The field above the tree is labelled
+     * "Search tables", and a row here carrying the same name would be a second
+     * control with one name — which the interface cannot tell apart either, and
+     * said so in the test suite.
+     */
+    label: t('workspace.findAnything'),
+    hint: shortcutLabel('palette.open'),
+    run: () => (paletteOpen.value = true),
+  },
+]);
+
 const railItems = computed<readonly { id: RailItem; label: string; icon: string }[]>(() => [
   { id: 'entities', label: t('workspace.entities'), icon: 'tables' },
   { id: 'queries', label: t('workspace.savedQueries'), icon: 'star' },
@@ -69,20 +143,6 @@ const railItems = computed<readonly { id: RailItem; label: string; icon: string 
  * which is what makes the three read as positions on one axis.
  */
 const railIndex = computed(() => railItems.value.findIndex((item) => item.id === rail.value));
-
-const nouns = computed(() => connections.active?.capabilities.nouns);
-/**
- * The engine's own word for its entities, in the reader's language.
- *
- * This goes through the reactive `t` rather than i18next directly: calling
- * i18next from inside a computed gives it no dependency on the language, so the
- * word would keep whichever one it was first evaluated in.
- */
-const entityNoun = computed(() => {
-  const noun = nouns.value?.entity ?? 'table';
-  const translated = t(`noun.${noun}`);
-  return translated === `noun.${noun}` ? noun : translated;
-});
 
 function selectRail(item: RailItem): void {
   // Clicking the item that is already showing collapses the sidebar, which is
@@ -450,6 +510,7 @@ onBeforeUnmount(() => stopPersisting?.());
             <div
               v-show="tab.id === tabs.activeId"
               class="content__pane"
+              :class="{ 'content__pane--opening': opening.has(tab.id) }"
             >
               <TableTab
                 v-if="tab.kind === 'table' && tab.entity"
@@ -486,26 +547,55 @@ onBeforeUnmount(() => stopPersisting?.());
             v-if="tabs.tabs.length === 0"
             class="content__empty"
           >
-            <p class="type-title">
-              {{ $t('workspace.nothingOpen') }}
-            </p>
-            <p class="type-body content__hint">
-              {{ $t('workspace.nothingOpenHint', { noun: entityNoun }) }}
-            </p>
-            <div class="content__actions">
-              <PressButton
-                variant="primary"
-                size="sm"
-                @click="tabs.openQuery()"
-              >
-                {{ $t('workspace.newQuery') }}
-              </PressButton>
-              <PressButton
-                size="sm"
-                @click="tabs.openChat()"
-              >
-                {{ $t('assistant.newChat') }}
-              </PressButton>
+            <!--
+              The starting points, as the same three rows the `+` offers.
+              ─────────────────────────────────────────────────────────
+              It was a heading, a sentence and two buttons floating in the
+              middle of a very large dark rectangle — which is the shape an
+              empty state takes when nobody has decided what it is *for*. It is
+              for starting, so it lists the ways to start, in the vocabulary the
+              rest of the window already uses: an icon, a name, and the key that
+              skips the click.
+
+              The connection's own badge heads it, because this pane belongs to
+              a database and saying which one costs a line and answers the
+              question somebody arriving at an empty window actually has.
+            -->
+            <div class="opening">
+              <span
+                v-if="connections.active"
+                class="opening__mark"
+                :style="{ '--engine-hue': engineHue }"
+                aria-hidden="true"
+              >{{ engineMark }}</span>
+
+              <h2 class="opening__title">
+                {{ connections.active?.name }}
+              </h2>
+              <p class="opening__note">
+                {{ $t('workspace.nothingOpenHint') }}
+              </p>
+
+              <ul class="opening__ways">
+                <li
+                  v-for="way in openings"
+                  :key="way.id"
+                >
+                  <button
+                    type="button"
+                    class="opening__way focus-fill"
+                    @click="way.run()"
+                  >
+                    <AppIcon
+                      class="opening__icon"
+                      :name="way.icon"
+                      :size="14"
+                    />
+                    <span class="opening__label">{{ way.label }}</span>
+                    <kbd class="opening__key">{{ way.hint }}</kbd>
+                  </button>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
@@ -1082,7 +1172,188 @@ onBeforeUnmount(() => stopPersisting?.());
   inset: 0;
 }
 
+/*
+ * The regions of a new tab arrive in order.
+ * ─────────────────────────────────────────
+ * `> * > *` is the tab component's own top-level regions — the editor, the
+ * divider, the toolbar, the results — rather than the component root, because
+ * animating the root is one box fading, which is the thing that already looked
+ * like a jump cut with a fade on it.
+ *
+ * `backwards` so each region holds its first frame through its own delay
+ * instead of being painted in place and then snapping back to start.
+ */
+.content__pane--opening > * > * {
+  animation: pane-region-in 340ms var(--ease-out) backwards;
+}
+
+.content__pane--opening > * > :nth-child(2) {
+  animation-delay: 45ms;
+}
+
+.content__pane--opening > * > :nth-child(3) {
+  animation-delay: 90ms;
+}
+
+.content__pane--opening > * > :nth-child(4) {
+  animation-delay: 135ms;
+}
+
+.content__pane--opening > * > :nth-child(n + 5) {
+  animation-delay: 175ms;
+}
+
+@keyframes pane-region-in {
+  from {
+    opacity: 0;
+    /*
+     * Offset only, and a small one: a larger move on a full-width region reads
+     * as the whole pane sliding rather than as its parts settling.
+     *
+     * Not scaled. A scale on a region holding the grid changes the width its
+     * container measures, so the grid refit its columns when the animation
+     * ended — a full remeasure of every loaded row, for a frame of decoration.
+     * The invariant that catches it is `switching back to a tab does not redraw
+     * its grid`.
+     */
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content__pane--opening > * > * {
+    animation: pane-region-fade 160ms var(--ease-out) backwards;
+  }
+
+  @keyframes pane-region-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}
+
 .content__todo,
+/*
+ * The empty pane, as a place to start from.
+ *
+ * A `stagger` on the way in: the badge, then the name, then each way in turn.
+ * An empty pane appears when the last tab closes as well as when the window
+ * opens, and something that simply *is there* in the frame after a close reads
+ * as a glitch — arriving says the pane changed rather than the app blinked.
+ */
+.opening {
+  display: grid;
+  justify-items: center;
+  gap: var(--gap-tight);
+  width: min(24rem, 100%);
+  text-align: center;
+}
+
+.opening > * {
+  animation: opening-in 320ms var(--ease-out) backwards;
+}
+
+.opening__mark {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: var(--gap-tight);
+  border-radius: 0.75rem;
+  background: linear-gradient(
+    145deg,
+    oklch(64% 0.16 var(--engine-hue)),
+    oklch(52% 0.17 var(--engine-hue))
+  );
+  color: oklch(99% 0 0);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.opening__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  animation-delay: 40ms;
+}
+
+.opening__note {
+  margin: 0 0 var(--gap-loose);
+  font-size: 0.8125rem;
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  animation-delay: 80ms;
+}
+
+.opening__ways {
+  display: grid;
+  gap: var(--gap-hair);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  animation-delay: 120ms;
+}
+
+.opening__way {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  width: 100%;
+  min-height: var(--hit-min);
+  padding-inline: var(--gap-loose);
+  border-radius: var(--control-radius);
+  text-align: start;
+  transition:
+    background-color var(--t-hover) var(--ease-out),
+    transform var(--t-press) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .opening__way:hover {
+    background: var(--fill-3);
+  }
+}
+
+.opening__way:active {
+  transform: scale(0.99);
+}
+
+.opening__icon {
+  flex: 0 0 auto;
+  opacity: 0.65;
+}
+
+.opening__label {
+  flex: 1;
+  font-size: 0.8125rem;
+}
+
+.opening__key {
+  flex: 0 0 auto;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
+}
+
+@keyframes opening-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.375rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opening > * {
+    animation: none;
+  }
+
+  .opening__way {
+    transition: none;
+  }
+}
+
 .content__empty {
   display: grid;
   place-content: center;
