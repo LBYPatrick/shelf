@@ -588,10 +588,10 @@
     "chipDisable": "Turn off {{name}}",
     "chipEnable": "Turn on {{name}}",
     "openRows": "Open the rows",
-    "explain": "Explain this query",
+    "explain": "Explain",
     "explainOf": "Explain: {{name}}",
     "clearFilters": "Clear the filters",
-    "showSql": "Show original query"
+    "showSql": "Show original"
   },
   "value": {
     "asJson": "formatted as JSON",

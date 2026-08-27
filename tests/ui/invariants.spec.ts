@@ -2357,8 +2357,8 @@ test.describe('the jobs rail', () => {
     await expect(menu.getByRole('menuitem')).toHaveText([
       'Open the rows',
       'Export data to file…',
-      'Show original query',
-      'Explain this query',
+      'Show original',
+      'Explain',
       'Discard',
     ]);
   });

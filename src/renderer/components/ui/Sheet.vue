@@ -196,8 +196,23 @@ function resize(): void {
    * content fits, the sheet says so: at its natural size nothing scrolls, so
    * nothing can appear to change the width it was measured at.
    */
-  overflowing.value = natural > ceiling;
-  height.value = Math.min(natural, Math.round(ceiling));
+  /*
+   * And a few pixels of slack, because the decision is a coin flip without it.
+   *
+   * A panel whose content lands within a pixel or two of the ceiling flips
+   * between scrolling and not on nothing more than how the text rasterised
+   * that run — and flipping means a scrollbar appearing, taking its width out
+   * of the content, and rewrapping a line. The settings sheet sat exactly
+   * there, and photographed differently on consecutive runs of the same build.
+   *
+   * Four pixels over an eighty-per-cent-of-the-viewport cap is invisible; a
+   * scrollbar that comes and goes is not. So a panel that nearly fits is
+   * allowed to be slightly taller than the nominal ceiling and keep its width.
+   */
+  const SLACK = 4;
+
+  overflowing.value = natural > ceiling + SLACK;
+  height.value = overflowing.value ? Math.round(ceiling) : natural;
 }
 
 /*

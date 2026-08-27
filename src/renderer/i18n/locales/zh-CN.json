@@ -588,7 +588,7 @@
     "chipDisable": "关闭 {{name}}",
     "chipEnable": "开启 {{name}}",
     "openRows": "打开结果",
-    "explain": "解释这条查询",
+    "explain": "解释",
     "explainOf": "解释：{{name}}",
     "clearFilters": "清除筛选",
     "showSql": "查看原始查询"

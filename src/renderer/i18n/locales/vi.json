@@ -588,10 +588,10 @@
     "chipDisable": "Tắt {{name}}",
     "chipEnable": "Bật {{name}}",
     "openRows": "Mở các hàng",
-    "explain": "Giải thích truy vấn này",
+    "explain": "Giải thích",
     "explainOf": "Giải thích: {{name}}",
     "clearFilters": "Xóa bộ lọc",
-    "showSql": "Xem câu truy vấn gốc"
+    "showSql": "Xem bản gốc"
   },
   "value": {
     "asJson": "định dạng JSON",

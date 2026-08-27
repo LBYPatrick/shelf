@@ -588,10 +588,10 @@
     "chipDisable": "{{name}} を無効化",
     "chipEnable": "{{name}} を有効化",
     "openRows": "結果を開く",
-    "explain": "このクエリを説明",
+    "explain": "説明",
     "explainOf": "説明: {{name}}",
     "clearFilters": "絞り込みを解除",
-    "showSql": "元のクエリを表示"
+    "showSql": "元のクエリ"
   },
   "value": {
     "asJson": "JSON として整形",
