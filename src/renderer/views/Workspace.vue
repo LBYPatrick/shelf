@@ -1312,15 +1312,24 @@ onBeforeUnmount(() => stopPersisting?.());
  * as a glitch — arriving says the pane changed rather than the app blinked.
  */
 /*
- * Bigger, and the rows are objects.
+ * Objects, and only just.
  *
- * The first attempt drew all three ways in at the weight of a caption — a
- * 14-unit glyph at 65% opacity, a 13px label and a rule of nothing between
- * them — so the only thing on an empty pane with any presence was the note
- * above it saying there was nothing on it. The list is the page's whole
- * purpose; it can look like it. Each way is a card of its own now: a tinted
- * tile behind its glyph, a label a step up from body copy, and a surface that
- * lifts under the pointer.
+ * The first attempt drew all three ways in at the weight of a caption, so the
+ * only thing on an empty pane with any presence was the note above it saying
+ * there was nothing on it. The second overcorrected: an outlined card on a
+ * *darker* fill than the pane, holding a grey tile and a bordered chip — four
+ * edges and three greys for a row that says two words.
+ *
+ * A card standing off a field is `--surface-raised`, which is lighter than the
+ * pane on the light theme and lighter on the dark one too, because raised is a
+ * direction rather than a colour. Separation is that step in tone and nothing
+ * else — no outline and no shadow. Both were tried: the outline made four edges
+ * for a row that says two words, and the shadow put an object on a page that is
+ * asking a question, not presenting a result.
+ *
+ * The glyph keeps a tile because it is the row's subject, at a fill quiet
+ * enough to read as a place for it rather than as a second card inside the
+ * first.
  */
 .opening {
   display: grid;
@@ -1392,22 +1401,19 @@ onBeforeUnmount(() => stopPersisting?.());
   align-items: center;
   gap: var(--gap);
   width: 100%;
-  min-height: 3.25rem;
+  min-height: 3rem;
   padding-inline: var(--gap) var(--gap-loose);
-  border: 1px solid var(--separator);
   border-radius: var(--radius-box);
-  background: var(--fill-4);
+  background: var(--surface-raised);
   text-align: start;
   transition:
     background-color var(--t-hover) var(--ease-out),
-    border-color var(--t-hover) var(--ease-out),
     transform var(--t-press) var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .opening__way:hover {
-    background: var(--fill-2);
-    border-color: var(--separator-strong);
+    background: color-mix(in oklab, var(--surface-raised) 100%, var(--color-base-content) 6%);
   }
 }
 
@@ -1416,15 +1422,16 @@ onBeforeUnmount(() => stopPersisting?.());
 }
 
 /* The glyph gets a tile of its own, so it reads as the row's subject rather
-   than as punctuation before the label. */
+   than as punctuation before the label — at the lightest fill there is, or it
+   becomes a second card inside the first. */
 .opening__icon {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.625rem;
-  background: var(--fill-2);
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  background: var(--fill-4);
   color: var(--color-primary-text);
 }
 
@@ -1436,16 +1443,14 @@ onBeforeUnmount(() => stopPersisting?.());
   letter-spacing: -0.005em;
 }
 
+/* The keystroke is a fact about the row, not a control on it — so no chrome of
+   its own, just the tabular figures and a quiet colour. */
 .opening__key {
   flex: 0 0 auto;
-  padding: 2px 7px;
-  border-radius: 6px;
-  border: 1px solid var(--separator-strong);
-  background: var(--color-base-100);
   font-family: inherit;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
 }
 
 @keyframes opening-in {
