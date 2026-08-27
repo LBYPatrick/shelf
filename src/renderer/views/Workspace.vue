@@ -210,7 +210,10 @@ onBeforeUnmount(() => stopPersisting?.());
       once rather than managing them: the controls have one surface under them,
       the tabs get the window, and the columns below start under a clean edge.
     -->
-    <header class="topbar drag-region">
+    <header
+      class="topbar drag-region"
+      :class="{ 'topbar--tight': sidebarCollapsed }"
+    >
       <!--
         The controls, the toggle, and the room the columns take up.
         ──────────────────────────────────────────────────────────
@@ -228,20 +231,26 @@ onBeforeUnmount(() => stopPersisting?.());
         prevent. It travels on the sidebar's own curve, so the two move as one
         thing rather than as two that happen to agree at each end.
       -->
-      <div class="topbar__lead panel-content">
+      <div class="topbar__lead">
         <!--
-          The columns' share of it, and only that.
-          ───────────────────────────────────────
-          The region has to be at least as wide as the traffic lights, and
-          collapsing the sidebar takes the columns *below* it down to the rail
-          — narrower than that. So the whole strip wore the sidebar's material
-          and the extra sat directly over the working pane, which put a step in
-          the pane's leading edge: opaque from the rail down, and a different
-          shade for the height of the bar. The overhang belongs to the pane, so
-          it wears the pane's surface; only the part actually above the columns
-          is the columns'.
+          Two surfaces side by side, never one on top of the other.
+          ────────────────────────────────────────────────────────
+          This region has to be at least as wide as the traffic lights, and
+          collapsing the sidebar takes the columns *below* it down to the rail —
+          narrower than that. So the whole region wore the sidebar's material
+          and the overhang sat over the working pane, putting a step in the
+          pane's leading edge for the height of the bar.
+
+          The obvious repair was to paint the pane's surface on this box and lay
+          the columns' material over the part above the columns, and that is
+          worse: the columns are *glass*, so laying them over an opaque pane
+          composites them against the pane instead of against the window's own
+          material, and the band came out a different shade from the sidebar
+          directly under it. Two absolutely positioned siblings, each painting
+          only its own share, neither behind the other.
         -->
         <div class="topbar__columns mat-regular panel-sidebar" />
+        <div class="topbar__over panel-content" />
       </div>
 
       <TabStrip />
@@ -708,9 +717,39 @@ onBeforeUnmount(() => stopPersisting?.());
   transition: width 260ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+/* Whatever is left, which is nothing at all until the columns are narrower
+   than the window controls need this region to be. */
+.topbar__over {
+  position: absolute;
+  inset-block: 0;
+  inset-inline: var(--columns-w) 0;
+  transition: inset-inline-start 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/*
+ * And under the traffic lights the join is feathered, not cut.
+ * ────────────────────────────────────────────────────────────
+ * Collapsed, the columns are the rail alone — narrower than the window
+ * controls — so the boundary between the two surfaces falls directly under
+ * them, and nothing may draw a line there. The three ways to avoid it all cost
+ * something: give the whole region to the columns and their shade overhangs the
+ * pane as a band; give it to the pane and the rail's own column stops short of
+ * the top; leave the seam and the green button sits on it.
+ *
+ * So the pane's surface fades in across the last few pixels instead. Both
+ * surfaces stay where they belong, and there is no edge under the controls to
+ * see — only when the collapse actually puts one there, because a feather above
+ * the sidebar's own edge would be a smudge where a clean seam is wanted.
+ */
+.topbar--tight .topbar__over {
+  inset-inline-start: calc(var(--columns-w) - 1.5rem);
+  mask-image: linear-gradient(to right, transparent, #000 1.5rem);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .topbar__lead,
-  .topbar__columns {
+  .topbar__columns,
+  .topbar__over {
     transition: none;
   }
 }

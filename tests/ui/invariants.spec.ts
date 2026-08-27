@@ -1789,6 +1789,7 @@ test.describe('the columns and the pane', () => {
       return {
         lead: of('.topbar__lead'),
         columns: of('.topbar__columns'),
+        over: of('.topbar__over'),
         sidebar: of('.leftpanel'),
         strip: of('.strip'),
         pane: of('.content'),
@@ -1797,7 +1798,16 @@ test.describe('the columns and the pane', () => {
 
     expect(paint.columns, 'the bar does not continue the columns').toBe(paint.sidebar);
     expect(paint.strip, 'the strip does not continue the pane').toBe(paint.pane);
-    expect(paint.lead, 'the overhang does not continue the pane').toBe(paint.pane);
+    expect(paint.over, 'the overhang does not continue the pane').toBe(paint.pane);
+    /*
+     * And the columns' half is not laid over the pane's. They are glass; a
+     * translucent surface composited against an opaque one beneath it comes out
+     * a different shade from the same surface over the window's own material,
+     * which is exactly what the sidebar under it is.
+     */
+    expect(paint.lead, 'the bar paints a surface under its two halves').toBe(
+      'rgba(0, 0, 0, 0)'
+    );
     expect(paint.columns, 'the two halves of the bar are the same shade').not.toBe(paint.strip);
   });
 
@@ -1826,7 +1836,7 @@ test.describe('the columns and the pane', () => {
         paneLeft: pane.left,
         aboveIsPaneShade:
           above !== null &&
-          getComputedStyle(above.closest('.topbar__lead, .strip') ?? above).backgroundColor ===
+          getComputedStyle(above.closest('.topbar__over, .strip') ?? above).backgroundColor ===
             getComputedStyle(document.querySelector('.content')!).backgroundColor,
       };
     });
