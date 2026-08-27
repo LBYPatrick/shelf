@@ -165,6 +165,12 @@ component's props or a mock's shape has changed.
   view's table was a grid container, its head and body were blockified into two
   separate anonymous tables, and each sized its own columns. The gate fails on
   both lists.
+- **A default is somebody's answer, not the absence of one.** The syntax
+  catalogue had a "Shelf" entry that wrote nothing and let `base.css` answer —
+  coherent as an idea and poor as a menu item, since it was the one row whose
+  name told the reader nothing about what they were choosing. Monokai Pro is
+  the default; the stylesheet's values stay as the fallback for a token a
+  palette does not carry.
 - **Never hardcode a colour.** Everything comes from the tokens in
   `src/renderer/styles/`. The accent derivation in `theme.ts` is the single
   source; if you add a semantic colour, add it there and give it a contrast test.
@@ -404,6 +410,19 @@ component's props or a mock's shape has changed.
   Overrides are stored, never the whole map — a keymap outlives the build it was
   written in, and someone who changed one shortcut in an old version must not be
   pinned to that version's defaults for every other one.
+- **The first round trip is a warm-up, and it is thrown away.** It pays for
+  everything both ends do lazily — a driver's statement cache, a pool handing
+  back a parked connection, a TLS session resuming — and measured with the rest
+  it was twenty-five times the median every time, which made every healthy
+  connection report itself as erratic. Discarding it is honest only if it is
+  *said*, so the count under the chart is the count of trips kept. There is no
+  p95 beside it either: the nearest-rank 95th of fifteen samples is the
+  fourteenth, so the one terrible trip that is the whole reason to look at a
+  tail falls outside it. At this sample size the honest tail is the worst trip.
+- **A verdict's colour agrees with its words.** The sheet drew a green tick
+  beside "erratic — some trips take far longer than others", because the tone
+  was a constant and only the sentence was derived. Colour is the part read
+  first and from furthest away.
 - **Feedback lands on `pointerdown`,** not on click.
 - **The cost of telling two gestures apart is paid where they overlap, and
   nowhere else.** A job card opens on one click and its name renames on two, so

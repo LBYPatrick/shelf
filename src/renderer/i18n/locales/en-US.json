@@ -36,7 +36,10 @@
     "dispatch": "Dispatch",
     "saveQuery": "Save Query",
     "back": "Back",
-    "showSuggestions": "Show suggestions"
+    "showSuggestions": "Show suggestions",
+    "disconnect": "Disconnect",
+    "yes": "Yes",
+    "no": "No"
   },
   "time": {
     "justNow": "just now",
@@ -110,7 +113,8 @@
     "savePasswordHelp": "Stored in the system keychain, never in the app database.",
     "noKeyringHelp": "Unavailable: no system keyring was found on this machine.",
     "sshKeyFile": "Key file",
-    "sshPasswordMode": "Password"
+    "sshPasswordMode": "Password",
+    "andMore": "{{count}} more…"
   },
   "workspace": {
     "entities": "Entities",
@@ -688,5 +692,32 @@
     "empty": "Nothing saved yet. Write a query and press Save Query.",
     "discard": "Delete this query",
     "rename": "Rename this query"
+  },
+  "diagnose": {
+    "action": "Diagnose connection…",
+    "title": "Connection health",
+    "roundTrip": "Round trip",
+    "samples": "{{count}} pings kept",
+    "fastest": "Fastest",
+    "typical": "Typical",
+    "worst": "Worst",
+    "jitter": "Jitter",
+    "catalogue": "Catalogue",
+    "catalogueNote": "Read, not asserted",
+    "databases": "Databases",
+    "schemas": "Schemas",
+    "entities": "Tables",
+    "found": "{{count}} found",
+    "about": "This connection",
+    "version": "Version",
+    "database": "Database",
+    "again": "Run again",
+    "running": "Measuring…",
+    "steady": "Steady",
+    "variable": "Answering, but unevenly",
+    "erratic": "Erratic — some trips take far longer than others",
+    "partial": "Connected, but part of the catalogue did not answer",
+    "unreachable": "The database did not answer",
+    "readOnly": "Read-only"
   }
 }
