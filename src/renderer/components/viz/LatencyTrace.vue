@@ -108,10 +108,7 @@ const band = computed(() => {
       rx="1"
     />
 
-    <g
-      v-for="line in lines"
-      :key="line.id"
-    >
+    <g v-for="line in lines" :key="line.id">
       <line
         :class="`trace__rule trace__rule--${line.id}`"
         :x1="PAD.left"

@@ -164,23 +164,13 @@ defineExpose({ focus });
 
 <template>
   <div class="filterbar">
-    <div
-      v-if="mode === 'builder'"
-      class="filterbar__rows"
-    >
-      <div
-        v-for="(row, index) in rows"
-        :key="index"
-        class="filterbar__row"
-      >
+    <div v-if="mode === 'builder'" class="filterbar__rows">
+      <div v-for="(row, index) in rows" :key="index" class="filterbar__row">
         <!-- The first condition has nothing to join to, so it says so rather
              than offering a choice that does nothing. Both occupy the same
              width, so the columns below line up instead of stepping sideways
              as "where" gives way to "and". -->
-        <span
-          v-if="index === 0"
-          class="filterbar__lead type-label"
-        >{{
+        <span v-if="index === 0" class="filterbar__lead type-label">{{
           $t('filter.where')
         }}</span>
         <SelectMenu
@@ -223,11 +213,8 @@ defineExpose({ focus });
           "
           :aria-label="$t('filter.value')"
           @keydown.enter="apply"
-        >
-        <span
-          v-else
-          class="filterbar__value filterbar__value--none"
         />
+        <span v-else class="filterbar__value filterbar__value--none" />
 
         <button
           type="button"
@@ -236,22 +223,12 @@ defineExpose({ focus });
           :title="$t('filter.removeRow')"
           @click="removeRow(index)"
         >
-          <AppIcon
-            name="close"
-            :size="10"
-          />
+          <AppIcon name="close" :size="10" />
         </button>
       </div>
 
-      <button
-        type="button"
-        class="filterbar__add focus-fill"
-        @click="addRow"
-      >
-        <AppIcon
-          name="plus"
-          :size="10"
-        />
+      <button type="button" class="filterbar__add focus-fill" @click="addRow">
+        <AppIcon name="plus" :size="10" />
         {{ $t('filter.addCondition') }}
       </button>
     </div>
@@ -266,7 +243,7 @@ defineExpose({ focus });
       :placeholder="$t('table.filterPlaceholder')"
       :aria-label="$t('filter.raw')"
       @keydown.enter="apply"
-    >
+    />
 
     <!-- The controls that act on the whole filter sit apart from the conditions
          they act on, at the end of the bar rather than above them. -->
@@ -277,26 +254,13 @@ defineExpose({ focus });
         shape kept in agreement by hand — and the app already showed the same
         two-way choice a different way three screens over.
       -->
-      <SegmentedControl
-        v-model="mode"
-        :options="modeOptions"
-        :aria-label="$t('filter.mode')"
-      />
+      <SegmentedControl v-model="mode" :options="modeOptions" :aria-label="$t('filter.mode')" />
 
-      <button
-        v-if="applied"
-        type="button"
-        class="filterbar__clear focus-fill"
-        @click="clear"
-      >
+      <button v-if="applied" type="button" class="filterbar__clear focus-fill" @click="clear">
         {{ $t('action.clear') }}
       </button>
 
-      <PressButton
-        size="sm"
-        variant="primary"
-        @click="apply"
-      >
+      <PressButton size="sm" variant="primary" @click="apply">
         {{ $t('action.apply') }}
       </PressButton>
     </div>

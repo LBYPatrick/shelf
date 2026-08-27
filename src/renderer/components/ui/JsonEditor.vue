@@ -100,10 +100,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div
-    ref="host"
-    class="jsoneditor"
-  />
+  <div ref="host" class="jsoneditor" />
 </template>
 
 <style scoped>

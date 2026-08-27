@@ -692,6 +692,14 @@ Google's TypeScript style guide, 2-space indent, single quotes, named exports.
 Comments explain *why*, not *what* — if a line needs a comment to say what it
 does, rewrite the line.
 
+**Prettier owns line breaking, and the gate checks it.** It did not, and
+nothing said so: `tidy.sh` ran prettier and then `eslint --fix`, and
+`vue/max-attributes-per-line` re-expanded every multi-attribute tag prettier
+had just collapsed. ESLint won because it ran last, `make` never ran
+`prettier --check`, and sixty-eight files sat permanently unformatted while the
+gate was green. Two formatters cannot both be right; with eslint-plugin-vue gone
+there is one, and `make lint` checks it.
+
 **The linter is oxlint, and it runs `correctness` only.** Adopting a linter is
 not adopting its opinions: ESLint here ran the recommended sets and five named
 rules, so that is what `.oxlintrc.json` reproduces. `unicorn`'s pedantic and

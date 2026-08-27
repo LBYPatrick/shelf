@@ -87,34 +87,25 @@ watch(
 </script>
 
 <template>
-  <Sheet
-    v-model="open"
-    :title="qualified"
-  >
+  <Sheet v-model="open" :title="qualified">
     <p class="summary type-label">
       <span>{{ entity.schema ?? $t('properties.noSchema') }}</span>
-      <span v-if="properties.rowCount !== undefined">· {{ $t('properties.rowsCount', { count: properties.rowCount }) }}</span>
-      <span v-if="properties.dataSizeBytes !== undefined">· {{ formatBytes(properties.dataSizeBytes) }}</span>
+      <span v-if="properties.rowCount !== undefined"
+        >· {{ $t('properties.rowsCount', { count: properties.rowCount }) }}</span
+      >
+      <span v-if="properties.dataSizeBytes !== undefined"
+        >· {{ formatBytes(properties.dataSizeBytes) }}</span
+      >
     </p>
 
-    <p
-      v-if="properties.comment"
-      class="comment"
-    >
+    <p v-if="properties.comment" class="comment">
       {{ properties.comment }}
     </p>
 
-    <p
-      v-if="error"
-      class="note note--error"
-      role="alert"
-    >
+    <p v-if="error" class="note note--error" role="alert">
       {{ error }}
     </p>
-    <p
-      v-else-if="loading"
-      class="note"
-    >
+    <p v-else-if="loading" class="note">
       {{ $t('workspace.loading') }}
     </p>
 
@@ -122,45 +113,26 @@ watch(
       Name and type on one line each, the type set right so the eye can run down
       the column of types without reading a single name.
     -->
-    <ul
-      v-else
-      class="columns"
-    >
-      <li
-        v-for="column in columns"
-        :key="column.name"
-        class="columns__row"
-      >
+    <ul v-else class="columns">
+      <li v-for="column in columns" :key="column.name" class="columns__row">
         <span class="columns__name">
           {{ column.name }}
-          <span
-            v-if="column.primaryKey"
-            class="columns__key"
-          >{{ $t('properties.key') }}</span>
+          <span v-if="column.primaryKey" class="columns__key">{{ $t('properties.key') }}</span>
         </span>
         <span class="columns__type">
           {{ column.dataType
-          }}<span
-            v-if="!column.nullable"
-            class="columns__req"
-          >·{{ $t('properties.required') }}</span>
+          }}<span v-if="!column.nullable" class="columns__req"
+            >·{{ $t('properties.required') }}</span
+          >
         </span>
       </li>
     </ul>
 
     <template #footer>
-      <PressButton
-        size="sm"
-        :disabled="!selectAll"
-        @click="copySelect"
-      >
+      <PressButton size="sm" :disabled="!selectAll" @click="copySelect">
         {{ copied ? $t('properties.copied') : $t('properties.copySelect') }}
       </PressButton>
-      <PressButton
-        variant="primary"
-        size="sm"
-        @click="open = false"
-      >
+      <PressButton variant="primary" size="sm" @click="open = false">
         {{ $t('action.done') }}
       </PressButton>
     </template>

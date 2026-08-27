@@ -308,10 +308,7 @@ watch(
 </script>
 
 <template>
-  <div
-    ref="host"
-    class="editor"
-  />
+  <div ref="host" class="editor" />
 </template>
 
 <style scoped>

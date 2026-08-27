@@ -329,51 +329,29 @@ function startedAt(job: Job): string {
           the same surface that is missing them — and the way to see all of them
           again is next to the sentence explaining why you cannot.
         -->
-    <div
-      v-if="narrowed"
-      class="joblist__tally"
-    >
+    <div v-if="narrowed" class="joblist__tally">
       <span class="type-label">{{
         $t('jobs.matchCount', { shown: shown.length, total: jobs.ordered.length })
       }}</span>
-      <button
-        type="button"
-        class="joblist__clear focus-fill"
-        @click="jobs.clearFilter()"
-      >
+      <button type="button" class="joblist__clear focus-fill" @click="jobs.clearFilter()">
         {{ $t('action.clear') }}
       </button>
     </div>
 
     <div class="joblist__scroll tilelist">
-      <p
-        v-if="jobs.ordered.length === 0"
-        class="joblist__empty"
-      >
+      <p v-if="jobs.ordered.length === 0" class="joblist__empty">
         {{ $t('jobs.empty') }}
       </p>
 
       <!-- Nothing matched, which is a different fact from nothing existing. -->
-      <p
-        v-else-if="shown.length === 0"
-        class="joblist__empty"
-      >
+      <p v-else-if="shown.length === 0" class="joblist__empty">
         {{ $t('jobs.noMatches') }}
-        <button
-          type="button"
-          class="joblist__clear focus-fill"
-          @click="jobs.clearFilter()"
-        >
+        <button type="button" class="joblist__clear focus-fill" @click="jobs.clearFilter()">
           {{ $t('jobs.clearFilters') }}
         </button>
       </p>
 
-      <div
-        v-for="job in shown"
-        :key="job.id"
-        class="tile"
-        @contextmenu="openMenu($event, job)"
-      >
+      <div v-for="job in shown" :key="job.id" class="tile" @contextmenu="openMenu($event, job)">
         <!--
           Not a `<button>`, because the name inside it has to hear a double-click
           and a disabled button delivers no events to its children — so a failed
@@ -403,12 +381,7 @@ function startedAt(job: Job): string {
             apart was the part that had been cut off. The status moved under it,
             where it costs a line and hides nothing.
           -->
-          <span
-            v-if="editing === job.id"
-            class="job__editor"
-            @click.stop
-            @dblclick.stop
-          >
+          <span v-if="editing === job.id" class="job__editor" @click.stop @dblclick.stop>
             <input
               :ref="(el) => bindField(el)"
               v-model="draft"
@@ -417,7 +390,7 @@ function startedAt(job: Job): string {
               @keydown.enter.prevent="commitRename"
               @keydown.esc.prevent="editing = null"
               @blur="commitRename"
-            >
+            />
             <!--
               The way out, inside the thing you are editing.
               ──────────────────────────────────────────────
@@ -434,10 +407,7 @@ function startedAt(job: Job): string {
               @mousedown.prevent
               @click.stop="commitRename"
             >
-              <AppIcon
-                name="check"
-                :size="12"
-              />
+              <AppIcon name="check" :size="12" />
             </button>
           </span>
           <span
@@ -445,7 +415,8 @@ function startedAt(job: Job): string {
             class="tile__name"
             @click.stop="openAfterGrace(job)"
             @dblclick.stop="beginRename(job)"
-          >{{ job.name }}</span>
+            >{{ job.name }}</span
+          >
 
           <span class="job__line">
             <!--
@@ -460,30 +431,17 @@ function startedAt(job: Job): string {
               breathes, because "working" is the one state that is a *now* rather
               than an outcome.
             -->
-            <span
-              class="job__status"
-              :class="`job__status--${job.status}`"
-            >
+            <span class="job__status" :class="`job__status--${job.status}`">
               <span
                 v-if="job.status === 'done' || job.status === 'failed'"
                 class="job__status-mark"
               >
-                <AppIcon
-                  :name="job.status === 'done' ? 'check' : 'warning'"
-                  :size="11"
-                />
+                <AppIcon :name="job.status === 'done' ? 'check' : 'warning'" :size="11" />
               </span>
-              <span
-                v-else
-                class="job__status-mark job__status-mark--live"
-                aria-hidden="true"
-              />
+              <span v-else class="job__status-mark job__status-mark--live" aria-hidden="true" />
               {{ statusLabel(job.status) }}
             </span>
-            <span
-              v-if="job.status === 'done'"
-              class="job__meta"
-            >{{
+            <span v-if="job.status === 'done'" class="job__meta">{{
               $t('jobs.rowCount', { rows: job.rows.toLocaleString() })
             }}</span>
           </span>
@@ -517,10 +475,7 @@ function startedAt(job: Job): string {
             label: given one line it was cut at the width of the column, which is
             reliably before the part naming what went wrong.
           -->
-          <span
-            v-if="job.status === 'failed' && job.error"
-            class="job__error"
-          >{{
+          <span v-if="job.status === 'failed' && job.error" class="job__error">{{
             job.error
           }}</span>
         </div>
@@ -547,21 +502,13 @@ function startedAt(job: Job): string {
             :aria-label="$t('jobs.discard')"
             @click="discard(job)"
           >
-            <AppIcon
-              name="close"
-              :size="12"
-            />
+            <AppIcon name="close" :size="12" />
           </button>
         </span>
       </div>
     </div>
 
-    <ContextMenu
-      v-model="menuOpen"
-      :items="menuItems"
-      :at="menuAt"
-      @choose="onChoose"
-    />
+    <ContextMenu v-model="menuOpen" :items="menuItems" :at="menuAt" @choose="onChoose" />
 
     <ExportSheet
       v-if="exportOf"

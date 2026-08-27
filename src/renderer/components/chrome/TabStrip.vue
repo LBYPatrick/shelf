@@ -519,11 +519,7 @@ const KIND_ICON: Record<Tab['kind'], string> = {
         @dblclick="beginRename(tab)"
         @keydown.delete="closeTab(tab.id)"
       >
-        <AppIcon
-          class="striptab__mark"
-          :name="KIND_ICON[tab.kind]"
-          :size="12"
-        />
+        <AppIcon class="striptab__mark" :name="KIND_ICON[tab.kind]" :size="12" />
         <!--
           The name, and the field it becomes.
           ──────────────────────────────────
@@ -547,15 +543,9 @@ const KIND_ICON: Record<Tab['kind'], string> = {
           @keydown.enter.prevent="commitRename()"
           @keydown.esc.prevent="renaming = null"
           @blur="commitRename()"
-        >
-        <span
-          v-else
-          class="striptab__title"
-        >{{ tab.title }}</span>
-        <span
-          v-if="tab.subtitle"
-          class="striptab__scope"
-        >{{ tab.subtitle }}</span>
+        />
+        <span v-else class="striptab__title">{{ tab.title }}</span>
+        <span v-if="tab.subtitle" class="striptab__scope">{{ tab.subtitle }}</span>
 
         <!--
           The dot is the unsaved mark and the cross is the action, in one place
@@ -569,16 +559,8 @@ const KIND_ICON: Record<Tab['kind'], string> = {
           @pointerdown.stop
           @click.stop="closeTab(tab.id)"
         >
-          <span
-            v-if="tab.unsaved"
-            class="striptab__dot"
-            aria-hidden="true"
-          />
-          <AppIcon
-            class="striptab__cross"
-            name="close"
-            :size="9"
-          />
+          <span v-if="tab.unsaved" class="striptab__dot" aria-hidden="true" />
+          <AppIcon class="striptab__cross" name="close" :size="9" />
         </button>
       </div>
     </div>
@@ -610,10 +592,7 @@ const KIND_ICON: Record<Tab['kind'], string> = {
       aria-haspopup="menu"
       @click="openNewMenu"
     >
-      <AppIcon
-        name="plus"
-        :size="13"
-      />
+      <AppIcon name="plus" :size="13" />
     </button>
 
     <ContextMenu

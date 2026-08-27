@@ -69,17 +69,10 @@ function act(): void {
     @focusin="pause"
     @focusout="resume"
   >
-    <AppIcon
-      class="notice__mark"
-      :name="ICON[notice.tone]"
-      :size="14"
-    />
+    <AppIcon class="notice__mark" :name="ICON[notice.tone]" :size="14" />
 
     <div class="notice__body">
-      <p
-        v-if="notice.title"
-        class="notice__title"
-      >
+      <p v-if="notice.title" class="notice__title">
         {{ notice.title }}
       </p>
       <p class="notice__message">
@@ -87,12 +80,7 @@ function act(): void {
       </p>
     </div>
 
-    <button
-      v-if="notice.action"
-      type="button"
-      class="notice__action focus-fill"
-      @click="act"
-    >
+    <button v-if="notice.action" type="button" class="notice__action focus-fill" @click="act">
       {{ notice.action.label }}
     </button>
 
@@ -102,10 +90,7 @@ function act(): void {
       :aria-label="$t('action.close')"
       @click="emit('dismiss')"
     >
-      <AppIcon
-        name="close"
-        :size="10"
-      />
+      <AppIcon name="close" :size="10" />
     </button>
   </div>
 </template>

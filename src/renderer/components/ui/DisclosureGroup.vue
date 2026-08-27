@@ -62,23 +62,11 @@ function leave(element: Element): void {
         />
       </svg>
       <span class="type-label">{{ label }}</span>
-      <span
-        v-if="hint"
-        class="disclosure__hint"
-      >{{ hint }}</span>
+      <span v-if="hint" class="disclosure__hint">{{ hint }}</span>
     </button>
 
-    <Transition
-      name="disclose"
-      @enter="enter"
-      @after-enter="afterEnter"
-      @leave="leave"
-    >
-      <div
-        v-show="open"
-        ref="content"
-        class="disclosure__panel"
-      >
+    <Transition name="disclose" @enter="enter" @after-enter="afterEnter" @leave="leave">
+      <div v-show="open" ref="content" class="disclosure__panel">
         <div class="disclosure__inner">
           <slot />
         </div>

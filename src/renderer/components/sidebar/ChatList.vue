@@ -139,33 +139,18 @@ function when(at: number): string {
 
 <template>
   <div class="chats">
-    <FilterChips
-      v-model="assistant.filter"
-      :kinds="CHAT_KINDS"
-    />
+    <FilterChips v-model="assistant.filter" :kinds="CHAT_KINDS" />
 
-    <p
-      v-if="assistant.chats.length === 0"
-      class="tilelist__note"
-    >
+    <p v-if="assistant.chats.length === 0" class="tilelist__note">
       {{ $t('chats.empty') }}
     </p>
 
-    <p
-      v-else-if="shown.length === 0"
-      class="tilelist__note"
-    >
+    <p v-else-if="shown.length === 0" class="tilelist__note">
       {{ $t('chats.noMatch') }}
     </p>
 
-    <ul
-      v-else
-      class="tilelist"
-    >
-      <li
-        v-for="chat in shown"
-        :key="chat.id"
-      >
+    <ul v-else class="tilelist">
+      <li v-for="chat in shown" :key="chat.id">
         <div
           class="tile"
           :class="{ 'tile--on': tabs.tabs.some((tab) => tab.chatId === chat.id) }"
@@ -174,11 +159,7 @@ function when(at: number): string {
             The whole card opens it. A row that is a button is a row where the
             gap between two words is not a dead spot.
           -->
-          <button
-            type="button"
-            class="tile__face focus-fill"
-            @click="open(chat)"
-          >
+          <button type="button" class="tile__face focus-fill" @click="open(chat)">
             <input
               v-if="editing === chat.id"
               ref="field"
@@ -190,7 +171,7 @@ function when(at: number): string {
               @keydown.enter.prevent="commit"
               @keydown.esc.prevent="editing = null"
               @blur="commit"
-            >
+            />
             <!--
               Two lines' worth of room, used or not.
               ──────────────────────────────────────
@@ -205,7 +186,8 @@ function when(at: number): string {
               class="tile__name"
               @click.stop="onNameClick(chat)"
               @dblclick.stop="startRename(chat)"
-            >{{ chat.title }}</span>
+              >{{ chat.title }}</span
+            >
 
             <span class="tile__meta">{{ when(chat.updatedAt) }}</span>
           </button>
@@ -224,10 +206,7 @@ function when(at: number): string {
               :aria-label="$t('chats.discard')"
               @click="discard(chat)"
             >
-              <AppIcon
-                name="close"
-                :size="12"
-              />
+              <AppIcon name="close" :size="12" />
             </button>
           </span>
         </div>

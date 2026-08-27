@@ -25,15 +25,8 @@ const icon = computed(() => ICONS[props.tone]);
 </script>
 
 <template>
-  <span
-    class="chip"
-    :class="`chip--${tone}`"
-  >
-    <AppIcon
-      class="chip__icon"
-      :name="icon"
-      :size="11"
-    />
+  <span class="chip" :class="`chip--${tone}`">
+    <AppIcon class="chip__icon" :name="icon" :size="11" />
     <span>{{ label }}</span>
   </span>
 </template>

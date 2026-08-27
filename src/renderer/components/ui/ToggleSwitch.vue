@@ -30,10 +30,7 @@ withDefaults(defineProps<{ ariaLabel: string; disabled?: boolean }>(), { disable
     :disabled="disabled"
     @click="model = !model"
   >
-    <span
-      class="switch__knob"
-      aria-hidden="true"
-    />
+    <span class="switch__knob" aria-hidden="true" />
   </button>
 </template>
 

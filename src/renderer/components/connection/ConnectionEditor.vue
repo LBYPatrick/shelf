@@ -124,32 +124,18 @@ function close(): void {
     />
 
     <template #footer>
-      <span
-        v-if="problem"
-        class="problem"
-      >{{ problem }}</span>
+      <span v-if="problem" class="problem">{{ problem }}</span>
 
       <PressButton @click="close">
         {{ $t('action.cancel') }}
       </PressButton>
-      <PressButton
-        :disabled="!ready"
-        @click="submit(false)"
-      >
+      <PressButton :disabled="!ready" @click="submit(false)">
         {{ $t('action.save') }}
       </PressButton>
-      <PressButton
-        variant="glass"
-        :disabled="!ready || testing"
-        @click="runTest"
-      >
+      <PressButton variant="glass" :disabled="!ready || testing" @click="runTest">
         {{ testing ? $t('connection.testing') : $t('action.test') }}
       </PressButton>
-      <PressButton
-        variant="primary"
-        :disabled="!ready"
-        @click="submit(true)"
-      >
+      <PressButton variant="primary" :disabled="!ready" @click="submit(true)">
         {{ $t('action.connect') }}
       </PressButton>
     </template>

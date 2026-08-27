@@ -12,15 +12,8 @@ defineProps<{ tone?: 'primary' | 'error' }>();
 </script>
 
 <template>
-  <div
-    class="bar"
-    role="progressbar"
-    aria-busy="true"
-  >
-    <span
-      class="bar__sweep"
-      :class="`bar__sweep--${tone ?? 'primary'}`"
-    />
+  <div class="bar" role="progressbar" aria-busy="true">
+    <span class="bar__sweep" :class="`bar__sweep--${tone ?? 'primary'}`" />
   </div>
 </template>
 

@@ -79,10 +79,7 @@ function commit(): void {
 
 <template>
   <div class="entries">
-    <p
-      v-if="queries.visibleSaved.length === 0"
-      class="tilelist__note"
-    >
+    <p v-if="queries.visibleSaved.length === 0" class="tilelist__note">
       <!--
         It used to say "press ⌘S", which is a key nothing is bound to: saving a
         query is the button on the query tab's toolbar and always has been.
@@ -90,14 +87,8 @@ function commit(): void {
       {{ $t('saved.empty') }}
     </p>
 
-    <ul
-      v-else
-      class="tilelist"
-    >
-      <li
-        v-for="query in queries.visibleSaved"
-        :key="query.id"
-      >
+    <ul v-else class="tilelist">
+      <li v-for="query in queries.visibleSaved" :key="query.id">
         <div class="tile">
           <div
             v-tip="query.text"
@@ -119,13 +110,14 @@ function commit(): void {
               @keydown.enter.prevent="commit"
               @keydown.esc.prevent="editing = null"
               @blur="commit"
-            >
+            />
             <span
               v-else
               class="tile__name"
               @click.stop="onNameClick(query)"
               @dblclick.stop="startRename(query)"
-            >{{ query.name }}</span>
+              >{{ query.name }}</span
+            >
 
             <span class="tile__meta">{{ excerpt(query.text) }}</span>
           </div>
@@ -138,10 +130,7 @@ function commit(): void {
               :aria-label="$t('saved.discard')"
               @click="queries.remove(query.id)"
             >
-              <AppIcon
-                name="close"
-                :size="12"
-              />
+              <AppIcon name="close" :size="12" />
             </button>
           </span>
         </div>

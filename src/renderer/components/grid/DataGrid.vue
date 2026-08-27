@@ -623,11 +623,7 @@ watch(
 <template>
   <div class="grid-wrap">
     <!-- One span whose only job is to be the shape of a cell's text. -->
-    <span
-      ref="probe"
-      class="datagrid__probe"
-      aria-hidden="true"
-    />
+    <span ref="probe" class="datagrid__probe" aria-hidden="true" />
 
     <!--
       "No rows" is a fact about the table, and it is only true once the table
@@ -636,11 +632,7 @@ watch(
       announced that the table was empty, dimmed by the veil on top of it. The
       flag lets the stylesheet withhold it until there is something to say.
     -->
-    <div
-      ref="container"
-      class="datagrid"
-      :data-loading="loading ? '' : undefined"
-    />
+    <div ref="container" class="datagrid" :data-loading="loading ? '' : undefined" />
     <!--
       A veil alone said nothing. It dimmed the previous page by a few per cent
       and left the window looking exactly like one that had finished, so a slow
@@ -648,15 +640,8 @@ watch(
       says work is happening; the veil is only what stops the stale rows reading
       as the new ones.
     -->
-    <ProgressBar
-      v-if="loading"
-      class="datagrid__progress"
-    />
-    <div
-      v-if="loading"
-      class="datagrid__veil"
-      aria-hidden="true"
-    />
+    <ProgressBar v-if="loading" class="datagrid__progress" />
+    <div v-if="loading" class="datagrid__veil" aria-hidden="true" />
 
     <!--
       Mounted from the start rather than with the value, and this is not a

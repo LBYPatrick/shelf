@@ -85,44 +85,22 @@ function copy(): void {
 </script>
 
 <template>
-  <figure
-    class="sqlblock"
-    :class="{ 'sqlblock--changes': changes }"
-  >
+  <figure class="sqlblock" :class="{ 'sqlblock--changes': changes }">
     <figcaption class="sqlblock__bar">
       <span class="sqlblock__label type-label">{{ title || $t('assistant.statement') }}</span>
 
-      <p
-        v-if="warning"
-        class="sqlblock__warning"
-      >
-        <AppIcon
-          name="warning"
-          :size="12"
-        />
+      <p v-if="warning" class="sqlblock__warning">
+        <AppIcon name="warning" :size="12" />
         <span>{{ warning }}</span>
       </p>
 
       <span class="sqlblock__spacer" />
 
-      <PressButton
-        size="sm"
-        :aria-label="$t('action.copy')"
-        @click="copy"
-      >
-        <AppIcon
-          name="copy"
-          :size="12"
-        />
+      <PressButton size="sm" :aria-label="$t('action.copy')" @click="copy">
+        <AppIcon name="copy" :size="12" />
       </PressButton>
-      <PressButton
-        size="sm"
-        @click="emit('open', pretty, title ?? '')"
-      >
-        <AppIcon
-          name="query"
-          :size="12"
-        />
+      <PressButton size="sm" @click="emit('open', pretty, title ?? '')">
+        <AppIcon name="query" :size="12" />
         <span>{{ $t('assistant.openInTab') }}</span>
       </PressButton>
     </figcaption>

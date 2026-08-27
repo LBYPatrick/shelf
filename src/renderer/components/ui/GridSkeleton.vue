@@ -24,11 +24,7 @@ const WIDTHS = [92, 64, 78, 55, 86, 70, 60, 88];
 </script>
 
 <template>
-  <div
-    class="skeleton"
-    role="status"
-    :aria-label="$t('query.running')"
-  >
+  <div class="skeleton" role="status" :aria-label="$t('query.running')">
     <div class="skeleton__head">
       <span
         v-for="column in columns"
@@ -38,11 +34,7 @@ const WIDTHS = [92, 64, 78, 55, 86, 70, 60, 88];
       />
     </div>
 
-    <div
-      v-for="row in rows"
-      :key="row"
-      class="skeleton__row"
-    >
+    <div v-for="row in rows" :key="row" class="skeleton__row">
       <span
         v-for="column in columns"
         :key="column"
@@ -51,10 +43,7 @@ const WIDTHS = [92, 64, 78, 55, 86, 70, 60, 88];
       />
     </div>
 
-    <span
-      class="skeleton__sheen"
-      aria-hidden="true"
-    />
+    <span class="skeleton__sheen" aria-hidden="true" />
   </div>
 </template>
 

@@ -72,50 +72,25 @@ void props;
 </script>
 
 <template>
-  <Sheet
-    v-model="open"
-    :title="$t('plan.title')"
-    icon="diagram"
-    broad
-  >
+  <Sheet v-model="open" :title="$t('plan.title')" icon="diagram" broad>
     <!--
       Both formats, side by side, because which one is right depends entirely on
       where it is going: a vector for a document that will be read at some other
       size, a raster for anywhere that will not take one.
     -->
     <template #header>
-      <button
-        type="button"
-        class="tool focus-fill"
-        :disabled="!plan"
-        @click="exportSvg"
-      >
-        <AppIcon
-          name="download"
-          :size="13"
-        />
+      <button type="button" class="tool focus-fill" :disabled="!plan" @click="exportSvg">
+        <AppIcon name="download" :size="13" />
         SVG
       </button>
-      <button
-        type="button"
-        class="tool focus-fill"
-        :disabled="!plan"
-        @click="exportPng"
-      >
-        <AppIcon
-          name="download"
-          :size="13"
-        />
+      <button type="button" class="tool focus-fill" :disabled="!plan" @click="exportPng">
+        <AppIcon name="download" :size="13" />
         PNG
       </button>
     </template>
 
     <div class="plansheet">
-      <ExplainTree
-        v-if="plan"
-        ref="tree"
-        :plan="plan"
-      />
+      <ExplainTree v-if="plan" ref="tree" :plan="plan" />
     </div>
   </Sheet>
 </template>

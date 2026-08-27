@@ -21,29 +21,14 @@ const describedBy = `${id}-note`;
 
 <template>
   <div class="field">
-    <label
-      class="type-label field__label"
-      :for="id"
-    >{{ label }}</label>
+    <label class="type-label field__label" :for="id">{{ label }}</label>
 
-    <slot
-      :id="id"
-      :described-by="error || help ? describedBy : undefined"
-    />
+    <slot :id="id" :described-by="error || help ? describedBy : undefined" />
 
-    <p
-      v-if="error"
-      :id="describedBy"
-      class="field__note field__note--error"
-      role="alert"
-    >
+    <p v-if="error" :id="describedBy" class="field__note field__note--error" role="alert">
       {{ error }}
     </p>
-    <p
-      v-else-if="help"
-      :id="describedBy"
-      class="field__note"
-    >
+    <p v-else-if="help" :id="describedBy" class="field__note">
       {{ help }}
     </p>
   </div>

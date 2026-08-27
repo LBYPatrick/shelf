@@ -35,7 +35,8 @@
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down -v",
     "db:logs": "docker compose logs -f",
-    "storybook:check": "node scripts/storybook-check.mjs"
+    "storybook:check": "node scripts/storybook-check.mjs",
+    "format:check": "prettier --check \"src/**/*.{ts,vue,css}\" \"tests/**/*.ts\" \"*.{ts,js,json}\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",

@@ -281,31 +281,16 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
 
 <template>
   <div class="chat">
-    <div
-      ref="scroller"
-      class="chat__scroll selectable"
-      @scroll="onScroll"
-    >
+    <div ref="scroller" class="chat__scroll selectable" @scroll="onScroll">
       <!--
         Pushed to the bottom by `margin-block-start: auto`. A short conversation
         sits against the composer that continues it, and grows upward; a long
         one fills the pane and scrolls as normal. There is never a gap between
         the last thing said and the box for saying the next thing.
       -->
-      <div
-        class="chat__column"
-        :class="{ 'chat__column--opening': chat.turns.length === 0 }"
-      >
-        <section
-          v-if="chat.turns.length === 0"
-          class="opening"
-        >
-          <AppIcon
-            class="opening__mark"
-            name="assistant"
-            filled
-            :size="22"
-          />
+      <div class="chat__column" :class="{ 'chat__column--opening': chat.turns.length === 0 }">
+        <section v-if="chat.turns.length === 0" class="opening">
+          <AppIcon class="opening__mark" name="assistant" filled :size="22" />
           <h2 class="opening__title">
             {{ $t('assistant.openingTitle') }}
           </h2>
@@ -322,36 +307,22 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
             {{ $t('assistant.setUp') }}
           </button>
 
-          <ul
-            v-else
-            class="opening__list"
-          >
+          <ul v-else class="opening__list">
             <li
               v-for="(text, index) in SUGGESTIONS"
               :key="text"
               class="opening__item"
               :style="{ animationDelay: `${index * 45}ms` }"
             >
-              <button
-                type="button"
-                class="opening__chip focus-fill"
-                @click="suggest(text)"
-              >
+              <button type="button" class="opening__chip focus-fill" @click="suggest(text)">
                 {{ text }}
               </button>
             </li>
           </ul>
         </section>
 
-        <article
-          v-for="turn in chat.turns"
-          :key="turn.id"
-          class="turn"
-        >
-          <p
-            v-if="turn.question"
-            class="turn__question"
-          >
+        <article v-for="turn in chat.turns" :key="turn.id" class="turn">
+          <p v-if="turn.question" class="turn__question">
             {{ turn.question }}
           </p>
 
@@ -360,10 +331,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
               v-if="turn.state === 'running' && turn.items.length === 0"
               class="turn__waiting"
             >
-              <span
-                class="turn__pulse"
-                aria-hidden="true"
-              />
+              <span class="turn__pulse" aria-hidden="true" />
               <span class="type-label">{{ $t('assistant.reading') }}</span>
             </span>
 
@@ -375,20 +343,11 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
               @open="openInTab"
             />
 
-            <p
-              v-if="turn.state === 'failed'"
-              class="turn__failure"
-            >
-              <AppIcon
-                name="warning"
-                :size="13"
-              />
+            <p v-if="turn.state === 'failed'" class="turn__failure">
+              <AppIcon name="warning" :size="13" />
               <span>{{ turn.error }}</span>
             </p>
-            <p
-              v-else-if="turn.state === 'stopped'"
-              class="turn__stopped type-label"
-            >
+            <p v-else-if="turn.state === 'stopped'" class="turn__stopped type-label">
               {{ $t('assistant.stopped') }}
             </p>
           </div>
@@ -441,10 +400,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
               @choose="onProvider"
             />
 
-            <span
-              class="composer__rule"
-              aria-hidden="true"
-            />
+            <span class="composer__rule" aria-hidden="true" />
 
             <InlinePicker
               v-model="scopeValue"
@@ -463,11 +419,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
               :aria-label="$t('assistant.stop')"
               @click="assistant.interrupt(props.tabId)"
             >
-              <AppIcon
-                name="stop"
-                :size="11"
-                filled
-              />
+              <AppIcon name="stop" :size="11" filled />
             </button>
             <button
               v-else
@@ -477,10 +429,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
               :aria-label="$t('assistant.send')"
               @click="send()"
             >
-              <AppIcon
-                name="arrowUp"
-                :size="14"
-              />
+              <AppIcon name="arrowUp" :size="14" />
             </button>
           </div>
         </div>

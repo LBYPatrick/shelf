@@ -158,10 +158,7 @@ watch(
     :title="target.name"
     :subtitle="connections.active?.name"
   >
-    <template
-      v-if="sections.length > 1"
-      #header
-    >
+    <template v-if="sections.length > 1" #header>
       <SegmentedControl
         v-model="section"
         :options="sections"
@@ -185,28 +182,15 @@ watch(
     -->
     <div class="pane">
       <Transition name="pane">
-        <div
-          v-show="section === 'overview'"
-          class="pane__overview"
-        >
-          <p
-            v-if="comment"
-            class="comment"
-          >
+        <div v-show="section === 'overview'" class="pane__overview">
+          <p v-if="comment" class="comment">
             {{ comment }}
           </p>
 
-          <p
-            v-if="error"
-            class="note note--error"
-            role="alert"
-          >
+          <p v-if="error" class="note note--error" role="alert">
             {{ error }}
           </p>
-          <p
-            v-else-if="loading"
-            class="note"
-          >
+          <p v-else-if="loading" class="note">
             {{ $t('workspace.loading') }}
           </p>
 
@@ -217,11 +201,7 @@ watch(
         column headers that do not exist.
       -->
             <dl class="facts">
-              <div
-                v-for="fact in facts"
-                :key="fact.key"
-                class="facts__item"
-              >
+              <div v-for="fact in facts" :key="fact.key" class="facts__item">
                 <dt class="type-label">
                   {{ labelFor(fact.key) }}
                 </dt>
@@ -229,42 +209,25 @@ watch(
               </div>
             </dl>
 
-            <section
-              v-if="largest.length > 0"
-              class="largest"
-            >
+            <section v-if="largest.length > 0" class="largest">
               <h3 class="type-label largest__title">
                 {{ $t('container.largest') }}
               </h3>
-              <RankedBars
-                :bars="bars"
-                :label="$t('container.largest')"
-              />
+              <RankedBars :bars="bars" :label="$t('container.largest')" />
             </section>
           </template>
         </div>
       </Transition>
 
       <Transition name="pane">
-        <div
-          v-if="analysisMounted"
-          v-show="section !== 'overview'"
-          class="pane__analysis"
-        >
-          <AnalyzePanel
-            :section="analysisSection"
-            :active="open && section !== 'overview'"
-          />
+        <div v-if="analysisMounted" v-show="section !== 'overview'" class="pane__analysis">
+          <AnalyzePanel :section="analysisSection" :active="open && section !== 'overview'" />
         </div>
       </Transition>
     </div>
 
     <template #footer>
-      <PressButton
-        variant="primary"
-        size="sm"
-        @click="open = false"
-      >
+      <PressButton variant="primary" size="sm" @click="open = false">
         {{ $t('action.done') }}
       </PressButton>
     </template>

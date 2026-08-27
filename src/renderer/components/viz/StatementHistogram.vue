@@ -260,11 +260,7 @@ const scales = computed(() => [
         indicator is a statement that the two options are ends of one axis, and
         these are two different pictures of the same numbers.
       -->
-      <div
-        class="histogram__scales"
-        role="group"
-        :aria-label="$t('analyze.scaleLabel')"
-      >
+      <div class="histogram__scales" role="group" :aria-label="$t('analyze.scaleLabel')">
         <button
           v-for="option in scales"
           :key="option.value"

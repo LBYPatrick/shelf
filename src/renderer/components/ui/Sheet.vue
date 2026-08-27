@@ -274,12 +274,7 @@ void props;
 <template>
   <Teleport to="body">
     <Transition name="sheet">
-      <div
-        v-if="open"
-        class="scrim"
-        @keydown="onKeydown"
-        @click.self="open = false"
-      >
+      <div v-if="open" class="scrim" @keydown="onKeydown" @click.self="open = false">
         <div
           ref="panel"
           class="panel surface-sheet mat-edge-top"
@@ -291,16 +286,8 @@ void props;
           @transitionend="onSettled"
           @animationend="onSettled"
         >
-          <header
-            ref="head"
-            class="panel__head"
-          >
-            <AppIcon
-              v-if="icon"
-              class="panel__icon"
-              :name="icon"
-              :size="17"
-            />
+          <header ref="head" class="panel__head">
+            <AppIcon v-if="icon" class="panel__icon" :name="icon" :size="17" />
 
             <!--
               A stacked label: what this thing belongs to, then what it is. The
@@ -309,16 +296,10 @@ void props;
               broader reads as an afterthought.
             -->
             <div class="panel__titles">
-              <p
-                v-if="subtitle"
-                class="panel__eyebrow"
-              >
+              <p v-if="subtitle" class="panel__eyebrow">
                 {{ subtitle }}
               </p>
-              <h2
-                :id="titleId"
-                class="type-title"
-              >
+              <h2 :id="titleId" class="type-title">
                 {{ title }}
               </h2>
             </div>
@@ -335,26 +316,15 @@ void props;
               *do* belongs at the far end, beside the close button, with the
               other verbs.
             -->
-            <div
-              v-if="$slots.lead"
-              class="panel__lead"
-            >
+            <div v-if="$slots.lead" class="panel__lead">
               <slot name="lead" />
             </div>
 
-            <div
-              v-if="$slots.header"
-              class="panel__tools"
-            >
+            <div v-if="$slots.header" class="panel__tools">
               <slot name="header" />
             </div>
 
-            <button
-              type="button"
-              class="panel__close"
-              aria-label="Close"
-              @click="open = false"
-            >
+            <button type="button" class="panel__close" aria-label="Close" @click="open = false">
               ✕
             </button>
           </header>
@@ -373,19 +343,12 @@ void props;
               this: it is the element being constrained, so its height is the
               answer we are trying to compute.
             -->
-            <div
-              ref="measure"
-              class="panel__measure"
-            >
+            <div ref="measure" class="panel__measure">
               <slot />
             </div>
           </div>
 
-          <footer
-            v-if="$slots.footer"
-            ref="foot"
-            class="panel__foot"
-          >
+          <footer v-if="$slots.footer" ref="foot" class="panel__foot">
             <slot name="footer" />
           </footer>
         </div>

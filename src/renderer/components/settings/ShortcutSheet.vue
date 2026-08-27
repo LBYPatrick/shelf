@@ -183,52 +183,26 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
 </script>
 
 <template>
-  <Sheet
-    v-model="open"
-    :title="$t('settings.keyboard')"
-    icon="keyboard"
-    flush
-  >
+  <Sheet v-model="open" :title="$t('settings.keyboard')" icon="keyboard" flush>
     <template #lead>
-      <SegmentedControl
-        v-model="view"
-        :options="views"
-        :aria-label="$t('settings.keyboard')"
-      />
+      <SegmentedControl v-model="view" :options="views" :aria-label="$t('settings.keyboard')" />
     </template>
 
-    <div
-      v-show="view === 'visual'"
-      class="panels"
-    >
+    <div v-show="view === 'visual'" class="panels">
       <p class="note">
         {{ $t('settings.keyboardEdit') }}
       </p>
 
-      <div
-        v-for="group in groups"
-        :key="group"
-        class="rows"
-      >
+      <div v-for="group in groups" :key="group" class="rows">
         <div class="row row--header">
           <span class="row__label row__label--group">{{ group }}</span>
         </div>
 
-        <div
-          v-for="binding in bindingsIn(group)"
-          :key="binding.id"
-          class="row"
-        >
+        <div v-for="binding in bindingsIn(group)" :key="binding.id" class="row">
           <span class="row__label">
             {{ binding.label }}
-            <span
-              v-if="clashes.get(binding.id)"
-              class="row__hint row__hint--clash"
-            >
-              <AppIcon
-                name="warning"
-                :size="11"
-              />
+            <span v-if="clashes.get(binding.id)" class="row__hint row__hint--clash">
+              <AppIcon name="warning" :size="11" />
               {{ $t('settings.keyboardClash', { names: clashes.get(binding.id)!.join(', ') }) }}
             </span>
           </span>
@@ -239,15 +213,13 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
             popup over it would put the keystroke somewhere other than where
             the answer appears.
           -->
-          <span
-            v-if="recording === binding.id"
-            class="row__control record"
-          >
+          <span v-if="recording === binding.id" class="row__control record">
             <span
               class="record__slot"
               :class="{ 'record__slot--empty': !captured }"
               role="status"
-            >{{ captured ? displayKeys(captured) : $t('settings.keyboardPress') }}</span>
+              >{{ captured ? displayKeys(captured) : $t('settings.keyboardPress') }}</span
+            >
 
             <button
               v-tip="$t('action.cancel')"
@@ -256,10 +228,7 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
               :aria-label="$t('action.cancel')"
               @click="stopRecording"
             >
-              <AppIcon
-                name="close"
-                :size="12"
-              />
+              <AppIcon name="close" :size="12" />
             </button>
             <button
               v-tip="$t('action.save')"
@@ -269,17 +238,11 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
               :disabled="!captured"
               @click="commit"
             >
-              <AppIcon
-                name="check"
-                :size="12"
-              />
+              <AppIcon name="check" :size="12" />
             </button>
           </span>
 
-          <span
-            v-else
-            class="row__control keys"
-          >
+          <span v-else class="row__control keys">
             <button
               v-tip="$t('settings.keyboardRestore')"
               type="button"
@@ -289,10 +252,7 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
               :disabled="!isChanged(binding.id)"
               @click="restore(binding.id)"
             >
-              <AppIcon
-                name="refresh"
-                :size="11"
-              />
+              <AppIcon name="refresh" :size="11" />
             </button>
 
             <button
@@ -301,16 +261,10 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
               :aria-label="$t('settings.keyboardRecord', { name: binding.label })"
               @click="startRecording(binding.id)"
             >
-              <kbd
-                v-for="accelerator in binding.keys"
-                :key="accelerator"
-              >{{
+              <kbd v-for="accelerator in binding.keys" :key="accelerator">{{
                 displayKeys(accelerator)
               }}</kbd>
-              <span
-                v-if="binding.keys.length === 0"
-                class="keys__none"
-              >{{
+              <span v-if="binding.keys.length === 0" class="keys__none">{{
                 $t('settings.keyboardNone')
               }}</span>
             </button>
@@ -319,36 +273,16 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
       </div>
     </div>
 
-    <div
-      v-show="view === 'json'"
-      class="json"
-    >
-      <JsonEditor
-        v-model="jsonText"
-        class="json__editor"
-        :label="$t('settings.viewJson')"
-      />
+    <div v-show="view === 'json'" class="json">
+      <JsonEditor v-model="jsonText" class="json__editor" :label="$t('settings.viewJson')" />
 
       <div class="json__bar">
-        <span
-          v-if="jsonError"
-          class="json__state json__state--error"
-          role="alert"
-        >
-          <AppIcon
-            name="warning"
-            :size="13"
-          />
+        <span v-if="jsonError" class="json__state json__state--error" role="alert">
+          <AppIcon name="warning" :size="13" />
           {{ jsonError }}
         </span>
-        <span
-          v-else
-          class="json__state json__state--ok"
-        >
-          <AppIcon
-            name="check"
-            :size="13"
-          />
+        <span v-else class="json__state json__state--ok">
+          <AppIcon name="check" :size="13" />
           {{ $t('settings.jsonValid') }}
         </span>
 
@@ -360,19 +294,11 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
           :disabled="changedCount === 0"
           @click="restoreAll"
         >
-          <AppIcon
-            name="refresh"
-            :size="12"
-          />
+          <AppIcon name="refresh" :size="12" />
           {{ $t('settings.keyboardRestoreAll') }}
         </button>
 
-        <PressButton
-          size="sm"
-          variant="primary"
-          :disabled="!!jsonError"
-          @click="applyJson"
-        >
+        <PressButton size="sm" variant="primary" :disabled="!!jsonError" @click="applyJson">
           {{ $t('action.apply') }}
         </PressButton>
       </div>

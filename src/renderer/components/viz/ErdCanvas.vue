@@ -354,16 +354,8 @@ defineExpose({ fit });
 </script>
 
 <template>
-  <div
-    ref="frame"
-    class="erd"
-  >
-    <svg
-      ref="svg"
-      class="erd__svg"
-      role="img"
-      aria-label="Entity relationship diagram"
-    >
+  <div ref="frame" class="erd">
+    <svg ref="svg" class="erd__svg" role="img" aria-label="Entity relationship diagram">
       <g :transform="`translate(${transform.x},${transform.y}) scale(${transform.k})`">
         <!-- Grouped so the whole set transforms together with the canvas. -->
         <g>
@@ -388,30 +380,13 @@ defineExpose({ fit });
           @mouseleave="hovered = null"
           @dblclick="emit('openTable', node.key)"
         >
-          <rect
-            class="erd-node__box"
-            :width="node.width"
-            :height="node.height"
-            rx="10"
-          />
-          <rect
-            class="erd-node__header"
-            :width="node.width"
-            :height="HEADER_HEIGHT"
-            rx="10"
-          />
-          <text
-            class="erd-node__title"
-            x="10"
-            :y="HEADER_HEIGHT / 2 + 4"
-          >
+          <rect class="erd-node__box" :width="node.width" :height="node.height" rx="10" />
+          <rect class="erd-node__header" :width="node.width" :height="HEADER_HEIGHT" rx="10" />
+          <text class="erd-node__title" x="10" :y="HEADER_HEIGHT / 2 + 4">
             {{ node.name }}
           </text>
 
-          <g
-            v-for="(column, index) in node.columns.slice(0, MAX_ROWS)"
-            :key="column.name"
-          >
+          <g v-for="(column, index) in node.columns.slice(0, MAX_ROWS)" :key="column.name">
             <text
               class="erd-node__column"
               :class="{ 'erd-node__column--key': column.primaryKey }"
@@ -442,11 +417,7 @@ defineExpose({ fit });
       </g>
     </svg>
 
-    <ZoomControl
-      :scale="transform.k"
-      @zoom="nudge"
-      @fit="fit()"
-    />
+    <ZoomControl :scale="transform.k" @zoom="nudge" @fit="fit()" />
   </div>
 </template>
 

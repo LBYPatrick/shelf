@@ -56,20 +56,13 @@ function isNull(row: Row, field: Field): boolean {
       <table class="rows__table">
         <thead>
           <tr>
-            <th
-              v-for="field in fields"
-              :key="field.name"
-              scope="col"
-            >
+            <th v-for="field in fields" :key="field.name" scope="col">
               {{ field.name }}
             </th>
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-for="(row, index) in shown"
-            :key="index"
-          >
+          <tr v-for="(row, index) in shown" :key="index">
             <td
               v-for="field in fields"
               :key="field.name"

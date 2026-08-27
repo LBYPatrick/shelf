@@ -65,10 +65,7 @@ function nudge(delta: number): void {
     @keydown.up.prevent="nudge(orientation === 'horizontal' ? -16 : 0)"
     @keydown.down.prevent="nudge(orientation === 'horizontal' ? 16 : 0)"
   >
-    <span
-      class="handle__line"
-      aria-hidden="true"
-    />
+    <span class="handle__line" aria-hidden="true" />
   </div>
 </template>
 

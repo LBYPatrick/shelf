@@ -380,18 +380,11 @@ onBeforeUnmount(stopSampling);
 
 <template>
   <div class="analyze">
-    <p
-      v-if="error"
-      class="analyze__error"
-      role="alert"
-    >
+    <p v-if="error" class="analyze__error" role="alert">
       {{ error }}
     </p>
 
-    <div
-      v-else
-      class="analyze__body"
-    >
+    <div v-else class="analyze__body">
       <!-- ------------------------------------------------------- queries -->
       <template v-if="section === 'queries'">
         <!--
@@ -400,10 +393,7 @@ onBeforeUnmount(stopSampling);
           The two lines that fix it are given here, because the alternative is
           the reader leaving to find them.
         -->
-        <div
-          v-if="problem"
-          class="analyze__empty"
-        >
+        <div v-if="problem" class="analyze__empty">
           <p class="type-title">
             {{ $t(`analyzeProblem.${problem.kind}`) }}
           </p>
@@ -414,16 +404,10 @@ onBeforeUnmount(stopSampling);
             extension creating again. What every one of them gets instead is the
             server's own numbers, below.
           -->
-          <p
-            v-if="needsSetup"
-            class="analyze__hint"
-          >
+          <p v-if="needsSetup" class="analyze__hint">
             {{ $t('analyzeProblem.hint') }}
           </p>
-          <div
-            v-if="needsSetup"
-            class="snippet"
-          >
+          <div v-if="needsSetup" class="snippet">
             <pre class="analyze__code selectable">{{ SETUP }}</pre>
             <button
               type="button"
@@ -432,16 +416,10 @@ onBeforeUnmount(stopSampling);
               :title="$t('action.copy')"
               @click="copy(SETUP)"
             >
-              <AppIcon
-                name="copy"
-                :size="13"
-              />
+              <AppIcon name="copy" :size="13" />
             </button>
           </div>
-          <p
-            v-if="problem.detail"
-            class="analyze__detail"
-          >
+          <p v-if="problem.detail" class="analyze__detail">
             {{ problem.detail }}
           </p>
         </div>
@@ -455,16 +433,8 @@ onBeforeUnmount(stopSampling);
             />
             <span class="analyze__span">{{ spanLabel }}</span>
             <span class="analyze__grow" />
-            <button
-              type="button"
-              class="analyze__refresh"
-              :disabled="loading"
-              @click="refresh"
-            >
-              <AppIcon
-                name="refresh"
-                :size="12"
-              />
+            <button type="button" class="analyze__refresh" :disabled="loading" @click="refresh">
+              <AppIcon name="refresh" :size="12" />
               {{ loading ? $t('analyze.reading') : $t('action.refresh') }}
             </button>
           </div>
@@ -475,21 +445,12 @@ onBeforeUnmount(stopSampling);
             slightly different question, and quietly showing it as the answer
             asked for is the one thing this tab must not do.
           -->
-          <p
-            v-if="result?.caveat"
-            class="analyze__caveat"
-          >
-            <AppIcon
-              name="info"
-              :size="12"
-            />
+          <p v-if="result?.caveat" class="analyze__caveat">
+            <AppIcon name="info" :size="12" />
             {{ $t(`analyzeCaveat.${result.caveat}`) }}
           </p>
 
-          <section
-            v-if="buckets.length > 0"
-            class="panel"
-          >
+          <section v-if="buckets.length > 0" class="panel">
             <div class="panel__head">
               <h2 class="panel__title type-label">
                 {{ $t('analyze.trend') }}
@@ -511,10 +472,7 @@ onBeforeUnmount(stopSampling);
             />
           </section>
 
-          <section
-            v-if="statements.length > 0"
-            class="panel"
-          >
+          <section v-if="statements.length > 0" class="panel">
             <h2 class="panel__title type-label">
               {{ $t('analyze.slowest') }}
             </h2>
@@ -526,36 +484,15 @@ onBeforeUnmount(stopSampling);
             />
           </section>
 
-          <section
-            v-if="statements.length > 0"
-            class="panel panel--flush"
-          >
+          <section v-if="statements.length > 0" class="panel panel--flush">
             <table class="stats">
               <colgroup>
-                <col
-                  span="1"
-                  style="width: 44%"
-                >
-                <col
-                  span="1"
-                  style="width: 11%"
-                >
-                <col
-                  span="1"
-                  style="width: 12%"
-                >
-                <col
-                  span="1"
-                  style="width: 11%"
-                >
-                <col
-                  span="1"
-                  style="width: 11%"
-                >
-                <col
-                  span="1"
-                  style="width: 11%"
-                >
+                <col span="1" style="width: 44%" />
+                <col span="1" style="width: 11%" />
+                <col span="1" style="width: 12%" />
+                <col span="1" style="width: 11%" />
+                <col span="1" style="width: 11%" />
+                <col span="1" style="width: 11%" />
               </colgroup>
               <thead>
                 <tr>
@@ -586,10 +523,7 @@ onBeforeUnmount(stopSampling);
                 >
                   <td class="stats__text">
                     <span class="stats__query">{{ oneLine(statement.text) }}</span>
-                    <span
-                      v-if="statement.firstSeen"
-                      class="stats__badge"
-                    >{{
+                    <span v-if="statement.firstSeen" class="stats__badge">{{
                       $t('analyze.new')
                     }}</span>
                   </td>
@@ -605,9 +539,7 @@ onBeforeUnmount(stopSampling);
                   <td class="stats__number">
                     {{ statement.maxMs === undefined ? '—' : formatDuration(statement.maxMs) }}
                   </td>
-                  <td class="stats__number">
-                    {{ (statement.share * 100).toFixed(1) }}%
-                  </td>
+                  <td class="stats__number">{{ (statement.share * 100).toFixed(1) }}%</td>
                 </tr>
               </tbody>
             </table>
@@ -618,23 +550,13 @@ onBeforeUnmount(stopSampling);
             slow query is the beginning of rewriting it, and retyping it into
             the editor is the step nobody should have to take.
           -->
-          <section
-            v-if="chosen"
-            class="panel"
-          >
+          <section v-if="chosen" class="panel">
             <div class="panel__head">
               <h2 class="panel__title type-label">
                 {{ $t('analyze.statement') }}
               </h2>
-              <PressButton
-                size="sm"
-                variant="glass"
-                @click="tabs.openQuery(chosen.text)"
-              >
-                <AppIcon
-                  name="query"
-                  :size="12"
-                />
+              <PressButton size="sm" variant="glass" @click="tabs.openQuery(chosen.text)">
+                <AppIcon name="query" :size="12" />
                 {{ $t('analyze.openInEditor') }}
               </PressButton>
             </div>
@@ -647,10 +569,7 @@ onBeforeUnmount(stopSampling);
                 :title="$t('action.copy')"
                 @click="copy(chosen.text)"
               >
-                <AppIcon
-                  name="copy"
-                  :size="13"
-                />
+                <AppIcon name="copy" :size="13" />
               </button>
             </div>
           </section>
@@ -662,10 +581,7 @@ onBeforeUnmount(stopSampling);
             the panel used to give both of them the same four words — which read
             as a broken screen on a server that was plainly busy.
           -->
-          <p
-            v-if="statements.length === 0"
-            class="analyze__note"
-          >
+          <p v-if="statements.length === 0" class="analyze__note">
             {{
               loading
                 ? $t('workspace.loading')
@@ -683,24 +599,13 @@ onBeforeUnmount(stopSampling);
       <template v-else>
         <div class="analyze__windows">
           <span class="analyze__grow" />
-          <button
-            type="button"
-            class="analyze__refresh"
-            :disabled="loading"
-            @click="refresh"
-          >
-            <AppIcon
-              name="refresh"
-              :size="12"
-            />
+          <button type="button" class="analyze__refresh" :disabled="loading" @click="refresh">
+            <AppIcon name="refresh" :size="12" />
             {{ loading ? $t('analyze.reading') : $t('action.refresh') }}
           </button>
         </div>
 
-        <div
-          v-if="metrics"
-          class="gauges"
-        >
+        <div v-if="metrics" class="gauges">
           <div
             v-for="gauge in metrics.gauges"
             :key="gauge.key"
@@ -712,10 +617,7 @@ onBeforeUnmount(stopSampling);
           </div>
         </div>
 
-        <section
-          v-if="activity.length > 0"
-          class="panel"
-        >
+        <section v-if="activity.length > 0" class="panel">
           <h2 class="panel__title type-label">
             {{ $t('analyze.activity') }}
           </h2>
@@ -726,26 +628,17 @@ onBeforeUnmount(stopSampling);
           />
         </section>
 
-        <section
-          v-if="tableBars.length > 0"
-          class="panel"
-        >
+        <section v-if="tableBars.length > 0" class="panel">
           <h2 class="panel__title type-label">
             {{ $t('analyze.largestTables') }}
           </h2>
-          <RankedBars
-            :bars="tableBars"
-            :label="$t('analyze.largestTables')"
-          />
+          <RankedBars :bars="tableBars" :label="$t('analyze.largestTables')" />
           <p class="analyze__hint">
             {{ $t('analyze.deadRows') }}
           </p>
         </section>
 
-        <section
-          v-if="metrics && metrics.unusedIndexes.length > 0"
-          class="panel"
-        >
+        <section v-if="metrics && metrics.unusedIndexes.length > 0" class="panel">
           <h2 class="panel__title type-label">
             {{ $t('analyze.unusedIndexes') }}
           </h2>
@@ -767,10 +660,7 @@ onBeforeUnmount(stopSampling);
           </p>
         </section>
 
-        <p
-          v-if="!metrics"
-          class="analyze__note"
-        >
+        <p v-if="!metrics" class="analyze__note">
           {{ $t('workspace.loading') }}
         </p>
       </template>

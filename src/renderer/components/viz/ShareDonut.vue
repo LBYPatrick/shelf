@@ -91,10 +91,7 @@ const percent = (share: number) =>
 </script>
 
 <template>
-  <figure
-    class="donut"
-    @pointerleave="active = null"
-  >
+  <figure class="donut" @pointerleave="active = null">
     <svg
       class="donut__svg"
       :width="size"
@@ -112,11 +109,7 @@ const percent = (share: number) =>
         :fill="slice.colour"
         @pointerenter="active = slice.id"
       />
-      <text
-        class="donut__total"
-        text-anchor="middle"
-        dominant-baseline="central"
-      >
+      <text class="donut__total" text-anchor="middle" dominant-baseline="central">
         {{ total }}
       </text>
     </svg>
@@ -135,10 +128,7 @@ const percent = (share: number) =>
         :style="{ '--share': `${(slice.share * 100).toFixed(2)}%`, '--slice': slice.colour }"
         @pointerenter="active = slice.id"
       >
-        <span
-          class="donut__swatch"
-          aria-hidden="true"
-        />
+        <span class="donut__swatch" aria-hidden="true" />
         <span class="donut__name">{{ slice.label }}</span>
         <!--
           The bar is what makes two states comparable; the ring only says that
@@ -146,10 +136,7 @@ const percent = (share: number) =>
           three read as one line rather than as three columns with a gulf
           between them.
         -->
-        <span
-          class="donut__bar"
-          aria-hidden="true"
-        />
+        <span class="donut__bar" aria-hidden="true" />
         <span class="donut__value">{{ slice.value.toLocaleString() }}</span>
         <span class="donut__percent">{{ percent(slice.share) }}</span>
       </div>

@@ -112,16 +112,8 @@ async function writeResultsToFile(
 
 <template>
   <div class="jobtab">
-    <div
-      class="toolbar jobtab__bar"
-      role="toolbar"
-      :aria-label="$t('jobs.resultBar')"
-    >
-      <div
-        class="toolbar__group"
-        role="group"
-        :aria-label="$t('query.groupResult')"
-      >
+    <div class="toolbar jobtab__bar" role="toolbar" :aria-label="$t('jobs.resultBar')">
+      <div class="toolbar__group" role="group" :aria-label="$t('query.groupResult')">
         <span class="jobtab__summary">{{
           $t('jobs.showing', {
             from: total === 0 ? 0 : offset + 1,
@@ -141,11 +133,7 @@ async function writeResultsToFile(
         :aria-label="$t('jobs.previous')"
         @click="step(-1)"
       >
-        <AppIcon
-          name="chevron"
-          class="jobtab__back"
-          :size="12"
-        />
+        <AppIcon name="chevron" class="jobtab__back" :size="12" />
       </button>
       <button
         v-tip="$t('jobs.next')"
@@ -155,43 +143,24 @@ async function writeResultsToFile(
         :aria-label="$t('jobs.next')"
         @click="step(1)"
       >
-        <AppIcon
-          name="chevron"
-          :size="12"
-        />
+        <AppIcon name="chevron" :size="12" />
       </button>
 
       <RowIndexToggle />
 
-      <PressButton
-        size="sm"
-        :disabled="!job?.path"
-        @click="exporting = true"
-      >
-        <AppIcon
-          name="download"
-          :size="12"
-        />
+      <PressButton size="sm" :disabled="!job?.path" @click="exporting = true">
+        <AppIcon name="download" :size="12" />
         {{ $t('action.export') }}
       </PressButton>
     </div>
 
-    <p
-      v-if="error"
-      class="jobtab__error"
-      role="alert"
-    >
+    <p v-if="error" class="jobtab__error" role="alert">
       {{ error }}
     </p>
 
     <GridSkeleton v-else-if="loading && rows.length === 0" />
 
-    <DataGrid
-      v-else
-      :fields="fields"
-      :rows="rows"
-      :loading="loading"
-    />
+    <DataGrid v-else :fields="fields" :rows="rows" :loading="loading" />
 
     <ExportSheet
       v-model="exporting"

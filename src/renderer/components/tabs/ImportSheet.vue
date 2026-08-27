@@ -120,21 +120,11 @@ watch(open, (isOpen) => {
 </script>
 
 <template>
-  <Sheet
-    v-model="open"
-    :title="$t('import.title', { name: entity.name })"
-    wide
-  >
-    <FormField
-      :label="$t('import.file')"
-      :help="$t('import.fileHelp')"
-    >
+  <Sheet v-model="open" :title="$t('import.title', { name: entity.name })" wide>
+    <FormField :label="$t('import.file')" :help="$t('import.fileHelp')">
       <div class="file">
         <span class="file__path">{{ path || $t('import.nothingChosen') }}</span>
-        <PressButton
-          variant="glass"
-          @click="choose"
-        >
+        <PressButton variant="glass" @click="choose">
           {{ $t('action.choose') }}
         </PressButton>
       </div>
@@ -152,23 +142,14 @@ watch(open, (isOpen) => {
         <table>
           <thead>
             <tr>
-              <th
-                v-for="name in header"
-                :key="name"
-              >
+              <th v-for="name in header" :key="name">
                 {{ name }}
               </th>
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="(row, index) in preview"
-              :key="index"
-            >
-              <td
-                v-for="(cell, cellIndex) in row"
-                :key="cellIndex"
-              >
+            <tr v-for="(row, index) in preview" :key="index">
+              <td v-for="(cell, cellIndex) in row" :key="cellIndex">
                 {{ cell }}
               </td>
             </tr>
@@ -180,11 +161,7 @@ watch(open, (isOpen) => {
         {{ $t('import.columns') }}
       </p>
       <div class="map">
-        <div
-          v-for="column in columns"
-          :key="column.name"
-          class="map__row"
-        >
+        <div v-for="column in columns" :key="column.name" class="map__row">
           <span class="map__target">
             {{ column.name }}
             <span class="map__type">{{ column.dataType }}</span>
@@ -208,10 +185,7 @@ watch(open, (isOpen) => {
         </div>
       </div>
 
-      <p
-        v-if="unmatched.length"
-        class="note"
-      >
+      <p v-if="unmatched.length" class="note">
         {{ $t('import.unmatched', { count: unmatched.length, names: unmatched.join(', ') }) }}
       </p>
 
@@ -222,11 +196,7 @@ watch(open, (isOpen) => {
       />
     </template>
 
-    <p
-      v-if="error"
-      class="error"
-      role="alert"
-    >
+    <p v-if="error" class="error" role="alert">
       {{ error }}
     </p>
 

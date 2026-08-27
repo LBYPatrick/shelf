@@ -132,10 +132,7 @@ const any = computed(() => filter.value.criteria.length > 0);
           :aria-label="$t('jobs.chipRemove')"
           @click="drop(index)"
         >
-          <AppIcon
-            name="close"
-            :size="9"
-          />
+          <AppIcon name="close" :size="9" />
         </button>
       </span>
     </TransitionGroup>
@@ -149,20 +146,12 @@ const any = computed(() => filter.value.criteria.length > 0);
         :aria-label="$t('jobs.addFilter')"
         @click="begin"
       >
-        <AppIcon
-          name="plus"
-          :size="10"
-        />
+        <AppIcon name="plus" :size="10" />
         <span v-if="!any">{{ $t('jobs.addFilter') }}</span>
       </button>
 
       <Transition name="pop">
-        <div
-          v-if="open"
-          ref="panel"
-          class="picker surface-popover"
-          tabindex="-1"
-        >
+        <div v-if="open" ref="panel" class="picker surface-popover" tabindex="-1">
           <!--
             Step one and step two in the same box. The heading changes and the
             list changes; the box does not move, so the second choice is made
@@ -181,25 +170,13 @@ const any = computed(() => filter.value.criteria.length > 0);
               @click="step = kind"
             >
               <span>{{ kindLabel(kind) }}</span>
-              <AppIcon
-                class="picker__caret"
-                name="chevron"
-                :size="10"
-              />
+              <AppIcon class="picker__caret" name="chevron" :size="10" />
             </button>
           </template>
 
           <template v-else>
-            <button
-              type="button"
-              class="picker__row picker__row--back"
-              @click="step = null"
-            >
-              <AppIcon
-                class="picker__back"
-                name="chevron"
-                :size="10"
-              />
+            <button type="button" class="picker__row picker__row--back" @click="step = null">
+              <AppIcon class="picker__back" name="chevron" :size="10" />
               <span>{{ $t('action.back') }}</span>
             </button>
             <button

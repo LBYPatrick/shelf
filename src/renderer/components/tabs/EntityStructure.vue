@@ -420,17 +420,11 @@ watch(() => props.entity, load);
         :aria-label="$t('structure.wrap')"
         @click="toggleWrap"
       >
-        <AppIcon
-          name="wrap"
-          :size="13"
-        />
+        <AppIcon name="wrap" :size="13" />
       </PressButton>
 
       <label class="structure__find">
-        <AppIcon
-          name="search"
-          :size="12"
-        />
+        <AppIcon name="search" :size="12" />
         <input
           v-model="filter"
           type="search"
@@ -438,7 +432,7 @@ watch(() => props.entity, load);
           spellcheck="false"
           :aria-label="$t('structure.filter')"
           :placeholder="$t('structure.filter')"
-        >
+        />
       </label>
 
       <PressButton
@@ -447,10 +441,7 @@ watch(() => props.entity, load);
         variant="glass"
         @click="adding = true"
       >
-        <AppIcon
-          name="plus"
-          :size="12"
-        />
+        <AppIcon name="plus" :size="12" />
         {{ $t('structure.column') }}
       </PressButton>
 
@@ -460,33 +451,19 @@ watch(() => props.entity, load);
         variant="glass"
         @click="addingIndex = true"
       >
-        <AppIcon
-          name="plus"
-          :size="12"
-        />
+        <AppIcon name="plus" :size="12" />
         {{ $t('structure.index') }}
       </PressButton>
     </div>
 
-    <p
-      v-if="error"
-      class="structure__error"
-      role="alert"
-    >
+    <p v-if="error" class="structure__error" role="alert">
       {{ error }}
     </p>
-    <p
-      v-else-if="loading"
-      class="structure__note"
-    >
+    <p v-else-if="loading" class="structure__note">
       {{ $t('workspace.loading') }}
     </p>
 
-    <div
-      v-else
-      ref="bodyEl"
-      class="structure__body"
-    >
+    <div v-else ref="bodyEl" class="structure__body">
       <!--
         Every section states its own column widths in a `colgroup`.
 
@@ -497,29 +474,15 @@ watch(() => props.entity, load);
         on the cells, they are two sets of numbers that have to agree, and the
         header and the body are exactly the two things that must never disagree.
       -->
-      <table
-        v-if="section === 'columns'"
-        class="rows"
-        :style="tableStyle"
-      >
+      <table v-if="section === 'columns'" class="rows" :style="tableStyle">
         <colgroup>
-          <col
-            v-for="(column, index) in head"
-            :key="column.key"
-            :style="colStyle(index)"
-          >
+          <col v-for="(column, index) in head" :key="column.key" :style="colStyle(index)" />
         </colgroup>
         <thead>
           <tr>
-            <th
-              v-for="(column, index) in head"
-              :key="column.key"
-            >
+            <th v-for="(column, index) in head" :key="column.key">
               <span v-if="column.label">{{ $t(column.label) }}</span>
-              <span
-                v-else
-                class="sr-only"
-              >{{ $t('structure.actions') }}</span>
+              <span v-else class="sr-only">{{ $t('structure.actions') }}</span>
               <!--
                 On the *leading* edge of every header but the first, sizing the
                 column to its left. A grip on the trailing edge is the same
@@ -537,10 +500,7 @@ watch(() => props.entity, load);
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-for="column in shownColumns"
-            :key="column.ordinal"
-          >
+          <tr v-for="column in shownColumns" :key="column.ordinal">
             <!--
               The description goes under the name rather than in a column of its
               own. A sentence needs the width of a sentence, and giving it one
@@ -550,24 +510,14 @@ watch(() => props.entity, load);
             <td class="rows__lead">
               <span class="rows__name">
                 {{ column.name }}
-                <span
-                  v-if="column.primaryKey"
-                  class="chip chip--key"
-                >{{
+                <span v-if="column.primaryKey" class="chip chip--key">{{
                   $t('structure.pk')
                 }}</span>
-                <span
-                  v-else-if="column.generated"
-                  class="chip"
-                >{{
+                <span v-else-if="column.generated" class="chip">{{
                   $t('structure.generated')
                 }}</span>
               </span>
-              <span
-                v-if="column.comment"
-                class="rows__note"
-                :title="column.comment"
-              >{{
+              <span v-if="column.comment" class="rows__note" :title="column.comment">{{
                 column.comment
               }}</span>
             </td>
@@ -575,16 +525,10 @@ watch(() => props.entity, load);
               {{ column.dataType }}
             </td>
             <td>
-              <span
-                v-if="!column.nullable"
-                class="chip chip--strict"
-              >{{
+              <span v-if="!column.nullable" class="chip chip--strict">{{
                 $t('structure.notNull')
               }}</span>
-              <span
-                v-else
-                class="rows__muted"
-              >{{ $t('structure.yes') }}</span>
+              <span v-else class="rows__muted">{{ $t('structure.yes') }}</span>
             </td>
             <td class="rows__code">
               {{ column.defaultValue ?? '—' }}
@@ -598,39 +542,22 @@ watch(() => props.entity, load);
                 :title="$t('structure.dropColumn', { name: column.name })"
                 @click="propose({ kind: 'drop-column', entity: entity, name: column.name })"
               >
-                <AppIcon
-                  name="close"
-                  :size="11"
-                />
+                <AppIcon name="close" :size="11" />
               </button>
             </td>
           </tr>
         </tbody>
       </table>
 
-      <table
-        v-else-if="section === 'indexes'"
-        class="rows"
-        :style="tableStyle"
-      >
+      <table v-else-if="section === 'indexes'" class="rows" :style="tableStyle">
         <colgroup>
-          <col
-            v-for="(column, index) in head"
-            :key="column.key"
-            :style="colStyle(index)"
-          >
+          <col v-for="(column, index) in head" :key="column.key" :style="colStyle(index)" />
         </colgroup>
         <thead>
           <tr>
-            <th
-              v-for="(column, index) in head"
-              :key="column.key"
-            >
+            <th v-for="(column, index) in head" :key="column.key">
               <span v-if="column.label">{{ $t(column.label) }}</span>
-              <span
-                v-else
-                class="sr-only"
-              >{{ $t('structure.actions') }}</span>
+              <span v-else class="sr-only">{{ $t('structure.actions') }}</span>
               <!--
                 On the *leading* edge of every header but the first, sizing the
                 column to its left. A grip on the trailing edge is the same
@@ -648,23 +575,14 @@ watch(() => props.entity, load);
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-for="index in shownIndexes"
-            :key="index.name"
-          >
+          <tr v-for="index in shownIndexes" :key="index.name">
             <td class="rows__lead">
               <span class="rows__name">
                 {{ index.name }}
-                <span
-                  v-if="index.primary"
-                  class="chip chip--key"
-                >{{
+                <span v-if="index.primary" class="chip chip--key">{{
                   $t('structure.pk')
                 }}</span>
-                <span
-                  v-else-if="index.unique"
-                  class="chip chip--strict"
-                >{{
+                <span v-else-if="index.unique" class="chip chip--strict">{{
                   $t('structure.unique')
                 }}</span>
               </span>
@@ -684,39 +602,22 @@ watch(() => props.entity, load);
                 :title="$t('structure.dropIndex', { name: index.name })"
                 @click="propose({ kind: 'drop-index', entity: entity, name: index.name })"
               >
-                <AppIcon
-                  name="close"
-                  :size="11"
-                />
+                <AppIcon name="close" :size="11" />
               </button>
             </td>
           </tr>
         </tbody>
       </table>
 
-      <table
-        v-else-if="section === 'relations'"
-        class="rows"
-        :style="tableStyle"
-      >
+      <table v-else-if="section === 'relations'" class="rows" :style="tableStyle">
         <colgroup>
-          <col
-            v-for="(column, index) in head"
-            :key="column.key"
-            :style="colStyle(index)"
-          >
+          <col v-for="(column, index) in head" :key="column.key" :style="colStyle(index)" />
         </colgroup>
         <thead>
           <tr>
-            <th
-              v-for="(column, index) in head"
-              :key="column.key"
-            >
+            <th v-for="(column, index) in head" :key="column.key">
               <span v-if="column.label">{{ $t(column.label) }}</span>
-              <span
-                v-else
-                class="sr-only"
-              >{{ $t('structure.actions') }}</span>
+              <span v-else class="sr-only">{{ $t('structure.actions') }}</span>
               <!--
                 On the *leading* edge of every header but the first, sizing the
                 column to its left. A grip on the trailing edge is the same
@@ -746,10 +647,7 @@ watch(() => props.entity, load);
                   column of its own: it was a whole column carrying one of two
                   words, next to a name that had nowhere to wrap.
                 -->
-                <span
-                  class="chip"
-                  :class="`chip--${relation.direction}`"
-                >{{
+                <span class="chip" :class="`chip--${relation.direction}`">{{
                   $t(`structure.${relation.direction}`)
                 }}</span>
               </span>
@@ -767,29 +665,15 @@ watch(() => props.entity, load);
         </tbody>
       </table>
 
-      <table
-        v-else-if="section === 'triggers'"
-        class="rows"
-        :style="tableStyle"
-      >
+      <table v-else-if="section === 'triggers'" class="rows" :style="tableStyle">
         <colgroup>
-          <col
-            v-for="(column, index) in head"
-            :key="column.key"
-            :style="colStyle(index)"
-          >
+          <col v-for="(column, index) in head" :key="column.key" :style="colStyle(index)" />
         </colgroup>
         <thead>
           <tr>
-            <th
-              v-for="(column, index) in head"
-              :key="column.key"
-            >
+            <th v-for="(column, index) in head" :key="column.key">
               <span v-if="column.label">{{ $t(column.label) }}</span>
-              <span
-                v-else
-                class="sr-only"
-              >{{ $t('structure.actions') }}</span>
+              <span v-else class="sr-only">{{ $t('structure.actions') }}</span>
               <!--
                 On the *leading* edge of every header but the first, sizing the
                 column to its left. A grip on the trailing edge is the same
@@ -807,10 +691,7 @@ watch(() => props.entity, load);
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-for="trigger in shownTriggers"
-            :key="trigger.name"
-          >
+          <tr v-for="trigger in shownTriggers" :key="trigger.name">
             <td class="rows__lead">
               <span class="rows__name">{{ trigger.name }}</span>
             </td>
@@ -824,29 +705,15 @@ watch(() => props.entity, load);
         </tbody>
       </table>
 
-      <table
-        v-else
-        class="rows"
-        :style="tableStyle"
-      >
+      <table v-else class="rows" :style="tableStyle">
         <colgroup>
-          <col
-            v-for="(column, index) in head"
-            :key="column.key"
-            :style="colStyle(index)"
-          >
+          <col v-for="(column, index) in head" :key="column.key" :style="colStyle(index)" />
         </colgroup>
         <thead>
           <tr>
-            <th
-              v-for="(column, index) in head"
-              :key="column.key"
-            >
+            <th v-for="(column, index) in head" :key="column.key">
               <span v-if="column.label">{{ $t(column.label) }}</span>
-              <span
-                v-else
-                class="sr-only"
-              >{{ $t('structure.actions') }}</span>
+              <span v-else class="sr-only">{{ $t('structure.actions') }}</span>
               <!--
                 On the *leading* edge of every header but the first, sizing the
                 column to its left. A grip on the trailing edge is the same
@@ -864,10 +731,7 @@ watch(() => props.entity, load);
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-for="partition in shownPartitions"
-            :key="partition.name"
-          >
+          <tr v-for="partition in shownPartitions" :key="partition.name">
             <td class="rows__lead">
               <span class="rows__name">{{ partition.name }}</span>
             </td>
@@ -878,28 +742,15 @@ watch(() => props.entity, load);
         </tbody>
       </table>
 
-      <p
-        v-if="isEmpty"
-        class="structure__note"
-      >
+      <p v-if="isEmpty" class="structure__note">
         {{ isFiltered ? $t('structure.noMatch') : $t('structure.nothingHere') }}
       </p>
     </div>
 
-    <Sheet
-      v-model="adding"
-      :title="$t('structure.addColumn')"
-    >
+    <Sheet v-model="adding" :title="$t('structure.addColumn')">
       <div class="fields">
-        <FormField
-          v-slot="{ id }"
-          label="Name"
-        >
-          <TextInput
-            :id="id"
-            v-model="newColumn.name"
-            placeholder="note"
-          />
+        <FormField v-slot="{ id }" label="Name">
+          <TextInput :id="id" v-model="newColumn.name" placeholder="note" />
         </FormField>
 
         <FormField
@@ -907,12 +758,7 @@ watch(() => props.entity, load);
           label="Type"
           help="Written through as-is, so any type this engine accepts works."
         >
-          <TextInput
-            :id="id"
-            v-model="newColumn.dataType"
-            monospace
-            placeholder="text"
-          />
+          <TextInput :id="id" v-model="newColumn.dataType" monospace placeholder="text" />
         </FormField>
 
         <FormField
@@ -949,20 +795,10 @@ watch(() => props.entity, load);
       </template>
     </Sheet>
 
-    <Sheet
-      v-model="addingIndex"
-      :title="$t('structure.addIndex')"
-    >
+    <Sheet v-model="addingIndex" :title="$t('structure.addIndex')">
       <div class="fields">
-        <FormField
-          v-slot="{ id }"
-          label="Name"
-        >
-          <TextInput
-            :id="id"
-            v-model="newIndex.name"
-            :placeholder="`${entity.name}_idx`"
-          />
+        <FormField v-slot="{ id }" label="Name">
+          <TextInput :id="id" v-model="newIndex.name" :placeholder="`${entity.name}_idx`" />
         </FormField>
 
         <FormField

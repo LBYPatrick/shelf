@@ -62,27 +62,15 @@ defineEmits<{ open: [] }>();
     :class="{ 'row--busy': busy }"
     :style="accent ? { '--label': accent } : undefined"
   >
-    <button
-      type="button"
-      class="row__open"
-      :aria-label="label"
-      @click="$emit('open')"
-    >
+    <button type="button" class="row__open" :aria-label="label" @click="$emit('open')">
       <span
         class="row__mark"
         :class="{ 'row__mark--engine': hue !== undefined }"
         :style="hue !== undefined ? { '--engine-hue': hue } : undefined"
         aria-hidden="true"
       >
-        <AppIcon
-          v-if="icon"
-          :name="icon"
-          :size="16"
-        />
-        <span
-          v-else
-          class="row__glyph"
-        >{{ mark }}</span>
+        <AppIcon v-if="icon" :name="icon" :size="16" />
+        <span v-else class="row__glyph">{{ mark }}</span>
       </span>
 
       <span class="row__text">
@@ -91,29 +79,15 @@ defineEmits<{ open: [] }>();
           <slot name="badge" />
         </span>
 
-        <span
-          v-if="subtitle || meta"
-          class="row__line row__line--sub"
-        >
-          <span
-            v-if="subtitle"
-            class="row__sub"
-            :class="{ 'row__sub--mono': mono }"
-          >{{
+        <span v-if="subtitle || meta" class="row__line row__line--sub">
+          <span v-if="subtitle" class="row__sub" :class="{ 'row__sub--mono': mono }">{{
             subtitle
           }}</span>
-          <span
-            v-if="meta"
-            class="row__meta"
-          >{{ meta }}</span>
+          <span v-if="meta" class="row__meta">{{ meta }}</span>
         </span>
       </span>
 
-      <AppIcon
-        class="row__chevron"
-        name="chevron"
-        :size="16"
-      />
+      <AppIcon class="row__chevron" name="chevron" :size="16" />
     </button>
 
     <!--
@@ -125,18 +99,11 @@ defineEmits<{ open: [] }>();
       space is reserved whether or not they are showing, so nothing moves when
       the pointer arrives.
     -->
-    <div
-      v-if="$slots.actions"
-      class="row__actions"
-    >
+    <div v-if="$slots.actions" class="row__actions">
       <slot name="actions" />
     </div>
 
-    <span
-      v-if="busy"
-      class="row__progress"
-      aria-hidden="true"
-    />
+    <span v-if="busy" class="row__progress" aria-hidden="true" />
   </div>
 </template>
 

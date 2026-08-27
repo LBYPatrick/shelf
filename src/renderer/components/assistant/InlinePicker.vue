@@ -78,27 +78,12 @@ function choose(id: string): void {
     :aria-expanded="open"
     @click="toggle"
   >
-    <AppIcon
-      v-if="icon"
-      class="picker__mark"
-      :name="icon"
-      filled
-      :size="12"
-    />
+    <AppIcon v-if="icon" class="picker__mark" :name="icon" filled :size="12" />
     <span class="picker__label">{{ label }}</span>
-    <AppIcon
-      class="picker__caret"
-      name="chevron"
-      :size="10"
-    />
+    <AppIcon class="picker__caret" name="chevron" :size="10" />
   </button>
 
-  <ContextMenu
-    v-model="open"
-    :items="options"
-    :at="at"
-    @choose="choose"
-  />
+  <ContextMenu v-model="open" :items="options" :at="at" @choose="choose" />
 </template>
 
 <style scoped>

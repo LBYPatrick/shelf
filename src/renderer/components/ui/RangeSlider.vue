@@ -46,12 +46,8 @@ const progress = computed(() => {
       :step="step"
       :aria-label="ariaLabel"
       :style="{ '--progress': progress }"
-    >
-    <span
-      v-if="display !== undefined"
-      class="slider__value"
-      aria-hidden="true"
-    >{{
+    />
+    <span v-if="display !== undefined" class="slider__value" aria-hidden="true">{{
       display
     }}</span>
   </div>

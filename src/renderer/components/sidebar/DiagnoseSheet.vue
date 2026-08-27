@@ -232,26 +232,13 @@ const verdict = computed<{ tone: Tone; text: string }>(() => {
         derive it. The numbers below are the working, for when the answer is
         not the one they hoped for.
       -->
-      <div
-        class="verdict"
-        :class="`verdict--${verdict.tone}`"
-      >
-        <AppIcon
-          :name="TONE_ICON[verdict.tone]"
-          :size="15"
-        />
+      <div class="verdict" :class="`verdict--${verdict.tone}`">
+        <AppIcon :name="TONE_ICON[verdict.tone]" :size="15" />
         <span class="verdict__text">{{ verdict.text }}</span>
-        <span
-          v-if="samples.length > 0"
-          class="verdict__figure"
-        >{{ ms(summary.median) }}</span>
+        <span v-if="samples.length > 0" class="verdict__figure">{{ ms(summary.median) }}</span>
       </div>
 
-      <p
-        v-if="failure"
-        class="diagnose__error"
-        role="alert"
-      >
+      <p v-if="failure" class="diagnose__error" role="alert">
         {{ failure }}
       </p>
 
@@ -307,19 +294,12 @@ const verdict = computed<{ tone: Tone; text: string }>(() => {
             class="check"
             :class="{ 'check--failed': !check.ok }"
           >
-            <AppIcon
-              class="check__mark"
-              :name="check.ok ? 'check' : 'warning'"
-              :size="13"
-            />
+            <AppIcon class="check__mark" :name="check.ok ? 'check' : 'warning'" :size="13" />
             <span class="check__label">{{ check.label }}</span>
             <span class="check__detail">{{ check.detail }}</span>
             <span class="check__ms">{{ ms(check.ms) }}</span>
           </li>
-          <li
-            v-if="running"
-            class="check check--pending"
-          >
+          <li v-if="running" class="check check--pending">
             <span class="check__label">{{ $t('diagnose.running') }}</span>
           </li>
         </ul>
@@ -353,15 +333,8 @@ const verdict = computed<{ tone: Tone; text: string }>(() => {
       </section>
 
       <div class="diagnose__foot">
-        <PressButton
-          size="sm"
-          :disabled="running"
-          @click="diagnose"
-        >
-          <AppIcon
-            name="refresh"
-            :size="13"
-          />
+        <PressButton size="sm" :disabled="running" @click="diagnose">
+          <AppIcon name="refresh" :size="13" />
           {{ $t('diagnose.again') }}
         </PressButton>
       </div>

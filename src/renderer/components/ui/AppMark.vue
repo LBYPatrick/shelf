@@ -22,14 +22,7 @@ const style = computed(() =>
 </script>
 
 <template>
-  <img
-    class="mark"
-    :src="icon"
-    :style="style"
-    alt=""
-    aria-hidden="true"
-    draggable="false"
-  >
+  <img class="mark" :src="icon" :style="style" alt="" aria-hidden="true" draggable="false" />
 </template>
 
 <style scoped>

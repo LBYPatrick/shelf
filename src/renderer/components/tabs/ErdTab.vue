@@ -134,38 +134,19 @@ onMounted(load);
 
 <template>
   <div class="erd-tab">
-    <p
-      v-if="error"
-      class="erd-tab__note erd-tab__note--error"
-      role="alert"
-    >
+    <p v-if="error" class="erd-tab__note erd-tab__note--error" role="alert">
       {{ error }}
     </p>
-    <p
-      v-else-if="loading"
-      class="erd-tab__note"
-    >
+    <p v-else-if="loading" class="erd-tab__note">
       {{ $t('erd.reading') }}
     </p>
-    <p
-      v-else-if="tables.length === 0"
-      class="erd-tab__note"
-    >
+    <p v-else-if="tables.length === 0" class="erd-tab__note">
       {{ $t('erd.nothing') }}
     </p>
 
-    <ErdCanvas
-      v-else
-      :tables="tables"
-      :edges="edges"
-      @open-table="openTable"
-    />
+    <ErdCanvas v-else :tables="tables" :edges="edges" @open-table="openTable" />
 
-    <Teleport
-      v-if="active && !loading"
-      to="#statusbar-slot"
-      defer
-    >
+    <Teleport v-if="active && !loading" to="#statusbar-slot" defer>
       <span class="tabstatus__item">{{ summary }}</span>
     </Teleport>
   </div>

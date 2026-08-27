@@ -32,12 +32,7 @@ const properties = ref<EntityProperties>({});
     it is. A qualified name run together as one string makes the part you came
     to read the smaller half of it.
   -->
-  <Sheet
-    v-model="open"
-    wide
-    :title="entity.name"
-    :subtitle="entity.schema"
-  >
+  <Sheet v-model="open" wide :title="entity.name" :subtitle="entity.schema">
     <!--
       Three facts, given equal weight and read left to right. A definition list
       rather than a table: they are label-and-value pairs, and marking them up
@@ -65,10 +60,7 @@ const properties = ref<EntityProperties>({});
       </div>
     </dl>
 
-    <p
-      v-if="properties.comment"
-      class="comment"
-    >
+    <p v-if="properties.comment" class="comment">
       {{ properties.comment }}
     </p>
 
@@ -79,18 +71,11 @@ const properties = ref<EntityProperties>({});
       not make the popup two hundred rows tall.
     -->
     <div class="structure-pane">
-      <EntityStructure
-        :entity="entity"
-        @loaded="properties = $event"
-      />
+      <EntityStructure :entity="entity" @loaded="properties = $event" />
     </div>
 
     <template #footer>
-      <PressButton
-        variant="primary"
-        size="sm"
-        @click="open = false"
-      >
+      <PressButton variant="primary" size="sm" @click="open = false">
         {{ $t('action.done') }}
       </PressButton>
     </template>

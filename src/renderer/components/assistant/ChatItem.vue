@@ -113,16 +113,8 @@ const STATE_ICON: Record<string, string> = {
     state are one control with one focus ring, and so the fold can be animated
     on the grid-rows trick rather than snapping.
   -->
-  <div
-    v-else-if="item.kind === 'thinking'"
-    class="aside"
-  >
-    <button
-      type="button"
-      class="aside__head"
-      :aria-expanded="open"
-      @click="said = !open"
-    >
+  <div v-else-if="item.kind === 'thinking'" class="aside">
+    <button type="button" class="aside__head" :aria-expanded="open" @click="said = !open">
       <AppIcon
         class="aside__caret"
         :class="{ 'aside__caret--open': open }"
@@ -132,17 +124,10 @@ const STATE_ICON: Record<string, string> = {
       <span class="aside__label">{{
         streaming ? $t('assistant.thinking') : $t('assistant.thought')
       }}</span>
-      <span
-        v-if="streaming"
-        class="aside__pulse"
-        aria-hidden="true"
-      />
+      <span v-if="streaming" class="aside__pulse" aria-hidden="true" />
     </button>
 
-    <div
-      class="aside__fold"
-      :class="{ 'aside__fold--open': open }"
-    >
+    <div class="aside__fold" :class="{ 'aside__fold--open': open }">
       <div class="aside__inner">
         <p class="aside__text">
           {{ item.text }}
@@ -164,11 +149,7 @@ const STATE_ICON: Record<string, string> = {
       :aria-expanded="expandable ? open : undefined"
       @click="said = !open"
     >
-      <span
-        v-if="item.state === 'running'"
-        class="aside__pulse"
-        aria-hidden="true"
-      />
+      <span v-if="item.state === 'running'" class="aside__pulse" aria-hidden="true" />
       <AppIcon
         v-else
         class="aside__glyph"
@@ -177,10 +158,7 @@ const STATE_ICON: Record<string, string> = {
       />
 
       <span class="aside__label">{{ item.label }}</span>
-      <span
-        v-if="item.detail"
-        class="aside__detail"
-      >{{ item.detail }}</span>
+      <span v-if="item.detail" class="aside__detail">{{ item.detail }}</span>
 
       <!--
         The chevron sits at the end of the row, which is where the collapsed
@@ -195,11 +173,7 @@ const STATE_ICON: Record<string, string> = {
       />
     </button>
 
-    <div
-      v-if="expandable"
-      class="aside__fold"
-      :class="{ 'aside__fold--open': open }"
-    >
+    <div v-if="expandable" class="aside__fold" :class="{ 'aside__fold--open': open }">
       <div class="aside__inner">
         <div class="aside__body">
           <!-- What came back, first: it is what the step was opened for. -->
@@ -228,10 +202,7 @@ const STATE_ICON: Record<string, string> = {
               <span>{{ $t('assistant.theQuery') }}</span>
             </button>
 
-            <div
-              class="aside__fold"
-              :class="{ 'aside__fold--open': !sqlFolds || sqlOpen }"
-            >
+            <div class="aside__fold" :class="{ 'aside__fold--open': !sqlFolds || sqlOpen }">
               <div class="aside__inner">
                 <div class="aside__reveal">
                   <SqlBlock
@@ -247,22 +218,13 @@ const STATE_ICON: Record<string, string> = {
       </div>
     </div>
 
-    <p
-      v-if="item.error"
-      class="aside__error"
-    >
+    <p v-if="item.error" class="aside__error">
       {{ item.error }}
     </p>
   </div>
 
-  <p
-    v-else-if="item.kind === 'error'"
-    class="failure"
-  >
-    <AppIcon
-      name="warning"
-      :size="13"
-    />
+  <p v-else-if="item.kind === 'error'" class="failure">
+    <AppIcon name="warning" :size="13" />
     <span>{{ item.message }}</span>
   </p>
 </template>

@@ -471,7 +471,7 @@ function commit(): void {
               @keydown.home.prevent="jump(0)"
               @keydown.end.prevent="jump(rows.length - 1)"
               @keydown.enter.prevent="commit"
-            >
+            />
 
             <button
               v-if="query"
@@ -483,10 +483,7 @@ function commit(): void {
                 input?.focus();
               "
             >
-              <AppIcon
-                name="close"
-                :size="11"
-              />
+              <AppIcon name="close" :size="11" />
             </button>
 
             <kbd class="palette__key">esc</kbd>
@@ -499,18 +496,15 @@ function commit(): void {
             class="palette__list"
             role="listbox"
           >
-            <template
-              v-for="section in sections"
-              :key="section.key"
-            >
+            <template v-for="section in sections" :key="section.key">
               <p class="palette__section type-label">
                 {{ section.label }} ·
                 {{
                   section.key === 'tables' && truncated > 0
                     ? $t('commands.someOf', {
-                      shown: section.items.length,
-                      total: matchedTables.length,
-                    })
+                        shown: section.items.length,
+                        total: matchedTables.length,
+                      })
                     : section.items.length
                 }}
               </p>
@@ -544,21 +538,13 @@ function commit(): void {
                 </template>
 
                 <template v-else-if="entry.row.kind === 'tab'">
-                  <AppIcon
-                    class="palette__icon"
-                    name="query"
-                    :size="13"
-                  />
+                  <AppIcon class="palette__icon" name="query" :size="13" />
                   <span class="palette__label">{{ entry.row.title }}</span>
                   <span class="palette__slash">{{ entry.row.subtitle }}</span>
                 </template>
 
                 <template v-else>
-                  <AppIcon
-                    class="palette__icon"
-                    name="table"
-                    :size="13"
-                  />
+                  <AppIcon class="palette__icon" name="table" :size="13" />
                   <!-- The qualifier is dimmed and the name is not: the path is
                        there to disambiguate, not to be read. -->
                   <span class="palette__label">
@@ -567,7 +553,8 @@ function commit(): void {
                         0,
                         entry.row.hit.path.length - entry.row.hit.entity.name.length
                       )
-                    }}</span>{{ entry.row.hit.entity.name }}
+                    }}</span
+                    >{{ entry.row.hit.entity.name }}
                   </span>
                   <span class="palette__slash">{{ entry.row.hit.entity.kind }}</span>
                 </template>
@@ -575,10 +562,7 @@ function commit(): void {
             </template>
           </div>
 
-          <div
-            v-else
-            class="palette__empty"
-          >
+          <div v-else class="palette__empty">
             <p>{{ query ? $t('commands.nothing') : $t('palette.openSomething') }}</p>
 
             <!-- The path was wrong, not the search. Here is the right one. -->
@@ -587,15 +571,8 @@ function commit(): void {
                 {{ $t('commands.tryPath') }}
               </p>
               <ul class="palette__paths">
-                <li
-                  v-for="path of elsewhere"
-                  :key="path"
-                >
-                  <button
-                    type="button"
-                    class="palette__path"
-                    @click="query = path"
-                  >
+                <li v-for="path of elsewhere" :key="path">
+                  <button type="button" class="palette__path" @click="query = path">
                     {{ path }}
                   </button>
                 </li>

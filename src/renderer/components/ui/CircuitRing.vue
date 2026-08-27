@@ -82,11 +82,7 @@ const path = computed(() => {
 </script>
 
 <template>
-  <span
-    ref="root"
-    class="circuit"
-    aria-hidden="true"
-  >
+  <span ref="root" class="circuit" aria-hidden="true">
     <svg
       v-if="path"
       class="circuit__svg"

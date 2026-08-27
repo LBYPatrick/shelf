@@ -43,16 +43,8 @@ const rows = computed(() =>
 </script>
 
 <template>
-  <span
-    class="palettestrip"
-    role="img"
-    :aria-label="label"
-  >
-    <span
-      v-for="row in rows"
-      :key="row.appearance"
-      class="palettestrip__row"
-    >
+  <span class="palettestrip" role="img" :aria-label="label">
+    <span v-for="row in rows" :key="row.appearance" class="palettestrip__row">
       <span
         v-for="swatch in row.swatches"
         :key="swatch.token"

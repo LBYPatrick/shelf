@@ -276,10 +276,7 @@ onBeforeUnmount(() => stopPersisting?.());
         />
 
         <div class="leftpanel__body">
-          <nav
-            class="rail"
-            :aria-label="$t('workspace.entities')"
-          >
+          <nav class="rail" :aria-label="$t('workspace.entities')">
             <span
               v-show="!sidebarCollapsed"
               class="rail__marker"
@@ -360,10 +357,7 @@ onBeforeUnmount(() => stopPersisting?.());
                 class="sidebar__search focus-fill"
                 @click="paletteOpen = true"
               >
-                <AppIcon
-                  name="search"
-                  :size="13"
-                />
+                <AppIcon name="search" :size="13" />
                 <span class="sidebar__search-label">{{ $t('workspace.searchEntities') }}</span>
                 <kbd class="sidebar__search-key">{{ shortcutLabel('palette.open') }}</kbd>
               </button>
@@ -386,15 +380,8 @@ onBeforeUnmount(() => stopPersisting?.());
             search fields in two places for five panels is two things to learn
             where there was one.
           -->
-              <label
-                v-else-if="rail === 'chats' || rail === 'jobs'"
-                class="sidebar__find"
-              >
-                <AppIcon
-                  class="sidebar__find-icon"
-                  name="search"
-                  :size="13"
-                />
+              <label v-else-if="rail === 'chats' || rail === 'jobs'" class="sidebar__find">
+                <AppIcon class="sidebar__find-icon" name="search" :size="13" />
                 <input
                   v-if="rail === 'chats'"
                   v-model="assistant.filter.text"
@@ -403,7 +390,7 @@ onBeforeUnmount(() => stopPersisting?.());
                   :placeholder="$t('chats.find')"
                   :aria-label="$t('chats.find')"
                   spellcheck="false"
-                >
+                />
                 <input
                   v-else
                   v-model="jobs.filter.text"
@@ -412,7 +399,7 @@ onBeforeUnmount(() => stopPersisting?.());
                   :placeholder="$t('jobs.find')"
                   :aria-label="$t('jobs.find')"
                   spellcheck="false"
-                >
+                />
               </label>
               <!--
             A field, with the glyph that says what it is.
@@ -423,15 +410,8 @@ onBeforeUnmount(() => stopPersisting?.());
             one thing a search field has to do before it is used is look like
             one.
           -->
-              <label
-                v-else
-                class="sidebar__find"
-              >
-                <AppIcon
-                  class="sidebar__find-icon"
-                  name="search"
-                  :size="13"
-                />
+              <label v-else class="sidebar__find">
+                <AppIcon class="sidebar__find-icon" name="search" :size="13" />
                 <input
                   v-model="queries.filter"
                   class="sidebar__find-input"
@@ -447,7 +427,7 @@ onBeforeUnmount(() => stopPersisting?.());
                       : $t('workspace.filterHistory')
                   "
                   spellcheck="false"
-                >
+                />
               </label>
               <!--
             One action per panel, and the one that panel actually has.
@@ -469,10 +449,7 @@ onBeforeUnmount(() => stopPersisting?.());
                 :aria-label="$t('action.refresh')"
                 @click="rail === 'entities' ? entities.refresh() : queries.refresh()"
               >
-                <AppIcon
-                  name="refresh"
-                  :size="13"
-                />
+                <AppIcon name="refresh" :size="13" />
               </PressButton>
               <PressButton
                 v-else-if="rail === 'history'"
@@ -481,22 +458,13 @@ onBeforeUnmount(() => stopPersisting?.());
                 :aria-label="$t('history.clear')"
                 @click="queries.clearHistory()"
               >
-                <AppIcon
-                  name="trash"
-                  :size="13"
-                />
+                <AppIcon name="trash" :size="13" />
               </PressButton>
             </div>
 
-            <div
-              v-if="rail === 'entities'"
-              class="sidebar__counts type-label"
-            >
+            <div v-if="rail === 'entities'" class="sidebar__counts type-label">
               <span>{{ $t('workspace.shown', { count: entities.entities.length }) }}</span>
-              <button
-                class="sidebar__collapse"
-                @click="entities.collapseAll()"
-              >
+              <button class="sidebar__collapse" @click="entities.collapseAll()">
                 {{ $t('action.collapseAll') }}
               </button>
             </div>
@@ -543,15 +511,9 @@ onBeforeUnmount(() => stopPersisting?.());
         aria-hidden="true"
       />
 
-      <section
-        class="content panel-content"
-        :class="{ 'content--alone': sidebarCollapsed }"
-      >
+      <section class="content panel-content" :class="{ 'content--alone': sidebarCollapsed }">
         <div class="content__body">
-          <template
-            v-for="tab in tabs.tabs"
-            :key="tab.id"
-          >
+          <template v-for="tab in tabs.tabs" :key="tab.id">
             <div
               v-show="tab.id === tabs.activeId"
               class="content__pane"
@@ -588,10 +550,7 @@ onBeforeUnmount(() => stopPersisting?.());
             </div>
           </template>
 
-          <div
-            v-if="tabs.tabs.length === 0"
-            class="content__empty"
-          >
+          <div v-if="tabs.tabs.length === 0" class="content__empty">
             <!--
               The starting points, as the same three rows the `+` offers.
               ─────────────────────────────────────────────────────────
@@ -612,7 +571,8 @@ onBeforeUnmount(() => stopPersisting?.());
                 class="opening__mark"
                 :style="{ '--engine-hue': engineHue }"
                 aria-hidden="true"
-              >{{ engineMark }}</span>
+                >{{ engineMark }}</span
+              >
 
               <h2 class="opening__title">
                 {{ connections.active?.name }}
@@ -622,23 +582,10 @@ onBeforeUnmount(() => stopPersisting?.());
               </p>
 
               <ul class="opening__ways">
-                <li
-                  v-for="way in openings"
-                  :key="way.id"
-                >
-                  <button
-                    type="button"
-                    class="opening__way focus-fill"
-                    @click="way.run()"
-                  >
-                    <span
-                      class="opening__icon"
-                      aria-hidden="true"
-                    >
-                      <AppIcon
-                        :name="way.icon"
-                        :size="16"
-                      />
+                <li v-for="way in openings" :key="way.id">
+                  <button type="button" class="opening__way focus-fill" @click="way.run()">
+                    <span class="opening__icon" aria-hidden="true">
+                      <AppIcon :name="way.icon" :size="16" />
                     </span>
                     <span class="opening__label">{{ way.label }}</span>
                     <kbd class="opening__key">{{ way.hint }}</kbd>

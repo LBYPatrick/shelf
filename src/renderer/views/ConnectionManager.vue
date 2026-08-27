@@ -286,10 +286,7 @@ watch(
       -->
       <div class="intro__chrome drag-region" />
       <div class="intro__inner">
-        <header
-          class="identity"
-          style="--step: 0"
-        >
+        <header class="identity" style="--step: 0">
           <AppMark class="identity__mark" />
           <h1 class="identity__title">
             {{ $t('app.name') }}
@@ -299,15 +296,8 @@ watch(
           </p>
         </header>
 
-        <div
-          class="finder"
-          style="--step: 1"
-        >
-          <AppIcon
-            class="finder__icon"
-            name="search"
-            :size="16"
-          />
+        <div class="finder" style="--step: 1">
+          <AppIcon class="finder__icon" name="search" :size="16" />
 
           <input
             v-model="search"
@@ -318,7 +308,7 @@ watch(
             autocomplete="off"
             :aria-label="$t('start.searchLabel')"
             @keydown.enter="parsed ? useParsed() : undefined"
-          >
+          />
 
           <button
             v-if="search"
@@ -327,20 +317,12 @@ watch(
             :aria-label="$t('action.clear')"
             @click="search = ''"
           >
-            <AppIcon
-              name="close"
-              :size="16"
-            />
+            <AppIcon name="close" :size="16" />
           </button>
         </div>
 
         <Transition name="rise">
-          <button
-            v-if="parsed"
-            class="parsed"
-            type="button"
-            @click="useParsed"
-          >
+          <button v-if="parsed" class="parsed" type="button" @click="useParsed">
             <span class="parsed__label">{{ $t('start.recognised') }}</span>
             <span class="parsed__name">{{ parsed.suggestedName }}</span>
             <span class="parsed__engine">{{ parsed.engine }}</span>
@@ -348,10 +330,7 @@ watch(
           </button>
         </Transition>
 
-        <div
-          class="intro__action"
-          style="--step: 2"
-        >
+        <div class="intro__action" style="--step: 2">
           <LineupRow
             :title="$t('start.newConnection')"
             :subtitle="$t('start.newConnectionBody')"
@@ -373,11 +352,7 @@ watch(
           />
         </div>
 
-        <p
-          v-if="!connections.keyringAvailable"
-          class="keyring"
-          style="--step: 3"
-        >
+        <p v-if="!connections.keyringAvailable" class="keyring" style="--step: 3">
           {{ $t('start.noKeyring') }}
         </p>
       </div>
@@ -415,10 +390,7 @@ watch(
               :style="{ '--index': index }"
               @open="open(connection)"
             >
-              <template
-                v-if="connection.readOnly"
-                #badge
-              >
+              <template v-if="connection.readOnly" #badge>
                 <span class="flag">{{ $t('workspace.readOnly') }}</span>
               </template>
 
@@ -429,10 +401,7 @@ watch(
                   :aria-label="$t('start.export', { name: connection.name })"
                   @click="exportConnection(connection)"
                 >
-                  <AppIcon
-                    name="download"
-                    :size="16"
-                  />
+                  <AppIcon name="download" :size="16" />
                 </button>
                 <button
                   type="button"
@@ -443,10 +412,7 @@ watch(
                     editing = connection;
                   "
                 >
-                  <AppIcon
-                    name="pencil"
-                    :size="16"
-                  />
+                  <AppIcon name="pencil" :size="16" />
                 </button>
                 <button
                   type="button"
@@ -454,20 +420,14 @@ watch(
                   :aria-label="$t('start.remove', { name: connection.name })"
                   @click="connections.remove(connection.id)"
                 >
-                  <AppIcon
-                    name="close"
-                    :size="16"
-                  />
+                  <AppIcon name="close" :size="16" />
                 </button>
               </template>
             </LineupRow>
           </div>
         </DisclosureGroup>
 
-        <p
-          v-if="nothingMatches"
-          class="blank"
-        >
+        <p v-if="nothingMatches" class="blank">
           {{ needle ? $t('start.noMatches') : $t('start.nothingSaved') }}
         </p>
 

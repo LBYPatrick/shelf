@@ -29,20 +29,14 @@ const activity = useActivity();
       opacity dial for the same property. A layer on top composites over
       whatever the glass resolved to, at any setting.
     -->
-    <span
-      class="statusbar__wash"
-      aria-hidden="true"
-    />
+    <span class="statusbar__wash" aria-hidden="true" />
 
     <!--
       Announced once, politely. The colour is the fast channel and the text is
       the accessible one; a screen reader should hear "query failed" rather than
       nothing at all because the signal was a shade of red.
     -->
-    <span
-      class="sr-only"
-      role="status"
-    >{{
+    <span class="sr-only" role="status">{{
       activity.busy
         ? $t('activity.working')
         : activity.outcome === 'ok'
@@ -71,10 +65,7 @@ const activity = useActivity();
     </span>
 
     <!-- Filled by the active tab. -->
-    <div
-      id="statusbar-slot"
-      class="statusbar__slot"
-    />
+    <div id="statusbar-slot" class="statusbar__slot" />
   </footer>
 </template>
 

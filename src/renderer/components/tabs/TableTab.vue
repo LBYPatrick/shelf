@@ -400,10 +400,7 @@ watch(
         "
         @click="toggleEditMode"
       >
-        <AppIcon
-          name="pencil"
-          :size="12"
-        />
+        <AppIcon name="pencil" :size="12" />
         {{ $t('table.editData') }}
       </button>
 
@@ -420,15 +417,9 @@ watch(
         :aria-expanded="filterOpen"
         @click="filterOpen = !filterOpen"
       >
-        <AppIcon
-          name="filter"
-          :size="12"
-        />
+        <AppIcon name="filter" :size="12" />
         {{ $t('action.filter') }}
-        <span
-          v-if="filterCount > 0"
-          class="toolbar__count"
-        >{{ filterCount }}</span>
+        <span v-if="filterCount > 0" class="toolbar__count">{{ filterCount }}</span>
       </button>
 
       <!--
@@ -436,40 +427,22 @@ watch(
         own count so "save" never has to be pressed to find out how much it is
         about to do.
       -->
-      <span
-        v-if="pendingCount > 0"
-        class="toolbar__pending"
-      >
+      <span v-if="pendingCount > 0" class="toolbar__pending">
         <span class="toolbar__badge">{{ pendingCount }}</span>
-        <button
-          type="button"
-          class="toolbar__action focus-fill"
-          @click="discard"
-        >
+        <button type="button" class="toolbar__action focus-fill" @click="discard">
           {{ $t('action.discard') }}
         </button>
-        <button
-          type="button"
-          class="toolbar__action focus-fill"
-          @click="previewChanges"
-        >
+        <button type="button" class="toolbar__action focus-fill" @click="previewChanges">
           {{ $t('action.copySql') }}
         </button>
-        <PressButton
-          size="sm"
-          variant="primary"
-          @click="applyChanges"
-        >
+        <PressButton size="sm" variant="primary" @click="applyChanges">
           {{ $t('action.save') }}
         </PressButton>
       </span>
 
       <span class="toolbar__spacer" />
 
-      <span
-        v-if="imported !== null"
-        class="toolbar__done"
-      >{{
+      <span v-if="imported !== null" class="toolbar__done">{{
         $t('table.imported', { count: imported })
       }}</span>
 
@@ -482,10 +455,7 @@ watch(
         :aria-label="$t('action.refresh')"
         @click="load()"
       >
-        <AppIcon
-          name="refresh"
-          :size="12"
-        />
+        <AppIcon name="refresh" :size="12" />
       </button>
 
       <button
@@ -494,30 +464,17 @@ watch(
         class="toolbar__action focus-fill"
         @click="importing = true"
       >
-        <AppIcon
-          name="upload"
-          :size="12"
-        />
+        <AppIcon name="upload" :size="12" />
         {{ $t('action.import') }}
       </button>
 
-      <button
-        type="button"
-        class="toolbar__action focus-fill"
-        @click="exporting = true"
-      >
-        <AppIcon
-          name="download"
-          :size="12"
-        />
+      <button type="button" class="toolbar__action focus-fill" @click="exporting = true">
+        <AppIcon name="download" :size="12" />
         {{ $t('action.export') }}
       </button>
     </div>
 
-    <div
-      class="table-tab__filter"
-      :class="{ 'table-tab__filter--open': filterOpen }"
-    >
+    <div class="table-tab__filter" :class="{ 'table-tab__filter--open': filterOpen }">
       <div class="table-tab__filter-inner">
         <FilterBar
           ref="filterBar"
@@ -528,11 +485,7 @@ watch(
       </div>
     </div>
 
-    <p
-      v-if="error"
-      class="table-tab__error"
-      role="alert"
-    >
+    <p v-if="error" class="table-tab__error" role="alert">
       {{ error }}
     </p>
 
@@ -562,11 +515,7 @@ watch(
       @done="afterImport"
     />
 
-    <Teleport
-      v-if="active"
-      to="#statusbar-slot"
-      defer
-    >
+    <Teleport v-if="active" to="#statusbar-slot" defer>
       <div class="tabstatus">
         <span class="tabstatus__item">
           {{
@@ -591,7 +540,9 @@ watch(
           >
             ‹
           </PressButton>
-          <span class="tabstatus__page">{{ page + 1 }}{{ lastPage === null ? '' : ` / ${lastPage + 1}` }}</span>
+          <span class="tabstatus__page"
+            >{{ page + 1 }}{{ lastPage === null ? '' : ` / ${lastPage + 1}` }}</span
+          >
           <PressButton
             size="sm"
             :disabled="lastPage !== null && page >= lastPage"

@@ -187,48 +187,23 @@ async function remove(): Promise<void> {
         {{ $t('assistant.providersNote') }}
       </p>
 
-      <ul
-        v-if="assistant.providers.length > 0"
-        class="list"
-      >
-        <li
-          v-for="provider in assistant.providers"
-          :key="provider.id"
-        >
-          <button
-            type="button"
-            class="row focus-fill"
-            @click="edit(provider)"
-          >
-            <AppIcon
-              class="row__glyph"
-              name="assistant"
-              filled
-              :size="14"
-            />
+      <ul v-if="assistant.providers.length > 0" class="list">
+        <li v-for="provider in assistant.providers" :key="provider.id">
+          <button type="button" class="row focus-fill" @click="edit(provider)">
+            <AppIcon class="row__glyph" name="assistant" filled :size="14" />
             <span class="row__names">
               <span class="row__name">{{ provider.name }}</span>
               <span class="row__model">{{ provider.model }}</span>
             </span>
-            <span
-              v-if="assistant.active?.id === provider.id"
-              class="row__badge type-label"
-            >{{
+            <span v-if="assistant.active?.id === provider.id" class="row__badge type-label">{{
               $t('assistant.inUse')
             }}</span>
-            <AppIcon
-              class="row__caret"
-              name="chevron"
-              :size="12"
-            />
+            <AppIcon class="row__caret" name="chevron" :size="12" />
           </button>
         </li>
       </ul>
 
-      <p
-        v-else
-        class="intro intro--empty"
-      >
+      <p v-else class="intro intro--empty">
         {{ $t('assistant.noProviderYet') }}
       </p>
     </template>
@@ -236,10 +211,7 @@ async function remove(): Promise<void> {
     <!-- The form. -->
     <template v-else>
       <FormField :label="$t('assistant.fieldName')">
-        <TextInput
-          v-model="form.name"
-          :placeholder="info.label"
-        />
+        <TextInput v-model="form.name" :placeholder="info.label" />
       </FormField>
 
       <FormField :label="$t('assistant.fieldDriver')">
@@ -250,10 +222,7 @@ async function remove(): Promise<void> {
         />
       </FormField>
 
-      <FormField
-        :label="$t('assistant.fieldModel')"
-        :help="$t('assistant.modelHelp')"
-      >
+      <FormField :label="$t('assistant.fieldModel')" :help="$t('assistant.modelHelp')">
         <template #default="{ id }">
           <SuggestInput
             :id="id"
@@ -270,11 +239,7 @@ async function remove(): Promise<void> {
         :label="$t('assistant.fieldBaseUrl')"
         :help="$t('assistant.baseUrlHelp')"
       >
-        <TextInput
-          v-model="form.baseUrl"
-          monospace
-          :placeholder="info.defaultBaseUrl"
-        />
+        <TextInput v-model="form.baseUrl" monospace :placeholder="info.defaultBaseUrl" />
       </FormField>
 
       <FormField
@@ -290,32 +255,19 @@ async function remove(): Promise<void> {
         />
       </FormField>
 
-      <p
-        v-if="problem && !info.acceptsKey"
-        class="problem"
-        role="alert"
-      >
+      <p v-if="problem && !info.acceptsKey" class="problem" role="alert">
         {{ problem }}
       </p>
 
-      <div
-        v-if="testing || saving"
-        class="working"
-      >
+      <div v-if="testing || saving" class="working">
         <ProgressBar />
       </div>
     </template>
 
     <template #footer>
       <template v-if="!editing">
-        <PressButton
-          variant="primary"
-          @click="add()"
-        >
-          <AppIcon
-            name="plus"
-            :size="12"
-          />
+        <PressButton variant="primary" @click="add()">
+          <AppIcon name="plus" :size="12" />
           <span>{{ $t('assistant.addProvider') }}</span>
         </PressButton>
       </template>
@@ -328,26 +280,16 @@ async function remove(): Promise<void> {
           :aria-label="$t('action.delete')"
           @click="remove()"
         >
-          <AppIcon
-            name="trash"
-            :size="12"
-          />
+          <AppIcon name="trash" :size="12" />
         </PressButton>
         <span class="grow" />
         <PressButton @click="editing = null">
           {{ $t('action.cancel') }}
         </PressButton>
-        <PressButton
-          :disabled="!valid || testing"
-          @click="test()"
-        >
+        <PressButton :disabled="!valid || testing" @click="test()">
           {{ $t('action.test') }}
         </PressButton>
-        <PressButton
-          variant="primary"
-          :disabled="!valid || saving"
-          @click="save()"
-        >
+        <PressButton variant="primary" :disabled="!valid || saving" @click="save()">
           {{ $t('action.save') }}
         </PressButton>
       </template>

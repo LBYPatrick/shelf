@@ -29,10 +29,7 @@ const STEP = 1.4;
       :aria-label="$t('erd.zoomOut')"
       @click="emit('zoom', 1 / STEP)"
     >
-      <AppIcon
-        name="minus"
-        :size="13"
-      />
+      <AppIcon name="minus" :size="13" />
     </button>
 
     <span class="zoomer__percent">{{ Math.round(scale * 100) }}%</span>
@@ -44,17 +41,10 @@ const STEP = 1.4;
       :aria-label="$t('erd.zoomIn')"
       @click="emit('zoom', STEP)"
     >
-      <AppIcon
-        name="plus"
-        :size="13"
-      />
+      <AppIcon name="plus" :size="13" />
     </button>
 
-    <button
-      type="button"
-      class="zoomer__fit focus-fill"
-      @click="emit('fit')"
-    >
+    <button type="button" class="zoomer__fit focus-fill" @click="emit('fit')">
       {{ $t('erd.fit') }}
     </button>
   </div>

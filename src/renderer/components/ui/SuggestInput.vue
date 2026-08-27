@@ -142,10 +142,7 @@ function onInput(): void {
 </script>
 
 <template>
-  <div
-    ref="root"
-    class="suggest"
-  >
+  <div ref="root" class="suggest">
     <input
       :id="id"
       ref="field"
@@ -166,7 +163,7 @@ function onInput(): void {
       @keydown.down.prevent="move(1)"
       @keydown.up.prevent="move(-1)"
       @keydown.enter="onEnter"
-    >
+    />
 
     <!--
       A button, not a glyph. The whole point of the list is that it can be

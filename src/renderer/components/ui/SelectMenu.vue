@@ -94,10 +94,7 @@ function move(delta: number): void {
 </script>
 
 <template>
-  <div
-    ref="root"
-    class="selectmenu"
-  >
+  <div ref="root" class="selectmenu">
     <button
       :id="id"
       type="button"

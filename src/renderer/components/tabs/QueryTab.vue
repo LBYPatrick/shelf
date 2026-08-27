@@ -578,14 +578,8 @@ watch(
 </script>
 
 <template>
-  <div
-    ref="split"
-    class="query"
-  >
-    <div
-      class="editor-pane"
-      :style="{ height: `${editorHeight}px` }"
-    >
+  <div ref="split" class="query">
+    <div class="editor-pane" :style="{ height: `${editorHeight}px` }">
       <SqlEditor
         ref="editor"
         v-model="text"
@@ -617,16 +611,8 @@ watch(
       stand. Loudness carries the rest: one filled control, the action ⌘↩
       performs, and everything else quiet until reached for.
     -->
-    <div
-      class="toolbar"
-      role="toolbar"
-      :aria-label="$t('query.groupStatement')"
-    >
-      <div
-        class="toolbar__group"
-        role="group"
-        :aria-label="$t('query.groupStatement')"
-      >
+    <div class="toolbar" role="toolbar" :aria-label="$t('query.groupStatement')">
+      <div class="toolbar__group" role="group" :aria-label="$t('query.groupStatement')">
         <!--
           One control, three scopes. The face performs whichever ⌘↩ performs;
           the chevron opens the others — including Dispatch, which is where a
@@ -645,10 +631,7 @@ watch(
             :disabled="!primaryRun.ready"
             @click="primaryRun.run"
           >
-            <AppIcon
-              name="play"
-              :size="11"
-            />
+            <AppIcon name="play" :size="11" />
             {{ primaryRun.label }}
             <kbd class="key">⌘↩</kbd>
           </PressButton>
@@ -699,21 +682,15 @@ watch(
           <CircuitRing />
 
           <span class="query__running">
-            <span
-              class="query__pulse"
-              aria-hidden="true"
-            />
+            <span class="query__pulse" aria-hidden="true" />
             <span
               class="query__clock"
               role="timer"
               :aria-label="$t('query.elapsed', { time: elapsedLabel(elapsed) })"
-            >{{ elapsedLabel(elapsed) }}</span>
+              >{{ elapsedLabel(elapsed) }}</span
+            >
           </span>
-          <PressButton
-            variant="danger"
-            size="sm"
-            @click="cancel"
-          >
+          <PressButton variant="danger" size="sm" @click="cancel">
             {{ $t('action.cancel') }}
           </PressButton>
         </div>
@@ -728,10 +705,7 @@ watch(
           fetches, and a control that looks live while the thing it governs is
           already in flight is a control that lies about what it is doing.
         -->
-        <div
-          v-tip="$t('settings.maxRows')"
-          class="query__limit"
-        >
+        <div v-tip="$t('settings.maxRows')" class="query__limit">
           <SelectMenu
             v-model="rowLimit"
             :options="rowLimits"
@@ -764,10 +738,7 @@ watch(
             :disabled="!text.trim()"
             @click="formatQuery"
           >
-            <AppIcon
-              name="structure"
-              :size="12"
-            />
+            <AppIcon name="structure" :size="12" />
             {{ $t('action.format') }}
           </button>
 
@@ -779,10 +750,7 @@ watch(
             :disabled="!text.trim() || explaining"
             @click="explain"
           >
-            <AppIcon
-              name="diagram"
-              :size="12"
-            />
+            <AppIcon name="diagram" :size="12" />
             {{ explaining ? $t('query.planning') : $t('action.explain') }}
           </button>
 
@@ -793,10 +761,7 @@ watch(
             :disabled="!text.trim()"
             @click="saveQuery"
           >
-            <AppIcon
-              name="star"
-              :size="12"
-            />
+            <AppIcon name="star" :size="12" />
             {{ savedId ? $t('action.update') : $t('action.saveQuery') }}
           </button>
         </div>
@@ -825,11 +790,7 @@ watch(
         :aria-label="$t('query.groupTransaction')"
       >
         <template v-if="!autoCommit">
-          <span
-            v-if="transactionOpen"
-            class="toolbar__txn"
-            role="status"
-          >{{
+          <span v-if="transactionOpen" class="toolbar__txn" role="status">{{
             $t('query.transactionOpen')
           }}</span>
 
@@ -842,26 +803,16 @@ watch(
             {{ $t('query.begin') }}
           </PressButton>
           <template v-else>
-            <PressButton
-              size="sm"
-              @click="finishTransaction('rollback')"
-            >
+            <PressButton size="sm" @click="finishTransaction('rollback')">
               {{ $t('query.rollback') }}
             </PressButton>
-            <PressButton
-              size="sm"
-              variant="primary"
-              @click="finishTransaction('commit')"
-            >
+            <PressButton size="sm" variant="primary" @click="finishTransaction('commit')">
               {{ $t('query.commit') }}
             </PressButton>
           </template>
         </template>
 
-        <label
-          v-tip="$t('query.autoCommitHint')"
-          class="query__auto"
-        >
+        <label v-tip="$t('query.autoCommitHint')" class="query__auto">
           <span>{{ $t('query.autoCommit') }}</span>
           <ToggleSwitch
             v-model="autoCommit"
@@ -887,11 +838,7 @@ watch(
         role="toolbar"
         :aria-label="$t('query.resultsBar')"
       >
-        <div
-          class="toolbar__group"
-          role="group"
-          :aria-label="$t('query.groupResult')"
-        >
+        <div class="toolbar__group" role="group" :aria-label="$t('query.groupResult')">
           <template v-if="results.length > 1">
             <button
               v-for="(set, index) in results"
@@ -906,10 +853,7 @@ watch(
               <span class="toolbar__count">{{ set.rowCount }}</span>
             </button>
           </template>
-          <span
-            v-else-if="summary"
-            class="results__summary"
-          >{{ summary }}</span>
+          <span v-else-if="summary" class="results__summary">{{ summary }}</span>
         </div>
 
         <span class="toolbar__spacer" />
@@ -926,18 +870,11 @@ watch(
         </button>
       </div>
 
-      <p
-        v-if="error"
-        class="results__error"
-        role="alert"
-      >
+      <p v-if="error" class="results__error" role="alert">
         {{ error }}
       </p>
 
-      <div
-        v-else-if="running"
-        class="results__running"
-      >
+      <div v-else-if="running" class="results__running">
         <ProgressBar />
         <!--
           The shape of what is coming, not the word "Running". A skeleton says
@@ -956,38 +893,24 @@ watch(
             class="results__clock"
             role="timer"
             :aria-label="$t('query.elapsed', { time: elapsedLabel(elapsed) })"
-          >{{ elapsedLabel(elapsed) }}</span>
+            >{{ elapsedLabel(elapsed) }}</span
+          >
         </p>
       </div>
 
-      <div
-        v-else-if="results.length === 0"
-        class="results__note"
-      >
+      <div v-else-if="results.length === 0" class="results__note">
         <span>{{ $t('query.writeAndPress') }}</span>
         <kbd class="key">⌘↩</kbd>
       </div>
 
-      <p
-        v-else-if="fields.length === 0"
-        class="results__note"
-      >
+      <p v-else-if="fields.length === 0" class="results__note">
         {{ summary || $t('query.completed') }}
       </p>
 
-      <DataGrid
-        v-else
-        ref="grid"
-        :fields="fields"
-        :rows="rows"
-        :loading="running"
-      />
+      <DataGrid v-else ref="grid" :fields="fields" :rows="rows" :loading="running" />
     </div>
 
-    <Sheet
-      v-model="saving"
-      :title="$t('query.saveTitle')"
-    >
+    <Sheet v-model="saving" :title="$t('query.saveTitle')">
       <FormField
         v-slot="{ id }"
         :label="$t('connection.name')"
@@ -1005,11 +928,7 @@ watch(
         <PressButton @click="saving = false">
           {{ $t('action.cancel') }}
         </PressButton>
-        <PressButton
-          variant="primary"
-          :disabled="!savedName.trim()"
-          @click="confirmSave"
-        >
+        <PressButton variant="primary" :disabled="!savedName.trim()" @click="confirmSave">
           {{ $t('action.save') }}
         </PressButton>
       </template>
@@ -1027,10 +946,7 @@ watch(
       the rows it produced are two things you do about one statement, and making
       them the same slot meant one always cost the other.
     -->
-    <PlanSheet
-      v-model="planOpen"
-      :plan="plan"
-    />
+    <PlanSheet v-model="planOpen" :plan="plan" />
 
     <ExportSheet
       v-model="exporting"
@@ -1041,11 +957,7 @@ watch(
       :truncated="activeResult?.truncated === true"
     />
 
-    <Teleport
-      v-if="active"
-      to="#statusbar-slot"
-      defer
-    >
+    <Teleport v-if="active" to="#statusbar-slot" defer>
       <div class="tabstatus">
         <!--
           Where the caret is and how long the query is. An engine that reports
@@ -1059,10 +971,7 @@ watch(
             lines: editorStats.lines,
           })
         }}</span>
-        <span
-          v-if="editorStats.selected > 0"
-          class="tabstatus__item"
-        >{{
+        <span v-if="editorStats.selected > 0" class="tabstatus__item">{{
           $t('query.selected', { count: editorStats.selected })
         }}</span>
 
@@ -1078,14 +987,8 @@ watch(
           :options="resultOptions"
           :aria-label="$t('query.result', { index: selectedResult + 1 })"
         />
-        <span
-          v-if="summary"
-          class="tabstatus__item"
-        >{{ summary }}</span>
-        <span
-          v-if="transactionOpen"
-          class="tabstatus__txn"
-        >{{
+        <span v-if="summary" class="tabstatus__item">{{ summary }}</span>
+        <span v-if="transactionOpen" class="tabstatus__txn">{{
           $t('query.transactionOpen')
         }}</span>
       </div>

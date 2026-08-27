@@ -50,22 +50,12 @@ async function copy(): Promise<void> {
 </script>
 
 <template>
-  <Sheet
-    v-model="open"
-    :title="column"
-    wide
-  >
+  <Sheet v-model="open" :title="column" wide>
     <div class="meta">
       <span class="chip">{{ kind }}</span>
       <span class="chip">{{ size }}</span>
-      <span
-        v-if="isJson"
-        class="chip"
-      >{{ $t('value.asJson') }}</span>
-      <span
-        v-if="value === null"
-        class="chip chip--null"
-      >NULL</span>
+      <span v-if="isJson" class="chip">{{ $t('value.asJson') }}</span>
+      <span v-if="value === null" class="chip chip--null">NULL</span>
     </div>
 
     <pre class="value">{{ pretty || $t('value.empty') }}</pre>
@@ -74,10 +64,7 @@ async function copy(): Promise<void> {
       <PressButton @click="copy">
         {{ $t('action.copy') }}
       </PressButton>
-      <PressButton
-        variant="primary"
-        @click="open = false"
-      >
+      <PressButton variant="primary" @click="open = false">
         {{ $t('action.done') }}
       </PressButton>
     </template>

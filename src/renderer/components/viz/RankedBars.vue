@@ -62,12 +62,7 @@ function widthOf(value: number): number {
 </script>
 
 <template>
-  <div
-    class="bars"
-    role="img"
-    :aria-label="label"
-    :style="{ height: `${height}px` }"
-  >
+  <div class="bars" role="img" :aria-label="label" :style="{ height: `${height}px` }">
     <div
       v-for="bar in bars"
       :key="bar.id"
@@ -80,20 +75,14 @@ function widthOf(value: number): number {
       }"
       @pointerdown="emit('pick', bar.id)"
     >
-      <span
-        class="bars__fill"
-        :class="`bars__fill--${bar.tone ?? 'accent'}`"
-      />
+      <span class="bars__fill" :class="`bars__fill--${bar.tone ?? 'accent'}`" />
       <!--
         The part sits at the *end* of the whole, not at its start. Drawn from
         the same edge it reads as a second, shorter bar racing the first; drawn
         at the tip it reads as the portion of the bar that is the problem — and
         it stops covering the label, which begins at the same edge.
       -->
-      <span
-        v-if="bar.inner !== undefined && bar.inner > 0"
-        class="bars__inner"
-      />
+      <span v-if="bar.inner !== undefined && bar.inner > 0" class="bars__inner" />
       <!--
         Drawn over the bar, not after it. A label placed after a bar moves as
         the value changes, so a column of them zig-zags down the chart and the

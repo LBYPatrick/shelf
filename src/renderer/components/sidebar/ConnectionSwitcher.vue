@@ -197,10 +197,7 @@ function onChoose(id: string): void {
 </script>
 
 <template>
-  <div
-    v-if="connections.active"
-    class="switcher drag-region"
-  >
+  <div v-if="connections.active" class="switcher drag-region">
     <button
       ref="row"
       class="switcher__row no-drag"
@@ -222,25 +219,19 @@ function onChoose(id: string): void {
         rail's own width it is on the rail's own centre line at every frame of
         that animation, and the collapse moves nothing.
       -->
-      <span
-        ref="slot"
-        class="switcher__slot"
-      >
+      <span ref="slot" class="switcher__slot">
         <span
           class="switcher__mark"
           :style="{ '--engine-hue': engine?.hue ?? 250 }"
           aria-hidden="true"
-        >{{ engine?.mark }}</span>
+          >{{ engine?.mark }}</span
+        >
       </span>
 
       <span class="switcher__text">
         <span class="switcher__name">{{ connections.active.name }}</span>
         <span class="switcher__state">
-          <span
-            class="switcher__dot"
-            :class="`switcher__dot--${state}`"
-            aria-hidden="true"
-          />
+          <span class="switcher__dot" :class="`switcher__dot--${state}`" aria-hidden="true" />
           <span class="switcher__detail">{{ detail }}</span>
           <!--
             Not a badge in the corner. "Read-only" is a fact about the
@@ -248,10 +239,7 @@ function onChoose(id: string): void {
             a pill floating away from the words it qualifies reads as a
             decoration rather than as part of the sentence.
           -->
-          <span
-            v-if="connections.active.readOnly"
-            class="switcher__flag"
-          >{{
+          <span v-if="connections.active.readOnly" class="switcher__flag">{{
             $t('workspace.readOnly')
           }}</span>
         </span>

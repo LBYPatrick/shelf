@@ -59,21 +59,12 @@ function ago(at: number): string {
       />
     </div>
 
-    <p
-      v-if="queries.visibleHistory.length === 0"
-      class="tilelist__note"
-    >
+    <p v-if="queries.visibleHistory.length === 0" class="tilelist__note">
       {{ $t('history.empty') }}
     </p>
 
-    <ul
-      v-else
-      class="tilelist"
-    >
-      <li
-        v-for="entry in queries.visibleHistory"
-        :key="entry.id"
-      >
+    <ul v-else class="tilelist">
+      <li v-for="entry in queries.visibleHistory" :key="entry.id">
         <div class="tile">
           <!--
             One click, like every other tile in this window. It used to open on
@@ -97,10 +88,7 @@ function ago(at: number): string {
               <span v-if="entry.rowCount !== null">{{
                 $t('jobs.rowCount', { rows: entry.rowCount.toLocaleString() })
               }}</span>
-              <span
-                class="tile__dot"
-                aria-hidden="true"
-              >·</span>
+              <span class="tile__dot" aria-hidden="true">·</span>
               <span>{{ ago(entry.executedAt) }}</span>
             </span>
           </button>

@@ -456,21 +456,13 @@ const KIND_ICON: Record<string, string> = {
 </script>
 
 <template>
-  <div
-    ref="viewport"
-    class="tree"
-    @scroll="onScroll"
-  >
+  <div ref="viewport" class="tree" @scroll="onScroll">
     <!--
       One row's worth of height, measured and never seen. The virtualiser needs
       the real number to size its spacer, and the alternative — reading it off a
       rendered row — is watching an element the recycler will replace.
     -->
-    <div
-      ref="probe"
-      class="tree__probe"
-      aria-hidden="true"
-    />
+    <div ref="probe" class="tree__probe" aria-hidden="true" />
 
     <template v-if="entities.loading">
       <ProgressBar class="tree__progress" />
@@ -478,16 +470,10 @@ const KIND_ICON: Record<string, string> = {
         {{ $t('workspace.loading') }}
       </p>
     </template>
-    <p
-      v-else-if="entities.error"
-      class="tree__note tree__note--error type-label"
-    >
+    <p v-else-if="entities.error" class="tree__note tree__note--error type-label">
       {{ entities.error }}
     </p>
-    <p
-      v-else-if="total === 0"
-      class="tree__note type-label"
-    >
+    <p v-else-if="total === 0" class="tree__note type-label">
       {{ entities.filter ? $t('workspace.noMatch') : $t('workspace.noTables') }}
     </p>
 
@@ -561,10 +547,7 @@ const KIND_ICON: Record<string, string> = {
               :name="row.kind === 'database' ? 'database' : 'folder'"
               :size="13"
             />
-            <span
-              class="row__label"
-              :class="`row__label--${row.kind}`"
-            >{{ row.label }}</span>
+            <span class="row__label" :class="`row__label--${row.kind}`">{{ row.label }}</span>
             <span class="row__count">{{ row.detail }}</span>
             <button
               class="row__action"
@@ -573,10 +556,7 @@ const KIND_ICON: Record<string, string> = {
               @pointerdown.stop
               @click.stop="openMenu($event, row)"
             >
-              <AppIcon
-                name="more"
-                :size="14"
-              />
+              <AppIcon name="more" :size="14" />
             </button>
           </template>
 
@@ -600,10 +580,7 @@ const KIND_ICON: Record<string, string> = {
               @pointerdown.stop
               @click.stop="openMenu($event, row)"
             >
-              <AppIcon
-                name="more"
-                :size="14"
-              />
+              <AppIcon name="more" :size="14" />
             </button>
           </template>
 
@@ -619,24 +596,11 @@ const KIND_ICON: Record<string, string> = {
       </div>
     </div>
 
-    <ContextMenu
-      v-model="menuOpen"
-      :items="menuItems"
-      :at="menuAt"
-      @choose="onChoose"
-    />
+    <ContextMenu v-model="menuOpen" :items="menuItems" :at="menuAt" @choose="onChoose" />
 
-    <QuickDocsSheet
-      v-if="docsOf"
-      v-model="docsOpen"
-      :entity="docsOf"
-    />
+    <QuickDocsSheet v-if="docsOf" v-model="docsOpen" :entity="docsOf" />
 
-    <TablePropertiesSheet
-      v-if="propertiesOf"
-      v-model="propertiesOpen"
-      :entity="propertiesOf"
-    />
+    <TablePropertiesSheet v-if="propertiesOf" v-model="propertiesOpen" :entity="propertiesOf" />
 
     <ContainerPropertiesSheet
       v-if="containerOf"

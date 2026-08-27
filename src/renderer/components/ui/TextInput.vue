@@ -37,5 +37,5 @@ const model = defineModel<string | number | undefined>();
     :aria-invalid="invalid || undefined"
     spellcheck="false"
     autocomplete="off"
-  >
+  />
 </template>

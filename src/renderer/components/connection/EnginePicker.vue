@@ -13,11 +13,7 @@ const model = defineModel<EngineId | null>({ required: true });
 </script>
 
 <template>
-  <div
-    class="engines"
-    role="radiogroup"
-    :aria-label="$t('connection.engineLabel')"
-  >
+  <div class="engines" role="radiogroup" :aria-label="$t('connection.engineLabel')">
     <button
       v-for="engine in ENGINES"
       :key="engine.id"
@@ -29,10 +25,7 @@ const model = defineModel<EngineId | null>({ required: true });
       :aria-checked="model === engine.id"
       @click="model = engine.id"
     >
-      <span
-        class="engine__mark"
-        aria-hidden="true"
-      >{{ engine.mark }}</span>
+      <span class="engine__mark" aria-hidden="true">{{ engine.mark }}</span>
       <span class="engine__name">{{ engine.name }}</span>
     </button>
   </div>

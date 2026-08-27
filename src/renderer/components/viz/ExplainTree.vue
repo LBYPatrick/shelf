@@ -319,10 +319,7 @@ defineExpose({ toSvg, toPng });
 </script>
 
 <template>
-  <div
-    class="plan"
-    :style="{ height: paneHeight }"
-  >
+  <div class="plan" :style="{ height: paneHeight }">
     <svg
       ref="svg"
       class="plan__svg"
@@ -341,12 +338,7 @@ defineExpose({ toSvg, toPng });
         :transform="`translate(${transform.x},${transform.y}) scale(${transform.k})`"
       >
         <g>
-          <path
-            v-for="link in links"
-            :key="link.key"
-            class="plan__link"
-            :d="link.d"
-          />
+          <path v-for="link in links" :key="link.key" class="plan__link" :d="link.d" />
         </g>
 
         <g
@@ -356,17 +348,8 @@ defineExpose({ toSvg, toPng });
           :style="{ '--index': index, '--weight': weight(node.data) }"
           :transform="`translate(${node.x - widthOf(node.data) / 2},${node.y})`"
         >
-          <rect
-            class="plan__box"
-            :width="widthOf(node.data)"
-            :height="NODE_HEIGHT"
-            rx="8"
-          />
-          <text
-            class="plan__label"
-            x="10"
-            y="14"
-          >{{ node.data.label }}</text>
+          <rect class="plan__box" :width="widthOf(node.data)" :height="NODE_HEIGHT" rx="8" />
+          <text class="plan__label" x="10" y="14">{{ node.data.label }}</text>
           <text
             v-if="node.data.detail"
             v-tip="detailOf(node.data).full"
@@ -398,11 +381,7 @@ defineExpose({ toSvg, toPng });
       </g>
     </svg>
 
-    <ZoomControl
-      :scale="transform.k"
-      @zoom="nudge"
-      @fit="fit"
-    />
+    <ZoomControl :scale="transform.k" @zoom="nudge" @fit="fit" />
   </div>
 </template>
 

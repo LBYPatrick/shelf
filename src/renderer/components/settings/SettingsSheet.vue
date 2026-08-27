@@ -284,12 +284,7 @@ const languageOptions = computed(() => [
 </script>
 
 <template>
-  <Sheet
-    v-model="open"
-    :title="$t('settings.title')"
-    icon="settings"
-    flush
-  >
+  <Sheet v-model="open" :title="$t('settings.title')" icon="settings" flush>
     <!--
       What the sheet is showing sits beside its name; what it can do sits at the
       far end with the close button. The switcher used to be the first thing
@@ -297,17 +292,10 @@ const languageOptions = computed(() => [
       pushed the first actual setting under the fold.
     -->
     <template #lead>
-      <SegmentedControl
-        v-model="view"
-        :options="views"
-        :aria-label="$t('settings.title')"
-      />
+      <SegmentedControl v-model="view" :options="views" :aria-label="$t('settings.title')" />
     </template>
 
-    <div
-      v-show="view === 'visual'"
-      class="panels"
-    >
+    <div v-show="view === 'visual'" class="panels">
       <!--
         Every section is a heading, a sentence saying what it is for, and one
         card of rows.
@@ -414,10 +402,7 @@ const languageOptions = computed(() => [
             </span>
           </div>
 
-          <div
-            v-if="!theme.syntax.sync"
-            class="row"
-          >
+          <div v-if="!theme.syntax.sync" class="row">
             <span class="row__label">{{ $t('settings.syntaxDark') }}</span>
             <span class="row__control scheme">
               <SelectMenu
@@ -467,10 +452,7 @@ const languageOptions = computed(() => [
             />
           </div>
 
-          <div
-            v-if="!materialsAreDefault"
-            class="row"
-          >
+          <div v-if="!materialsAreDefault" class="row">
             <span class="row__label">{{ $t('settings.resetMaterials') }}</span>
             <!--
               The row says what is being reset and the button carries the verb,
@@ -502,10 +484,7 @@ const languageOptions = computed(() => [
 
         <div class="rows">
           <div class="row">
-            <label
-              class="row__label"
-              for="settings-page-size"
-            >{{
+            <label class="row__label" for="settings-page-size">{{
               $t('settings.rowsPerPage')
             }}</label>
             <input
@@ -516,7 +495,7 @@ const languageOptions = computed(() => [
               min="10"
               max="1000"
               step="10"
-            >
+            />
           </div>
 
           <!--
@@ -589,10 +568,7 @@ const languageOptions = computed(() => [
 
         <div class="rows">
           <div class="row">
-            <label
-              class="row__label"
-              for="settings-font-size"
-            >{{
+            <label class="row__label" for="settings-font-size">{{
               $t('settings.fontSize')
             }}</label>
             <input
@@ -602,7 +578,7 @@ const languageOptions = computed(() => [
               type="number"
               min="10"
               max="24"
-            >
+            />
           </div>
 
           <!--
@@ -612,10 +588,7 @@ const languageOptions = computed(() => [
             still toggles it, which is the part that matters.
           -->
           <div class="row">
-            <label
-              class="row__label"
-              for="settings-wrap-lines"
-            >{{
+            <label class="row__label" for="settings-wrap-lines">{{
               $t('settings.wrapLines')
             }}</label>
             <CheckBox
@@ -663,15 +636,8 @@ const languageOptions = computed(() => [
         <div class="rows">
           <div class="row">
             <span class="row__label">{{ $t('settings.keyboardRow') }}</span>
-            <PressButton
-              class="row__control"
-              size="sm"
-              @click="emit('manage-shortcuts')"
-            >
-              <AppIcon
-                name="keyboard"
-                :size="13"
-              />
+            <PressButton class="row__control" size="sm" @click="emit('manage-shortcuts')">
+              <AppIcon name="keyboard" :size="13" />
               {{ $t('settings.keyboardOpen') }}
             </PressButton>
           </div>
@@ -703,11 +669,7 @@ const languageOptions = computed(() => [
                 emit('manage-providers');
               "
             >
-              <AppIcon
-                name="assistant"
-                filled
-                :size="13"
-              />
+              <AppIcon name="assistant" filled :size="13" />
               {{ $t('assistant.manageProviders') }}
             </PressButton>
           </div>
@@ -728,30 +690,16 @@ const languageOptions = computed(() => [
           <!-- The row says what happens; the button carries the verb. -->
           <div class="row">
             <span class="row__label">{{ $t('settings.exportRow') }}</span>
-            <PressButton
-              class="row__control"
-              size="sm"
-              @click="exportSettings"
-            >
-              <AppIcon
-                name="download"
-                :size="13"
-              />
+            <PressButton class="row__control" size="sm" @click="exportSettings">
+              <AppIcon name="download" :size="13" />
               {{ $t('settings.exportSettings') }}
             </PressButton>
           </div>
 
           <div class="row">
             <span class="row__label">{{ $t('settings.importRow') }}</span>
-            <PressButton
-              class="row__control"
-              size="sm"
-              @click="importSettings"
-            >
-              <AppIcon
-                name="upload"
-                :size="13"
-              />
+            <PressButton class="row__control" size="sm" @click="importSettings">
+              <AppIcon name="upload" :size="13" />
               {{ $t('settings.importSettings') }}
             </PressButton>
           </div>
@@ -789,10 +737,7 @@ const languageOptions = computed(() => [
               "
               @click="resetData"
             >
-              <AppIcon
-                name="refresh"
-                :size="13"
-              />
+              <AppIcon name="refresh" :size="13" />
               {{ confirmingReset ? $t('action.confirm') : $t('action.reset') }}
             </PressButton>
           </div>
@@ -831,15 +776,8 @@ const languageOptions = computed(() => [
       inset inside it, because a code surface with a margin around it reads as a
       widget on a page, and this view *is* the page.
     -->
-    <div
-      v-show="view === 'json'"
-      class="json"
-    >
-      <JsonEditor
-        v-model="jsonText"
-        class="json__editor"
-        :label="$t('settings.viewJson')"
-      />
+    <div v-show="view === 'json'" class="json">
+      <JsonEditor v-model="jsonText" class="json__editor" :label="$t('settings.viewJson')" />
 
       <!--
         The document's own bar: what it is, and what can be done with it.
@@ -852,32 +790,16 @@ const languageOptions = computed(() => [
         row: a state on the left, the actions on the right, one of them filled.
       -->
       <div class="json__bar">
-        <span
-          v-if="jsonError"
-          class="json__state json__state--error"
-          role="alert"
-        >
-          <AppIcon
-            name="warning"
-            :size="13"
-          />
+        <span v-if="jsonError" class="json__state json__state--error" role="alert">
+          <AppIcon name="warning" :size="13" />
           {{ jsonError }}
         </span>
-        <span
-          v-else
-          class="json__state json__state--ok"
-        >
-          <AppIcon
-            name="check"
-            :size="13"
-          />
+        <span v-else class="json__state json__state--ok">
+          <AppIcon name="check" :size="13" />
           {{ $t('settings.jsonValid') }}
         </span>
 
-        <span
-          class="json__count"
-          aria-hidden="true"
-        >·</span>
+        <span class="json__count" aria-hidden="true">·</span>
         <span class="json__count">{{
           $t('settings.jsonLines', { count: jsonText.split('\n').length })
         }}</span>
@@ -890,10 +812,7 @@ const languageOptions = computed(() => [
           class="json__action focus-fill"
           @click="copyToClipboard"
         >
-          <AppIcon
-            name="copy"
-            :size="12"
-          />
+          <AppIcon name="copy" :size="12" />
           {{ $t('settings.copy') }}
         </button>
 
@@ -903,19 +822,11 @@ const languageOptions = computed(() => [
           class="json__action focus-fill"
           @click="exportSettings"
         >
-          <AppIcon
-            name="download"
-            :size="12"
-          />
+          <AppIcon name="download" :size="12" />
           {{ $t('settings.exportSettings') }}
         </button>
 
-        <PressButton
-          size="sm"
-          variant="primary"
-          :disabled="!!jsonError"
-          @click="applyJson"
-        >
+        <PressButton size="sm" variant="primary" :disabled="!!jsonError" @click="applyJson">
           {{ $t('action.apply') }}
         </PressButton>
       </div>

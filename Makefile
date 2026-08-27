@@ -107,8 +107,9 @@ format: ## Format and lint-fix the codebase
 
 tidy: format ## Alias for format
 
-lint: ## Lint without fixing
+lint: ## Lint and check formatting, without fixing either
 	@pnpm lint
+	@pnpm exec prettier --check "src/**/*.{ts,vue,css}" "tests/**/*.ts" "*.{ts,js,json}"
 
 commit: ## Format, stage and commit
 	@bash scripts/commit.sh

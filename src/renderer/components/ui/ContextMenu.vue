@@ -169,14 +169,8 @@ onBeforeUnmount(() => {
         @keydown.enter.prevent="commit"
         @keydown.space.prevent="commit"
       >
-        <template
-          v-for="item in items"
-          :key="item.id"
-        >
-          <hr
-            v-if="item.startsGroup"
-            class="popmenu__rule"
-          >
+        <template v-for="item in items" :key="item.id">
+          <hr v-if="item.startsGroup" class="popmenu__rule" />
           <button
             type="button"
             class="popmenu__item"
@@ -185,21 +179,13 @@ onBeforeUnmount(() => {
             :disabled="item.disabled"
             @pointerenter="
               !item.disabled &&
-                (active = enabled.findIndex((candidate) => candidate.id === item.id))
+              (active = enabled.findIndex((candidate) => candidate.id === item.id))
             "
             @click="choose(item)"
           >
-            <AppIcon
-              v-if="item.icon"
-              class="popmenu__icon"
-              :name="item.icon"
-              :size="12"
-            />
+            <AppIcon v-if="item.icon" class="popmenu__icon" :name="item.icon" :size="12" />
             <span class="popmenu__label">{{ item.label }}</span>
-            <kbd
-              v-if="item.hint"
-              class="popmenu__hint"
-            >{{ item.hint }}</kbd>
+            <kbd v-if="item.hint" class="popmenu__hint">{{ item.hint }}</kbd>
           </button>
         </template>
       </div>

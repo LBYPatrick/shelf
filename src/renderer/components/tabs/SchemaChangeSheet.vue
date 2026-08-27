@@ -54,10 +54,7 @@ async function copy(): Promise<void> {
     v-model="open"
     :title="destructive ? t('structure.cannotUndo') : t('structure.applyChange')"
   >
-    <p
-      class="summary"
-      :class="{ 'summary--danger': destructive }"
-    >
+    <p class="summary" :class="{ 'summary--danger': destructive }">
       {{ describe(change) }}
     </p>
 
@@ -72,12 +69,7 @@ async function copy(): Promise<void> {
       :label="$t('structure.typeToConfirm')"
       :help="$t('structure.typeToConfirmHelp', { name: target })"
     >
-      <TextInput
-        :id="id"
-        v-model="typed"
-        :placeholder="target"
-        monospace
-      />
+      <TextInput :id="id" v-model="typed" :placeholder="target" monospace />
     </FormField>
 
     <template #footer>

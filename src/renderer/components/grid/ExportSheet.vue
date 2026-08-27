@@ -195,10 +195,7 @@ async function run(): Promise<void> {
 </script>
 
 <template>
-  <Sheet
-    v-model="open"
-    :title="$t('export.title')"
-  >
+  <Sheet v-model="open" :title="$t('export.title')">
     <section class="section">
       <p class="type-label section__title">
         {{ $t('export.delivery') }}
@@ -221,18 +218,11 @@ async function run(): Promise<void> {
       Only where the answer differs from what is on screen. A run applied a
       preview limit; a dispatched job did not, and its rows are already here.
     -->
-    <section
-      v-if="offersScope && delivery === 'file'"
-      class="section"
-    >
+    <section v-if="offersScope && delivery === 'file'" class="section">
       <p class="type-label section__title">
         {{ $t('export.scope') }}
       </p>
-      <SegmentedControl
-        v-model="scope"
-        :options="scopes"
-        :aria-label="$t('export.scope')"
-      />
+      <SegmentedControl v-model="scope" :options="scopes" :aria-label="$t('export.scope')" />
       <p class="hint type-label">
         {{
           scope !== 'full'
@@ -253,40 +243,22 @@ async function run(): Promise<void> {
         same kind — pick one of four — and answering them through two different
         shapes, one above the other, made them look unrelated.
       -->
-      <SegmentedControl
-        v-model="format"
-        :options="formats"
-        :aria-label="$t('export.format')"
-      />
+      <SegmentedControl v-model="format" :options="formats" :aria-label="$t('export.format')" />
     </section>
 
-    <p
-      v-if="delivery === 'file' && !canWriteFile"
-      class="hint type-label"
-    >
+    <p v-if="delivery === 'file' && !canWriteFile" class="hint type-label">
       {{ $t('export.fileUnavailable') }}
     </p>
 
-    <p
-      v-if="error"
-      class="hint hint--error type-label"
-      role="alert"
-    >
+    <p v-if="error" class="hint hint--error type-label" role="alert">
       {{ error }}
     </p>
-    <p
-      v-else-if="done"
-      class="hint type-label"
-      role="status"
-    >
+    <p v-else-if="done" class="hint type-label" role="status">
       {{ done }}
     </p>
 
     <template #footer>
-      <PressButton
-        size="sm"
-        @click="open = false"
-      >
+      <PressButton size="sm" @click="open = false">
         {{ $t('action.cancel') }}
       </PressButton>
       <!--
@@ -306,11 +278,7 @@ async function run(): Promise<void> {
         <span :class="{ export__label: busy }">
           {{ busy ? $t('export.working') : $t('export.run') }}
         </span>
-        <span
-          v-if="busy"
-          class="export__clock"
-          role="timer"
-        >{{ elapsedLabel(elapsed) }}</span>
+        <span v-if="busy" class="export__clock" role="timer">{{ elapsedLabel(elapsed) }}</span>
       </PressButton>
     </template>
   </Sheet>

@@ -28,27 +28,11 @@ const model = defineModel<boolean>({ required: true });
 </script>
 
 <template>
-  <label
-    class="check"
-    :class="{ 'check--disabled': disabled }"
-  >
-    <input
-      :id="id"
-      v-model="model"
-      class="check__input"
-      type="checkbox"
-      :disabled="disabled"
-    >
+  <label class="check" :class="{ 'check--disabled': disabled }">
+    <input :id="id" v-model="model" class="check__input" type="checkbox" :disabled="disabled" />
 
-    <span
-      class="check__box"
-      aria-hidden="true"
-    >
-      <svg
-        class="check__tick"
-        viewBox="0 0 16 16"
-        fill="none"
-      >
+    <span class="check__box" aria-hidden="true">
+      <svg class="check__tick" viewBox="0 0 16 16" fill="none">
         <path
           d="M3.5 8.5 L6.5 11.5 L12.5 4.5"
           stroke="currentColor"
@@ -59,15 +43,9 @@ const model = defineModel<boolean>({ required: true });
       </svg>
     </span>
 
-    <span
-      v-if="label || hint"
-      class="check__text"
-    >
+    <span v-if="label || hint" class="check__text">
       <span class="check__label">{{ label }}</span>
-      <span
-        v-if="hint"
-        class="check__hint"
-      >{{ hint }}</span>
+      <span v-if="hint" class="check__hint">{{ hint }}</span>
     </span>
     <slot />
   </label>
