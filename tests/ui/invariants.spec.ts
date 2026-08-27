@@ -1774,75 +1774,21 @@ test.describe('the columns and the pane', () => {
      * So the bar is divided where the columns end: its leading half wears the
      * sidebar's surface and the strip wears the pane's, and the seam between
      * them is the same vertical line that runs all the way down the window.
-     *
-     * The leading region is *at least* the columns' width and sometimes wider —
-     * it has to clear the traffic lights, and collapsing the sidebar takes the
-     * columns below it down to the rail alone, which is narrower than they are.
-     * That overhang sits directly over the working pane, so it wears the pane's
-     * surface; only the part actually above the columns is the columns'. It
-     * wore the sidebar's shade across the whole region once, which put a step in
-     * the pane's leading edge for the height of the bar.
      */
     const paint = await sample.evaluate(() => {
       const of = (selector: string) =>
         getComputedStyle(document.querySelector(selector)!).backgroundColor;
       return {
         lead: of('.topbar__lead'),
-        columns: of('.topbar__columns'),
-        over: of('.topbar__over'),
         sidebar: of('.leftpanel'),
         strip: of('.strip'),
         pane: of('.content'),
       };
     });
 
-    expect(paint.columns, 'the bar does not continue the columns').toBe(paint.sidebar);
+    expect(paint.lead, 'the bar does not continue the columns').toBe(paint.sidebar);
     expect(paint.strip, 'the strip does not continue the pane').toBe(paint.pane);
-    expect(paint.over, 'the overhang does not continue the pane').toBe(paint.pane);
-    /*
-     * And the columns' half is not laid over the pane's. They are glass; a
-     * translucent surface composited against an opaque one beneath it comes out
-     * a different shade from the same surface over the window's own material,
-     * which is exactly what the sidebar under it is.
-     */
-    expect(paint.lead, 'the bar paints a surface under its two halves').toBe(
-      'rgba(0, 0, 0, 0)'
-    );
-    expect(paint.columns, 'the two halves of the bar are the same shade').not.toBe(paint.strip);
-  });
-
-  test('the pane has no step in its leading edge when the sidebar is shut', async ({
-    sample,
-  }) => {
-    /*
-     * The whole leading region wore the sidebar's material, and it is wider
-     * than the rail because the traffic lights are. Collapsed, that put a band
-     * of the sidebar's shade over the top of the pane, from the rail's edge to
-     * wherever the controls reached — a visible step in the pane's own edge,
-     * for exactly the height of the bar.
-     */
-    await sample
-      .getByRole('button', { name: /sidebar/i })
-      .first()
-      .click();
-    await sample.waitForTimeout(500);
-
-    const seam = await sample.evaluate(() => {
-      const pane = document.querySelector('.content')!.getBoundingClientRect();
-      const above = document.elementFromPoint(pane.left + 4, 6);
-      const columns = document.querySelector('.topbar__columns')!.getBoundingClientRect();
-      return {
-        columnsRight: columns.right,
-        paneLeft: pane.left,
-        aboveIsPaneShade:
-          above !== null &&
-          getComputedStyle(above.closest('.topbar__over, .strip') ?? above).backgroundColor ===
-            getComputedStyle(document.querySelector('.content')!).backgroundColor,
-      };
-    });
-
-    expect(Math.abs(seam.columnsRight - seam.paneLeft)).toBeLessThanOrEqual(1);
-    expect(seam.aboveIsPaneShade, 'the bar puts a different shade over the pane').toBe(true);
+    expect(paint.lead, 'the two halves of the bar are the same shade').not.toBe(paint.strip);
   });
 
   test('the seam in the bar lines up with the seam below it', async ({ sample }) => {
@@ -1850,10 +1796,7 @@ test.describe('the columns and the pane', () => {
     // worse than either, and is what a boundary an eighth of an inch out looks
     // like.
     const edges = await sample.evaluate(() => {
-      // The seam is drawn by the columns' own region, not by the whole leading
-      // half — that one is wider than the columns whenever the traffic lights
-      // are.
-      const lead = document.querySelector('.topbar__columns')!.getBoundingClientRect();
+      const lead = document.querySelector('.topbar__lead')!.getBoundingClientRect();
       const strip = document.querySelector('.strip')!.getBoundingClientRect();
       const pane = document.querySelector('.content')!.getBoundingClientRect();
       return { lead: lead.right, strip: strip.left, pane: pane.left };

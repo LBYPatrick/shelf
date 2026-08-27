@@ -36,10 +36,7 @@
     "dispatch": "后台运行",
     "saveQuery": "保存查询",
     "back": "返回",
-    "showSuggestions": "显示建议",
-    "disconnect": "断开连接",
-    "yes": "是",
-    "no": "否"
+    "showSuggestions": "显示建议"
   },
   "time": {
     "justNow": "刚刚",
@@ -113,8 +110,7 @@
     "savePasswordHelp": "存放在系统钥匙串中，不会写入应用数据库。",
     "noKeyringHelp": "不可用：这台机器上没有系统钥匙串。",
     "sshKeyFile": "密钥文件",
-    "sshPasswordMode": "密码",
-    "andMore": "还有 {{count}} 个…"
+    "sshPasswordMode": "密码"
   },
   "workspace": {
     "entities": "对象",
@@ -692,32 +688,5 @@
     "empty": "尚未保存任何内容。写一条查询后点击“保存查询”。",
     "discard": "删除此查询",
     "rename": "重命名此查询"
-  },
-  "diagnose": {
-    "action": "诊断连接…",
-    "title": "连接状况",
-    "roundTrip": "往返时间",
-    "samples": "保留 {{count}} 次 ping",
-    "fastest": "最快",
-    "typical": "典型",
-    "worst": "最慢",
-    "jitter": "抖动",
-    "catalogue": "目录",
-    "catalogueNote": "实测，而非声明",
-    "databases": "数据库",
-    "schemas": "模式",
-    "entities": "表",
-    "found": "找到 {{count}} 个",
-    "about": "此连接",
-    "version": "版本",
-    "database": "数据库",
-    "again": "重新运行",
-    "running": "正在测量…",
-    "steady": "稳定",
-    "variable": "有响应，但不均匀",
-    "erratic": "不稳定 — 部分往返明显更慢",
-    "partial": "已连接，但目录的一部分没有响应",
-    "unreachable": "数据库没有响应",
-    "readOnly": "只读"
   }
 }

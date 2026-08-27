@@ -212,7 +212,7 @@ onBeforeUnmount(() => stopPersisting?.());
     -->
     <header
       class="topbar drag-region"
-      :class="{ 'topbar--tight': sidebarCollapsed }"
+      :class="{ 'topbar--alone': sidebarCollapsed }"
     >
       <!--
         The controls, the toggle, and the room the columns take up.
@@ -231,27 +231,7 @@ onBeforeUnmount(() => stopPersisting?.());
         prevent. It travels on the sidebar's own curve, so the two move as one
         thing rather than as two that happen to agree at each end.
       -->
-      <div class="topbar__lead">
-        <!--
-          Two surfaces side by side, never one on top of the other.
-          ────────────────────────────────────────────────────────
-          This region has to be at least as wide as the traffic lights, and
-          collapsing the sidebar takes the columns *below* it down to the rail —
-          narrower than that. So the whole region wore the sidebar's material
-          and the overhang sat over the working pane, putting a step in the
-          pane's leading edge for the height of the bar.
-
-          The obvious repair was to paint the pane's surface on this box and lay
-          the columns' material over the part above the columns, and that is
-          worse: the columns are *glass*, so laying them over an opaque pane
-          composites them against the pane instead of against the window's own
-          material, and the band came out a different shade from the sidebar
-          directly under it. Two absolutely positioned siblings, each painting
-          only its own share, neither behind the other.
-        -->
-        <div class="topbar__columns mat-regular panel-sidebar" />
-        <div class="topbar__over panel-content" />
-      </div>
+      <div class="topbar__lead mat-regular panel-sidebar" />
 
       <TabStrip />
     </header>
@@ -518,7 +498,10 @@ onBeforeUnmount(() => stopPersisting?.());
         @collapse-toggle="sidebarCollapsed = true"
       />
 
-      <section class="content panel-content">
+      <section
+        class="content panel-content"
+        :class="{ 'content--alone': sidebarCollapsed }"
+      >
         <div class="content__body">
           <template
             v-for="tab in tabs.tabs"
@@ -603,15 +586,11 @@ onBeforeUnmount(() => stopPersisting?.());
                     class="opening__way focus-fill"
                     @click="way.run()"
                   >
-                    <span
+                    <AppIcon
                       class="opening__icon"
-                      aria-hidden="true"
-                    >
-                      <AppIcon
-                        :name="way.icon"
-                        :size="16"
-                      />
-                    </span>
+                      :name="way.icon"
+                      :size="14"
+                    />
                     <span class="opening__label">{{ way.label }}</span>
                     <kbd class="opening__key">{{ way.hint }}</kbd>
                   </button>
@@ -698,7 +677,6 @@ onBeforeUnmount(() => stopPersisting?.());
  * prevent.
  */
 .topbar__lead {
-  position: relative;
   box-sizing: border-box;
   flex: 0 0 auto;
   min-width: var(--columns-w);
@@ -707,49 +685,8 @@ onBeforeUnmount(() => stopPersisting?.());
   transition: min-width 260ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/* Exactly the columns, on their own curve, so the seam under the bar is the
-   same seam as the one beside it at every frame of the collapse. */
-.topbar__columns {
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  width: var(--columns-w);
-  transition: width 260ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-/* Whatever is left, which is nothing at all until the columns are narrower
-   than the window controls need this region to be. */
-.topbar__over {
-  position: absolute;
-  inset-block: 0;
-  inset-inline: var(--columns-w) 0;
-  transition: inset-inline-start 260ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-/*
- * And under the traffic lights the join is feathered, not cut.
- * ────────────────────────────────────────────────────────────
- * Collapsed, the columns are the rail alone — narrower than the window
- * controls — so the boundary between the two surfaces falls directly under
- * them, and nothing may draw a line there. The three ways to avoid it all cost
- * something: give the whole region to the columns and their shade overhangs the
- * pane as a band; give it to the pane and the rail's own column stops short of
- * the top; leave the seam and the green button sits on it.
- *
- * So the pane's surface fades in across the last few pixels instead. Both
- * surfaces stay where they belong, and there is no edge under the controls to
- * see — only when the collapse actually puts one there, because a feather above
- * the sidebar's own edge would be a smudge where a clean seam is wanted.
- */
-.topbar--tight .topbar__over {
-  inset-inline-start: calc(var(--columns-w) - 1.5rem);
-  mask-image: linear-gradient(to right, transparent, #000 1.5rem);
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .topbar__lead,
-  .topbar__columns,
-  .topbar__over {
+  .topbar__lead {
     transition: none;
   }
 }
@@ -1170,6 +1107,39 @@ onBeforeUnmount(() => stopPersisting?.());
 }
 
 /*
+ * And rounded again when it is on its own.
+ *
+ * The square edge is right while the strip continues the pane upward: the two
+ * are one column and a corner between them would be a seam inside one surface.
+ * Collapse the sidebar and that stops being true — the columns are down to the
+ * rail, the strip's leading edge is barely past the traffic lights, and the
+ * pane is the whole window with a bar on top of it. There the corner is what it
+ * always was: the softening where an opaque surface meets the chrome above it.
+ *
+ * Both halves animate, on the sidebar's own curve, so the change reads as one
+ * movement rather than as two things switching at the moment the width lands.
+ */
+.content--alone {
+  border-start-start-radius: var(--radius-box);
+}
+
+.content {
+  transition: border-start-start-radius 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/*
+ * And the strip gives its surface back.
+ *
+ * It wears the pane's material because it *is* the top of the pane. With no
+ * sidebar under it there is nothing for it to be the top of — it is a bar over
+ * a rounded pane, which is a different object, and one the bar should not be
+ * pretending to be part of.
+ */
+.topbar--alone :deep(.strip) {
+  background-color: transparent;
+}
+
+/*
  * Square, because the tab strip is now the pane's own top edge.
  *
  * There was one rounded corner here, backed by a masked wedge of the sidebar's
@@ -1271,22 +1241,11 @@ onBeforeUnmount(() => stopPersisting?.());
  * opens, and something that simply *is there* in the frame after a close reads
  * as a glitch — arriving says the pane changed rather than the app blinked.
  */
-/*
- * Bigger, and the rows are objects.
- *
- * The first attempt drew all three ways in at the weight of a caption — a
- * 14-unit glyph at 65% opacity, a 13px label and a rule of nothing between
- * them — so the only thing on an empty pane with any presence was the note
- * above it saying there was nothing on it. The list is the page's whole
- * purpose; it can look like it. Each way is a card of its own now: a tinted
- * tile behind its glyph, a label a step up from body copy, and a surface that
- * lifts under the pointer.
- */
 .opening {
   display: grid;
   justify-items: center;
   gap: var(--gap-tight);
-  width: min(27rem, 100%);
+  width: min(24rem, 100%);
   text-align: center;
 }
 
@@ -1297,49 +1256,38 @@ onBeforeUnmount(() => stopPersisting?.());
 .opening__mark {
   display: grid;
   place-items: center;
-  width: 3.25rem;
-  height: 3.25rem;
-  margin-bottom: var(--gap);
-  border-radius: 1rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: var(--gap-tight);
+  border-radius: 0.75rem;
   background: linear-gradient(
     145deg,
     oklch(64% 0.16 var(--engine-hue)),
     oklch(52% 0.17 var(--engine-hue))
   );
   color: oklch(99% 0 0);
-  font-size: 0.9375rem;
+  font-size: 0.75rem;
   font-weight: 650;
 }
 
-/*
- * The container is muted; the name and the actions are not.
- *
- * `.content__empty` dims everything inside it, which was right when it held two
- * grey sentences and is wrong now that it holds the page's only controls — a
- * button drawn at 45% of the text colour reads as disabled.
- */
 .opening__title {
   margin: 0;
-  color: var(--color-base-content);
-  /* Type that grows tightens. */
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 600;
-  letter-spacing: -0.018em;
+  letter-spacing: -0.01em;
   animation-delay: 40ms;
 }
 
 .opening__note {
-  max-width: 24rem;
-  margin: 0 0 var(--gap-section);
-  font-size: 0.875rem;
-  line-height: 1.5;
+  margin: 0 0 var(--gap-loose);
+  font-size: 0.8125rem;
   color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
   animation-delay: 80ms;
 }
 
 .opening__ways {
   display: grid;
-  gap: var(--gap-tight);
+  gap: var(--gap-hair);
   width: 100%;
   margin: 0;
   padding: 0;
@@ -1352,22 +1300,18 @@ onBeforeUnmount(() => stopPersisting?.());
   align-items: center;
   gap: var(--gap);
   width: 100%;
-  min-height: 3.25rem;
-  padding-inline: var(--gap) var(--gap-loose);
-  border: 1px solid var(--separator);
-  border-radius: var(--radius-box);
-  background: var(--fill-4);
+  min-height: var(--hit-min);
+  padding-inline: var(--gap-loose);
+  border-radius: var(--control-radius);
   text-align: start;
   transition:
     background-color var(--t-hover) var(--ease-out),
-    border-color var(--t-hover) var(--ease-out),
     transform var(--t-press) var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .opening__way:hover {
-    background: var(--fill-2);
-    border-color: var(--separator-strong);
+    background: var(--fill-3);
   }
 }
 
@@ -1375,37 +1319,22 @@ onBeforeUnmount(() => stopPersisting?.());
   transform: scale(0.99);
 }
 
-/* The glyph gets a tile of its own, so it reads as the row's subject rather
-   than as punctuation before the label. */
 .opening__icon {
-  display: grid;
-  place-items: center;
   flex: 0 0 auto;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.625rem;
-  background: var(--fill-2);
-  color: var(--color-primary-text);
+  opacity: 0.65;
 }
 
 .opening__label {
   flex: 1;
-  color: var(--color-base-content);
-  font-size: 0.9375rem;
-  font-weight: 550;
-  letter-spacing: -0.005em;
+  font-size: 0.8125rem;
 }
 
 .opening__key {
   flex: 0 0 auto;
-  padding: 2px 7px;
-  border-radius: 6px;
-  border: 1px solid var(--separator-strong);
-  background: var(--color-base-100);
   font-family: inherit;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
 }
 
 @keyframes opening-in {

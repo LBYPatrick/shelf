@@ -346,36 +346,3 @@ test('records a new shortcut, and the window obeys it', async ({ page }) => {
   await page.getByRole('button', { name: 'Customise' }).click();
   await expect(page.getByRole('dialog').last().getByText('⌘J')).toBeVisible();
 });
-
-/*
- * The connection's own menu, and the sheet behind it.
- *
- * What is worth asserting is that the diagnosis is *measured*: every row in it
- * comes from a call that ran, so a sheet that draws its checks without making
- * them would show the same green ticks. The count beside each probe is the one
- * thing a mock could not invent — it is the length of what came back.
- */
-test('diagnoses the connection it is attached to', async ({ page }) => {
-  const directory = await mkdtemp(join(tmpdir(), 'shelf-health-'));
-  await createConnection(page, { engine: 'SQLite', file: join(directory, 'health.db') });
-
-  await page.locator('.switcher__row').click();
-  await expect(page.getByRole('menuitem', { name: 'Disconnect' })).toBeVisible();
-  // The name is the row that opened the menu; the item is the verb.
-  await expect(page.getByRole('menuitem', { name: /Disconnect from/ })).toHaveCount(0);
-
-  await page.getByRole('menuitem', { name: /Diagnose/ }).click();
-
-  const sheet = page.getByRole('dialog');
-  await expect(sheet.getByText('Round trip')).toBeVisible();
-
-  // Fifteen kept, and a warm-up thrown away — a first round trip pays for
-  // everything both ends do lazily and it made every healthy connection here
-  // report itself as erratic.
-  await expect(sheet.getByText('15 pings kept')).toBeVisible({ timeout: 15_000 });
-  await expect(sheet.locator('.trace__bar')).toHaveCount(15);
-
-  // A check that ran, with what came back from it.
-  await expect(sheet.getByText('Tables')).toBeVisible();
-  await expect(sheet.locator('.check--failed')).toHaveCount(0);
-});

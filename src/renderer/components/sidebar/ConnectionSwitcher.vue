@@ -23,11 +23,8 @@
 import { computed, ref } from 'vue';
 import { useTranslation } from 'i18next-vue';
 import { engineDescriptor } from '@shared/engines';
-import type { SavedConnection } from '@shared/types';
 import AppIcon from '../ui/AppIcon.vue';
 import ContextMenu, { type MenuItem } from '../ui/ContextMenu.vue';
-import ConnectionEditor from '../connection/ConnectionEditor.vue';
-import DiagnoseSheet from './DiagnoseSheet.vue';
 import { useConnections } from '../../stores/connections';
 
 const connections = useConnections();
@@ -69,68 +66,13 @@ const menuOpen = ref(false);
 const menuAt = ref({ x: 0, y: 0 });
 const row = ref<HTMLElement>();
 
-/**
- * Where else you could be, then what you can do here.
- *
- * The menu held one item — "Disconnect from Sample data" — which is a strange
- * thing for the only menu attached to the connection to say, and it said the
- * connection's name twice: once in the row that opened the menu and again in
- * the item. The row is the subject; the item is the verb.
- *
- * The others are the questions a person actually has at this corner of the
- * window. *Somewhere else* is the commonest by a distance, and it was a
- * three-step round trip through disconnecting and the start screen. *A new one*
- * is the same sheet the start screen opens, over the workspace, because there
- * is no reason saving a connection should cost you the one you are in. And
- * *is this thing well* is the question that sends people looking for a log.
- */
-const others = computed(() =>
-  connections.saved
-    .filter((connection) => connection.id !== connections.active?.id)
-    .slice()
-    .sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0))
-);
-
-/**
- * Long enough to hold what anybody switches between, short enough that the menu
- * does not become the start screen with a scrollbar. Past this the row says how
- * many are not shown and sends you to the list that holds all of them.
- */
-const SHOWN = 6;
-
-const menuItems = computed<MenuItem[]>(() => {
-  const items: MenuItem[] = others.value.slice(0, SHOWN).map((connection) => ({
-    id: `open:${connection.id}`,
-    label: connection.name,
-    icon: 'database',
-  }));
-
-  if (others.value.length > SHOWN) {
-    items.push({
-      id: 'all',
-      label: t('connection.andMore', { count: others.value.length - SHOWN }),
-      icon: 'more',
-    });
-  }
-
-  items.push({
-    id: 'new',
-    label: t('connection.new'),
-    icon: 'plus',
-    startsGroup: items.length > 0,
-  });
-
-  items.push({
-    id: 'diagnose',
-    label: t('diagnose.action'),
-    icon: 'chart',
-    startsGroup: true,
-  });
-
-  items.push({ id: 'disconnect', label: t('action.disconnect'), icon: 'close' });
-
-  return items;
-});
+const menuItems = computed<MenuItem[]>(() => [
+  {
+    id: 'disconnect',
+    label: t('palette.disconnectFrom', { name: connections.active?.name ?? '' }),
+    icon: 'close',
+  },
+]);
 
 /**
  * Under the row rather than at the pointer.
@@ -145,41 +87,8 @@ function openMenu(): void {
   menuOpen.value = true;
 }
 
-const diagnoseOpen = ref(false);
-const editing = ref<SavedConnection | null | undefined>(undefined);
-
 function onChoose(id: string): void {
-  if (id === 'disconnect') {
-    void connections.disconnect();
-    return;
-  }
-
-  if (id === 'diagnose') {
-    diagnoseOpen.value = true;
-    return;
-  }
-
-  // `null` is the editor's word for "a new one"; `undefined` is closed.
-  if (id === 'new') {
-    editing.value = null;
-    return;
-  }
-
-  // Everything past the list goes to the list, which is the start screen — the
-  // one place every saved connection is, with its search.
-  if (id === 'all') {
-    void connections.disconnect();
-    return;
-  }
-
-  const openId = id.startsWith('open:') ? id.slice('open:'.length) : '';
-  const target = connections.saved.find((connection) => connection.id === openId);
-  if (target) void connections.connect(target);
-}
-
-function onSaved(connection: SavedConnection, connectNow: boolean): void {
-  editing.value = undefined;
-  if (connectNow) void connections.connect(connection);
+  if (id === 'disconnect') void connections.disconnect();
 }
 </script>
 
@@ -199,23 +108,11 @@ function onSaved(connection: SavedConnection, connectNow: boolean): void {
       "
       @click="openMenu"
     >
-      <!--
-        The badge sits in a box exactly as wide as the rail.
-        ──────────────────────────────────────────────────
-        Not centred in the row: the row is as wide as the columns are, and the
-        columns are what the sidebar toggle animates — so a centred badge slid
-        left across a quarter of a second every time the sidebar closed, while
-        the five icons under it stayed exactly where they were. Given the
-        rail's own width it is on the rail's own centre line at every frame of
-        that animation, and the collapse moves nothing.
-      -->
-      <span class="switcher__slot">
-        <span
-          class="switcher__mark"
-          :style="{ '--engine-hue': engine?.hue ?? 250 }"
-          aria-hidden="true"
-        >{{ engine?.mark }}</span>
-      </span>
+      <span
+        class="switcher__mark"
+        :style="{ '--engine-hue': engine?.hue ?? 250 }"
+        aria-hidden="true"
+      >{{ engine?.mark }}</span>
 
       <span class="switcher__text">
         <span class="switcher__name">{{ connections.active.name }}</span>
@@ -249,26 +146,19 @@ function onSaved(connection: SavedConnection, connectNow: boolean): void {
       />
     </button>
 
+    <!--
+      The two things you start by doing.
+      ──────────────────────────────────
+      One filled and one tonal, not two filled: a bar with two accents in it has
+      no primary action, it has two things shouting. Writing a query is what
+      this app is for and it goes first; asking is the other way in, and sits
+      beside it at the same size because it is a peer, not a footnote.
+    -->
     <ContextMenu
       v-model="menuOpen"
       :items="menuItems"
       :at="menuAt"
       @choose="onChoose"
-    />
-
-    <DiagnoseSheet v-model="diagnoseOpen" />
-
-    <!--
-      The start screen's own editor, over the workspace. Saving a connection
-      should not cost you the one you are in, so it opens here rather than
-      sending you back to the list to do it.
-    -->
-    <ConnectionEditor
-      v-if="editing !== undefined"
-      :editing="editing"
-      :keyring-available="connections.keyringAvailable"
-      @close="editing = undefined"
-      @saved="onSaved"
     />
   </div>
 </template>
@@ -285,17 +175,17 @@ function onSaved(connection: SavedConnection, connectNow: boolean): void {
    * round against the header's `--gap`, which put the search field a couple of
    * pixels further in than the buttons above it.
    */
-  padding: var(--gap-tight) var(--gap-tight) 0 0;
+  padding: var(--gap-tight) var(--gap-tight) 0 var(--gap-tight);
 }
 
 .switcher__row {
   display: flex;
   align-items: center;
+  gap: var(--gap);
   width: 100%;
   min-height: var(--header-h);
-  padding-inline: 0 var(--gap-tight);
-  border-start-end-radius: 0.625rem;
-  border-end-end-radius: 0.625rem;
+  padding-inline: var(--gap) var(--gap-tight);
+  border-radius: 0.625rem;
   text-align: start;
   transition:
     background-color var(--t-hover) var(--ease-out),
@@ -309,12 +199,6 @@ function onSaved(connection: SavedConnection, connectNow: boolean): void {
 /* Held open while its menu is, so the row and the menu read as one object. */
 .switcher__row--open {
   background: var(--fill-3);
-}
-
-.switcher__slot {
-  display: grid;
-  place-items: center;
-  flex: 0 0 var(--rail-w);
 }
 
 .switcher__mark {
@@ -346,6 +230,7 @@ function onSaved(connection: SavedConnection, connectNow: boolean): void {
  * that switches or leaves the connection is one click away either way.
  */
 .leftpanel--tight .switcher__row {
+  justify-content: center;
   padding-inline: 0;
 }
 
@@ -360,8 +245,6 @@ function onSaved(connection: SavedConnection, connectNow: boolean): void {
   gap: 1px;
   min-width: 0;
   flex: 1;
-  /* Starts where the sidebar's own content starts, one column over. */
-  margin-inline: var(--gap-tight) var(--gap);
   line-height: 1.25;
 }
 

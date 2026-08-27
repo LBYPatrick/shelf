@@ -36,10 +36,7 @@
     "dispatch": "Chạy nền",
     "saveQuery": "Lưu truy vấn",
     "back": "Quay lại",
-    "showSuggestions": "Hiện gợi ý",
-    "disconnect": "Ngắt kết nối",
-    "yes": "Có",
-    "no": "Không"
+    "showSuggestions": "Hiện gợi ý"
   },
   "time": {
     "justNow": "vừa xong",
@@ -113,8 +110,7 @@
     "savePasswordHelp": "Lưu trong keychain của hệ thống, không bao giờ nằm trong cơ sở dữ liệu của ứng dụng.",
     "noKeyringHelp": "Không khả dụng: máy này không có keychain hệ thống.",
     "sshKeyFile": "Tệp khóa",
-    "sshPasswordMode": "Mật khẩu",
-    "andMore": "Thêm {{count}}…"
+    "sshPasswordMode": "Mật khẩu"
   },
   "workspace": {
     "entities": "Đối tượng",
@@ -692,32 +688,5 @@
     "empty": "Chưa lưu gì. Viết một câu truy vấn rồi nhấn Lưu truy vấn.",
     "discard": "Xoá câu truy vấn này",
     "rename": "Đổi tên câu truy vấn này"
-  },
-  "diagnose": {
-    "action": "Chẩn đoán kết nối…",
-    "title": "Tình trạng kết nối",
-    "roundTrip": "Thời gian khứ hồi",
-    "samples": "Giữ lại {{count}} lần ping",
-    "fastest": "Nhanh nhất",
-    "typical": "Thường",
-    "worst": "Chậm nhất",
-    "jitter": "Độ dao động",
-    "catalogue": "Danh mục",
-    "catalogueNote": "Đo thật, không phải khai báo",
-    "databases": "Cơ sở dữ liệu",
-    "schemas": "Lược đồ",
-    "entities": "Bảng",
-    "found": "Tìm thấy {{count}}",
-    "about": "Kết nối này",
-    "version": "Phiên bản",
-    "database": "Cơ sở dữ liệu",
-    "again": "Chạy lại",
-    "running": "Đang đo…",
-    "steady": "Ổn định",
-    "variable": "Có phản hồi, nhưng không đều",
-    "erratic": "Thất thường — một số lần khứ hồi lâu hơn hẳn",
-    "partial": "Đã kết nối, nhưng một phần danh mục không phản hồi",
-    "unreachable": "Cơ sở dữ liệu không phản hồi",
-    "readOnly": "Chỉ đọc"
   }
 }

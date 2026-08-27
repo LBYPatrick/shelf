@@ -38,21 +38,20 @@ export type Palette = Readonly<Record<SyntaxToken, string>>;
 export interface SyntaxScheme {
   readonly id: string;
   readonly name: string;
-  readonly light: Palette;
-  readonly dark: Palette;
+  /** Absent on the built-in, which is whatever `base.css` already declares. */
+  readonly light?: Palette;
+  readonly dark?: Palette;
 }
 
 /**
- * Monokai Pro, because a default has to be somebody's answer.
+ * The default is *absence*, not a copy.
  *
- * There was a "Shelf" entry that wrote nothing and let `base.css` answer — a
- * scheme defined by *absence*, which is a coherent idea and a poor menu item:
- * it is the one row in the list whose name tells the reader nothing about what
- * they are choosing, and it sat at the top as the thing to compare the other
- * nine against. The stylesheet's values remain, as the fallback for a token a
- * palette somehow does not carry.
+ * Shelf's own palette is derived in `base.css` from the same neutral the rest
+ * of the theme is built from, and pasting its values here would be a second
+ * copy that stops agreeing the first time either moves. Choosing "Shelf" writes
+ * nothing and lets the stylesheet answer.
  */
-export const DEFAULT_SCHEME = 'monokaiPro';
+export const DEFAULT_SCHEME = 'shelf';
 
 const palette = (
   keyword: string,
@@ -75,6 +74,7 @@ const palette = (
 });
 
 export const SYNTAX_SCHEMES: readonly SyntaxScheme[] = [
+  { id: DEFAULT_SCHEME, name: 'Shelf' },
   {
     id: 'vscode',
     name: 'Visual Studio Code',
@@ -300,7 +300,16 @@ export function syntaxScheme(id: string): SyntaxScheme {
   return BY_ID.get(id) ?? BY_ID.get(DEFAULT_SCHEME)!;
 }
 
-/** The custom properties to set for one scheme in one appearance. */
-export function syntaxProperties(id: string, appearance: 'light' | 'dark'): Palette {
+/**
+ * The custom properties to set for one scheme in one appearance.
+ *
+ * Empty for the built-in, which is the point: nothing is written, so the
+ * stylesheet's own derivation stands. Anything already on the element from a
+ * previous choice has to be cleared by the caller — see `applyTheme`.
+ */
+export function syntaxProperties(
+  id: string,
+  appearance: 'light' | 'dark'
+): Palette | undefined {
   return syntaxScheme(id)[appearance];
 }

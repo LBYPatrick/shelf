@@ -36,10 +36,7 @@
     "dispatch": "백그라운드 실행",
     "saveQuery": "쿼리 저장",
     "back": "뒤로",
-    "showSuggestions": "제안 보기",
-    "disconnect": "연결 끊기",
-    "yes": "예",
-    "no": "아니요"
+    "showSuggestions": "제안 보기"
   },
   "time": {
     "justNow": "방금",
@@ -113,8 +110,7 @@
     "savePasswordHelp": "시스템 키체인에 저장되며 앱 데이터베이스에는 남지 않습니다.",
     "noKeyringHelp": "사용할 수 없음: 이 기기에는 시스템 키체인이 없습니다.",
     "sshKeyFile": "키 파일",
-    "sshPasswordMode": "비밀번호",
-    "andMore": "{{count}}개 더…"
+    "sshPasswordMode": "비밀번호"
   },
   "workspace": {
     "entities": "객체",
@@ -692,32 +688,5 @@
     "empty": "아직 저장된 항목이 없습니다. 쿼리를 작성하고 「쿼리 저장」을 누르세요.",
     "discard": "이 쿼리 삭제",
     "rename": "이 쿼리 이름 바꾸기"
-  },
-  "diagnose": {
-    "action": "연결 진단…",
-    "title": "연결 상태",
-    "roundTrip": "왕복 시간",
-    "samples": "유효한 ping {{count}}회",
-    "fastest": "가장 빠름",
-    "typical": "보통",
-    "worst": "가장 느림",
-    "jitter": "흔들림",
-    "catalogue": "카탈로그",
-    "catalogueNote": "선언이 아니라 실측",
-    "databases": "데이터베이스",
-    "schemas": "스키마",
-    "entities": "테이블",
-    "found": "{{count}}개",
-    "about": "이 연결",
-    "version": "버전",
-    "database": "데이터베이스",
-    "again": "다시 실행",
-    "running": "측정 중…",
-    "steady": "안정적입니다",
-    "variable": "응답하지만 고르지 않습니다",
-    "erratic": "불안정 — 일부 왕복이 훨씬 오래 걸립니다",
-    "partial": "연결되었지만 카탈로그 일부가 응답하지 않았습니다",
-    "unreachable": "데이터베이스가 응답하지 않았습니다",
-    "readOnly": "읽기 전용"
   }
 }

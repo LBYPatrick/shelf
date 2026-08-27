@@ -36,10 +36,7 @@
     "dispatch": "バックグラウンド実行",
     "saveQuery": "クエリを保存",
     "back": "戻る",
-    "showSuggestions": "候補を表示",
-    "disconnect": "切断",
-    "yes": "はい",
-    "no": "いいえ"
+    "showSuggestions": "候補を表示"
   },
   "time": {
     "justNow": "たった今",
@@ -113,8 +110,7 @@
     "savePasswordHelp": "OS のキーチェーンに保存され、アプリのデータベースには残りません。",
     "noKeyringHelp": "利用できません。このマシンにはシステムのキーチェーンがありません。",
     "sshKeyFile": "鍵ファイル",
-    "sshPasswordMode": "パスワード",
-    "andMore": "他 {{count}} 件…"
+    "sshPasswordMode": "パスワード"
   },
   "workspace": {
     "entities": "オブジェクト",
@@ -692,32 +688,5 @@
     "empty": "まだ保存されていません。クエリを書いて「クエリを保存」を押してください。",
     "discard": "このクエリを削除",
     "rename": "このクエリの名前を変更"
-  },
-  "diagnose": {
-    "action": "接続を診断…",
-    "title": "接続の状態",
-    "roundTrip": "往復時間",
-    "samples": "採用した ping {{count}} 回",
-    "fastest": "最速",
-    "typical": "標準",
-    "worst": "最遅",
-    "jitter": "ゆらぎ",
-    "catalogue": "カタログ",
-    "catalogueNote": "宣言ではなく実測",
-    "databases": "データベース",
-    "schemas": "スキーマ",
-    "entities": "テーブル",
-    "found": "{{count}} 件",
-    "about": "この接続",
-    "version": "バージョン",
-    "database": "データベース",
-    "again": "もう一度実行",
-    "running": "測定中…",
-    "steady": "安定しています",
-    "variable": "応答していますが、ばらつきがあります",
-    "erratic": "不安定 — 一部の往復が極端に遅くなっています",
-    "partial": "接続済みですが、カタログの一部が応答しませんでした",
-    "unreachable": "データベースが応答しませんでした",
-    "readOnly": "読み取り専用"
   }
 }
