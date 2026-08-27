@@ -4,7 +4,18 @@
  * One map, compiled into whichever consumer needs it — global hotkeys, the
  * editor keymap, the grid. `mod` resolves to Command on macOS and Control
  * everywhere else, so a binding is written once rather than per platform.
+ *
+ * The list below is the *default*. What the app actually runs on is
+ * `bindings`, which is that list with the reader's changes laid over it, and
+ * it is a `computed` so a chord changed in Settings redraws every hint beside
+ * every action rather than only taking effect on the keyboard. The arithmetic
+ * — spelling a chord one way, reading one out of a keystroke, finding two
+ * actions claiming the same one — is in `@shared/keymap`, where it is pure and
+ * unit tested.
  */
+import { computed, ref, watch } from 'vue';
+import { normalizeAccelerator, resolveKeymap, type KeymapOverrides } from '@shared/keymap';
+import { saveSetting } from './settings';
 
 export interface Binding {
   readonly id: string;
@@ -26,7 +37,7 @@ export interface Binding {
   readonly global?: boolean;
 }
 
-export const BINDINGS: readonly Binding[] = [
+export const DEFAULT_BINDINGS: readonly Binding[] = [
   {
     id: 'palette.open',
     label: 'Command palette',
@@ -81,7 +92,80 @@ export const BINDINGS: readonly Binding[] = [
   { id: 'data.apply', label: 'Apply pending changes', group: 'Data', keys: ['mod+s'] },
 ];
 
-const isMac = navigator.platform.toLowerCase().includes('mac');
+/**
+ * Only what differs from the defaults is stored.
+ *
+ * A keymap outlives the build it was written in, so recording every chord would
+ * mean a reader who changed one shortcut in an old version keeps the old
+ * default for every shortcut that has moved since.
+ */
+const overrides = ref<KeymapOverrides>({});
+
+export const bindings = computed<readonly Binding[]>(() =>
+  resolveKeymap(DEFAULT_BINDINGS, overrides.value)
+);
+
+const SETTING = 'keymap';
+
+/**
+ * Read once at startup, and written on every change after that.
+ *
+ * Explicit rather than done on import, because the storybook and the tests
+ * mount this module without a host to ask.
+ */
+export async function loadKeymap(): Promise<void> {
+  try {
+    overrides.value = await window.shelf.db.getSetting<KeymapOverrides>(SETTING, {});
+  } catch {
+    // A keymap that cannot be read is the defaults, not a broken window.
+  }
+
+  watch(overrides, (next) => void saveSetting(SETTING, next), { deep: true });
+}
+
+/** Replaces one action's chords whole; an empty list unbinds it. */
+export function setBinding(id: string, keys: readonly string[]): void {
+  const normalized = keys
+    .map((key) => normalizeAccelerator(key))
+    .filter((key): key is string => key !== undefined);
+
+  const original = DEFAULT_BINDINGS.find((binding) => binding.id === id)?.keys ?? [];
+  const next = { ...overrides.value };
+
+  if (
+    original.length === normalized.length &&
+    original.every((key, index) => key === normalized[index])
+  ) {
+    delete next[id];
+  } else {
+    next[id] = normalized;
+  }
+
+  overrides.value = next;
+}
+
+export function currentOverrides(): KeymapOverrides {
+  return overrides.value;
+}
+
+export function applyOverrides(next: KeymapOverrides): void {
+  overrides.value = { ...next };
+}
+
+export function resetKeymap(): void {
+  overrides.value = {};
+}
+
+/**
+ * One answer, shared.
+ *
+ * The recorder and the renderer of a chord have to agree about which key `mod`
+ * is, or a shortcut is recorded on one platform's rules and drawn on another's
+ * — which is a chord that reads back as a different chord from the one that was
+ * pressed. The platform store answers this too, and asynchronously; this is the
+ * synchronous fact, and both sides read it.
+ */
+export const isMac = navigator.platform.toLowerCase().includes('mac');
 
 /** Renders an accelerator the way this platform writes it. */
 export function displayKeys(accelerator: string): string {
@@ -133,7 +217,7 @@ export function matches(event: KeyboardEvent, accelerator: string): boolean {
 }
 
 export function bindingFor(id: string): Binding | undefined {
-  return BINDINGS.find((binding) => binding.id === id);
+  return bindings.value.find((binding) => binding.id === id);
 }
 
 /** The accelerator to show next to an action, already rendered. */

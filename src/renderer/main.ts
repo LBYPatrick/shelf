@@ -3,6 +3,7 @@ import { createApp } from 'vue';
 import App from './App.vue';
 import { i18next, resolveLocale, setupI18n } from './i18n';
 import { connectToHost } from './lib/bootstrap';
+import { loadKeymap } from './lib/keybindings';
 import { useToasts } from './stores/toasts';
 import './styles/tailwind.css';
 
@@ -20,6 +21,10 @@ async function start(): Promise<void> {
   ]);
 
   const locale = resolveLocale((stored.language as never) ?? 'system', platform.locale);
+
+  // Before the first render for the same reason the language is: every action
+  // in the window draws its own shortcut beside it.
+  await loadKeymap();
 
   await setupI18n(app, locale);
   document.documentElement.lang = locale;

@@ -7,7 +7,7 @@
  * being made rather than confirm and hope.
  */
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { BINDINGS, displayKeys } from '../../lib/keybindings';
+import ShortcutSheet from './ShortcutSheet.vue';
 import { LOCALES } from '../../i18n';
 import { useTranslation } from 'i18next-vue';
 import { useAssistant } from '../../stores/assistant';
@@ -259,8 +259,14 @@ const materialsAreDefault = computed(
   () => theme.materials.opacity === DEFAULT_MATERIALS.opacity
 );
 
-const groups = computed(() => [...new Set(BINDINGS.map((binding) => binding.group))]);
-const bindingsIn = (group: string) => BINDINGS.filter((binding) => binding.group === group);
+/*
+ * Its own sheet, not a fifth section here.
+ *
+ * Changing a shortcut is a different act from changing a preference: you do it
+ * by performing it, which means a surface that eats the keyboard while it is
+ * armed. That does not belong in the middle of a scrolling form.
+ */
+const shortcutsOpen = ref(false);
 
 const languageOptions = computed(() => [
   { value: 'system', label: t('settings.followSystem') },
@@ -624,28 +630,20 @@ const languageOptions = computed(() => [
           </p>
         </div>
 
-        <div
-          v-for="group in groups"
-          :key="group"
-          class="rows"
-        >
-          <div class="row row--header">
-            <span class="row__label row__label--group">{{ group }}</span>
-          </div>
-          <div
-            v-for="binding in bindingsIn(group)"
-            :key="binding.id"
-            class="row"
-          >
-            <span class="row__label">{{ binding.label }}</span>
-            <span class="row__control keys">
-              <kbd
-                v-for="accelerator in binding.keys"
-                :key="accelerator"
-              >{{
-                displayKeys(accelerator)
-              }}</kbd>
-            </span>
+        <div class="rows">
+          <div class="row">
+            <span class="row__label">{{ $t('settings.keyboardRow') }}</span>
+            <PressButton
+              class="row__control"
+              size="sm"
+              @click="shortcutsOpen = true"
+            >
+              <AppIcon
+                name="keyboard"
+                :size="13"
+              />
+              {{ $t('settings.keyboardOpen') }}
+            </PressButton>
           </div>
         </div>
       </section>
@@ -893,6 +891,13 @@ const languageOptions = computed(() => [
       </div>
     </div>
   </Sheet>
+
+  <!--
+    A sibling of the settings sheet rather than a child of its body: it is a
+    second surface over the same window, and Escape closes whichever is on top
+    because both register with `useDismiss`.
+  -->
+  <ShortcutSheet v-model="shortcutsOpen" />
 </template>
 
 <style scoped>

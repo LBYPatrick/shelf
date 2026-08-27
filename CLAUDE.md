@@ -370,6 +370,17 @@ component's props or a mock's shape has changed.
   the platform. `v-tip` from `lib/hoverTip.ts` puts it beside the control, on
   focus as well as hover — and skips the delay while another is already up,
   because moving along a row of icons is one gesture.
+- **A shortcut is changed by performing it, and nothing is written until you
+  say so.** The recorder takes the keyboard in the capture phase and stops the
+  event dead, because the chord somebody is most likely to rebind is one the app
+  already acts on — ⌘K cannot be recorded by an app that opens its palette on
+  ⌘K. The tick is what commits: a chord written the instant a key lands cannot
+  be corrected, because the correction is itself a keystroke. `mod` is resolved
+  from one `isMac` shared by the recorder and by `displayKeys`; two sources
+  there record a chord under one platform's rules and draw it under the other's.
+  Overrides are stored, never the whole map — a keymap outlives the build it was
+  written in, and someone who changed one shortcut in an old version must not be
+  pinned to that version's defaults for every other one.
 - **Feedback lands on `pointerdown`,** not on click.
 - **The cost of telling two gestures apart is paid where they overlap, and
   nowhere else.** A job card opens on one click and its name renames on two, so
@@ -546,7 +557,7 @@ component's props or a mock's shape has changed.
 ## Testing
 
 - Pure logic — SQL generation, colour maths, motion physics, schema documents,
-  statement classification — is unit tested.
+  statement classification, accelerators — is unit tested.
 - Anything touching `better-sqlite3` cannot run under plain Node, because the
   module is compiled against Electron's ABI. Cover it with an end-to-end test
   instead.

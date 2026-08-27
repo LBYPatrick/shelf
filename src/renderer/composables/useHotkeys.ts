@@ -1,5 +1,5 @@
 import { onBeforeUnmount, onMounted } from 'vue';
-import { BINDINGS, matches } from '../lib/keybindings';
+import { bindings, matches } from '../lib/keybindings';
 
 /**
  * Global keyboard shortcuts.
@@ -24,7 +24,7 @@ export function useHotkeys(handlers: Record<string, () => void>): void {
   }
 
   function handle(event: KeyboardEvent, phase: 'capture' | 'bubble'): void {
-    for (const binding of BINDINGS) {
+    for (const binding of bindings.value) {
       if ((binding.global === true) !== (phase === 'capture')) continue;
 
       const handler = handlers[binding.id];

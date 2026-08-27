@@ -160,7 +160,7 @@ test('editing a connection shows the password it saved', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Database' }).fill('shelf');
   await page.getByLabel('Name').fill('Reveal me');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 
   await page
     .getByRole('button', { name: /Edit Reveal me/ })
@@ -280,4 +280,58 @@ test('a connection can be written to a file and read back', async ({ app, page }
   await expect(page.getByRole('button', { name: 'Connect to Portable' })).toBeVisible({
     timeout: 15_000,
   });
+});
+
+/*
+ * A shortcut is changed by performing it, which is the whole difficulty: the
+ * chord somebody is most likely to rebind is one the app already acts on. So
+ * the assertion that matters is that the recorder eats the keystroke, and that
+ * what it recorded is live afterwards — not merely drawn in the list.
+ */
+test('records a new shortcut, and the window obeys it', async ({ page }) => {
+  const directory = await mkdtemp(join(tmpdir(), 'shelf-keymap-'));
+  await createConnection(page, { engine: 'SQLite', file: join(directory, 'keys.db') });
+
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Customise' }).click();
+
+  const sheet = page.getByRole('dialog').last();
+  await expect(sheet.getByText('New query tab')).toBeVisible();
+
+  await sheet.getByRole('button', { name: 'Change the shortcut for New query tab' }).click();
+  await expect(sheet.getByText('Press a shortcut')).toBeVisible();
+
+  /*
+   * ⌘J while the recorder is armed. If the chord reached the window instead of
+   * the recorder this would be opening whatever ⌘J opens, and the slot would
+   * still be empty.
+   */
+  await page.keyboard.press('ControlOrMeta+j');
+  await expect(sheet.locator('.record__slot')).not.toHaveClass(/record__slot--empty/);
+
+  await sheet.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(sheet.getByText('Press a shortcut')).toBeHidden();
+
+  // Out of both sheets, one Escape each, and then the chord that was recorded.
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  await page.keyboard.press('ControlOrMeta+j');
+  await expect(page.locator('.striptab')).toHaveCount(1);
+
+  // And the one it replaced does nothing, because a binding is replaced whole.
+  await page.keyboard.press('ControlOrMeta+t');
+  await expect(page.locator('.striptab')).toHaveCount(1);
+
+  /*
+   * And it survives a reload, because the keymap is stored rather than held.
+   * A reload comes back to the start screen — the connection is not resumed —
+   * so what is checked is the stored map itself, which is where the answer is.
+   */
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Shelf' })).toBeVisible({ timeout: 20_000 });
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Customise' }).click();
+  await expect(page.getByRole('dialog').last().getByText('⌘J')).toBeVisible();
 });
