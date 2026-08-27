@@ -210,10 +210,7 @@ onBeforeUnmount(() => stopPersisting?.());
       once rather than managing them: the controls have one surface under them,
       the tabs get the window, and the columns below start under a clean edge.
     -->
-    <header
-      class="topbar drag-region"
-      :class="{ 'topbar--alone': sidebarCollapsed }"
-    >
+    <header class="topbar drag-region">
       <!--
         The controls, the toggle, and the room the columns take up.
         ──────────────────────────────────────────────────────────
@@ -233,7 +230,7 @@ onBeforeUnmount(() => stopPersisting?.());
       -->
       <div class="topbar__lead mat-regular panel-sidebar" />
 
-      <TabStrip />
+      <TabStrip :tight="sidebarCollapsed" />
     </header>
 
     <div class="workspace__main">
@@ -498,10 +495,7 @@ onBeforeUnmount(() => stopPersisting?.());
         @collapse-toggle="sidebarCollapsed = true"
       />
 
-      <section
-        class="content panel-content"
-        :class="{ 'content--alone': sidebarCollapsed }"
-      >
+      <section class="content panel-content">
         <div class="content__body">
           <template
             v-for="tab in tabs.tabs"
@@ -1107,37 +1101,21 @@ onBeforeUnmount(() => stopPersisting?.());
 }
 
 /*
- * And rounded again when it is on its own.
+ * Square at every width, and the collapsed case is why.
  *
- * The square edge is right while the strip continues the pane upward: the two
- * are one column and a corner between them would be a seam inside one surface.
- * Collapse the sidebar and that stops being true — the columns are down to the
- * rail, the strip's leading edge is barely past the traffic lights, and the
- * pane is the whole window with a bar on top of it. There the corner is what it
- * always was: the softening where an opaque surface meets the chrome above it.
+ * A corner was tried here for the state where the sidebar is shut, on the
+ * theory that the pane is then a rounded panel with a bar over it rather than
+ * one column with tabs at the top. Two things were wrong with it. The strip was
+ * made transparent to match, which shows the window's own material — and
+ * against an opaque pane that reads as a floating band, exactly the seam the
+ * corner was meant to soften. And an arc over an opaque surface shows whatever
+ * is behind it: the columns' square edge sat in the corner's gap, which is the
+ * rectangle behind the rounded corner.
  *
- * Both halves animate, on the sidebar's own curve, so the change reads as one
- * movement rather than as two things switching at the moment the width lands.
+ * The strip wears a surface at every width and the pane meets it flat. What
+ * changes on collapse is *which* surface the bar wears — see `TabStrip`'s
+ * `tight` — and one material across the whole bar has no seam to soften.
  */
-.content--alone {
-  border-start-start-radius: var(--radius-box);
-}
-
-.content {
-  transition: border-start-start-radius 260ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-/*
- * And the strip gives its surface back.
- *
- * It wears the pane's material because it *is* the top of the pane. With no
- * sidebar under it there is nothing for it to be the top of — it is a bar over
- * a rounded pane, which is a different object, and one the bar should not be
- * pretending to be part of.
- */
-.topbar--alone :deep(.strip) {
-  background-color: transparent;
-}
 
 /*
  * Square, because the tab strip is now the pane's own top edge.

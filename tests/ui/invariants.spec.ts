@@ -1791,6 +1791,33 @@ test.describe('the columns and the pane', () => {
     expect(paint.lead, 'the two halves of the bar are the same shade').not.toBe(paint.strip);
   });
 
+  test('the bar is one surface when the sidebar is shut', async ({ sample }) => {
+    /*
+     * Expanded, the bar is divided where the columns end and the seam is far
+     * from the window controls. Collapsed, the columns are the rail alone —
+     * narrower than the controls — so that same seam would fall directly under
+     * the traffic lights, and nothing may draw a line there.
+     *
+     * So with the sidebar shut the whole bar wears the columns' material.
+     * There is no boundary under the controls because there is no second
+     * material in the bar to have one with.
+     */
+    await sample
+      .getByRole('button', { name: /sidebar/i })
+      .first()
+      .click();
+    await sample.waitForTimeout(500);
+
+    const paint = await sample.evaluate(() => {
+      const of = (selector: string) =>
+        getComputedStyle(document.querySelector(selector)!).backgroundColor;
+      return { lead: of('.topbar__lead'), strip: of('.strip'), pane: of('.content') };
+    });
+
+    expect(paint.strip, 'the bar is two materials under the controls').toBe(paint.lead);
+    expect(paint.strip, 'the bar went on wearing the pane').not.toBe(paint.pane);
+  });
+
   test('the seam in the bar lines up with the seam below it', async ({ sample }) => {
     // One line down the window, or it is two lines that nearly agree — which is
     // worse than either, and is what a boundary an eighth of an inch out looks

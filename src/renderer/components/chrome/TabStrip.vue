@@ -28,6 +28,22 @@ import { vTip } from '../../lib/hoverTip';
 import AppIcon from '../ui/AppIcon.vue';
 import ContextMenu, { type MenuItem } from '../ui/ContextMenu.vue';
 
+/**
+ * Which surface the strip wears.
+ *
+ * It is the top of the working pane and wears the pane's material, so the two
+ * read as one column with a row of tabs at the top of it. That stops being the
+ * arrangement when the sidebar closes: the columns are down to the rail, which
+ * is narrower than the window controls, so the boundary between the bar's two
+ * materials falls directly under the traffic lights — and nothing may draw a
+ * line there.
+ *
+ * So with the sidebar shut the whole bar is one surface, the columns'. There is
+ * no boundary under the controls because there is no second material in the bar
+ * to have one with.
+ */
+const props = withDefaults(defineProps<{ tight?: boolean }>(), { tight: false });
+
 const tabs = useTabs();
 const { t } = useTranslation();
 
@@ -453,7 +469,8 @@ const KIND_ICON: Record<Tab['kind'], string> = {
 <template>
   <div
     ref="stripEl"
-    class="strip panel-content drag-region"
+    class="strip drag-region"
+    :class="props.tight ? 'mat-regular panel-sidebar' : 'panel-content'"
   >
     <!--
       The tablist holds tabs and nothing else. The new-tab button used to sit
@@ -632,8 +649,8 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   /* Both ends, not just the trailing one. The first tab used to sit flush
      against the seam with the columns while the last had room to spare. */
   padding-inline: var(--gap-tight);
-  /* Given up when the sidebar is collapsed — see `.topbar--alone` — and the
-     change is animated so it reads as one movement with the corner. */
+  /* The material changes when the sidebar closes — see `tight` — and it moves
+     on the sidebar's own curve so the bar and the columns arrive together. */
   transition: background-color 260ms cubic-bezier(0.32, 0.72, 0, 1);
   overflow-x: auto;
   overflow-y: hidden;

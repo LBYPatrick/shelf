@@ -250,6 +250,15 @@ component's props or a mock's shape has changed.
   focus lands elsewhere, which is when people reach for Escape. But listeners on
   one node in one phase all run, and `stopPropagation` does not stop the
   siblings beside it, so one press collapsed the whole pile.
+- **The bar is one material when the sidebar is shut.** Expanded, it is divided
+  where the columns end and the seam is nowhere near the window controls.
+  Collapsed, the columns are the rail alone — narrower than the traffic lights —
+  so that same seam would fall directly under them. So the strip wears the
+  columns' material instead of the pane's, and there is no boundary under the
+  controls because there is no second material in the bar to have one with.
+  Making the strip *transparent* there is the mistake that looks like the same
+  idea: it shows the window's own material, which against an opaque pane reads
+  as a floating band.
 - **The working pane is square.** There was one rounded corner where it met the
   chrome, backed by a masked wedge of the sidebar's own surface so the arc did
   not show the material the OS draws *outside* the window — raw, where the
@@ -260,7 +269,11 @@ component's props or a mock's shape has changed.
   meeting at a corner. If a rounded clip ever comes back over a *composited*
   child it must be a `clip-path`, not `overflow`: Chromium drops an ancestor's
   rounded overflow clip on a layer of its own, Monaco promotes itself, and the
-  corner was correspondingly cut on a table tab and square on a query tab.
+  corner was correspondingly cut on a table tab and square on a query tab. A
+  corner was tried again for the collapsed state and failed the same way from
+  the other side: an arc over an opaque surface shows whatever is behind it, and
+  the columns' square edge sat in the gap — the rectangle behind the rounded
+  corner.
 - **The grid's column widths are measured in a canvas, never by the layout.**
   Tabulator's `fitData` family sizes a column by clearing its width and reading
   `offsetWidth` off every cell — a forced reflow each — and `fitDataStretch`
