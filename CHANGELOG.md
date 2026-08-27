@@ -6,6 +6,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-27
+
 ### Added
 
 - Assistant: ask a database in words. Statements are classified before they
@@ -33,33 +35,14 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   connection and the diagnosis; the settings document carries the scheme and the
   keymap, so an export is the whole of what was configured.
 - The tab strip's plus asks which kind of tab, with the shortcut beside each.
-
-### Changed
-
-- The empty pane lists the ways to start, each with its keystroke, instead of
-  two grey sentences.
-- The window is two columns running its full height with the tabs on the working
-  pane, rather than a band laid across the top of them.
-- The sidebar's four lists — tables, saved queries, history and chats — share
-  one search field, one tile and one filter.
-- The start screen wears the app's own glass, and can be taken out of full
-  screen.
-- Settings opened from the start screen can now reach the shortcuts editor and
-  the provider list; both rows previously did nothing there.
-
-### Fixed
-
-- PostgreSQL reported its version as "unknown" everywhere. `SHOW server_version`
-  answers with a column named `server_version`, and the driver read `version`
-  off it.
-- A menu opened from a button is closed by pressing that button again.
-- Escape leaves the shortcut recorder without closing the sheet it is in.
-- A tab dragged one width moves one place, not two, and keeps moving after the
-  first.
-
-## [1.0.0] - 2026-08-20
-
-### Added
+- Downloadable builds for macOS, Windows and Linux, produced by tagging a
+  release: a `.dmg` and a `.zip`, a `.deb`, an `.rpm` and an `.AppImage`, and an
+  installer and a portable `.exe`. Each is built on the architecture it runs on.
+- Claude Code and Codex are found on the machine rather than added by hand. If
+  either is installed and signed in it appears in the picker with nothing to
+  fill in, and it is looked for again on every launch.
+- Every assistant provider shows its own mark, so the row says which company is
+  about to be sent the question.
 
 - Start screen rebuilt as a two-pane welcome window: identity and the ways to
   start something new on the left, recent connections, saved ones and the sample
@@ -80,7 +63,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   ScyllaDB and DynamoDB — each with cancellation that reaches the server where
   the engine allows it, chunked streaming, and single-transaction (or batched)
   change application.
-- Query tab: CodeMirror 6 with schema-aware completion, the statement under the
+- Query tab: a Monaco editor with schema-aware completion, the statement under the
   cursor highlighted, run-all / run-current, real cancellation, multiple result
   sets, SQL formatting and manual transactions.
 - Structure tab: columns, indexes, relations, triggers and partitions, each
@@ -164,7 +147,34 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   only on things that genuinely float, and the accent has a second, lighter
   form for use as *type*.
 
+### Changed
+
+- The empty pane lists the ways to start, each with its keystroke, instead of
+  two grey sentences.
+- The window is two columns running its full height with the tabs on the working
+  pane, rather than a band laid across the top of them.
+- The sidebar's four lists — tables, saved queries, history and chats — share
+  one search field, one tile and one filter.
+- The start screen wears the app's own glass, and can be taken out of full
+  screen.
+- Settings opened from the start screen can now reach the shortcuts editor and
+  the provider list; both rows previously did nothing there.
+- The assistant reads a database's schema once per connection instead of before
+  every message. Gathering is a round trip per table for its columns and two
+  more for its indexes and relations, and it ran in full on every turn; the
+  reads are kept and the document is still assembled per question.
+- A new provider's name field starts empty, with the provider as its
+  placeholder, rather than pre-filled with the first driver's name.
+
 ### Fixed
+
+- PostgreSQL reported its version as "unknown" everywhere. `SHOW server_version`
+  answers with a column named `server_version`, and the driver read `version`
+  off it.
+- A menu opened from a button is closed by pressing that button again.
+- Escape leaves the shortcut recorder without closing the sheet it is in.
+- A tab dragged one width moves one place, not two, and keeps moving after the
+  first.
 
 - **Exporting to a file wrote a file of blank lines.** The host read
   `cursor.fields` before the cursor had answered a single batch, and several
