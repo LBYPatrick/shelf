@@ -287,8 +287,11 @@ test('a connection can be written to a file and read back', async ({ app, page }
     connections: { name: string }[];
   };
   expect(preset.connections).toHaveLength(1);
-  expect(preset.note).toContain('keyring');
-  expect(await readFile(target, 'utf8')).not.toContain('password');
+
+  // A SQLite file has no credential to carry, so the document says as much
+  // rather than claiming an empty `secrets` is one.
+  expect(preset.note).toContain('No passwords');
+  expect(preset.connections[0]).not.toHaveProperty('secrets');
 
   // Read it back: the same connection arrives again, from the file alone.
   await page.getByRole('button', { name: 'Delete Portable' }).click();
@@ -296,6 +299,61 @@ test('a connection can be written to a file and read back', async ({ app, page }
 
   await page.getByRole('button', { name: /Import presets/ }).click();
   await expect(page.getByRole('button', { name: 'Connect to Portable' })).toBeVisible({
+    timeout: 15_000,
+  });
+});
+
+/*
+ * The point of a preset is that it moves a connection to another machine, and
+ * one that arrives needing a password remembered is half a move. So the
+ * password goes in the file, and this is the assertion that it does — and that
+ * it comes back, rather than being written and then dropped on the way in.
+ */
+test('a connection carries its password through the file', async ({ app, page }) => {
+  const directory = await mkdtemp(join(tmpdir(), 'shelf-secret-'));
+  const target = join(directory, 'preset.json');
+
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+  }, target);
+
+  await page
+    .getByRole('button', { name: /New connection/ })
+    .first()
+    .click();
+  await page.getByRole('radio', { name: 'PostgreSQL', exact: true }).click();
+  await page.getByLabel('Host', { exact: true }).fill('db.internal');
+  await page.getByLabel('Name').fill('WithSecret');
+  await page.getByLabel('Password', { exact: true }).fill('hunter2');
+  await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
+
+  await page.getByRole('button', { name: 'Export WithSecret' }).click();
+
+  await expect
+    .poll(async () => readFile(target, 'utf8').catch(() => ''), { timeout: 15_000 })
+    .toContain('WithSecret');
+
+  const document = JSON.parse(await readFile(target, 'utf8')) as {
+    note: string;
+    connections: { secrets?: Record<string, string> }[];
+  };
+  expect(document.connections[0]?.secrets?.['password']).toBe('hunter2');
+  expect(document.note).toContain('plain text');
+
+  // And back again, from the file alone.
+  await page.getByRole('button', { name: 'Delete WithSecret' }).click();
+  await expect(page.getByRole('button', { name: 'Connect to WithSecret' })).toBeHidden();
+
+  await page.getByRole('button', { name: /Import presets/ }).click();
+  await expect(page.getByRole('button', { name: 'Connect to WithSecret' })).toBeVisible({
+    timeout: 15_000,
+  });
+
+  // The editor shows the secret it holds, so this is where an import that
+  // dropped the password on the way in would show up.
+  await page.getByRole('button', { name: 'Edit WithSecret' }).click();
+  await expect(page.getByLabel('Password', { exact: true })).toHaveValue('hunter2', {
     timeout: 15_000,
   });
 });

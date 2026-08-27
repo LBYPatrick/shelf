@@ -174,23 +174,39 @@ function lastUsed(connection: SavedConnection): string {
 }
 
 /**
- * Writes one connection out as a preset.
+ * Writes one connection out as a preset, credentials and all.
  *
- * Not the password: it is in the keyring and stays there. The document says so
- * in a field of its own, and so does the toast, because a file that silently
- * omits a credential is one people discover is incomplete at the worst moment.
+ * The point of a preset is that it moves a connection to another machine, and
+ * one that arrives needing a password remembered is half a move. So the
+ * secrets go with it.
+ *
+ * They are read here rather than in the document module, because the keyring
+ * belongs to the main process and this is the one place with a reason to ask.
+ * A connection with nothing stored exports a document with no `secrets` field
+ * at all, and the note inside says which kind it is — as does the toast,
+ * because a file that quietly contains a password is the one people attach to
+ * a ticket.
  */
 async function exportConnection(connection: SavedConnection): Promise<void> {
+  const secrets = await window.shelf.db.revealSecrets(connection.id).catch(() => ({}));
+  const carried = Object.keys(secrets).length > 0;
+
   const path = await window.shelf.dialogs.writeTextFile(
     {
       title: t('start.exportTitle'),
       defaultPath: documentFileName(connection.name, 'connection'),
       extensions: ['json'],
     },
-    serializeConnections([connection])
+    serializeConnections([connection], { [connection.id]: secrets })
   );
   if (!path) return;
-  toasts.show({ id: 'connection-export', tone: 'success', message: t('start.exported') });
+
+  toasts.show({
+    id: 'connection-export',
+    tone: carried ? 'warning' : 'success',
+    ...(carried ? { title: t('start.exportedWithSecrets') } : {}),
+    message: carried ? t('start.exportedWithSecretsNote') : t('start.exported'),
+  });
 }
 
 /** Reads a document of presets and saves every connection in it. */

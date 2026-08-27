@@ -118,8 +118,10 @@ capability is ever tied to a licence, because there is no licence.**
 - **Rebind** — every shortcut is changed by performing the chord, or edited as
   the JSON document it is stored as.
 - **Carry it between machines** — settings and saved connections can be written
-  to a file and read back. A connection document never carries the password,
-  which stays in the OS keyring.
+  to a file and read back. A connection document carries its passwords, in
+  plain text under `secrets`, so moving machines is one file rather than a file
+  and a round of remembering — the export says so, and importing puts them back
+  in the OS keyring.
 - **Resume** — tabs and unfinished query text come back when you reopen a
   connection.
 

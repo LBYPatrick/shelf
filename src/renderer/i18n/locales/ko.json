@@ -65,6 +65,8 @@
     "exportTitle": "연결 내보내기",
     "export": "{{name}} 내보내기",
     "exported": "저장했습니다. 비밀번호는 키체인에 남습니다.",
+    "exportedWithSecrets": "비밀번호를 포함해 내보냈습니다",
+    "exportedWithSecretsNote": "파일에 비밀번호가 평문으로 들어 있습니다. 가져온 뒤 삭제하세요.",
     "imported": "{{n}}개를 가져왔습니다. 각각 비밀번호가 필요합니다.",
     "importFailed": "그 파일을 읽을 수 없습니다",
     "sample": "샘플",

@@ -40,21 +40,82 @@ describe('connection documents', () => {
     expect(imported?.config.host).toBe('db.internal');
   });
 
-  it('never writes a password, whatever the connection is carrying', () => {
-    // The whole posture of the app is that the renderer does not hold secrets,
-    // but a document is the one artefact that leaves the machine — so this is
-    // asserted rather than assumed.
-    const withSecret = connection({
-      config: { engine: 'postgres', host: 'h', password: 'hunter2' },
-    } as Partial<SavedConnection>);
+  it('carries the secrets it was given, and says so in the note', () => {
+    // The document is how a connection moves to another machine, and one that
+    // arrives needing the password remembered is half a move.
+    const json = serializeConnections([connection()], {
+      [connection().id]: { password: 'hunter2', sshPassphrase: 'open sesame' },
+    });
 
-    const json = serializeConnections([withSecret]);
-    expect(json).not.toContain('hunter2');
-    expect(json).not.toContain('password');
+    const document = JSON.parse(json) as {
+      note: string;
+      connections: { secrets?: Record<string, string> }[];
+    };
+    expect(document.connections[0]?.secrets).toEqual({
+      password: 'hunter2',
+      sshPassphrase: 'open sesame',
+    });
+
+    // Said in the file itself, because this is the artefact people attach to a
+    // ticket without opening it.
+    expect(document.note).toContain('plain text');
+
+    const result = parseConnections(json);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.connections[0]?.rememberSecrets).toBe(true);
+      expect(result.connections[0]?.secrets?.['password']).toBe('hunter2');
+    }
+  });
+
+  it('writes no secrets field when it was given none', () => {
+    const json = serializeConnections([connection()]);
+    const document = JSON.parse(json) as {
+      note: string;
+      connections: { secrets?: unknown }[];
+    };
+
+    // Absent rather than empty: `secrets: {}` would claim the export carried
+    // credentials when it carried nothing.
+    expect(document.connections[0]?.secrets).toBeUndefined();
+    expect(document.note).toContain('No passwords');
 
     const result = parseConnections(json);
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.connections[0]?.rememberSecrets).toBe(false);
+  });
+
+  it('never lets the old in-config password through', () => {
+    // The saved shape has carried a `config.password` in the past. It is the
+    // keyring's to hold, and a copy of it in `config` would be a second one
+    // nothing knows about.
+    const withSecret = connection({
+      config: { engine: 'postgres', host: 'h', password: 'hunter2' },
+    } as Partial<SavedConnection>);
+
+    const document = JSON.parse(serializeConnections([withSecret])) as {
+      connections: { config: Record<string, unknown> }[];
+    };
+    expect(document.connections[0]?.config['password']).toBeUndefined();
+  });
+
+  it('refuses a secret that is not text', () => {
+    // A hand-edited file. A number here would reach the keyring stringified
+    // and fail at connect time rather than at import time.
+    const result = parseConnections(
+      JSON.stringify({
+        connections: [
+          {
+            name: 'Staging',
+            engine: 'postgres',
+            config: { engine: 'postgres', host: 'db.internal' },
+            secrets: { password: 42 },
+          },
+        ],
+      })
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('non-text secret');
   });
 
   it('names the entry that is wrong rather than failing anonymously', () => {

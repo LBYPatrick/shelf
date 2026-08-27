@@ -65,6 +65,8 @@
     "exportTitle": "Xuất kết nối",
     "export": "Xuất {{name}}",
     "exported": "Đã lưu. Mật khẩu vẫn nằm trong keychain.",
+    "exportedWithSecrets": "Đã xuất, kèm mật khẩu",
+    "exportedWithSecretsNote": "Tệp chứa mật khẩu dạng văn bản thuần. Hãy xoá tệp sau khi nhập xong.",
     "imported": "Đã nhập {{n}}. Mỗi cái vẫn cần mật khẩu.",
     "importFailed": "Không đọc được tệp đó",
     "sample": "Mẫu",

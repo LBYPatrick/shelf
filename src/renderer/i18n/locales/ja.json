@@ -65,6 +65,8 @@
     "exportTitle": "接続を書き出す",
     "export": "{{name}} を書き出す",
     "exported": "保存しました。パスワードはキーチェーンに残ります。",
+    "exportedWithSecrets": "パスワードを含めて書き出しました",
+    "exportedWithSecretsNote": "ファイルにはパスワードが平文で含まれています。読み込んだら削除してください。",
     "imported": "{{n}} 件を読み込みました。それぞれパスワードが必要です。",
     "importFailed": "そのファイルを読めませんでした",
     "sample": "サンプル",

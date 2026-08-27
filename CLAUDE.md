@@ -47,6 +47,14 @@ component's props or a mock's shape has changed.
 - **The renderer never imports a driver.** Drivers use Node APIs and native
   modules. If the renderer needs something from `src/drivers`, it is a *type* or
   it belongs in `src/shared`.
+- **A connection document carries its secrets, and says so.** Exporting a
+  connection writes its passwords in plain text under a `secrets` key, because
+  a preset that arrives needing the password remembered is half a move. The
+  cost is that this is the one artefact that leaves the machine, so it is paid
+  in the open: `secrets` is its own key rather than mixed into `config`, so it
+  can be seen and deleted; the document's `note` says what the file holds in
+  its first line; and the toast that confirms the export says it too. Importing
+  puts them straight into the keyring — the file is a transport, not a store.
 - **Secrets go keyring → main → host, and the renderer gets a handle.** It
   receives a single-use token from `window.shelf.db.prepareConnection` and never
   a password — with one deliberate, narrow exception: the connection editor asks

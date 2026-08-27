@@ -65,6 +65,8 @@
     "exportTitle": "Export connection",
     "export": "Export {{name}}",
     "exported": "Saved. The password stays in the keyring.",
+    "exportedWithSecrets": "Exported, with passwords",
+    "exportedWithSecretsNote": "The file contains passwords in plain text. Delete it once it has been imported.",
     "imported": "Imported {{n}}. Each still needs its password.",
     "importFailed": "That file could not be read",
     "sample": "Sample",

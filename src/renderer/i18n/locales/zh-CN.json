@@ -65,6 +65,8 @@
     "exportTitle": "导出连接",
     "export": "导出 {{name}}",
     "exported": "已保存。密码仍留在钥匙串中。",
+    "exportedWithSecrets": "已导出，包含密码",
+    "exportedWithSecretsNote": "文件中的密码为明文。导入后请删除该文件。",
     "imported": "已导入 {{n}} 个。每个仍需填写密码。",
     "importFailed": "无法读取该文件",
     "sample": "示例",
