@@ -221,6 +221,24 @@ function onChoose(id: string): void {
   );
 }
 
+/*
+ * At rail width the row is the mark and nothing else.
+ *
+ * Everything but the badge is hidden rather than allowed to clip, because a
+ * name cut off mid-word reads as a rendering fault where an icon alone reads as
+ * a deliberate small state — and the row is still the disclosure, so the menu
+ * that switches or leaves the connection is one click away either way.
+ */
+.leftpanel--tight .switcher__row {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.leftpanel--tight .switcher__text,
+.leftpanel--tight .switcher__chevron {
+  display: none;
+}
+
 .switcher__text {
   display: flex;
   flex-direction: column;

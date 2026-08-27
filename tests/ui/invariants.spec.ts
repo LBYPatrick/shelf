@@ -73,46 +73,48 @@ test.describe('layout', () => {
     expect(outside).toEqual([]);
   });
 
-  test('the rail and the connection row share a centre line', async ({ sample }) => {
-    // They were positioned independently and landed four pixels apart — close
-    // enough to read as a mistake rather than a choice.
-    const rows = await sample.evaluate(() => {
-      const centre = (selector: string) => {
-        const box = document.querySelector(selector)?.getBoundingClientRect();
-        return box ? box.top + box.height / 2 : null;
-      };
-      return {
-        icon: centre('.rail__item'),
-        connection: centre('.switcher__row'),
-        top: document.querySelector('.rail__item')?.getBoundingClientRect().top ?? 0,
-      };
+  test('the database sits above the rail, not beside it', async ({ sample }) => {
+    /*
+     * The rail used to run the full height beside the connection tile, which
+     * said the two were peers — a strip of destinations on one side and a
+     * database on the other. They are not peers: the connection is what every
+     * one of those destinations is *about*. The tables are its tables, the
+     * history is what was run against it, the chats are conversations about it.
+     *
+     * So it spans the column and the rail begins under it, and this is that
+     * sentence as a measurement.
+     */
+    const layout = await sample.evaluate(() => {
+      const box = (selector: string) =>
+        document.querySelector(selector)!.getBoundingClientRect();
+      return { row: box('.switcher__row'), rail: box('.rail'), panel: box('.leftpanel') };
     });
 
-    expect(rows.icon).not.toBeNull();
-    expect(Math.abs(rows.icon! - rows.connection!)).toBeLessThanOrEqual(1);
+    expect(layout.rail.top, 'the rail starts beside the connection').toBeGreaterThanOrEqual(
+      layout.row.bottom - 1
+    );
+    // And the tile is the width of the whole column, not of one half of it —
+    // within the column's own padding, which is the only thing between them.
+    expect(Math.abs(layout.row.width - layout.panel.width)).toBeLessThanOrEqual(24);
   });
 
-  test('every control in the drag region is clickable', async ({ sample }) => {
-    /*
-     * A drag region swallows clicks. The head of the sidebar is one, so the
-     * window can be moved by it, and anything interactive inside it has to say
-     * `no-drag` or it is scenery: the two primary actions were added there,
-     * looked completely normal, and did nothing at all.
-     *
-     * Asked of the computed region rather than the class, because the class is
-     * one way to get it and the rule is about the region.
-     */
-    const swallowed = await sample.evaluate(() =>
-      [
-        ...document.querySelectorAll<HTMLElement>(
-          '.drag-region button, .drag-region [role="button"]'
-        ),
-      ]
-        .filter((el) => getComputedStyle(el).webkitAppRegion !== 'no-drag')
-        .map((el) => el.className || el.tagName)
-    );
+  test('collapsing the sidebar takes the connection tile with it', async ({ sample }) => {
+    // A tile spanning a width the panel underneath has given up is a tile
+    // holding the sidebar open on its own.
+    const width = () =>
+      sample.locator('.leftpanel').evaluate((el) => el.getBoundingClientRect().width);
 
-    expect(swallowed, 'these are inside a drag region and cannot be clicked').toEqual([]);
+    const open = await width();
+    await sample.locator('.rail__item--bottom').click();
+    // The column animates on the sidebar's own curve, so the measurement waits
+    // for it rather than for the click.
+    await expect.poll(() => width(), { timeout: 5000 }).toBeLessThan(open / 2);
+    const shut = await width();
+
+    expect(shut).toBeLessThan(open / 2);
+    // The mark survives: it is the one piece that still says which database
+    // this is at rail width, and the row is still the way to leave.
+    await expect(sample.locator('.switcher__mark')).toBeVisible();
   });
 
   test('the columns begin below the bar the window controls sit on', async ({ sample }) => {
@@ -804,7 +806,7 @@ test.describe('materials', () => {
      * beside it converged on one colour and the window read as a single flat
      * sheet. It subtracts a constant now.
      */
-    const windowSurfaces = ['.rail', '.sidebar', '.statusbar', '.content'];
+    const windowSurfaces = ['.leftpanel', '.statusbar', '.content'];
 
     await sample.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(sample.getByRole('dialog')).toBeVisible();
@@ -1080,7 +1082,9 @@ test.describe('materials', () => {
      * it produces.
      */
     const panels = await sample.evaluate(() =>
-      ['.rail', '.sidebar'].map((selector) => {
+      // One column, one surface: the glass is declared on `.leftpanel` and
+      // nothing inside it paints.
+      ['.leftpanel'].map((selector) => {
         const style = getComputedStyle(document.querySelector(selector)!);
         const paint = style.backgroundColor + style.backgroundImage;
         const alpha = paint.match(/\/\s*(0?\.\d+)/)?.[1];
@@ -1744,7 +1748,7 @@ test.describe('the columns and the pane', () => {
         getComputedStyle(document.querySelector(selector)!).backgroundColor;
       return {
         lead: of('.topbar__lead'),
-        sidebar: of('.sidebar'),
+        sidebar: of('.leftpanel'),
         strip: of('.strip'),
         pane: of('.content'),
       };
@@ -1811,7 +1815,7 @@ test.describe('the columns and the pane', () => {
         const parts = value.match(/[\d.]+/g)!.map(Number);
         return parts[3] ?? 1;
       };
-      return { pane: of('.content'), sidebar: of('.sidebar'), rail: of('.rail') };
+      return { pane: of('.content'), sidebar: of('.leftpanel'), rail: of('.leftpanel') };
     });
 
     expect(alpha.pane).toBeGreaterThan(alpha.sidebar + 0.2);

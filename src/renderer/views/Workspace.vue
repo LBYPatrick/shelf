@@ -174,31 +174,49 @@ onBeforeUnmount(() => stopPersisting?.());
     </header>
 
     <div class="workspace__main">
-      <nav
-        class="rail mat-regular panel-recessed"
-        :aria-label="$t('workspace.entities')"
+      <!--
+        The left panel is one column, and the database is at the top of it.
+        ─────────────────────────────────────────────────────────────────
+        The rail used to run the full height *beside* the connection tile,
+        which said the two were peers — a strip of destinations on one side and
+        a database on the other. They are not peers. The connection is what
+        every one of those destinations is *about*: the tables are its tables,
+        the history is what was run against it, the chats are conversations
+        about it. So it sits over all of them, and the rail and the panel it
+        switches are the two halves of what is underneath.
+      -->
+      <div
+        class="leftpanel mat-regular panel-sidebar"
+        :class="{ 'leftpanel--tight': sidebarCollapsed }"
       >
-        <span
-          v-show="!sidebarCollapsed"
-          class="rail__marker"
-          :style="{ transform: `translateY(${railIndex * 2.125}rem)` }"
-          aria-hidden="true"
-        />
+        <ConnectionSwitcher />
 
-        <button
-          v-for="item in railItems"
-          :key="item.id"
-          v-tip="item.label"
-          class="rail__item"
-          :class="{ 'rail__item--on': rail === item.id && !sidebarCollapsed }"
-          :aria-label="item.label"
-          :aria-pressed="rail === item.id && !sidebarCollapsed"
-          @click="selectRail(item.id)"
-        >
-          <AppIcon :name="item.icon" />
-        </button>
+        <div class="leftpanel__body">
+          <nav
+            class="rail"
+            :aria-label="$t('workspace.entities')"
+          >
+            <span
+              v-show="!sidebarCollapsed"
+              class="rail__marker"
+              :style="{ transform: `translateY(${railIndex * 2.125}rem)` }"
+              aria-hidden="true"
+            />
 
-        <!--
+            <button
+              v-for="item in railItems"
+              :key="item.id"
+              v-tip="item.label"
+              class="rail__item"
+              :class="{ 'rail__item--on': rail === item.id && !sidebarCollapsed }"
+              :aria-label="item.label"
+              :aria-pressed="rail === item.id && !sidebarCollapsed"
+              @click="selectRail(item.id)"
+            >
+              <AppIcon :name="item.icon" />
+            </button>
+
+            <!--
           The sidebar's own switch, in the sidebar's own column.
           ─────────────────────────────────────────────────────
           It sat on the top bar beside the traffic lights, where it was the one
@@ -212,62 +230,60 @@ onBeforeUnmount(() => stopPersisting?.());
           in the window: everything else in this column is about the database,
           and settings is about the app.
         -->
-        <button
-          v-tip="`${t('workspace.toggleSidebar')} — ${shortcutLabel('sidebar.toggle')}`"
-          class="rail__item rail__item--bottom"
-          :aria-label="$t('workspace.toggleSidebar')"
-          :aria-pressed="!sidebarCollapsed"
-          @click="sidebarCollapsed = !sidebarCollapsed"
-        >
-          <AppIcon name="sidebar" />
-        </button>
+            <button
+              v-tip="`${t('workspace.toggleSidebar')} — ${shortcutLabel('sidebar.toggle')}`"
+              class="rail__item rail__item--bottom"
+              :aria-label="$t('workspace.toggleSidebar')"
+              :aria-pressed="!sidebarCollapsed"
+              @click="sidebarCollapsed = !sidebarCollapsed"
+            >
+              <AppIcon name="sidebar" />
+            </button>
 
-        <!--
+            <!--
           The cog turns a quarter under the pointer. It is the one icon in the
           rail whose shape *means* something mechanical, so it is the one where
           movement reads as the object behaving rather than as decoration — and
           the target is at the bottom corner, away from everything else, so it
           benefits most from confirming that the pointer found it.
         -->
-        <button
-          v-tip="`${t('action.settings')} — ${shortcutLabel('settings.open')}`"
-          class="rail__item rail__item--gear"
-          :aria-label="$t('action.settings')"
-          @click="settingsOpen = true"
-        >
-          <AppIcon name="settings" />
-        </button>
-      </nav>
+            <button
+              v-tip="`${t('action.settings')} — ${shortcutLabel('settings.open')}`"
+              class="rail__item rail__item--gear"
+              :aria-label="$t('action.settings')"
+              @click="settingsOpen = true"
+            >
+              <AppIcon name="settings" />
+            </button>
+          </nav>
 
-      <aside
-        class="sidebar mat-regular panel-sidebar"
-        :class="{ 'sidebar--collapsed': sidebarCollapsed }"
-        :inert="sidebarCollapsed"
-      >
-        <ConnectionSwitcher />
-
-        <div class="sidebar__head">
-          <!--
+          <aside
+            class="sidebar"
+            :class="{ 'sidebar--collapsed': sidebarCollapsed }"
+            :inert="sidebarCollapsed"
+          >
+            <div class="sidebar__head">
+              <!--
             Not a filter box. Narrowing the tree in place could only ever show
             what was already loaded into it, and it competed with a palette that
             reaches the whole database, takes a path or a pattern, and opens
             what you pick. The affordance stays — a search field nobody can find
             is a search nobody uses — but pressing it opens that.
           -->
-          <button
-            v-if="rail === 'entities'"
-            type="button"
-            class="sidebar__search focus-fill"
-            @click="paletteOpen = true"
-          >
-            <AppIcon
-              name="search"
-              :size="13"
-            />
-            <span class="sidebar__search-label">{{ $t('workspace.searchEntities') }}</span>
-            <kbd class="sidebar__search-key">{{ shortcutLabel('palette.open') }}</kbd>
-          </button>
-          <!--
+              <button
+                v-if="rail === 'entities'"
+                type="button"
+                class="sidebar__search focus-fill"
+                @click="paletteOpen = true"
+              >
+                <AppIcon
+                  name="search"
+                  :size="13"
+                />
+                <span class="sidebar__search-label">{{ $t('workspace.searchEntities') }}</span>
+                <kbd class="sidebar__search-key">{{ shortcutLabel('palette.open') }}</kbd>
+              </button>
+              <!--
             Jobs have a field of their own.
             ───────────────────────────────
             There used to be a name here instead, on the argument that the list
@@ -277,7 +293,7 @@ onBeforeUnmount(() => stopPersisting?.());
             field searches the names; the button beside it opens the four
             questions a log gets asked that a name cannot answer.
           -->
-          <!--
+              <!--
             Chats search from the same row every other panel searches from.
             ───────────────────────────────────────────────────────────────
             The field used to sit inside the list, which left this row holding
@@ -286,35 +302,35 @@ onBeforeUnmount(() => stopPersisting?.());
             search fields in two places for five panels is two things to learn
             where there was one.
           -->
-          <label
-            v-else-if="rail === 'chats' || rail === 'jobs'"
-            class="sidebar__find"
-          >
-            <AppIcon
-              class="sidebar__find-icon"
-              name="search"
-              :size="13"
-            />
-            <input
-              v-if="rail === 'chats'"
-              v-model="assistant.filter.text"
-              class="sidebar__find-input"
-              type="search"
-              :placeholder="$t('chats.find')"
-              :aria-label="$t('chats.find')"
-              spellcheck="false"
-            >
-            <input
-              v-else
-              v-model="jobs.filter.text"
-              class="sidebar__find-input"
-              type="search"
-              :placeholder="$t('jobs.find')"
-              :aria-label="$t('jobs.find')"
-              spellcheck="false"
-            >
-          </label>
-          <!--
+              <label
+                v-else-if="rail === 'chats' || rail === 'jobs'"
+                class="sidebar__find"
+              >
+                <AppIcon
+                  class="sidebar__find-icon"
+                  name="search"
+                  :size="13"
+                />
+                <input
+                  v-if="rail === 'chats'"
+                  v-model="assistant.filter.text"
+                  class="sidebar__find-input"
+                  type="search"
+                  :placeholder="$t('chats.find')"
+                  :aria-label="$t('chats.find')"
+                  spellcheck="false"
+                >
+                <input
+                  v-else
+                  v-model="jobs.filter.text"
+                  class="sidebar__find-input"
+                  type="search"
+                  :placeholder="$t('jobs.find')"
+                  :aria-label="$t('jobs.find')"
+                  spellcheck="false"
+                >
+              </label>
+              <!--
             A field, with the glyph that says what it is.
             ─────────────────────────────────────────────
             It had none of that: `::placeholder` — two colons — is not a binding
@@ -323,29 +339,33 @@ onBeforeUnmount(() => stopPersisting?.());
             one thing a search field has to do before it is used is look like
             one.
           -->
-          <label
-            v-else
-            class="sidebar__find"
-          >
-            <AppIcon
-              class="sidebar__find-icon"
-              name="search"
-              :size="13"
-            />
-            <input
-              v-model="queries.filter"
-              class="sidebar__find-input"
-              type="search"
-              :placeholder="
-                rail === 'queries' ? $t('workspace.filterSaved') : $t('workspace.filterHistory')
-              "
-              :aria-label="
-                rail === 'queries' ? $t('workspace.filterSaved') : $t('workspace.filterHistory')
-              "
-              spellcheck="false"
-            >
-          </label>
-          <!--
+              <label
+                v-else
+                class="sidebar__find"
+              >
+                <AppIcon
+                  class="sidebar__find-icon"
+                  name="search"
+                  :size="13"
+                />
+                <input
+                  v-model="queries.filter"
+                  class="sidebar__find-input"
+                  type="search"
+                  :placeholder="
+                    rail === 'queries'
+                      ? $t('workspace.filterSaved')
+                      : $t('workspace.filterHistory')
+                  "
+                  :aria-label="
+                    rail === 'queries'
+                      ? $t('workspace.filterSaved')
+                      : $t('workspace.filterHistory')
+                  "
+                  spellcheck="false"
+                >
+              </label>
+              <!--
             One action per panel, and the one that panel actually has.
             ─────────────────────────────────────────────────────────
             This slot used to mean "refresh" on four panels and "new chat" on
@@ -358,51 +378,53 @@ onBeforeUnmount(() => stopPersisting?.());
             actions at the head of the sidebar now, and a second copy of it in
             the panel below said the two were different things.
           -->
-          <PressButton
-            v-if="rail === 'entities' || rail === 'queries'"
-            v-tip="$t('action.refresh')"
-            size="sm"
-            :aria-label="$t('action.refresh')"
-            @click="rail === 'entities' ? entities.refresh() : queries.refresh()"
-          >
-            <AppIcon
-              name="refresh"
-              :size="13"
-            />
-          </PressButton>
-          <PressButton
-            v-else-if="rail === 'history'"
-            v-tip="$t('history.clear')"
-            size="sm"
-            :aria-label="$t('history.clear')"
-            @click="queries.clearHistory()"
-          >
-            <AppIcon
-              name="trash"
-              :size="13"
-            />
-          </PressButton>
-        </div>
+              <PressButton
+                v-if="rail === 'entities' || rail === 'queries'"
+                v-tip="$t('action.refresh')"
+                size="sm"
+                :aria-label="$t('action.refresh')"
+                @click="rail === 'entities' ? entities.refresh() : queries.refresh()"
+              >
+                <AppIcon
+                  name="refresh"
+                  :size="13"
+                />
+              </PressButton>
+              <PressButton
+                v-else-if="rail === 'history'"
+                v-tip="$t('history.clear')"
+                size="sm"
+                :aria-label="$t('history.clear')"
+                @click="queries.clearHistory()"
+              >
+                <AppIcon
+                  name="trash"
+                  :size="13"
+                />
+              </PressButton>
+            </div>
 
-        <div
-          v-if="rail === 'entities'"
-          class="sidebar__counts type-label"
-        >
-          <span>{{ $t('workspace.shown', { count: entities.entities.length }) }}</span>
-          <button
-            class="sidebar__collapse"
-            @click="entities.collapseAll()"
-          >
-            {{ $t('action.collapseAll') }}
-          </button>
-        </div>
+            <div
+              v-if="rail === 'entities'"
+              class="sidebar__counts type-label"
+            >
+              <span>{{ $t('workspace.shown', { count: entities.entities.length }) }}</span>
+              <button
+                class="sidebar__collapse"
+                @click="entities.collapseAll()"
+              >
+                {{ $t('action.collapseAll') }}
+              </button>
+            </div>
 
-        <EntityTree v-if="rail === 'entities'" />
-        <ChatList v-else-if="rail === 'chats'" />
-        <JobList v-else-if="rail === 'jobs'" />
-        <SavedQueryList v-else-if="rail === 'queries'" />
-        <HistoryList v-else />
-      </aside>
+            <EntityTree v-if="rail === 'entities'" />
+            <ChatList v-else-if="rail === 'chats'" />
+            <JobList v-else-if="rail === 'jobs'" />
+            <SavedQueryList v-else-if="rail === 'queries'" />
+            <HistoryList v-else />
+          </aside>
+        </div>
+      </div>
 
       <ResizeHandle
         v-model:size="sidebarWidth"
@@ -579,6 +601,47 @@ onBeforeUnmount(() => stopPersisting?.());
   flex: 1;
   min-height: 0;
   min-width: 0;
+}
+
+/*
+ * One column, one surface, the database at the top of it.
+ *
+ * The rail and the sidebar were two elements each painting the glass, which is
+ * how they came to be described as "one surface" in a rule rather than simply
+ * being one. Here they are one: the material is declared once, on the column
+ * that holds both, and nothing inside it paints anything.
+ */
+/*
+ * As wide as the two columns, and no wider.
+ *
+ * Collapsing the sidebar takes `--sidebar-w` to zero, which has to take this
+ * with it — a connection tile spanning a width the panel underneath has given
+ * up is a tile holding the sidebar open on its own. Clipped, so the row inside
+ * simply runs out of room rather than needing a second layout for the narrow
+ * case, and the mark is the part that survives: it is the one piece that still
+ * says which database this is at rail width.
+ */
+.leftpanel {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  min-height: 0;
+  width: var(--columns-w);
+  overflow: hidden;
+  transition: width 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leftpanel {
+    transition: none;
+  }
+}
+
+.leftpanel__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
 }
 
 .rail {
