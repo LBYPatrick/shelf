@@ -114,5 +114,42 @@ fi
 echo "==> Packaging for: ${wanted[*]}${ARCH:+ ($ARCH)}"
 pnpm exec electron-builder --config "$CONFIG" "${flags[@]}" ${arch_flags[@]+"${arch_flags[@]}"}
 
+# What the packager produced, checked rather than assumed.
+#
+# Both of these shipped in 1.0.0 and neither was catchable by the gate: the
+# tests run against `out/`, where `node_modules` is on disk and nothing is
+# signed, so a packaging mistake is invisible until somebody downloads the
+# result. These are the two that got out.
+version="$(node -p "require('./package.json').version")"
+readonly OUT="release/$version"
+
+fail=0
+
+# The SQLite driver's binary. `files` excluded the directory it lives in, and
+# the app shipped a driver that threw on require.
+while IFS= read -r app; do
+  if ! find "$app" -path '*better-sqlite3*' -name '*.node' | grep -q .; then
+    echo "  MISSING: no better-sqlite3 binary in $app" >&2
+    fail=1
+  fi
+done < <(find "$OUT" -maxdepth 2 -name '*.app' -o -maxdepth 2 -name 'linux-*' -type d 2>/dev/null)
+
+# And the signature. Unsigned, a downloaded .app is refused as "damaged".
+if [[ "$(uname -s)" == Darwin ]]; then
+  while IFS= read -r app; do
+    if ! codesign --verify --strict "$app" 2>/dev/null; then
+      echo "  UNSIGNED: $app would be refused as damaged once downloaded" >&2
+      fail=1
+    fi
+  done < <(find "$OUT" -maxdepth 2 -name '*.app' 2>/dev/null)
+fi
+
+if [[ "$fail" -ne 0 ]]; then
+  echo "" >&2
+  echo "  The packages are broken. See the notes in electron-builder.config.cjs." >&2
+  echo "" >&2
+  exit 1
+fi
+
 echo ""
 echo "Distributables are in ./release"

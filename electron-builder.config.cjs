@@ -30,7 +30,22 @@ module.exports = {
     'out/**/*',
     'package.json',
     '!**/*.map',
-    '!**/node_modules/better-sqlite3/{prebuilds,deps,src,benchmark,docs}/**',
+    /*
+     * `prebuilds` is not in this list, and that is the whole point.
+     *
+     * It used to be, and it took the binary with it. better-sqlite3 moved to
+     * prebuildify: the install hook's Electron-ABI build lands in
+     * `prebuilds/<platform>-<arch>.node`, which is the first place
+     * `lib/binding.js` looks and the only place it finds anything — the
+     * `build/Release` fallback it tries next is a layout this version never
+     * produces. Excluding the directory shipped an app whose SQLite driver
+     * threw on require, and nothing caught it, because the tests run against
+     * `out/` where `node_modules` is right there on disk.
+     *
+     * The other seven platforms' prebuilds are still dropped, in `afterPack`,
+     * where the architecture being built is actually known.
+     */
+    '!**/node_modules/better-sqlite3/{deps,src,benchmark,docs}/**',
     '!**/node_modules/better-sqlite3/build/{deps,Release/obj.target}/**',
     '!**/node_modules/**/*.{md,markdown,txt}',
     '!**/node_modules/**/{test,tests,example,examples,.github}/**',
@@ -175,13 +190,50 @@ module.exports = {
    * Signing happens after this hook, so what gets signed is what ships.
    */
   afterPack: async (context) => {
-    if (context.electronPlatformName !== 'darwin') return;
-
     const { execFileSync } = require('node:child_process');
-    const { readdirSync, statSync } = require('node:fs');
+    const { existsSync, readdirSync, rmSync, statSync } = require('node:fs');
     const { join } = require('node:path');
 
+    // electron-builder's `Arch`: ia32 0, x64 1, armv7l 2, arm64 3.
+    const cpu = context.arch === 1 ? 'x64' : 'arm64';
     const slice = context.arch === 1 ? 'x86_64' : 'arm64';
+
+    /*
+     * Drop the prebuilds this build cannot use.
+     *
+     * Here rather than in `files`, because this is the first point at which the
+     * architecture being packaged is known — a glob in `files` can only guess,
+     * and the guess that was there took every prebuild including the one the
+     * app loads. better-sqlite3 ships eight at about 2MB each; seven of them
+     * are for machines this build will never run on.
+     */
+    const prebuilds = [];
+    const findPrebuilds = (directory) => {
+      for (const entry of readdirSync(directory, { withFileTypes: true })) {
+        const path = join(directory, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === 'prebuilds') prebuilds.push(path);
+          else findPrebuilds(path);
+        }
+      }
+    };
+    findPrebuilds(context.appOutDir);
+
+    const wanted = `${context.electronPlatformName}-${cpu}.node`;
+    for (const directory of prebuilds) {
+      if (!existsSync(join(directory, wanted))) {
+        // Nothing here matches this build, and deleting the rest would leave a
+        // module with no binary at all — which is the bug this replaced.
+        console.log(`  • kept every prebuild: no ${wanted} in ${directory}`);
+        continue;
+      }
+      for (const entry of readdirSync(directory)) {
+        if (entry !== wanted) rmSync(join(directory, entry), { recursive: true, force: true });
+      }
+      console.log(`  • prebuilds pruned to ${wanted}  dir=${directory}`);
+    }
+
+    if (context.electronPlatformName !== 'darwin') return;
 
     const binaries = [];
     const walk = (directory) => {
@@ -219,6 +271,34 @@ module.exports = {
       } catch {
         // A binary lipo cannot read is a binary to leave exactly as it is.
       }
+    }
+
+    /*
+     * And an ad-hoc signature over the bundle, when there is no real one.
+     *
+     * "Do not sign with a certificate" is not the same as "ship something macOS
+     * will run". Left unsigned, the .app carries only the ad-hoc *linker*
+     * signature that came with the Electron executable: identified as
+     * `Electron`, sealing no resources, and describing a bundle that is no
+     * longer the bundle it is attached to. `codesign --verify` fails on it, and
+     * a copy that has been downloaded — so, every copy anybody actually gets —
+     * is refused by Gatekeeper as "damaged and can't be opened", which sends
+     * the reader to the Trash rather than to a workaround.
+     *
+     * An ad-hoc signature fixes the seal and the identifier. It is not
+     * notarisation and does not pretend to be: the first open still needs
+     * right-click → Open. It is the difference between an app that asks
+     * permission and an app that appears to be corrupt.
+     *
+     * Skipped when a certificate was asked for by name, because electron-builder
+     * signs properly in that case and this would replace it with something
+     * worse.
+     */
+    if (!process.env.APPLE_IDENTITY && !process.env.APPLE_TEAM_ID) {
+      const app = join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`);
+      execFileSync('codesign', ['--force', '--deep', '--sign', '-', app]);
+      execFileSync('codesign', ['--verify', '--strict', app]);
+      console.log(`  • ad-hoc signed  file=${app}`);
     }
   },
 

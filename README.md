@@ -210,15 +210,37 @@ half-present:
 ## Troubleshooting
 
 <details>
-<summary><strong>macOS says the app is damaged, or from an unidentified developer</strong></summary>
+<summary><strong>macOS says the app is from an unidentified developer</strong></summary>
 
-The 1.0.0 builds are unsigned and not notarised, so Gatekeeper refuses them on
-first open. Right-click the app and choose **Open**, then **Open** again in the
-dialog. If macOS still refuses, clear the quarantine flag:
+The builds carry an ad-hoc signature rather than a Developer ID one, and are not
+notarised, so Gatekeeper stops them on first open. Right-click the app and
+choose **Open**, then **Open** again in the dialog. macOS remembers the choice.
+
+If it still refuses, clear the quarantine flag:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/Shelf.app
 ```
+
+</details>
+
+<details>
+<summary><strong>macOS says the app is damaged and should go in the Trash</strong></summary>
+
+That is a different message, and it means the signature is missing rather than
+merely untrusted. Builds up to and including 1.0.0 were not signed at all, so
+every downloaded copy reported this. 1.0.1 and later are ad-hoc signed and open
+with the right-click above.
+
+To rescue a 1.0.0 copy rather than downloading again:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Shelf.app
+codesign --force --deep --sign - /Applications/Shelf.app
+```
+
+Note that 1.0.0 also shipped without its SQLite driver, so it is worth taking
+the newer build regardless.
 
 </details>
 

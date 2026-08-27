@@ -6,6 +6,27 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-27
+
+### Fixed
+
+- The macOS app opened as "damaged" and had to be moved to the Trash. It was
+  not signed at all, so a downloaded copy carried only the ad-hoc *linker*
+  signature from the Electron executable — identifying itself as `Electron`,
+  sealing no resources, and describing a bundle it no longer matched. The app
+  is ad-hoc signed now, which is not notarisation but is the difference between
+  asking permission on first open and appearing to be corrupt.
+- SQLite did not work in any packaged build. `better-sqlite3` moved to
+  prebuildify, so the binary the install hook compiles against Electron's ABI
+  lands in `prebuilds/`, and packaging excluded that whole directory as
+  leftovers — which it had been, one version earlier. The other platforms'
+  prebuilds are still dropped, but in `afterPack`, where the architecture being
+  built is known.
+- Packaging now checks what it produced: that the SQLite binary is in the
+  bundle and that the signature verifies. Neither fault above was catchable by
+  the test suite, which runs against the build directory where `node_modules`
+  is on disk and nothing is signed.
+
 ## [1.0.0] - 2026-08-27
 
 ### Added
