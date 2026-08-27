@@ -117,17 +117,36 @@ export function setCompactMode(window: BrowserWindow | null, compact: boolean): 
   if ((isCompact.get(window) ?? true) === compact) return;
 
   if (window.isMaximized()) window.unmaximize();
+
   /*
-   * And out of full screen before anything else, because a window that cannot
-   * be resized cannot leave it.
+   * Out of full screen first, and *waited for*.
    *
-   * macOS will take a non-resizable window full screen and then refuse to bring
-   * it back — the green button and the menu item both act on a size the window
-   * has been told it may not have — so the start screen could be entered and
-   * never exited. Compact mode declines to be full-screenable at all, and
-   * leaves first if it already is.
+   * macOS will take a non-resizable window full screen and then refuse to
+   * bring it back — the green button and the menu item both act on a size the
+   * window has been told it may not have — so the start screen could be
+   * entered and never exited. Compact mode declines to be full-screenable at
+   * all, and leaves first if it already is.
+   *
+   * Leaving is an animation, though, and `setFullScreen(false)` returns long
+   * before it has finished. Everything below ran against a window still
+   * mid-transition: the resize was applied to a frame that was about to be
+   * replaced, and `setResizable(false)` landed on a window the system still
+   * considered full screen — which is how it ended up stuck in exactly the
+   * state this function exists to prevent. So the rest waits for
+   * `leave-full-screen`, once.
    */
-  if (window.isFullScreen()) window.setFullScreen(false);
+  if (window.isFullScreen()) {
+    window.once('leave-full-screen', () => applyCompactMode(window, compact));
+    window.setFullScreen(false);
+    return;
+  }
+
+  applyCompactMode(window, compact);
+}
+
+/** The half that can only run on a window that has settled. */
+function applyCompactMode(window: BrowserWindow, compact: boolean): void {
+  if (window.isDestroyed()) return;
 
   window.setMinimumSize(1, 1);
   window.setMaximumSize(0, 0);

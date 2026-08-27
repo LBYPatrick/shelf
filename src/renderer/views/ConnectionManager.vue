@@ -272,7 +272,7 @@ watch(
 </script>
 
 <template>
-  <div class="manager">
+  <div class="manager panel-content">
     <!-- What this is, and how to start something that is not on the list. -->
     <aside class="intro">
       <!--
@@ -383,7 +383,7 @@ watch(
       Everything there is to open. The one part of the screen that grows without
       limit, so it is the one part that scrolls.
     -->
-    <section class="browser">
+    <section class="browser mat-regular panel-sidebar">
       <div class="browser__scroll">
         <DisclosureGroup
           v-for="(group, position) in groups"
@@ -535,7 +535,20 @@ watch(
    */
   grid-template-columns: minmax(15rem, 1.618fr) minmax(16rem, 1fr);
   overflow: hidden;
-  background-color: color-mix(in oklab, var(--color-base-100) 86%, transparent);
+  /*
+   * The app's own materials, not a surface of this view's own.
+   *
+   * This painted `color-mix(base-100 86%)` — a number written here and nowhere
+   * else, near enough to opaque that the window's glass had nothing left to
+   * show through it. So the one screen that is *entirely* window, with the
+   * desktop directly behind it, was the one screen with no vibrancy.
+   *
+   * It is the same two surfaces the workspace is made of instead: the reading
+   * pane is the working surface and the list beside it is the sidebar's glass,
+   * which means the welcome screen and the window it opens into are built from
+   * the same materials, follow the same opacity dial, and go solid together
+   * under `prefers-reduced-transparency`.
+   */
 }
 
 @media (prefers-reduced-transparency: reduce) {
@@ -772,7 +785,6 @@ watch(
   display: flex;
   min-width: 0;
   border-inline-start: 1px solid var(--separator);
-  background: var(--fill-3);
 }
 
 .browser__scroll {
