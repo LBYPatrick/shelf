@@ -210,10 +210,7 @@ onBeforeUnmount(() => stopPersisting?.());
       once rather than managing them: the controls have one surface under them,
       the tabs get the window, and the columns below start under a clean edge.
     -->
-    <header
-      class="topbar drag-region"
-      :class="{ 'topbar--alone': sidebarCollapsed }"
-    >
+    <header class="topbar drag-region">
       <!--
         The controls, the toggle, and the room the columns take up.
         ──────────────────────────────────────────────────────────
@@ -231,7 +228,21 @@ onBeforeUnmount(() => stopPersisting?.());
         prevent. It travels on the sidebar's own curve, so the two move as one
         thing rather than as two that happen to agree at each end.
       -->
-      <div class="topbar__lead mat-regular panel-sidebar" />
+      <div class="topbar__lead panel-content">
+        <!--
+          The columns' share of it, and only that.
+          ───────────────────────────────────────
+          The region has to be at least as wide as the traffic lights, and
+          collapsing the sidebar takes the columns *below* it down to the rail
+          — narrower than that. So the whole strip wore the sidebar's material
+          and the extra sat directly over the working pane, which put a step in
+          the pane's leading edge: opaque from the rail down, and a different
+          shade for the height of the bar. The overhang belongs to the pane, so
+          it wears the pane's surface; only the part actually above the columns
+          is the columns'.
+        -->
+        <div class="topbar__columns mat-regular panel-sidebar" />
+      </div>
 
       <TabStrip />
     </header>
@@ -498,10 +509,7 @@ onBeforeUnmount(() => stopPersisting?.());
         @collapse-toggle="sidebarCollapsed = true"
       />
 
-      <section
-        class="content panel-content"
-        :class="{ 'content--alone': sidebarCollapsed }"
-      >
+      <section class="content panel-content">
         <div class="content__body">
           <template
             v-for="tab in tabs.tabs"
@@ -677,6 +685,7 @@ onBeforeUnmount(() => stopPersisting?.());
  * prevent.
  */
 .topbar__lead {
+  position: relative;
   box-sizing: border-box;
   flex: 0 0 auto;
   min-width: var(--columns-w);
@@ -685,8 +694,19 @@ onBeforeUnmount(() => stopPersisting?.());
   transition: min-width 260ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+/* Exactly the columns, on their own curve, so the seam under the bar is the
+   same seam as the one beside it at every frame of the collapse. */
+.topbar__columns {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: var(--columns-w);
+  transition: width 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .topbar__lead {
+  .topbar__lead,
+  .topbar__columns {
     transition: none;
   }
 }
@@ -1104,39 +1124,6 @@ onBeforeUnmount(() => stopPersisting?.());
 .sidebar__todo {
   padding: var(--gap-loose);
   color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
-}
-
-/*
- * And rounded again when it is on its own.
- *
- * The square edge is right while the strip continues the pane upward: the two
- * are one column and a corner between them would be a seam inside one surface.
- * Collapse the sidebar and that stops being true — the columns are down to the
- * rail, the strip's leading edge is barely past the traffic lights, and the
- * pane is the whole window with a bar on top of it. There the corner is what it
- * always was: the softening where an opaque surface meets the chrome above it.
- *
- * Both halves animate, on the sidebar's own curve, so the change reads as one
- * movement rather than as two things switching at the moment the width lands.
- */
-.content--alone {
-  border-start-start-radius: var(--radius-box);
-}
-
-.content {
-  transition: border-start-start-radius 260ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-/*
- * And the strip gives its surface back.
- *
- * It wears the pane's material because it *is* the top of the pane. With no
- * sidebar under it there is nothing for it to be the top of — it is a bar over
- * a rounded pane, which is a different object, and one the bar should not be
- * pretending to be part of.
- */
-.topbar--alone :deep(.strip) {
-  background-color: transparent;
 }
 
 /*

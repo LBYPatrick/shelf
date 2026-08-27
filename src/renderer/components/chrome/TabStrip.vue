@@ -632,9 +632,6 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   /* Both ends, not just the trailing one. The first tab used to sit flush
      against the seam with the columns while the last had room to spare. */
   padding-inline: var(--gap-tight);
-  /* Given up when the sidebar is collapsed — see `.topbar--alone` — and the
-     change is animated so it reads as one movement with the corner. */
-  transition: background-color 260ms cubic-bezier(0.32, 0.72, 0, 1);
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
