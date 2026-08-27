@@ -32,8 +32,11 @@ export function installedDrivers(): readonly AiDriverKind[] {
    * state exists on one laptop and not the next, and the test that reads
    * "before it has been set up" passes or fails for a reason that has nothing
    * to do with the change under it.
+   *
+   * `SHELF_SHOW` is the exception, and the only one: that is the screenshot
+   * run, which is photographing this machine on purpose.
    */
-  if (process.env['SHELF_E2E']) return [];
+  if (process.env['SHELF_E2E'] && !process.env['SHELF_SHOW']) return [];
 
   return CLI_DRIVERS.filter(
     (driver) => findExecutable(driver.command, driver.where) !== null

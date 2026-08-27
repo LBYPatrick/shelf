@@ -16,24 +16,44 @@ const OUT = process.env['SHOT_DIR'] ?? 'test-results/shots';
  * owns. `screencapture` over the window's own bounds takes what is actually on
  * the screen, blurred desktop and all.
  *
- * Exactly the window's bounds and no margin: the material showing through the
- * rail and the sidebar is the point, and a wider frame would put whatever is on
- * the developer's desktop into a picture bound for a public README.
  */
 const FROM_SCREEN = Boolean(process.env['SHELF_SHOW']);
+
+/**
+ * Desktop left around the window, in points.
+ *
+ * The window's shadow falls outside its own bounds, so a capture cut to the
+ * bounds exactly loses the one thing that says this is sitting on a desktop
+ * rather than pasted onto a page. Clamped to the display below: a region that
+ * runs off the screen is a region `screencapture` will not take.
+ */
+const MARGIN = 56;
 
 test('capture the interface', async ({ app, page }) => {
   await mkdir(OUT, { recursive: true });
   const settle = (ms = 500) => page.waitForTimeout(ms);
 
   if (FROM_SCREEN) {
-    // A size worth looking at, and frontmost — a region capture takes whatever
-    // is on screen there, including anything sitting over it.
-    await app.evaluate(({ BrowserWindow }) => {
+    // Centred, and sized so the margin still lands on the screen — a laptop
+    // panel is not much wider than the window this wants to be, and a region
+    // that runs off the display comes back cropped on one side only.
+    await app.evaluate(({ screen: displays, BrowserWindow }, margin) => {
+      const target =
+        displays.getAllDisplays().find((one) => one.internal) ?? displays.getPrimaryDisplay();
+      const area = target.workArea;
+
+      const width = Math.min(1280, area.width - margin * 2);
+      const height = Math.min(820, area.height - margin * 2);
+
       const window = BrowserWindow.getAllWindows()[0];
-      window?.setBounds({ x: 120, y: 120, width: 1280, height: 820 });
+      window?.setBounds({
+        x: Math.round(area.x + (area.width - width) / 2),
+        y: Math.round(area.y + (area.height - height) / 2),
+        width,
+        height,
+      });
       window?.focus();
-    });
+    }, MARGIN);
     // A beat before the first capture. The window has just been brought to the
     // front on somebody's real desktop, and the run needs them to be out of the
     // rectangle it is about to photograph.
@@ -59,10 +79,30 @@ test('capture the interface', async ({ app, page }) => {
     });
     await page.waitForTimeout(250);
     if (!at) throw new Error('no window to capture');
+
+    // The display the window is actually on. Picking the internal one by name
+    // is a guess that is wrong the moment there are two screens, and a region
+    // clamped to a display the window is not on comes back as a sliver of it.
+    const screen = await app.evaluate(
+      ({ screen: displays }, where) => displays.getDisplayMatching(where).workArea,
+      at
+    );
+
+    // Grown by the margin, then pulled back inside the display.
+    const left = Math.max(screen.x, at.x - MARGIN);
+    const top = Math.max(screen.y, at.y - MARGIN);
+    const right = Math.min(screen.x + screen.width, at.x + at.width + MARGIN);
+    const bottom = Math.min(screen.y + screen.height, at.y + at.height + MARGIN);
+
+    console.log(
+      `${name}: window ${at.width}x${at.height} at ${at.x},${at.y} -> region ` +
+        `${right - left}x${bottom - top} at ${left},${top}`
+    );
+
     execFileSync('screencapture', [
       '-x',
       '-R',
-      `${at.x},${at.y},${at.width},${at.height}`,
+      `${left},${top},${right - left},${bottom - top}`,
       `${OUT}/${name}.png`,
     ]);
   };
@@ -142,6 +182,66 @@ test('capture the interface', async ({ app, page }) => {
   await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');
   await settle(400);
+
+  /*
+   * The assistant, answering for real.
+   *
+   * Only on a screenshot run, and only because one is pointed at this machine:
+   * `SHELF_SHOW` turns CLI detection back on, so whichever of Claude Code and
+   * Codex is signed in here is the provider, and the answer in the picture is
+   * an answer a model actually gave about the sample database. A mocked
+   * transcript would be a drawing of the feature rather than the feature.
+   */
+  if (FROM_SCREEN) {
+    // Back to the schema tree first. The jobs panel is where the previous shot
+    // left the sidebar, and a picture of the assistant should have the database
+    // beside it rather than a list of finished jobs.
+    await page
+      .getByRole('button', { name: 'Entities', exact: true })
+      .first()
+      .click()
+      .catch(() => undefined);
+    await settle(400);
+
+    await page.keyboard.press('ControlOrMeta+Shift+a');
+    await page.locator('.chat').waitFor({ timeout: 20_000 });
+    await settle(600);
+
+    const composer = page.getByPlaceholder('Ask about the data, or describe a query');
+    if (await composer.isVisible().catch(() => false)) {
+      await composer.fill('Which artists have the most tracks? Show me the top five.');
+      await page.keyboard.press('Enter');
+
+      // A real model over a real CLI. Two minutes is generous rather than
+      // optimistic, and a run that does not get there leaves the shot out
+      // instead of failing the capture of everything else.
+      await page
+        .locator('.rows__table')
+        .first()
+        .waitFor({ timeout: 120_000 })
+        .catch(() => undefined);
+
+      // And then until it has stopped writing. A turn caught mid-stream shows a
+      // caret in the middle of a sentence and a progress bar under the
+      // composer, which photographs as an app that has not finished loading.
+      await page
+        .getByRole('button', { name: 'Stop', exact: true })
+        .waitFor({ state: 'hidden', timeout: 120_000 })
+        .catch(() => undefined);
+      await settle(1200);
+
+      // Framed on the question and what came back. The transcript follows the
+      // bottom while a turn is being written, which by the end is whatever the
+      // model said last rather than the thing it was asked.
+      await page.evaluate(() => {
+        const scroller = document.querySelector('.chat__scroll');
+        const question = document.querySelector('.chat__column [class*="ask"], .chat__column');
+        if (scroller && question) scroller.scrollTop = 0;
+      });
+      await settle(700);
+      await shot('12-assistant');
+    }
+  }
 
   await page.evaluate(() => {
     const stored = JSON.parse(localStorage.getItem('shelf.appearance') ?? '{}');
