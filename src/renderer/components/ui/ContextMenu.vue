@@ -21,7 +21,13 @@ import AppIcon from './AppIcon.vue';
 export interface MenuItem {
   readonly id: string;
   readonly label: string;
-  /** Drawn before the label, if the action has an icon in the set. */
+  /**
+   * Drawn before the label, if the action has an icon in the set.
+   *
+   * A caller with a glyph that is not in the set — a provider's own mark, which
+   * is filled where every icon here is stroked — fills the `icon` slot instead
+   * rather than teaching this menu what it is drawing.
+   */
   readonly icon?: string;
   readonly disabled?: boolean;
   /** Separated from what came before it. */
@@ -183,7 +189,9 @@ onBeforeUnmount(() => {
             "
             @click="choose(item)"
           >
-            <AppIcon v-if="item.icon" class="popmenu__icon" :name="item.icon" :size="12" />
+            <slot name="icon" :item="item">
+              <AppIcon v-if="item.icon" class="popmenu__icon" :name="item.icon" :size="12" />
+            </slot>
             <span class="popmenu__label">{{ item.label }}</span>
             <kbd v-if="item.hint" class="popmenu__hint">{{ item.hint }}</kbd>
           </button>

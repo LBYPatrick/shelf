@@ -20,16 +20,26 @@
  * all those behaviours to keep right.
  */
 import { computed, ref } from 'vue';
+import type { AiDriverKind } from '@shared/ai';
 import ContextMenu, { type MenuItem } from '../ui/ContextMenu.vue';
 import AppIcon from '../ui/AppIcon.vue';
+import ProviderMark from './ProviderMark.vue';
 
 const props = defineProps<{
   options: readonly MenuItem[];
   /** What is chosen, matched against the options' ids. */
   modelValue: string;
   ariaLabel: string;
-  /** Drawn before the label, for the provider's mark. */
+  /** Drawn before the label when there is no driver to draw instead. */
   icon?: string;
+  /**
+   * Whose mark to draw on the control.
+   *
+   * The point of the row is which company is about to be sent the question, so
+   * the control says which one — a sparkle here named the feature, which the
+   * reader can already see they are using.
+   */
+  driver?: AiDriverKind;
   /** Shown when the chosen id matches nothing, e.g. nothing configured yet. */
   placeholder?: string;
 }>();
@@ -78,12 +88,19 @@ function choose(id: string): void {
     :aria-expanded="open"
     @click="toggle"
   >
-    <AppIcon v-if="icon" class="picker__mark" :name="icon" filled :size="12" />
+    <ProviderMark v-if="driver" class="picker__mark" :driver="driver" :size="12" />
+    <AppIcon v-else-if="icon" class="picker__mark" :name="icon" filled :size="12" />
     <span class="picker__label">{{ label }}</span>
     <AppIcon class="picker__caret" name="chevron" :size="10" />
   </button>
 
-  <ContextMenu v-model="open" :items="options" :at="at" @choose="choose" />
+  <ContextMenu v-model="open" :items="options" :at="at" @choose="choose">
+    <!-- Forwarded only when a caller has one, so the menu keeps its own
+         fallback for every other list in the app. -->
+    <template v-if="$slots.icon" #icon="slotProps">
+      <slot name="icon" v-bind="slotProps" />
+    </template>
+  </ContextMenu>
 </template>
 
 <style scoped>

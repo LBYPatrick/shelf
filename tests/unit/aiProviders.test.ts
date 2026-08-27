@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import {
   AI_DRIVERS,
@@ -72,5 +73,32 @@ describe('a detected provider', () => {
     expect(isDetectedProviderId('3f1a6c2e-9b74-4a0f-8f2b-1d4c5e6a7b8c')).toBe(false);
     expect(detectedDriverOf('3f1a6c2e-9b74-4a0f-8f2b-1d4c5e6a7b8c')).toBeNull();
     expect(isDetectedProviderId('cli:nonesuch')).toBe(false);
+  });
+});
+
+/**
+ * The marks in front of the providers.
+ *
+ * Every row used to be the same sparkle, which said "assistant" in a list of
+ * nothing but assistants — where the one fact a reader wants is which company
+ * is about to be sent their question.
+ */
+describe('the provider marks', () => {
+  it('draws a real mark for every driver that is one company', async () => {
+    const source = await readFile(
+      new URL('../../src/renderer/components/assistant/ProviderMark.vue', import.meta.url),
+      'utf8'
+    );
+
+    for (const driver of AI_DRIVERS) {
+      if (driver.kind === 'openaiCompatible') continue;
+      expect(source, `${driver.kind} has no mark`).toContain(`${driver.kind}:`);
+    }
+  });
+
+  it('leaves the generic driver generic', () => {
+    // One driver for Ollama, LM Studio, vLLM and OpenRouter: any one mark there
+    // would name the wrong company most of the time.
+    expect(driverInfo('openaiCompatible').detected).toBe(false);
   });
 });

@@ -40,6 +40,8 @@ import AppIcon from '../ui/AppIcon.vue';
 import ChatItem from './ChatItem.vue';
 import CircuitRing from '../ui/CircuitRing.vue';
 import InlinePicker from './InlinePicker.vue';
+import ProviderMark from './ProviderMark.vue';
+import type { AiDriverKind } from '@shared/ai';
 import { useAssistant } from '../../stores/assistant';
 import { useConnections } from '../../stores/connections';
 import { useEntities } from '../../stores/entities';
@@ -126,7 +128,6 @@ const providerOptions = computed<MenuItem[]>(() => [
   ...assistant.providers.map((provider) => ({
     id: provider.id,
     label: `${provider.name} · ${provider.model}`,
-    icon: 'assistant',
   })),
   {
     id: MANAGE,
@@ -135,6 +136,11 @@ const providerOptions = computed<MenuItem[]>(() => [
     startsGroup: assistant.providers.length > 0,
   },
 ]);
+
+/** The driver behind a row, so the list can wear each provider's own mark. */
+function driverFor(id: string): AiDriverKind | undefined {
+  return assistant.providers.find((provider) => provider.id === id)?.driver;
+}
 
 const providerValue = computed<string>({
   get: () => assistant.active?.id ?? '',
@@ -395,10 +401,19 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
               v-model="providerValue"
               :options="providerOptions"
               :aria-label="$t('assistant.provider')"
-              icon="assistant"
+              :driver="assistant.active?.driver"
               :placeholder="$t('assistant.chooseProvider')"
               @choose="onProvider"
-            />
+            >
+              <template #icon="{ item }">
+                <ProviderMark
+                  v-if="driverFor(item.id)"
+                  :driver="driverFor(item.id)!"
+                  :size="12"
+                />
+                <AppIcon v-else-if="item.icon" :name="item.icon" :size="12" />
+              </template>
+            </InlinePicker>
 
             <span class="composer__rule" aria-hidden="true" />
 

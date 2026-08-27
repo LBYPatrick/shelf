@@ -18,6 +18,7 @@ import type { AiDriverKind, AiProvider } from '@shared/ai';
 import { CONFIGURABLE_DRIVERS, driverInfo, isDetectedProviderId } from '@shared/aiDrivers';
 import { errorMessage } from '@shared/errors';
 import AppIcon from '../ui/AppIcon.vue';
+import ProviderMark from './ProviderMark.vue';
 import FormField from '../ui/FormField.vue';
 import PressButton from '../ui/PressButton.vue';
 import ProgressBar from '../ui/ProgressBar.vue';
@@ -208,7 +209,7 @@ async function remove(): Promise<void> {
             :class="isDetectedProviderId(provider.id) ? 'row--detected' : 'focus-fill'"
             @click="edit(provider)"
           >
-            <AppIcon class="row__glyph" name="assistant" filled :size="14" />
+            <ProviderMark class="row__glyph" :driver="provider.driver" :size="14" />
             <span class="row__names">
               <span class="row__name">{{ provider.name }}</span>
               <span class="row__model">
