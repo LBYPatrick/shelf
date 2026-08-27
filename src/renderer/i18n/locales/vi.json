@@ -671,6 +671,7 @@
   },
   "saved": {
     "empty": "Chưa lưu gì. Viết một câu truy vấn rồi nhấn Lưu truy vấn.",
-    "discard": "Xoá câu truy vấn này"
+    "discard": "Xoá câu truy vấn này",
+    "rename": "Đổi tên câu truy vấn này"
   }
 }

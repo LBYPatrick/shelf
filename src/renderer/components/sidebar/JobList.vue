@@ -345,7 +345,7 @@ function startedAt(job: Job): string {
       </button>
     </div>
 
-    <div class="joblist__scroll">
+    <div class="joblist__scroll tilelist">
       <p
         v-if="jobs.ordered.length === 0"
         class="joblist__empty"
@@ -583,14 +583,9 @@ function startedAt(job: Job): string {
 }
 
 /* Only the list scrolls: the choices stay where they were put. */
+/* The layout is `.tilelist`; this only adds what the jobs need on top of it. */
 .joblist__scroll {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--gap-tight);
-  min-height: 0;
-  padding: var(--gap-tight);
-  overflow-y: auto;
+  padding-block-start: 0;
 }
 
 .joblist__tally {

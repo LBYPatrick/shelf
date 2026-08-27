@@ -601,7 +601,14 @@
   transition: background-color var(--t-hover) var(--ease-out);
 }
 
-.tilelist > li + li .tile::before {
+/*
+ * Written for both shapes a list comes in — tiles wrapped in `<li>`, and tiles
+ * as direct children of a scroller. The first version only knew about `<li>`,
+ * so the jobs, which are not in a list element, had no dividers at all and
+ * looked like a different design from the three panels beside them.
+ */
+.tilelist > li + li .tile::before,
+.tilelist > .tile + .tile::before {
   content: '';
   position: absolute;
   inset-inline: var(--gap);
@@ -620,10 +627,15 @@
   }
 }
 
+/*
+ * A filled row swallows the rules on both of its edges, so it reads as one
+ * shape rather than as a shape with a line stuck to it.
+ */
 .tile:hover::before,
 .tile:hover + .tile::before,
-.tilelist > li:hover + li .tile::before,
 .tile--on::before,
+.tile--on + .tile::before,
+.tilelist > li:hover + li .tile::before,
 .tilelist > li:has(.tile--on) + li .tile::before {
   opacity: 0;
 }

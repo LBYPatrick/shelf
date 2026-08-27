@@ -671,6 +671,7 @@
   },
   "saved": {
     "empty": "Nothing saved yet. Write a query and press Save Query.",
-    "discard": "Delete this query"
+    "discard": "Delete this query",
+    "rename": "Rename this query"
   }
 }
