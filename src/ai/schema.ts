@@ -7,6 +7,7 @@ import {
   type SchemaDocument,
   type SchemaScope,
 } from '@shared/schemaDoc';
+import type { SchemaCache } from './schemaCache';
 
 /**
  * Reading a database into a document.
@@ -38,6 +39,26 @@ export interface GatherOptions {
   /** The document is narrowed to fit this many estimated tokens. */
   readonly budget: number;
   readonly signal?: AbortSignal;
+  /**
+   * The connection's remembered reads. Absent means read everything again,
+   * which is what a test wants and what the first turn on a connection gets.
+   */
+  readonly cache?: SchemaCache;
+}
+
+/**
+ * A round trip, through the cache when there is one.
+ *
+ * The `catch` belongs at the call sites and not in here: a read that failed is
+ * an empty list *for this turn*, and burying that in the cache would keep the
+ * emptiness for five minutes.
+ */
+function read<T>(
+  cache: SchemaCache | undefined,
+  key: string,
+  fetch: () => Promise<T>
+): Promise<T> {
+  return cache ? cache.take(key, fetch) : fetch();
 }
 
 async function mapLimited<T, R>(
@@ -110,8 +131,9 @@ export async function gatherSchema(
       : scope.kind === 'entity'
         ? scope.entity.schema
         : undefined;
-  const all = await client.listEntities(
-    capabilities.schemas && typeof schema === 'string' ? schema : undefined
+  const within = capabilities.schemas && typeof schema === 'string' ? schema : undefined;
+  const all = await read(options.cache, `entities:${within ?? '*'}`, () =>
+    client.listEntities(within)
   );
 
   // A routine has no columns to describe and no rows to select from; it is
@@ -136,15 +158,25 @@ export async function gatherSchema(
       ...(entity.schema ? { schema: entity.schema } : {}),
     };
 
-    const columns = await client.listColumns(ref).catch(() => []);
+    // Keyed per part rather than per entity, because which entities get the
+    // expensive half depends on the scope: a table read for its columns under
+    // one question is read for its indexes under the next, and an entry that
+    // held only what the first turn asked for would report a table as having no
+    // indexes at all.
+    const name = qualifiedName(ref);
+    const columns = await read(options.cache, `columns:${name}`, () =>
+      client.listColumns(ref)
+    ).catch(() => []);
     const wantsDetail = detailed.indexOf(entity) < DETAIL_LIMIT;
 
     const [indexes, relations] = await Promise.all([
       wantsDetail && capabilities.indexes
-        ? client.listIndexes(ref).catch(() => [])
+        ? read(options.cache, `indexes:${name}`, () => client.listIndexes(ref)).catch(() => [])
         : Promise.resolve([]),
       wantsDetail && capabilities.relations
-        ? client.listRelations(ref).catch(() => [])
+        ? read(options.cache, `relations:${name}`, () => client.listRelations(ref)).catch(
+            () => []
+          )
         : Promise.resolve([]),
     ]);
 
@@ -188,10 +220,11 @@ export async function gatherSchema(
  */
 export async function gatherTables(
   client: DatabaseClient,
-  names: readonly string[]
+  names: readonly string[],
+  cache?: SchemaCache
 ): Promise<SchemaDocument> {
   const capabilities = client.capabilities;
-  const all = await client.listEntities();
+  const all = await read(cache, 'entities:*', () => client.listEntities());
 
   const wanted = new Set(names.map((name) => name.toLowerCase()));
   const matched = all.filter((entity) => {
@@ -204,10 +237,15 @@ export async function gatherTables(
       name: entity.name,
       ...(entity.schema ? { schema: entity.schema } : {}),
     };
+    const name = qualifiedName(ref);
     const [columns, indexes, relations] = await Promise.all([
-      client.listColumns(ref).catch(() => []),
-      capabilities.indexes ? client.listIndexes(ref).catch(() => []) : Promise.resolve([]),
-      capabilities.relations ? client.listRelations(ref).catch(() => []) : Promise.resolve([]),
+      read(cache, `columns:${name}`, () => client.listColumns(ref)).catch(() => []),
+      capabilities.indexes
+        ? read(cache, `indexes:${name}`, () => client.listIndexes(ref)).catch(() => [])
+        : Promise.resolve([]),
+      capabilities.relations
+        ? read(cache, `relations:${name}`, () => client.listRelations(ref)).catch(() => [])
+        : Promise.resolve([]),
     ]);
     return { entity, columns, indexes, relations } satisfies EntityFacts;
   });

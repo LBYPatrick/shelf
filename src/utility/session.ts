@@ -1,6 +1,7 @@
 import type { ConnectionConfig, DatabaseClient } from '@drivers/types';
 import type { AiProvider } from '@shared/ai';
 import type { HostEventName, HostEvents } from '@shared/contract';
+import { SchemaCache } from '@ai/schemaCache';
 import type { Tunnel } from './tunnel';
 
 /** A provider and its key, staged by main exactly as a connection's are. */
@@ -35,6 +36,14 @@ export class Session {
   readonly tunnels = new Map<string, Tunnel>();
   /** Assistant credentials, staged and consumed the same way. */
   private readonly stagedProviders = new Map<string, StagedProvider>();
+  /**
+   * What each connection's schema was, last time it was read.
+   *
+   * Here rather than beside the client because a driver has no idea anyone is
+   * remembering its answers — the same reason the tunnels are here. Reading a
+   * schema is N+1 and was paid on every turn; see `ai/schemaCache.ts`.
+   */
+  private readonly schemaCaches = new Map<string, SchemaCache>();
 
   /**
    * Pushing something the renderer did not ask for.
@@ -73,12 +82,32 @@ export class Session {
     return config;
   }
 
+  /** The connection's remembered schema reads, made on first ask. */
+  schemaCache(connectionId: string): SchemaCache {
+    const existing = this.schemaCaches.get(connectionId);
+    if (existing) return existing;
+
+    const cache = new SchemaCache();
+    this.schemaCaches.set(connectionId, cache);
+    return cache;
+  }
+
+  /** Something changed the shape; what was read about it no longer holds. */
+  forgetSchema(connectionId: string): void {
+    this.schemaCaches.get(connectionId)?.forget();
+  }
+
   require(connectionId: string): DatabaseClient {
     const client = this.connections.get(connectionId);
     if (!client) {
       throw new Error(`No open connection: ${connectionId}`);
     }
     return client;
+  }
+
+  /** Drops everything held about one connection that is going away. */
+  closeSchemaCache(connectionId: string): void {
+    this.schemaCaches.delete(connectionId);
   }
 
   /** Takes down the forwarder for one connection, if it had one. */
@@ -94,6 +123,7 @@ export class Session {
     this.inFlight.clear();
     this.staged.clear();
     this.stagedProviders.clear();
+    this.schemaCaches.clear();
 
     await Promise.allSettled(
       [...this.connections.values()].map((client) => client.disconnect())

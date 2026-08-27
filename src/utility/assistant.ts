@@ -36,7 +36,11 @@ export async function schemaFor(
   signal: AbortSignal
 ) {
   const client = session.require(connectionId);
-  return gatherSchema(client, scope, { budget: budget ?? SCHEMA_BUDGET, signal });
+  return gatherSchema(client, scope, {
+    budget: budget ?? SCHEMA_BUDGET,
+    signal,
+    cache: session.schemaCache(connectionId),
+  });
 }
 
 export async function turn(
@@ -56,9 +60,12 @@ export async function turn(
   const staged = session.consumeProvider(payload.handle);
   const adapter = createAiAdapter(staged.provider, staged.apiKey);
 
+  const cache = session.schemaCache(payload.connectionId);
+
   const document = await gatherSchema(client, payload.scope, {
     budget: SCHEMA_BUDGET,
     signal,
+    cache,
   });
 
   const outcome = await runTurn(
@@ -70,6 +77,7 @@ export async function turn(
       maxTokens: CHAT_TOKENS,
       history: payload.history,
       question: payload.question,
+      cache,
       ...(payload.locale ? { locale: payload.locale } : {}),
     },
     {

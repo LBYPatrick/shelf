@@ -1,5 +1,6 @@
 import { createClient } from '@drivers/registry';
 import type { HostChannel, HostContract } from '@shared/contract';
+import { changesShape } from '@ai/schemaCache';
 import { probe, schemaFor, turn } from './assistant';
 import { runExport } from './export';
 import { cellToValue, readTable } from './import';
@@ -53,6 +54,7 @@ export const handlers: Registry = {
   'conn/close': async (session, { connectionId }) => {
     const client = session.connections.get(connectionId);
     session.connections.delete(connectionId);
+    session.closeSchemaCache(connectionId);
     await client?.disconnect();
     await session.closeTunnel(connectionId);
   },
@@ -128,8 +130,23 @@ export const handlers: Registry = {
   'data/count': (session, { connectionId, entity, filters }) =>
     session.require(connectionId).count(entity, filters),
 
-  'query/run': (session, { connectionId, text, options }, signal) =>
-    session.require(connectionId).query(text, options, signal),
+  /*
+   * The one door DDL goes through.
+   *
+   * The query tab runs whatever was typed, and the structure editor's "Apply
+   * schema change" runs its statement here too — so this is where a schema the
+   * assistant has remembered stops being true. Dropped in a `finally` because a
+   * statement that failed may still have got half way, and a needless drop
+   * costs one re-read where a missed one costs a model describing a column that
+   * is no longer there.
+   */
+  'query/run': async (session, { connectionId, text, options }, signal) => {
+    try {
+      return await session.require(connectionId).query(text, options, signal);
+    } finally {
+      if (changesShape(text)) session.forgetSchema(connectionId);
+    }
+  },
   'query/editability': (session, { connectionId, text, fields }) =>
     session.require(connectionId).resolveEditability(text, fields),
 
@@ -148,11 +165,16 @@ export const handlers: Registry = {
    */
   'job/run': async (session, { connectionId, jobId, text }, signal) => {
     const client = session.require(connectionId);
-    const cursor = await client.stream({ query: text, chunkSize: 1000 });
-    const path = spoolPath(jobId);
 
-    const result = await spool(cursor, path, undefined, signal);
-    return { ...result, path };
+    try {
+      const cursor = await client.stream({ query: text, chunkSize: 1000 });
+      const path = spoolPath(jobId);
+
+      const result = await spool(cursor, path, undefined, signal);
+      return { ...result, path };
+    } finally {
+      if (changesShape(text)) session.forgetSchema(connectionId);
+    }
   },
 
   'job/page': (_session, { path, offset, limit }) => readSpoolPage(path, offset, limit),

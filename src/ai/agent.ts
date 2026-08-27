@@ -4,6 +4,7 @@ import { splitReply, systemPrompt } from '@shared/aiPrompt';
 import { classifyStatement } from '@shared/sqlSafety';
 import { schemaDocumentText, type SchemaDocument } from '@shared/schemaDoc';
 import { gatherTables } from './schema';
+import type { SchemaCache } from './schemaCache';
 import {
   AiError,
   type AiAdapter,
@@ -115,6 +116,12 @@ export interface TurnInput {
   readonly question: string;
   /** The interface's language, as a BCP-47 tag, for the reply to default to. */
   readonly locale?: string;
+  /**
+   * The connection's remembered reads, so `inspect_schema` and the document it
+   * is reaching past share one. Without it the tool re-reads tables the
+   * document already read a moment earlier.
+   */
+  readonly cache?: SchemaCache;
 }
 
 export interface TurnOutcome {
@@ -397,7 +404,7 @@ async function executeCall(
     });
 
     try {
-      const document = await gatherTables(client, tables);
+      const document = await gatherTables(client, tables, input.cache);
       emit({
         kind: 'step',
         id: stepId,
