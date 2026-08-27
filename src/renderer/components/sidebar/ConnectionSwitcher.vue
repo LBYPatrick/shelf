@@ -108,11 +108,23 @@ function onChoose(id: string): void {
       "
       @click="openMenu"
     >
-      <span
-        class="switcher__mark"
-        :style="{ '--engine-hue': engine?.hue ?? 250 }"
-        aria-hidden="true"
-      >{{ engine?.mark }}</span>
+      <!--
+        The badge sits in a box exactly as wide as the rail.
+        ──────────────────────────────────────────────────
+        Not centred in the row: the row is as wide as the columns are, and the
+        columns are what the sidebar toggle animates — so a centred badge slid
+        left across a quarter of a second every time the sidebar closed, while
+        the five icons under it stayed exactly where they were. Given the
+        rail's own width it is on the rail's own centre line at every frame of
+        that animation, and the collapse moves nothing.
+      -->
+      <span class="switcher__slot">
+        <span
+          class="switcher__mark"
+          :style="{ '--engine-hue': engine?.hue ?? 250 }"
+          aria-hidden="true"
+        >{{ engine?.mark }}</span>
+      </span>
 
       <span class="switcher__text">
         <span class="switcher__name">{{ connections.active.name }}</span>
@@ -175,17 +187,17 @@ function onChoose(id: string): void {
    * round against the header's `--gap`, which put the search field a couple of
    * pixels further in than the buttons above it.
    */
-  padding: var(--gap-tight) var(--gap-tight) 0 var(--gap-tight);
+  padding: var(--gap-tight) var(--gap-tight) 0 0;
 }
 
 .switcher__row {
   display: flex;
   align-items: center;
-  gap: var(--gap);
   width: 100%;
   min-height: var(--header-h);
-  padding-inline: var(--gap) var(--gap-tight);
-  border-radius: 0.625rem;
+  padding-inline: 0 var(--gap-tight);
+  border-start-end-radius: 0.625rem;
+  border-end-end-radius: 0.625rem;
   text-align: start;
   transition:
     background-color var(--t-hover) var(--ease-out),
@@ -199,6 +211,12 @@ function onChoose(id: string): void {
 /* Held open while its menu is, so the row and the menu read as one object. */
 .switcher__row--open {
   background: var(--fill-3);
+}
+
+.switcher__slot {
+  display: grid;
+  place-items: center;
+  flex: 0 0 var(--rail-w);
 }
 
 .switcher__mark {
@@ -230,7 +248,6 @@ function onChoose(id: string): void {
  * that switches or leaves the connection is one click away either way.
  */
 .leftpanel--tight .switcher__row {
-  justify-content: center;
   padding-inline: 0;
 }
 
@@ -245,6 +262,8 @@ function onChoose(id: string): void {
   gap: 1px;
   min-width: 0;
   flex: 1;
+  /* Starts where the sidebar's own content starts, one column over. */
+  margin-inline: var(--gap-tight) var(--gap);
   line-height: 1.25;
 }
 
