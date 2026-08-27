@@ -132,7 +132,8 @@
     "searchEntities": "搜索表",
     "toggleSidebar": "切换侧边栏",
     "jobs": "任务",
-    "newQueryTab": "新建查询标签页"
+    "newQueryTab": "新建查询标签页",
+    "query": "查询"
   },
   "table": {
     "filterPlaceholder": "筛选 — 例如 name like 'A%'",
@@ -653,7 +654,8 @@
     "showingFirst": "显示前 {{count}} 行",
     "cutOff": "已到行数上限",
     "chooseProvider": "选择提供方",
-    "theQuery": "查询"
+    "theQuery": "查询",
+    "chat": "对话"
   },
   "chats": {
     "title": "对话",

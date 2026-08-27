@@ -132,7 +132,8 @@
     "searchEntities": "Search tables",
     "toggleSidebar": "Toggle sidebar",
     "jobs": "Jobs",
-    "newQueryTab": "New query tab"
+    "newQueryTab": "New query tab",
+    "query": "Query"
   },
   "table": {
     "filterPlaceholder": "Filter — e.g. name like 'A%'",
@@ -653,7 +654,8 @@
     "showingFirst": "showing the first {{count}}",
     "cutOff": "cut off at the row limit",
     "chooseProvider": "Choose a provider",
-    "theQuery": "Query"
+    "theQuery": "Query",
+    "chat": "Chat"
   },
   "chats": {
     "title": "Chats",

@@ -132,7 +132,8 @@
     "searchEntities": "테이블 검색",
     "toggleSidebar": "사이드바 전환",
     "jobs": "작업",
-    "newQueryTab": "새 쿼리 탭"
+    "newQueryTab": "새 쿼리 탭",
+    "query": "쿼리"
   },
   "table": {
     "filterPlaceholder": "필터 — 예: name like 'A%'",
@@ -653,7 +654,8 @@
     "showingFirst": "앞 {{count}}행 표시",
     "cutOff": "행 제한에서 잘림",
     "chooseProvider": "공급자 선택",
-    "theQuery": "쿼리"
+    "theQuery": "쿼리",
+    "chat": "대화"
   },
   "chats": {
     "title": "대화",

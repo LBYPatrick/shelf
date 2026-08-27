@@ -132,7 +132,8 @@
     "searchEntities": "テーブルを検索",
     "toggleSidebar": "サイドバーの切り替え",
     "jobs": "ジョブ",
-    "newQueryTab": "新しいクエリタブ"
+    "newQueryTab": "新しいクエリタブ",
+    "query": "クエリ"
   },
   "table": {
     "filterPlaceholder": "絞り込み — 例: name like 'A%'",
@@ -653,7 +654,8 @@
     "showingFirst": "先頭 {{count}} 件を表示",
     "cutOff": "行数上限で打ち切り",
     "chooseProvider": "提供元を選択",
-    "theQuery": "クエリ"
+    "theQuery": "クエリ",
+    "chat": "チャット"
   },
   "chats": {
     "title": "チャット",

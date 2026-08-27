@@ -132,7 +132,8 @@
     "searchEntities": "Tìm bảng",
     "toggleSidebar": "Bật/tắt thanh bên",
     "jobs": "Tác vụ",
-    "newQueryTab": "Thẻ truy vấn mới"
+    "newQueryTab": "Thẻ truy vấn mới",
+    "query": "Truy vấn"
   },
   "table": {
     "filterPlaceholder": "Lọc — ví dụ name like 'A%'",
@@ -653,7 +654,8 @@
     "showingFirst": "hiển thị {{count}} hàng đầu",
     "cutOff": "bị cắt ở giới hạn hàng",
     "chooseProvider": "Chọn nhà cung cấp",
-    "theQuery": "Câu truy vấn"
+    "theQuery": "Câu truy vấn",
+    "chat": "Trò chuyện"
   },
   "chats": {
     "title": "Trò chuyện",

@@ -92,6 +92,29 @@ test.describe('layout', () => {
     expect(Math.abs(rows.icon! - rows.connection!)).toBeLessThanOrEqual(1);
   });
 
+  test('every control in the drag region is clickable', async ({ sample }) => {
+    /*
+     * A drag region swallows clicks. The head of the sidebar is one, so the
+     * window can be moved by it, and anything interactive inside it has to say
+     * `no-drag` or it is scenery: the two primary actions were added there,
+     * looked completely normal, and did nothing at all.
+     *
+     * Asked of the computed region rather than the class, because the class is
+     * one way to get it and the rule is about the region.
+     */
+    const swallowed = await sample.evaluate(() =>
+      [
+        ...document.querySelectorAll<HTMLElement>(
+          '.drag-region button, .drag-region [role="button"]'
+        ),
+      ]
+        .filter((el) => getComputedStyle(el).webkitAppRegion !== 'no-drag')
+        .map((el) => el.className || el.tagName)
+    );
+
+    expect(swallowed, 'these are inside a drag region and cannot be clicked').toEqual([]);
+  });
+
   test('the columns begin below the bar the window controls sit on', async ({ sample }) => {
     // The clearance used to be padding inside the rail and the connection row,
     // measured separately and kept in agreement by hand. It is the bar's height

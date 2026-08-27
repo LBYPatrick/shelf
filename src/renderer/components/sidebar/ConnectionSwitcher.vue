@@ -38,20 +38,17 @@ const engine = computed(() =>
 );
 
 /**
- * The engine and its version, as one line.
+ * What this connection is, in as few words as are true.
  *
- * The engine's name is dropped when the connection is already called that:
- * repeating a word directly beneath itself tells the reader nothing. The
- * version stays either way — it is the fact that decides whether a syntax is
- * available, and it was previously only in a tooltip.
+ * Every driver's version string already names its engine — `PostgreSQL 16.2`,
+ * `SQLite 3.45` — so putting the engine's own label beside it printed the word
+ * twice. And a server that will not say which version it is comes back as
+ * "PostgreSQL unknown", which is a sentence with a shrug on the end: the engine
+ * alone is the honest version of it.
  */
 const detail = computed(() => {
-  const active = connections.active;
-  if (!active) return '';
-
-  const label = engine.value?.name;
-  const version = active.version && active.version !== 'unknown' ? active.version : '';
-  return [label !== active.name ? label : '', version].filter(Boolean).join(' ');
+  const version = (connections.active?.version ?? '').replace(/\s+unknown$/i, '').trim();
+  return version || engine.value?.name || '';
 });
 
 /**
@@ -160,29 +157,48 @@ function onChoose(id: string): void {
       this app is for and it goes first; asking is the other way in, and sits
       beside it at the same size because it is a peer, not a footnote.
     -->
+    <!--
+      `no-drag`, or they are scenery.
+
+      The head of the sidebar is a drag region so the window can be moved by it,
+      and a drag region swallows every click that lands on it — the row has said
+      `no-drag` since it was written, and two buttons added inside the same
+      region without it looked completely normal and did nothing at all.
+
+      On each control rather than on the row around them: `-webkit-app-region`
+      is not inherited, so a `no-drag` wrapper exempts the wrapper and leaves
+      everything in it exactly as swallowed as before.
+    -->
     <div class="switcher__actions">
+      <!--
+        One word each, and the whole phrase for anything that reads the name
+        aloud. "New" is what both of these buttons have in common, so it is the
+        part that says nothing: the noun is the choice being made.
+      -->
       <PressButton
-        class="switcher__action"
+        class="switcher__action no-drag"
         variant="primary"
+        :aria-label="$t('workspace.newQuery')"
         @click="tabs.openQuery()"
       >
         <AppIcon
           name="query"
           :size="13"
         />
-        <span>{{ $t('workspace.newQuery') }}</span>
+        <span>{{ $t('workspace.query') }}</span>
       </PressButton>
 
       <PressButton
-        class="switcher__action"
+        class="switcher__action no-drag"
         variant="glass"
+        :aria-label="$t('assistant.newChat')"
         @click="tabs.openChat()"
       >
         <AppIcon
           name="assistant"
           :size="13"
         />
-        <span>{{ $t('assistant.newChat') }}</span>
+        <span>{{ $t('assistant.chat') }}</span>
       </PressButton>
     </div>
 
@@ -201,7 +217,13 @@ function onChoose(id: string): void {
   display: flex;
   flex-direction: column;
   gap: var(--gap-tight);
-  padding: var(--gap-tight);
+  /*
+   * The same inset the panel header below uses, so the head of the sidebar is
+   * one block rather than two that nearly line up. It was `--gap-tight` all
+   * round against the header's `--gap`, which put the search field a couple of
+   * pixels further in than the buttons above it.
+   */
+  padding: var(--gap-tight) var(--gap-tight) 0 var(--gap-tight);
 }
 
 .switcher__row {
