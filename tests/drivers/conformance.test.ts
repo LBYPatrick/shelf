@@ -157,10 +157,19 @@ for (const target of TARGETS) {
       await client?.disconnect().catch(() => undefined);
     });
 
-    it('reports a version', async () => {
+    it('reports a version, and an actual one', async () => {
+      /*
+       * "PostgreSQL unknown" is truthy and longer than two characters, and it
+       * is what this suite accepted for as long as the Postgres driver read a
+       * column the server does not name. A version string has to carry a
+       * version: at least one digit, and not the word we print when there is
+       * none.
+       */
       const version = await client.versionString();
       expect(version).toBeTruthy();
       expect(version.length).toBeGreaterThan(2);
+      expect(version, `${target.label} does not say which version`).toMatch(/\d/);
+      expect(version.toLowerCase()).not.toContain('unknown');
     });
 
     it('answers a ping', async () => {

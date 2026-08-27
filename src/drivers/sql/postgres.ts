@@ -155,8 +155,20 @@ export class PostgresClient implements DatabaseClient {
   }
 
   async versionString(): Promise<string> {
-    const result = await this.run<{ version: string }>('SHOW server_version');
-    return `PostgreSQL ${result.rows[0]?.version ?? 'unknown'}`;
+    /*
+     * Aliased, like every other driver here, and that is the whole fix.
+     *
+     * `SHOW server_version` answers with a column called `server_version`; this
+     * read `.version` off it, which is `undefined` for every server that has
+     * ever run — so the app has been saying "PostgreSQL unknown" since the day
+     * it was written, and the type annotation asserting `{ version: string }`
+     * is what made it look checked. A name we choose cannot be a name the
+     * server declines to use.
+     */
+    const result = await this.run<{ v: string }>(
+      "SELECT current_setting('server_version') AS v"
+    );
+    return `PostgreSQL ${result.rows[0]?.v ?? 'unknown'}`;
   }
 
   async ping(): Promise<void> {
