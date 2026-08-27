@@ -428,12 +428,12 @@ export function applyTheme(
   root.style.colorScheme = appearance;
 
   /*
-   * The scheme, or the absence of one.
+   * Every token, every time.
    *
-   * Cleared before it is set, and cleared entirely when the built-in is chosen:
-   * a property left on the element from a previous choice is a colour that
-   * survives switching away from the scheme that asked for it, which is how a
-   * palette ends up half one thing and half another.
+   * Writing only the ones a scheme happens to name leaves the rest of the
+   * previous choice on the element, which is how a palette ends up half one
+   * thing and half another. A scheme carries all eight, so this is a whole
+   * replacement rather than a patch.
    */
   const syntax = clampSyntax(options.syntax);
   const palette = syntaxProperties(
@@ -441,8 +441,7 @@ export function applyTheme(
     appearance
   );
   for (const token of SYNTAX_TOKENS) {
-    if (palette) root.style.setProperty(`--syntax-${token}`, palette[token]);
-    else root.style.removeProperty(`--syntax-${token}`);
+    root.style.setProperty(`--syntax-${token}`, palette[token]);
   }
 
   const alpha = alphaTransform(materials.opacity);
