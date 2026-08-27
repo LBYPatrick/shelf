@@ -137,13 +137,32 @@ the window.
 
 ## What it looks like
 
-<p align="center">
-  <img src="docs/diagram.png" alt="The entity-relationship diagram of the sample database" width="900" />
-</p>
-
-<p align="center">
-  <img src="docs/start-dark.png" alt="The start screen in the dark theme" width="900" />
-</p>
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/assistant.png" alt="The assistant answering a question about the sample database" width="100%" />
+      <br />
+      <sub><b>Ask.</b> It reads the schema, runs read-only queries to check itself, and shows the rows it got back. The statement is one click from a tab of its own.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/diagram.png" alt="An entity-relationship diagram of the sample database" width="100%" />
+      <br />
+      <sub><b>Diagram.</b> Every relationship in the database, laid out, draggable, and remembering where you put things.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/query.png" alt="The query editor, with a dispatched job finishing" width="100%" />
+      <br />
+      <sub><b>Query.</b> Completion from the schema, run-all or run-current, and long statements dispatched to finish on their own.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/start-dark.png" alt="The start screen in the dark theme" width="100%" />
+      <br />
+      <sub><b>Start.</b> Paste a connection URL and it fills in the form — or open the sample database and nothing is saved.</sub>
+    </td>
+  </tr>
+</table>
 
 Light and dark, an accent colour you pick, and three density settings for how
 much fits on screen. English, 日本語, 简体中文, 한국어 and Tiếng Việt, following the
