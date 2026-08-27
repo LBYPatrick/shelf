@@ -9,10 +9,6 @@
 </p>
 
 <p align="center">
-  Nine engines. Every feature. No account.
-</p>
-
-<p align="center">
   <img src="https://img.shields.io/badge/version-1.0.0-4C6EF5" alt="Version 1.0.0" />
   <img src="https://img.shields.io/badge/licence-MIT-3BA55D" alt="MIT licence" />
   <img src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-2F3136" alt="Platforms" />
@@ -139,30 +135,20 @@ the window.
 
 ---
 
-## Design
+## What it looks like
+
+<p align="center">
+  <img src="docs/diagram.png" alt="The entity-relationship diagram of the sample database" width="900" />
+</p>
 
 <p align="center">
   <img src="docs/start-dark.png" alt="The start screen in the dark theme" width="900" />
 </p>
 
-- **One accent colour drives everything.** Pick a colour and the whole palette
-  is derived from it — including a faint tint carried through the neutral
-  surfaces, which is what makes a new accent feel like a new theme rather than a
-  repainted button. Any accent stays readable: the derivation walks the
-  lightness until it clears the contrast it needs.
-- **The window is the material.** Real vibrancy on macOS and acrylic on Windows,
-  with the rail, the sidebar and the working pane at three different depths over
-  it, and one dial that thins them together.
-- **Three density modes,** so you can fit more on screen without anything
-  drifting out of proportion.
-- **Springs, not keyframes.** Anything you can grab tracks the pointer one to
-  one, resists at its limits, and carries your release velocity into the
-  animation that follows.
-- **Five languages** — English, 日本語, 简体中文, 한국어 and Tiếng Việt, following
-  the system locale or set explicitly. Engine-specific words — *collection*,
-  *keyspace*, *item* — are translated too.
-- `prefers-reduced-motion`, `prefers-reduced-transparency` and
-  `prefers-contrast` are all honoured.
+Light and dark, an accent colour you pick, and three density settings for how
+much fits on screen. English, 日本語, 简体中文, 한국어 and Tiếng Việt, following the
+system locale or set explicitly. `prefers-reduced-motion`,
+`prefers-reduced-transparency` and `prefers-contrast` are all honoured.
 
 ---
 
