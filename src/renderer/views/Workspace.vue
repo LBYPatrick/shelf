@@ -607,11 +607,15 @@ onBeforeUnmount(() => stopPersisting?.());
                     class="opening__way focus-fill"
                     @click="way.run()"
                   >
-                    <AppIcon
+                    <span
                       class="opening__icon"
-                      :name="way.icon"
-                      :size="14"
-                    />
+                      aria-hidden="true"
+                    >
+                      <AppIcon
+                        :name="way.icon"
+                        :size="16"
+                      />
+                    </span>
                     <span class="opening__label">{{ way.label }}</span>
                     <kbd class="opening__key">{{ way.hint }}</kbd>
                   </button>
@@ -1269,11 +1273,22 @@ onBeforeUnmount(() => stopPersisting?.());
  * opens, and something that simply *is there* in the frame after a close reads
  * as a glitch — arriving says the pane changed rather than the app blinked.
  */
+/*
+ * Bigger, and the rows are objects.
+ *
+ * The first attempt drew all three ways in at the weight of a caption — a
+ * 14-unit glyph at 65% opacity, a 13px label and a rule of nothing between
+ * them — so the only thing on an empty pane with any presence was the note
+ * above it saying there was nothing on it. The list is the page's whole
+ * purpose; it can look like it. Each way is a card of its own now: a tinted
+ * tile behind its glyph, a label a step up from body copy, and a surface that
+ * lifts under the pointer.
+ */
 .opening {
   display: grid;
   justify-items: center;
   gap: var(--gap-tight);
-  width: min(24rem, 100%);
+  width: min(27rem, 100%);
   text-align: center;
 }
 
@@ -1284,38 +1299,49 @@ onBeforeUnmount(() => stopPersisting?.());
 .opening__mark {
   display: grid;
   place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  margin-bottom: var(--gap-tight);
-  border-radius: 0.75rem;
+  width: 3.25rem;
+  height: 3.25rem;
+  margin-bottom: var(--gap);
+  border-radius: 1rem;
   background: linear-gradient(
     145deg,
     oklch(64% 0.16 var(--engine-hue)),
     oklch(52% 0.17 var(--engine-hue))
   );
   color: oklch(99% 0 0);
-  font-size: 0.75rem;
+  font-size: 0.9375rem;
   font-weight: 650;
 }
 
+/*
+ * The container is muted; the name and the actions are not.
+ *
+ * `.content__empty` dims everything inside it, which was right when it held two
+ * grey sentences and is wrong now that it holds the page's only controls — a
+ * button drawn at 45% of the text colour reads as disabled.
+ */
 .opening__title {
   margin: 0;
-  font-size: 1rem;
+  color: var(--color-base-content);
+  /* Type that grows tightens. */
+  font-size: 1.25rem;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.018em;
   animation-delay: 40ms;
 }
 
 .opening__note {
-  margin: 0 0 var(--gap-loose);
-  font-size: 0.8125rem;
+  max-width: 24rem;
+  margin: 0 0 var(--gap-section);
+  font-size: 0.875rem;
+  line-height: 1.5;
   color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
   animation-delay: 80ms;
 }
 
 .opening__ways {
   display: grid;
-  gap: var(--gap-hair);
+  gap: var(--gap-tight);
   width: 100%;
   margin: 0;
   padding: 0;
@@ -1328,18 +1354,22 @@ onBeforeUnmount(() => stopPersisting?.());
   align-items: center;
   gap: var(--gap);
   width: 100%;
-  min-height: var(--hit-min);
-  padding-inline: var(--gap-loose);
-  border-radius: var(--control-radius);
+  min-height: 3.25rem;
+  padding-inline: var(--gap) var(--gap-loose);
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-box);
+  background: var(--fill-4);
   text-align: start;
   transition:
     background-color var(--t-hover) var(--ease-out),
+    border-color var(--t-hover) var(--ease-out),
     transform var(--t-press) var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .opening__way:hover {
-    background: var(--fill-3);
+    background: var(--fill-2);
+    border-color: var(--separator-strong);
   }
 }
 
@@ -1347,22 +1377,37 @@ onBeforeUnmount(() => stopPersisting?.());
   transform: scale(0.99);
 }
 
+/* The glyph gets a tile of its own, so it reads as the row's subject rather
+   than as punctuation before the label. */
 .opening__icon {
+  display: grid;
+  place-items: center;
   flex: 0 0 auto;
-  opacity: 0.65;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.625rem;
+  background: var(--fill-2);
+  color: var(--color-primary-text);
 }
 
 .opening__label {
   flex: 1;
-  font-size: 0.8125rem;
+  color: var(--color-base-content);
+  font-size: 0.9375rem;
+  font-weight: 550;
+  letter-spacing: -0.005em;
 }
 
 .opening__key {
   flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--separator-strong);
+  background: var(--color-base-100);
   font-family: inherit;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
 }
 
 @keyframes opening-in {
