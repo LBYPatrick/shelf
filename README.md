@@ -186,6 +186,7 @@ absence is asserted, not skipped.
 | `make test-drivers` | Conformance suite against every engine |
 | `make build` | Type-check and build all processes |
 | `make package` | Build a distributable for the host platform |
+| `make publish` | Gate, bump, push and tag a release |
 | `make test` | Unit tests |
 | `make storybook` | Browse every component in isolation |
 | `make storybook-check` | Open every story and fail on any that throws |
@@ -195,6 +196,34 @@ absence is asserted, not skipped.
 | `make clean` | Remove build artifacts |
 | `make uninstall` | Remove dependencies and artifacts |
 | `pnpm shots` | Screenshot the interface for design review |
+
+### Releases
+
+```bash
+echo 1.2.0 > VERSION
+make publish
+```
+
+It asks which version, runs the gate, brings `package.json` to whatever
+`VERSION` says, commits, pushes `main`, and tags. Pushing the tag is what
+publishes: a workflow builds the packages on three runners and attaches them to
+the release — a `.dmg` and a `.zip` for macOS, a `.deb`, an `.rpm` and an
+`.AppImage` for Linux, and an installer and a portable `.exe` for Windows. Each
+is built on the architecture it runs on, because the native modules are compiled
+against the machine that builds them.
+
+The release page is drafted before the packages exist and goes live when they
+are attached, so nobody arrives during the forty minutes in between and finds a
+release with nothing to download.
+
+| Variable | What it does |
+| --- | --- |
+| `V=1.2.0` | The version, instead of being asked for it |
+| `NOTES=notes.json` | `{"title": "...", "body": "..."}` for the release page; without it GitHub writes the page from the commits |
+| `YES=1` | Skip the confirmation — for an agent, not for a person |
+
+`make publish` runs from `main`, refuses a tag that already exists, and refuses
+to run with anything uncommitted other than the two version files.
 
 ### Storybook
 

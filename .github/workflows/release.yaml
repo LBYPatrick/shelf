@@ -1,0 +1,200 @@
+name: release
+
+# The tag is the trigger, not the release object.
+#
+# `make publish`, `git push --tags` and "Draft a new release" in the web
+# interface are all ways of releasing, and only the last raises a `release`
+# event — so listening for that one would leave the other two building nothing.
+# A tag push is the one thing all three do. The publish job writes the release
+# page when the tag arrived without one, and uploads into it when it did not.
+on:
+  push:
+    tags: ['v*']
+
+# A release is never cancelled by a later one. Two tags pushed a minute apart
+# are two releases, and the first is not a stale run of the second.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Three files carry the version and a release is the moment they have to
+  # agree: the tag names it, `VERSION` is what the app compiles in and shows in
+  # its settings, and `package.json` is what electron-builder writes into every
+  # filename. Checked here, in seconds, rather than discovered as a `Shelf-1.0.0`
+  # attached to a v1.1.0 release forty minutes later.
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: check
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          file="$(tr -d '[:space:]' < VERSION)"
+          pkg="$(node -p "require('./package.json').version")"
+
+          if [[ "$tag" != "$file" || "$tag" != "$pkg" ]]; then
+            echo "The tag and the files disagree about which version this is:" >&2
+            echo "  tag           $GITHUB_REF_NAME  (-> $tag)" >&2
+            echo "  VERSION       $file" >&2
+            echo "  package.json  $pkg" >&2
+            echo "" >&2
+            echo "Set both files to $tag, commit, and move the tag onto it." >&2
+            exit 1
+          fi
+
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+
+  # No gate here. It runs on every push to main, so the commit a tag points at
+  # has already passed it — and it could not pass on two of these three runners
+  # anyway: the visual snapshots are pixels, and pixels are a function of the
+  # font rasteriser.
+  package:
+    needs: version
+    strategy:
+      # One platform failing must not cancel the other two. The publish job
+      # already refuses to attach a partial set, and the logs of the runs that
+      # worked are what say whether the failure is about the platform or the tag.
+      fail-fast: false
+      matrix:
+        include:
+          # Each package is built on the architecture it runs on, and there is
+          # one architecture per runner. `better-sqlite3` is compiled by the
+          # install hook against the host's ABI and DuckDB's bindings are an
+          # optional dependency the package manager picks by host CPU — so a
+          # cross-built app carries a native module for the wrong machine, which
+          # fails at the first query rather than at build time. An Intel Mac
+          # build needs an Intel runner.
+          - os: macos-latest
+            platform: macos
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+
+    # bash on all three, so the scripts the Makefile runs are the scripts this
+    # runs. Windows has no dependable `make`, and two ways of building is the
+    # one that gets left behind.
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # No `version` here on purpose — see the note in gate.yml. `packageManager`
+      # in `package.json` is the one place that says which pnpm this is built
+      # with.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      # What the .rpm and the AppImage are assembled with. The runner carries
+      # dpkg for the .deb and neither of these: `rpmbuild` comes from `rpm`, and
+      # electron-builder unpacks the AppImage runtime with bsdtar.
+      - name: Install the Linux packaging tools
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends rpm libarchive-tools
+
+      # `scripts/install.sh` rather than `pnpm install`: better-sqlite3 is
+      # compiled against Electron's ABI, and a plain install leaves it built for
+      # Node — which fails at the first query rather than at install time.
+      - name: Install
+        run: bash scripts/install.sh
+
+      - name: Build
+        run: bash scripts/build.sh
+
+      # Signing is opt-in and asked for by name, and nothing here asks: the mac
+      # build is unsigned and the Windows installer is unsigned. Adding a
+      # certificate means adding the secrets electron-builder reads for it, not
+      # editing this line.
+      - name: Package
+        run: bash scripts/package.sh ${{ matrix.platform }}
+
+      # What a person downloads, and nothing else. The output directory also
+      # holds the unpacked app, the builder's own debug log, and a .blockmap per
+      # archive — a differential-update index for an updater this app does not
+      # run.
+      - name: Collect the distributables
+        run: |
+          mkdir -p dist
+          find "release/${{ needs.version.outputs.version }}" -maxdepth 1 -type f \
+            \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' \
+               -o -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \) \
+            -exec cp {} dist/ \;
+          ls -l dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.platform }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 7
+
+  # All three or none. A release page carrying only the Windows installer
+  # because the mac build failed is worse than one carrying nothing: the first
+  # reads as a decision and the second reads as a build still running. This job
+  # is skipped outright if any leg of the matrix failed.
+  publish:
+    needs: [version, package]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Attach the packages to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Nothing is checked out here, so `gh` has no remote to read the
+          # repository from and has to be told.
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          shopt -s nullglob
+          files=(dist/*)
+
+          if [[ ${#files[@]} -eq 0 ]]; then
+            echo "Every platform built and none of them produced a file." >&2
+            exit 1
+          fi
+
+          # A tag pushed on its own has no release to upload to. One made in
+          # the web interface, or drafted by `make publish` with notes, has a
+          # body somebody wrote — which is not ours to replace. So the release
+          # is written only when there is not one already.
+          #
+          # `release list` rather than `release view`, because a draft is not
+          # reachable by tag through the API that `view` asks first, and a
+          # missed draft here would try to create a release that already exists.
+          if gh release list --limit 100 --json tagName --jq '.[].tagName' |
+            grep -qxF "$TAG"; then
+            echo "Release $TAG already exists; keeping its title and notes."
+          else
+            gh release create "$TAG" --draft --title "Shelf $VERSION" --generate-notes
+          fi
+
+          gh release upload "$TAG" "${files[@]}" --clobber
+
+          # Live only now. A release page is drafted before the packages exist
+          # so that its notes are ready, and published once they are attached —
+          # nobody should arrive during the forty minutes in between and find a
+          # release with nothing on it to download.
+          gh release edit "$TAG" --draft=false

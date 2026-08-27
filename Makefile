@@ -1,10 +1,14 @@
-.PHONY: help gate gate-full install uninstall clean dev preview build test test-assistant test-e2e typecheck lint format tidy commit package icon storybook storybook-build storybook-check
+.PHONY: help gate gate-full install uninstall clean dev preview build test test-assistant test-e2e typecheck lint format tidy commit package publish icon storybook storybook-build storybook-check
 
 SHELL := /bin/bash
-# The one place the number lives; the build compiles it in from here too.
-# The fallback is deliberately not a plausible version: a missing file should
-# look missing rather than look like a release.
-VERSION := $(shell cat VERSION 2>/dev/null | tr -d '\n' || echo "0.0.0")
+# The one place the number lives is `package.json`, because that is the copy
+# nothing can be talked out of reading: electron-builder writes it into every
+# filename, and the build compiles it in from there. Lazily expanded — only
+# `help` asks for it, and a node process on every `make` for a line nobody reads
+# is a cost for nothing. The fallback is deliberately not a plausible version: a
+# manifest that cannot be read should look unread rather than look like a
+# release.
+VERSION = $(shell node -p "require('./package.json').version" 2>/dev/null || echo "0.0.0")
 VERBOSE ?= 0
 
 # The icon is drawn once, in `resources/icon.svg`, and reaches the two places
@@ -53,8 +57,8 @@ dev: $(ICON_PNG) $(ICON_ASSET) ## Run the app in development with hot reload
 preview: $(ICON_PNG) build ## Build, then run the built app with no dev server and no hot reload
 	@pnpm preview
 
-build: $(ICON_ASSET) ## Type-check and build all three processes
-	@pnpm typecheck && pnpm build
+build: ## Type-check and build all three processes
+	@bash scripts/build.sh
 
 # Which platforms to package for, as a comma-separated list: `macos`, `linux`,
 # `windows`. `P` is the short form of the same thing. Neither given, it is the
@@ -74,6 +78,17 @@ icon: $(ICON_PNG) $(ICON_ASSET) ## Redraw the app icon from resources/icon.svg
 
 package: build ## Package for distribution (PLATFORM/P=macos,linux; SIGN=1 to sign)
 	@bash scripts/package.sh "$(PLATFORM)"
+
+# Releasing. `V` is the version, and is asked for if it is not given. `NOTES`
+# is a JSON file holding the release page's `title` and `body` — without one,
+# GitHub writes the page from the commits. `YES=1` skips the confirmation, which
+# is how an agent runs this and not how a person should.
+V ?=
+NOTES ?=
+YES ?=
+
+publish: ## Gate, bump, push and tag a release (V=1.2.0 NOTES=notes.json)
+	@V="$(V)" NOTES="$(NOTES)" YES="$(YES)" bash scripts/publish.sh
 
 typecheck: ## Type-check without emitting
 	@pnpm typecheck
