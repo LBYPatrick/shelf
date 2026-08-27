@@ -30,6 +30,7 @@ import {
   resetKeymap,
   setBinding,
 } from '../../lib/keybindings';
+import { useDismiss } from '../../composables/useDismiss';
 import { useToasts } from '../../stores/toasts';
 import AppIcon from '../ui/AppIcon.vue';
 import JsonEditor from '../ui/JsonEditor.vue';
@@ -86,6 +87,19 @@ const recording = ref('');
 const captured = ref('');
 
 /**
+ * The recorder joins the overlay stack while it is armed.
+ *
+ * Escape has to leave the recorder without leaving the sheet, and handling it
+ * here could not do that: `useDismiss` listens at the window in the capture
+ * phase and was registered when the sheet opened, so it ran first and took the
+ * sheet with it. Listeners on one node in one phase all run — that is the whole
+ * reason there is a stack — so the recorder registers on it instead, above the
+ * sheet, and is what Escape reaches.
+ */
+const armed = ref(false);
+useDismiss(armed, () => stopRecording());
+
+/**
  * In the capture phase, and stopped dead.
  *
  * Anything less and the app acts on the chord being recorded — which is exactly
@@ -93,15 +107,11 @@ const captured = ref('');
  */
 function onKey(event: KeyboardEvent): void {
   if (!recording.value) return;
+  // Escape is the way out, and `useDismiss` has already acted on it above.
+  if (event.key === 'Escape') return;
+
   event.preventDefault();
   event.stopPropagation();
-
-  // Escape is the way out of a recorder, so it is never a thing a recorder
-  // records. Nothing in this app binds it either.
-  if (event.key === 'Escape') {
-    stopRecording();
-    return;
-  }
 
   const accelerator = acceleratorFrom(event, isMac);
   // A modifier held on its own is a chord still being typed, not a chord.
@@ -111,12 +121,14 @@ function onKey(event: KeyboardEvent): void {
 function startRecording(id: string): void {
   recording.value = id;
   captured.value = '';
+  armed.value = true;
   window.addEventListener('keydown', onKey, true);
 }
 
 function stopRecording(): void {
   recording.value = '';
   captured.value = '';
+  armed.value = false;
   window.removeEventListener('keydown', onKey, true);
 }
 

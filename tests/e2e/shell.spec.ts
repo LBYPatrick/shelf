@@ -309,6 +309,17 @@ test('records a new shortcut, and the window obeys it', async ({ page }) => {
   await page.keyboard.press('ControlOrMeta+j');
   await expect(sheet.locator('.record__slot')).not.toHaveClass(/record__slot--empty/);
 
+  /*
+   * Escape leaves the recorder and *not* the sheet. It could not: `useDismiss`
+   * listens at the window in the capture phase and was registered when the
+   * sheet opened, so it ran first and took the sheet with it.
+   */
+  await page.keyboard.press('Escape');
+  await expect(sheet.getByText('Press a shortcut')).toBeHidden();
+  await expect(sheet.getByText('New query tab')).toBeVisible();
+
+  await sheet.getByRole('button', { name: 'Change the shortcut for New query tab' }).click();
+  await page.keyboard.press('ControlOrMeta+j');
   await sheet.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(sheet.getByText('Press a shortcut')).toBeHidden();
 
