@@ -590,7 +590,8 @@
     "openRows": "Mở các hàng",
     "explain": "Giải thích truy vấn này",
     "explainOf": "Giải thích: {{name}}",
-    "clearFilters": "Xóa bộ lọc"
+    "clearFilters": "Xóa bộ lọc",
+    "showSql": "Xem câu truy vấn gốc"
   },
   "value": {
     "asJson": "định dạng JSON",

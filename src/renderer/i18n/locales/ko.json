@@ -590,7 +590,8 @@
     "openRows": "결과 열기",
     "explain": "이 쿼리 설명",
     "explainOf": "설명: {{name}}",
-    "clearFilters": "필터 지우기"
+    "clearFilters": "필터 지우기",
+    "showSql": "원래 쿼리 보기"
   },
   "value": {
     "asJson": "JSON으로 정렬됨",

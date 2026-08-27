@@ -590,7 +590,8 @@
     "openRows": "打开结果",
     "explain": "解释这条查询",
     "explainOf": "解释：{{name}}",
-    "clearFilters": "清除筛选"
+    "clearFilters": "清除筛选",
+    "showSql": "查看原始查询"
   },
   "value": {
     "asJson": "按 JSON 格式化",

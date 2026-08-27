@@ -590,7 +590,8 @@
     "openRows": "結果を開く",
     "explain": "このクエリを説明",
     "explainOf": "説明: {{name}}",
-    "clearFilters": "絞り込みを解除"
+    "clearFilters": "絞り込みを解除",
+    "showSql": "元のクエリを表示"
   },
   "value": {
     "asJson": "JSON として整形",

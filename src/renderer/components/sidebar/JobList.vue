@@ -146,6 +146,7 @@ const menuItems = computed<MenuItem[]>(() => {
       disabled: !finished,
       startsGroup: true,
     },
+    { id: 'sql', label: t('jobs.showSql'), icon: 'query' },
     { id: 'explain', label: t('jobs.explain'), icon: 'chart' },
     { id: 'discard', label: t('jobs.discard'), icon: 'trash', startsGroup: true },
   ];
@@ -168,6 +169,18 @@ function onChoose(id: string): void {
   else if (id === 'export') {
     exportOf.value = job;
     exportOpen.value = true;
+  } else if (id === 'sql') {
+    /*
+     * What was actually dispatched, in an editor.
+     *
+     * The card carries a name, and a name is the first thing anyone changes —
+     * so on a list of forty there is often nothing left saying what a job ran.
+     * Opened rather than shown in a popup, because the next thing you want to
+     * do with a statement you have gone looking for is run it again or change
+     * it, and an editor is where both of those happen.
+     */
+    const tab = tabs.openQuery(job.sql);
+    tabs.rename(tab.id, job.name);
   } else if (id === 'explain') {
     /*
      * Opened as a statement rather than run here. A job outlives the connection

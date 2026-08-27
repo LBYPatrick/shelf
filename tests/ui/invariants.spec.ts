@@ -2333,10 +2333,10 @@ test.describe('the jobs rail', () => {
     await expect(sample.locator('.chip')).toHaveCount(0);
   });
 
-  test('a job card holds its three actions on a right-click', async ({ sample }) => {
-    // A card two lines tall has room for one button. Export and explain are
-    // exactly the questions a job that ran for four minutes raises, and they
-    // had nowhere to live.
+  test('a job card holds its actions on a right-click', async ({ sample }) => {
+    // A card two lines tall has room for one button. Export, explain and "what
+    // did this actually run" are exactly the questions a job that ran for four
+    // minutes raises, and they had nowhere to live.
     await sample
       .getByRole('button', { name: /new query tab/i })
       .first()
@@ -2357,6 +2357,7 @@ test.describe('the jobs rail', () => {
     await expect(menu.getByRole('menuitem')).toHaveText([
       'Open the rows',
       'Export data to file…',
+      'Show original query',
       'Explain this query',
       'Discard',
     ]);

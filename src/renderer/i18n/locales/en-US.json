@@ -590,7 +590,8 @@
     "openRows": "Open the rows",
     "explain": "Explain this query",
     "explainOf": "Explain: {{name}}",
-    "clearFilters": "Clear the filters"
+    "clearFilters": "Clear the filters",
+    "showSql": "Show original query"
   },
   "value": {
     "asJson": "formatted as JSON",
