@@ -2892,6 +2892,57 @@ test.describe('the assistant', () => {
     expect(shown.split('\n').length).toBeGreaterThan(2);
   });
 
+  test('the composer traces its own edge while a turn runs', async ({ sample }) => {
+    /*
+     * The same ring the Run button wears. A model has no progress to report, so
+     * what is shown is not how far through it is but *which thing* is working —
+     * and here that is the whole composer: the question is in it, the Stop that
+     * ends it is on its floor, and the answer arrives directly above it.
+     *
+     * Asserted against the box's own radius, because the point is that the ring
+     * *is* the border rather than a second line drawn just inside one. A number
+     * passed in would be a copy of a token, and a copy of a token can disagree
+     * with it.
+     */
+    await seedChat(sample, [
+      { id: 't1', question: 'how many albums?', state: 'running', items: [] },
+    ]);
+
+    const ring = sample.locator('.composer__box .circuit');
+    await expect(ring).toHaveCount(1);
+
+    const traced = await sample.evaluate(() => {
+      const box = document.querySelector('.composer__box')!;
+      const style = getComputedStyle(box);
+      const svg = box.querySelector('.circuit svg')!.getBoundingClientRect();
+      const outer = box.getBoundingClientRect();
+      /*
+       * The ring fills the *padding* box, so it is exactly the border's width
+       * narrower on each side than the border box — which is the point: the
+       * stroke is centred on that border rather than drawn inside it.
+       */
+      const border = Number.parseFloat(style.borderTopWidth) * 2;
+      return {
+        radius: Number.parseFloat(style.borderTopLeftRadius),
+        width: Math.abs(svg.width - outer.width) - border,
+        height: Math.abs(svg.height - outer.height) - border,
+      };
+    });
+
+    expect(traced.radius).toBeGreaterThan(0);
+    expect(traced.width, 'the ring is not the width of the box').toBeLessThanOrEqual(1);
+    expect(traced.height, 'the ring is not the height of the box').toBeLessThanOrEqual(1);
+  });
+
+  test('and stops tracing it when the turn is over', async ({ sample }) => {
+    // A ring that outlives its wait says the app is still busy when it is not,
+    // which is worse than no ring at all.
+    await seedChat(sample, [
+      { id: 't1', question: 'how many albums?', state: 'done', items: [] },
+    ]);
+    await expect(sample.locator('.composer__box .circuit')).toHaveCount(0);
+  });
+
   test('the transcript turns off scroll anchoring', async ({ sample }) => {
     // The browser holds a scroll position steady by adjusting scrollTop when
     // content above changes size — and while an answer streams, every token

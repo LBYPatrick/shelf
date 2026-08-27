@@ -38,6 +38,7 @@ import { scopeLabel } from '@shared/schemaDoc';
 import type { MenuItem } from '../ui/ContextMenu.vue';
 import AppIcon from '../ui/AppIcon.vue';
 import ChatItem from './ChatItem.vue';
+import CircuitRing from '../ui/CircuitRing.vue';
 import InlinePicker from './InlinePicker.vue';
 import { useAssistant } from '../../stores/assistant';
 import { useConnections } from '../../stores/connections';
@@ -405,6 +406,20 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
     <div class="composer">
       <div class="composer__inner">
         <div class="composer__box">
+          <!--
+            The edge of the box lights up while a turn is running.
+            ─────────────────────────────────────────────────────
+            The same ring the Run button wears, for the same reason: a model has
+            no progress to report, so what is shown is not how far through it is
+            but *which thing* is working. Here that thing is the whole composer —
+            the question you asked is in it, the Stop that ends it is on its
+            floor, and the answer is arriving directly above it.
+
+            It traces the box's own corner rather than being given a number, so
+            the ring is that border while it runs instead of a second line drawn
+            just inside it.
+          -->
+          <CircuitRing v-if="running" />
           <textarea
             ref="box"
             v-model="draft"
@@ -718,6 +733,8 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
  * off the page, a second surface for focus is one state too many.
  */
 .composer__box {
+  /* The ring is absolute within it. */
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--gap-tight);
