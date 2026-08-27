@@ -1731,6 +1731,13 @@ test.describe('cost', () => {
      *
      * The number below has a lot of room in it. It is not a frame-rate target,
      * it is the difference between answering a resize and sitting it out.
+     *
+     * Forty was not room, though: this gate runs `fullyParallel` at six workers
+     * on the same machine, so "the local gate" is not a machine to itself
+     * either, and forty is fifty-seven frames a second — a bar a contended
+     * laptop trips over about one run in three. Thirty is still nearly twice
+     * the janky case and clears the contention, which is the whole of what this
+     * number has to do.
      */
     test.skip(Boolean(process.env['CI']), 'a frame count needs a machine to itself');
 
@@ -1756,7 +1763,7 @@ test.describe('cost', () => {
       return count;
     });
 
-    expect(frames).toBeGreaterThan(40);
+    expect(frames).toBeGreaterThan(30);
     // Nothing at all: the pane came back the width it left, and a width is the
     // only thing a collapse changes.
     expect(await redraws()).toBe(before);

@@ -74,6 +74,7 @@ const state = computed<'live' | 'connecting' | 'failed'>(() => {
 const menuOpen = ref(false);
 const menuAt = ref({ x: 0, y: 0 });
 const row = ref<HTMLElement>();
+const slot = ref<HTMLElement>();
 
 /**
  * Where else you could be, then what you can do here.
@@ -139,15 +140,25 @@ const menuItems = computed<MenuItem[]>(() => {
 });
 
 /**
- * Under the row rather than at the pointer.
+ * Under the row rather than at the pointer, and inset to where the row's
+ * content begins.
  *
  * A menu belonging to a control opens from that control, so the relationship
  * between the two is visible in where it appears — the same rule the select's
- * list follows.
+ * list follows. But this row's *box* starts at the window's leading edge, so
+ * taking its left put the menu flush against the frame, where nothing else in
+ * the app appears: every other menu here opens at a pointer, and a pointer is
+ * never at the very edge.
+ *
+ * The badge's slot is the rail's width, so its trailing edge is where the
+ * name begins and where the sidebar's own content is aligned. With the sidebar
+ * shut that same edge is the rail's, and the menu opens just clear of the
+ * column — which is what a flyout from a collapsed rail should do.
  */
 function openMenu(): void {
   const box = row.value?.getBoundingClientRect();
-  if (box) menuAt.value = { x: box.left, y: box.bottom + 4 };
+  const badge = slot.value?.getBoundingClientRect();
+  if (box) menuAt.value = { x: badge?.right ?? box.left, y: box.bottom + 4 };
   menuOpen.value = true;
 }
 
@@ -206,7 +217,10 @@ function onChoose(id: string): void {
         rail's own width it is on the rail's own centre line at every frame of
         that animation, and the collapse moves nothing.
       -->
-      <span class="switcher__slot">
+      <span
+        ref="slot"
+        class="switcher__slot"
+      >
         <span
           class="switcher__mark"
           :style="{ '--engine-hue': engine?.hue ?? 250 }"
