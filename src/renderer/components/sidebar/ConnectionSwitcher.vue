@@ -156,6 +156,11 @@ const menuItems = computed<MenuItem[]>(() => {
  * column — which is what a flyout from a collapsed rail should do.
  */
 function openMenu(): void {
+  if (menuOpen.value) {
+    menuOpen.value = false;
+    return;
+  }
+
   const box = row.value?.getBoundingClientRect();
   const badge = slot.value?.getBoundingClientRect();
   if (box) menuAt.value = { x: badge?.right ?? box.left, y: box.bottom + 4 };
@@ -264,6 +269,7 @@ function onChoose(id: string): void {
       v-model="menuOpen"
       :items="menuItems"
       :at="menuAt"
+      :trigger="row"
       @choose="onChoose"
     />
   </div>

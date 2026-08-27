@@ -397,3 +397,39 @@ test('diagnoses the connection it is attached to', async ({ page }) => {
   await expect(sheet.getByText('Tables')).toBeVisible();
   await expect(sheet.locator('.check--failed')).toHaveCount(0);
 });
+
+/*
+ * A disclosure closes on a second press.
+ *
+ * It could not: dismissal happens at the window in the capture phase, so the
+ * press closed the menu before the button's own click handler ran and the
+ * handler opened it straight back up. Pressing twice looked like pressing
+ * nothing at all.
+ */
+test('a menu opened from a button is closed by that button', async ({ page }) => {
+  await page.getByRole('button', { name: /Sample database/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+
+  const row = page.locator('.switcher__row');
+  const menu = page.getByRole('menu');
+
+  await row.click();
+  await expect(menu).toBeVisible();
+  await row.click();
+  await expect(menu).toBeHidden();
+
+  // ...and a press anywhere else still closes it, which is the behaviour the
+  // trigger had to be carved out of rather than replace.
+  await row.click();
+  await expect(menu).toBeVisible();
+  await page.locator('.content').click({ position: { x: 300, y: 300 } });
+  await expect(menu).toBeHidden();
+
+  // The tab strip's plus is the same shape of control, and had the same fault.
+  await page.keyboard.press('ControlOrMeta+t');
+  const plus = page.getByRole('button', { name: /new tab/i }).first();
+  await plus.click();
+  await expect(menu).toBeVisible();
+  await plus.click();
+  await expect(menu).toBeHidden();
+});

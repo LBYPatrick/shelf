@@ -264,6 +264,12 @@ component's props or a mock's shape has changed.
   position steady by adjusting `scrollTop` when content above the anchor changes
   size — which is a good default and the exact opposite of what a recycler
   wants, because every scroll *is* that content changing.
+- **A menu opened from a button is closed by that button.** Dismissal happens
+  at the window in the capture phase, so a press on the trigger closed the menu
+  before the trigger's own click handler ran, and the handler opened it straight
+  back up — pressing twice looked like pressing nothing. `ContextMenu` takes a
+  `trigger` so the dismisser leaves it alone and the control can simply toggle.
+  A menu opened at a pointer has no trigger and wants none.
 - **Escape dismisses the top overlay, and only that one.** Overlays register
   with `useDismiss` rather than listening themselves. Every one of them used to,
   at the window and in the capture phase, each for the same good reason — a

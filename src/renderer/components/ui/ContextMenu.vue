@@ -40,6 +40,20 @@ const props = defineProps<{
   items: readonly MenuItem[];
   /** Where the pointer was, in viewport coordinates. */
   at: { x: number; y: number };
+  /**
+   * The control that opens this menu, when there is one.
+   *
+   * A menu opened from a *button* has to close when that button is pressed
+   * again, and it could not: dismissal happens at the window in the capture
+   * phase, so the press closed the menu before the button's own click handler
+   * ran and the handler then opened it straight back up. Pressing twice looked
+   * like pressing nothing.
+   *
+   * Naming the trigger lets the dismisser leave it alone, so the button's
+   * handler sees the state the reader saw and can simply toggle. A menu opened
+   * at a pointer — a right-click — has no trigger and wants none.
+   */
+  trigger?: HTMLElement | null;
 }>();
 
 const open = defineModel<boolean>({ required: true });
@@ -111,6 +125,8 @@ function commit(): void {
 function onWindowPointerDown(event: PointerEvent): void {
   if (!open.value) return;
   if (panel.value?.contains(event.target as Node)) return;
+  // The control that opened it closes it itself, on the click that follows.
+  if (props.trigger?.contains(event.target as Node)) return;
   open.value = false;
 }
 

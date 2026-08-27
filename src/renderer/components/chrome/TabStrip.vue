@@ -229,8 +229,14 @@ const newMenuItems = computed<MenuItem[]>(() => [
   },
 ]);
 
-/** Under the button, so the menu is visibly that button's. */
+/** Under the button, so the menu is visibly that button's — and closed by a
+ *  second press on it, which is what a disclosure does. */
 function openNewMenu(): void {
+  if (newMenuOpen.value) {
+    newMenuOpen.value = false;
+    return;
+  }
+
   const box = newButton.value?.getBoundingClientRect();
   if (box) newMenuAt.value = { x: box.left, y: box.bottom + 4 };
   newMenuOpen.value = true;
@@ -614,6 +620,7 @@ const KIND_ICON: Record<Tab['kind'], string> = {
       v-model="newMenuOpen"
       :items="newMenuItems"
       :at="newMenuAt"
+      :trigger="newButton"
       @choose="onNewChoose"
     />
   </div>
