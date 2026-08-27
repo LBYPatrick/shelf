@@ -300,7 +300,13 @@
     "importRow": "从文件读取并替换",
     "jsonLines": "{{count}} 行",
     "copyHint": "把整份文档复制到剪贴板",
-    "version": "版本 {{version}}"
+    "version": "版本 {{version}}",
+    "syntax": "代码配色",
+    "syntaxHelp": "编辑器、对话，以及此 JSON 视图。",
+    "syntaxSync": "两种外观使用同一套配色",
+    "syntaxBoth": "配色",
+    "syntaxLight": "浅色配色",
+    "syntaxDark": "深色配色"
   },
   "palette": {
     "placeholder": "搜索表、标签页和操作…",

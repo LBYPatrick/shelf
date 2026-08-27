@@ -27,7 +27,9 @@ import PressButton from '../ui/PressButton.vue';
 import RangeSlider from '../ui/RangeSlider.vue';
 import SegmentedControl from '../ui/SegmentedControl.vue';
 import SelectMenu from '../ui/SelectMenu.vue';
+import ToggleSwitch from '../ui/ToggleSwitch.vue';
 import Sheet from '../ui/Sheet.vue';
+import { SYNTAX_SCHEMES } from '@shared/syntaxThemes';
 
 const open = defineModel<boolean>({ required: true });
 /*
@@ -151,6 +153,13 @@ const modes = computed(() => [
   { value: 'light' as const, label: t('settings.light') },
   { value: 'dark' as const, label: t('settings.dark') },
 ]);
+
+/*
+ * Named, not translated. A colour scheme is a proper noun — "Nord" is Nord in
+ * every language, and a list of translated scheme names is a list nobody can
+ * match against the editor they saw it in.
+ */
+const schemes = SYNTAX_SCHEMES.map((scheme) => ({ value: scheme.id, label: scheme.name }));
 
 const densities = computed(() => [
   { value: 'compact' as const, label: t('settings.compact') },
@@ -344,6 +353,49 @@ const languageOptions = computed(() => [
               class="row__control"
               :options="densities"
               :aria-label="$t('settings.density')"
+            />
+          </div>
+
+          <!--
+            Two schemes, because a palette drawn for a dark background is
+            unreadable on a light one — one picker would be offering to make the
+            editor illegible half the time. The switch is the shortcut for the
+            common case: take a family and use both of its halves.
+          -->
+          <div class="row">
+            <span class="row__label">
+              {{ $t('settings.syntax') }}
+              <span class="row__hint">{{ $t('settings.syntaxHelp') }}</span>
+            </span>
+            <ToggleSwitch
+              v-model="theme.syntax.sync"
+              class="row__control"
+              :aria-label="$t('settings.syntaxSync')"
+            />
+          </div>
+
+          <div class="row">
+            <span class="row__label">{{
+              theme.syntax.sync ? $t('settings.syntaxBoth') : $t('settings.syntaxLight')
+            }}</span>
+            <SelectMenu
+              v-model="theme.syntax.light"
+              class="row__control"
+              :options="schemes"
+              :aria-label="$t('settings.syntaxLight')"
+            />
+          </div>
+
+          <div
+            v-if="!theme.syntax.sync"
+            class="row"
+          >
+            <span class="row__label">{{ $t('settings.syntaxDark') }}</span>
+            <SelectMenu
+              v-model="theme.syntax.dark"
+              class="row__control"
+              :options="schemes"
+              :aria-label="$t('settings.syntaxDark')"
             />
           </div>
         </div>

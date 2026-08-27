@@ -300,7 +300,13 @@
     "importRow": "ファイルから読み込んで置き換える",
     "jsonLines": "{{count}} 行",
     "copyHint": "書類全体をクリップボードにコピー",
-    "version": "バージョン {{version}}"
+    "version": "バージョン {{version}}",
+    "syntax": "コードの配色",
+    "syntaxHelp": "エディタ、チャット、この JSON ビュー。",
+    "syntaxSync": "両方の外観で同じ配色を使う",
+    "syntaxBoth": "配色",
+    "syntaxLight": "ライトの配色",
+    "syntaxDark": "ダークの配色"
   },
   "palette": {
     "placeholder": "テーブル・タブ・操作を検索…",

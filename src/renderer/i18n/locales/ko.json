@@ -300,7 +300,13 @@
     "importRow": "파일에서 읽어 대체",
     "jsonLines": "{{count}}줄",
     "copyHint": "문서 전체를 클립보드로 복사",
-    "version": "버전 {{version}}"
+    "version": "버전 {{version}}",
+    "syntax": "코드 색상",
+    "syntaxHelp": "편집기, 대화, 이 JSON 보기.",
+    "syntaxSync": "두 모드에 같은 색상 사용",
+    "syntaxBoth": "색상",
+    "syntaxLight": "라이트 색상",
+    "syntaxDark": "다크 색상"
   },
   "palette": {
     "placeholder": "테이블, 탭, 동작 검색…",

@@ -11,6 +11,12 @@
  */
 
 import { contrastRatio, type Oklch } from '@shared/color';
+import {
+  DEFAULT_SCHEME,
+  SYNTAX_TOKENS,
+  syntaxProperties,
+  syntaxScheme,
+} from '@shared/syntaxThemes';
 
 export type { Oklch };
 
@@ -32,6 +38,35 @@ export type Density = 'compact' | 'default' | 'comfortable';
  * worse than no control, because someone will move it, see nothing happen, and
  * leave it wherever they let go.
  */
+/**
+ * Which palette code is drawn in, per appearance.
+ *
+ * Two, not one, because a palette designed for a dark background is unreadable
+ * on a light one — a single choice would be offering to make the editor
+ * illegible half the time. `sync` is the shortcut for the common case: pick a
+ * family and take both of its halves.
+ */
+export interface Syntax {
+  readonly light: string;
+  readonly dark: string;
+  readonly sync: boolean;
+}
+
+export const DEFAULT_SYNTAX: Syntax = {
+  light: DEFAULT_SCHEME,
+  dark: DEFAULT_SCHEME,
+  sync: true,
+};
+
+export function clampSyntax(syntax: Partial<Syntax> | undefined): Syntax {
+  const sync = syntax?.sync ?? DEFAULT_SYNTAX.sync;
+  const light = syntaxScheme(syntax?.light ?? DEFAULT_SCHEME).id;
+  // Synced means the dark half *is* the light one, resolved here rather than
+  // at every read: a stored pair that disagrees with its own flag is a state
+  // the interface can never show and would have to guess about.
+  return { light, dark: sync ? light : syntaxScheme(syntax?.dark ?? DEFAULT_SCHEME).id, sync };
+}
+
 export interface Materials {
   /**
    * 1 is solid, 0 is fully clear, and the anchor is the material as designed.
@@ -382,6 +417,7 @@ export function applyTheme(
     appearance: Appearance;
     density: Density;
     materials?: Materials;
+    syntax?: Partial<Syntax>;
   }
 ): void {
   const { seed, appearance, density } = options;
@@ -390,6 +426,24 @@ export function applyTheme(
   root.dataset['theme'] = appearance === 'dark' ? 'shelf-dark' : 'shelf-light';
   root.dataset['density'] = density;
   root.style.colorScheme = appearance;
+
+  /*
+   * The scheme, or the absence of one.
+   *
+   * Cleared before it is set, and cleared entirely when the built-in is chosen:
+   * a property left on the element from a previous choice is a colour that
+   * survives switching away from the scheme that asked for it, which is how a
+   * palette ends up half one thing and half another.
+   */
+  const syntax = clampSyntax(options.syntax);
+  const palette = syntaxProperties(
+    appearance === 'dark' ? syntax.dark : syntax.light,
+    appearance
+  );
+  for (const token of SYNTAX_TOKENS) {
+    if (palette) root.style.setProperty(`--syntax-${token}`, palette[token]);
+    else root.style.removeProperty(`--syntax-${token}`);
+  }
 
   const alpha = alphaTransform(materials.opacity);
   root.style.setProperty('--material-alpha-scale', String(alpha.scale));

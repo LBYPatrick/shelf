@@ -288,6 +288,17 @@ watch(
   { deep: true }
 );
 
+/*
+ * Monaco's theme is a snapshot of the custom properties, taken when it is
+ * defined — so a scheme chosen in settings changes the variables and nothing
+ * else until the theme is built again from them.
+ */
+watch(
+  () => theme.syntax,
+  () => defineEditorTheme(theme.appearance),
+  { deep: true }
+);
+
 watch(
   () => [settings.values.editorFontSize, settings.values.wrapLines] as const,
   ([fontSize, wrap]) => {

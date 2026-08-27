@@ -6,10 +6,12 @@ import {
   DEFAULT_MATERIALS,
   applyTheme,
   clampMaterials,
+  clampSyntax,
   resolveAppearance,
   type Density,
   type Materials,
   type Oklch,
+  type Syntax,
   type ThemeMode,
 } from '../styles/theme';
 
@@ -20,6 +22,7 @@ interface StoredAppearance {
   accent: Oklch;
   density: Density;
   materials: Materials;
+  syntax: Syntax;
 }
 
 function readStored(): Partial<StoredAppearance> {
@@ -42,6 +45,9 @@ export const useTheme = defineStore('theme', () => {
   // half-written store should not be able to put the window into a state with
   // no way back to it through the interface.
   const materials = ref<Materials>(clampMaterials(stored.materials));
+  // Clamped on the way in for the same reason: a scheme removed in an update
+  // must not take the editor's colours with it.
+  const syntax = ref<Syntax>(clampSyntax(stored.syntax));
 
   // The OS preference is watched live, so a system-level switch to dark mode
   // takes effect without a restart.
@@ -74,6 +80,7 @@ export const useTheme = defineStore('theme', () => {
       appearance: appearance.value,
       density: density.value,
       materials: materials.value,
+      syntax: syntax.value,
     });
 
     // `mode`, not the resolved appearance: handing the OS `system` lets it keep
@@ -88,6 +95,7 @@ export const useTheme = defineStore('theme', () => {
           accent: accent.value,
           density: density.value,
           materials: materials.value,
+          syntax: syntax.value,
         })
       );
     } catch {
@@ -105,6 +113,7 @@ export const useTheme = defineStore('theme', () => {
     accent,
     density,
     materials,
+    syntax,
     appearance,
     presets,
     activePreset,

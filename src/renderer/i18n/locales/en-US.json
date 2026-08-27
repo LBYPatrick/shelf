@@ -300,7 +300,13 @@
     "importRow": "Replace them from a file",
     "jsonLines": "{{count}} lines",
     "copyHint": "Copy the whole document to the clipboard",
-    "version": "Version {{version}}"
+    "version": "Version {{version}}",
+    "syntax": "Code colours",
+    "syntaxHelp": "The editor, the chat and this JSON view.",
+    "syntaxSync": "Use one scheme for both appearances",
+    "syntaxBoth": "Scheme",
+    "syntaxLight": "Light scheme",
+    "syntaxDark": "Dark scheme"
   },
   "palette": {
     "placeholder": "Search tables, tabs and actions…",
