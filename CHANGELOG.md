@@ -6,6 +6,57 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Assistant: ask a database in words. Statements are classified before they
+  reach the connection and only reads run; anything else comes back as SQL with
+  an offer to open it in a query tab. A turn's queries are declared as working
+  or as the answer, so the intermediate ones fold away and the one that was
+  asked for is open. Claude Code and Codex are driven as subprocesses; the rest
+  go over their own APIs. The reply's language follows the question, with the
+  interface's language settling what a bare table name cannot.
+- Jobs: a dispatched query gets a card you can rename, search and filter, and
+  the statement it actually ran is one click away.
+- Keyboard shortcuts are editable — by performing the chord, or as a JSON
+  document. Only what differs from the defaults is stored, so a keymap written
+  in an old version does not pin every other shortcut to that version.
+- Colour schemes for everything that draws code — the editor, statements in a
+  conversation, and the JSON views: Visual Studio Code, Nord, Tokyo Night, Rosé
+  Pine, Gruvbox, Monokai Pro, Darcula, Catppuccin and One Dark, chosen per
+  appearance or synced across both, with a specimen of the palette beside the
+  picker.
+- The database menu switches between saved connections, opens the connection
+  editor over the workspace, and diagnoses the connection: timed round trips
+  with a trace of every one, and the catalogue reads measured rather than
+  asserted.
+- The command palette reaches the colour schemes, the shortcuts editor, a new
+  connection and the diagnosis; the settings document carries the scheme and the
+  keymap, so an export is the whole of what was configured.
+- The tab strip's plus asks which kind of tab, with the shortcut beside each.
+
+### Changed
+
+- The empty pane lists the ways to start, each with its keystroke, instead of
+  two grey sentences.
+- The window is two columns running its full height with the tabs on the working
+  pane, rather than a band laid across the top of them.
+- The sidebar's four lists — tables, saved queries, history and chats — share
+  one search field, one tile and one filter.
+- The start screen wears the app's own glass, and can be taken out of full
+  screen.
+- Settings opened from the start screen can now reach the shortcuts editor and
+  the provider list; both rows previously did nothing there.
+
+### Fixed
+
+- PostgreSQL reported its version as "unknown" everywhere. `SHOW server_version`
+  answers with a column named `server_version`, and the driver read `version`
+  off it.
+- A menu opened from a button is closed by pressing that button again.
+- Escape leaves the shortcut recorder without closing the sheet it is in.
+- A tab dragged one width moves one place, not two, and keeps moving after the
+  first.
+
 ## [1.0.0] - 2026-08-20
 
 ### Added
