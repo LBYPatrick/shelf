@@ -33,6 +33,8 @@ import AppIcon from '../components/ui/AppIcon.vue';
 import AppMark from '../components/ui/AppMark.vue';
 import DisclosureGroup from '../components/ui/DisclosureGroup.vue';
 import SettingsSheet from '../components/settings/SettingsSheet.vue';
+import ShortcutSheet from '../components/settings/ShortcutSheet.vue';
+import ProviderSheet from '../components/assistant/ProviderSheet.vue';
 import { useConnections } from '../stores/connections';
 import { useToasts } from '../stores/toasts';
 
@@ -54,6 +56,8 @@ const seed = ref<ParsedConnection | undefined>(undefined);
 const opening = ref<string | null>(null);
 const sampling = ref(false);
 const settingsOpen = ref(false);
+const shortcutsOpen = ref(false);
+const providersOpen = ref(false);
 
 /**
  * Which groups are unfolded. All of them, to start.
@@ -491,7 +495,19 @@ watch(
       </div>
     </section>
 
-    <SettingsSheet v-model="settingsOpen" />
+    <!--
+      Settings asks; the view answers — and this view has to answer as fully as
+      the workspace does. The shortcuts editor and the provider list were owned
+      by the workspace alone, so opening Settings from the start screen gave you
+      two rows whose buttons did nothing at all.
+    -->
+    <SettingsSheet
+      v-model="settingsOpen"
+      @manage-shortcuts="shortcutsOpen = true"
+      @manage-providers="providersOpen = true"
+    />
+    <ShortcutSheet v-model="shortcutsOpen" />
+    <ProviderSheet v-model="providersOpen" />
 
     <ConnectionEditor
       v-if="editing !== undefined"

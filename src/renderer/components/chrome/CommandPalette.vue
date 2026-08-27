@@ -26,7 +26,12 @@ import { useTheme } from '../../composables/useTheme';
 import AppIcon from '../ui/AppIcon.vue';
 
 const open = defineModel<boolean>({ required: true });
-const emit = defineEmits<{ openSettings: [] }>();
+const emit = defineEmits<{
+  openSettings: [];
+  openShortcuts: [];
+  newConnection: [];
+  diagnose: [];
+}>();
 
 const connections = useConnections();
 const entities = useEntities();
@@ -96,6 +101,33 @@ const navigation = computed<Command[]>(() => [
     slash: '/settings',
     keywords: 'preferences options',
     run: () => emit('openSettings'),
+  },
+  {
+    id: 'nav.shortcuts',
+    section: 'navigation',
+    icon: 'keyboard',
+    title: t('settings.keyboard'),
+    slash: '/shortcuts',
+    keywords: 'keys keyboard bindings keymap accelerator',
+    run: () => emit('openShortcuts'),
+  },
+  {
+    id: 'nav.newConnection',
+    section: 'navigation',
+    icon: 'plus',
+    title: t('connection.new'),
+    slash: '/connection new',
+    keywords: 'database add server',
+    run: () => emit('newConnection'),
+  },
+  {
+    id: 'nav.diagnose',
+    section: 'navigation',
+    icon: 'chart',
+    title: t('diagnose.action'),
+    slash: '/diagnose',
+    keywords: 'connection health latency ping round trip',
+    run: () => emit('diagnose'),
   },
   {
     id: 'nav.collapse',

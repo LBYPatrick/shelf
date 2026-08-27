@@ -7,7 +7,6 @@
  * being made rather than confirm and hope.
  */
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import ShortcutSheet from './ShortcutSheet.vue';
 import { LOCALES } from '../../i18n';
 import { useTranslation } from 'i18next-vue';
 import { useAssistant } from '../../stores/assistant';
@@ -30,6 +29,7 @@ import SelectMenu from '../ui/SelectMenu.vue';
 import ToggleSwitch from '../ui/ToggleSwitch.vue';
 import Sheet from '../ui/Sheet.vue';
 import { SYNTAX_SCHEMES } from '@shared/syntaxThemes';
+import { applyOverrides, currentOverrides } from '../../lib/keybindings';
 
 const open = defineModel<boolean>({ required: true });
 /*
@@ -37,7 +37,7 @@ const open = defineModel<boolean>({ required: true });
  * it is a list with an editor behind it — two levels of navigation inside a
  * pane that is already a long scroll. Settings names it and hands it over.
  */
-const emit = defineEmits<{ 'manage-providers': [] }>();
+const emit = defineEmits<{ 'manage-providers': []; 'manage-shortcuts': [] }>();
 
 const assistant = useAssistant();
 const theme = useTheme();
@@ -83,8 +83,10 @@ function currentState(): SettingsState {
       density: theme.density,
       accent: { l: theme.accent.l, c: theme.accent.c, h: theme.accent.h },
       opacity: theme.materials.opacity,
+      syntax: { ...theme.syntax },
     },
     preferences: { ...settings.values },
+    keymap: currentOverrides(),
   };
 }
 
@@ -93,7 +95,9 @@ function applyState(state: SettingsState): void {
   theme.density = state.appearance.density as typeof theme.density;
   theme.accent = state.appearance.accent;
   theme.materials = { ...theme.materials, opacity: state.appearance.opacity };
+  theme.syntax = { ...state.appearance.syntax };
   settings.values = { ...settings.values, ...state.preferences } as typeof settings.values;
+  applyOverrides(state.keymap);
 }
 
 const jsonText = ref(serializeSettings(currentState()));
@@ -266,7 +270,11 @@ const materialsAreDefault = computed(
  * by performing it, which means a surface that eats the keyboard while it is
  * armed. That does not belong in the middle of a scrolling form.
  */
-const shortcutsOpen = ref(false);
+/*
+ * Asked for here, opened by the window — the same arrangement the provider
+ * editor has, and for the same reason: the palette can reach it too, and a
+ * surface owned by one control can only ever be opened from that one.
+ */
 
 const languageOptions = computed(() => [
   { value: 'system', label: t('settings.followSystem') },
@@ -636,7 +644,7 @@ const languageOptions = computed(() => [
             <PressButton
               class="row__control"
               size="sm"
-              @click="shortcutsOpen = true"
+              @click="emit('manage-shortcuts')"
             >
               <AppIcon
                 name="keyboard"
@@ -891,13 +899,6 @@ const languageOptions = computed(() => [
       </div>
     </div>
   </Sheet>
-
-  <!--
-    A sibling of the settings sheet rather than a child of its body: it is a
-    second surface over the same window, and Escape closes whichever is on top
-    because both register with `useDismiss`.
-  -->
-  <ShortcutSheet v-model="shortcutsOpen" />
 </template>
 
 <style scoped>

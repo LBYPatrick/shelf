@@ -91,6 +91,7 @@ const state: SettingsState = {
     density: 'default',
     accent: { l: 0.6, c: 0.15, h: 250 },
     opacity: 0.9,
+    syntax: { light: 'monokaiPro', dark: 'monokaiPro', sync: true },
   },
   preferences: {
     pageSize: 100,
@@ -99,6 +100,7 @@ const state: SettingsState = {
     wrapLines: true,
     language: 'system',
   },
+  keymap: { 'tab.new': ['mod+shift+n'] },
 };
 
 describe('settings documents', () => {
@@ -165,5 +167,71 @@ describe('settings documents', () => {
   it('says why, when it is not a document at all', () => {
     expect(parseSettings('nonsense', state).ok).toBe(false);
     expect(parseSettings('[]', state).ok).toBe(false);
+  });
+});
+
+/*
+ * The two newest configurable things, and the reason they are here.
+ *
+ * A document that quietly drops half the state is worse than one that refuses
+ * to load: the reader exports "my settings", moves machine, imports, and finds
+ * their palette and their shortcuts back at the defaults with nothing saying
+ * so.
+ */
+describe('the colour scheme and the keymap travel with the rest', () => {
+  it('carries both through a round trip', () => {
+    const result = parseSettings(serializeSettings(state), state);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.appearance.syntax).toEqual(state.appearance.syntax);
+    expect(result.state.keymap).toEqual(state.keymap);
+  });
+
+  it('falls back on a scheme that no longer exists', () => {
+    // A keymap outlives the build it was written in, and so does a palette.
+    const result = parseSettings(
+      JSON.stringify({ appearance: { syntax: { light: 'vaporwave', sync: false } } }),
+      state
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.appearance.syntax.light).toBe('monokaiPro');
+  });
+
+  it('honours sync rather than leaving the interface to', () => {
+    /*
+     * "Synced, light: nord, dark: gruvbox" describes a state no control can
+     * produce, and the flag is the one that says what was meant.
+     */
+    const result = parseSettings(
+      JSON.stringify({
+        appearance: { syntax: { light: 'nord', dark: 'gruvbox', sync: true } },
+      }),
+      state
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.appearance.syntax).toEqual({
+      light: 'nord',
+      dark: 'nord',
+      sync: true,
+    });
+  });
+
+  it('spells an accelerator one way, whatever the file said', () => {
+    const result = parseSettings(
+      JSON.stringify({ keymap: { 'tab.close': ['Shift+Cmd+W'] } }),
+      state
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.keymap['tab.close']).toEqual(['mod+shift+w']);
+  });
+
+  it('drops a binding it cannot read rather than refusing the file', () => {
+    const result = parseSettings(JSON.stringify({ keymap: { 'tab.new': ['mod+'] } }), state);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.keymap['tab.new']).toBeUndefined();
   });
 });

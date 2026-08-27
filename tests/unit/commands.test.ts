@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { matchSlash, UNCOMMANDED, type Command } from '@renderer/lib/commands';
+import {
+  matchSlash,
+  UNCOMMANDED,
+  UNCOMMANDED_APPEARANCE,
+  type Command,
+} from '@renderer/lib/commands';
+import { APPEARANCE_KEYS } from '@shared/settingsFile';
 
 /*
  * The registry is built from live stores, which a unit test has no business
@@ -72,10 +78,30 @@ describe('settings parity', () => {
     ).toEqual([]);
   });
 
+  it('accounts for every appearance option too', () => {
+    /*
+     * The colour scheme is why this exists. It arrived with a form control, a
+     * place in the theme store and nothing in the palette, and the parity check
+     * of the day looked only at `Settings` — so a whole new configurable thing
+     * went unreachable with nothing anywhere saying so.
+     */
+    const exempt = new Set<string>(UNCOMMANDED_APPEARANCE);
+    const covered = new Set(['mode', 'density', 'accent', 'syntax']);
+
+    const unaccounted = APPEARANCE_KEYS.filter((key) => !exempt.has(key) && !covered.has(key));
+    expect(
+      unaccounted,
+      'a new appearance option needs a command, or a line in UNCOMMANDED_APPEARANCE'
+    ).toEqual([]);
+  });
+
   it('exempts only the preferences a palette row cannot express', () => {
     // A row is a name you can say. A number typed into a slot is a form field,
     // and the settings sheet already has one. The row limit left this list when
     // it stopped being a number and became seven named choices.
     expect([...UNCOMMANDED].sort()).toEqual(['editorFontSize', 'pageSize']);
+    // The opacity dial is continuous and has no named stops; the row that does
+    // exist for it puts it back where it started.
+    expect([...UNCOMMANDED_APPEARANCE].sort()).toEqual(['opacity']);
   });
 });

@@ -23,6 +23,9 @@ import JobTab from '../components/tabs/JobTab.vue';
 import QueryTab from '../components/tabs/QueryTab.vue';
 import TableTab from '../components/tabs/TableTab.vue';
 import SettingsSheet from '../components/settings/SettingsSheet.vue';
+import ShortcutSheet from '../components/settings/ShortcutSheet.vue';
+import DiagnoseSheet from '../components/sidebar/DiagnoseSheet.vue';
+import ConnectionEditor from '../components/connection/ConnectionEditor.vue';
 import AppIcon from '../components/ui/AppIcon.vue';
 import PressButton from '../components/ui/PressButton.vue';
 import ResizeHandle from '../components/ui/ResizeHandle.vue';
@@ -35,6 +38,7 @@ import { useTabs } from '../stores/tabs';
 import { useHotkeys } from '../composables/useHotkeys';
 import { vTip } from '../lib/hoverTip';
 import { engineDescriptor } from '@shared/engines';
+import type { SavedConnection } from '@shared/types';
 import { shortcutLabel } from '../lib/keybindings';
 import { useTranslation } from 'i18next-vue';
 
@@ -89,6 +93,23 @@ const sidebarCollapsed = ref(false);
 const paletteOpen = ref(false);
 const settingsOpen = ref(false);
 const providersOpen = ref(false);
+const shortcutsOpen = ref(false);
+const diagnoseOpen = ref(false);
+
+/**
+ * The connection editor, over the workspace.
+ *
+ * `null` is the editor's word for "a new one" and `undefined` is closed, which
+ * is why this is not a boolean. Saving a connection should not cost you the one
+ * you are in, so it opens here rather than sending you back to the start screen
+ * to do it.
+ */
+const editingConnection = ref<SavedConnection | null | undefined>(undefined);
+
+function onConnectionSaved(connection: SavedConnection, connectNow: boolean): void {
+  editingConnection.value = undefined;
+  if (connectNow) void connections.connect(connection);
+}
 
 // Built as a computed so the labels follow a language change rather than
 // keeping whichever language the component happened to mount in.
@@ -249,7 +270,10 @@ onBeforeUnmount(() => stopPersisting?.());
         class="leftpanel mat-regular panel-sidebar"
         :class="{ 'leftpanel--tight': sidebarCollapsed }"
       >
-        <ConnectionSwitcher />
+        <ConnectionSwitcher
+          @diagnose="diagnoseOpen = true"
+          @new-connection="editingConnection = null"
+        />
 
         <div class="leftpanel__body">
           <nav
@@ -632,12 +656,26 @@ onBeforeUnmount(() => stopPersisting?.());
     <CommandPalette
       v-model="paletteOpen"
       @open-settings="settingsOpen = true"
+      @open-shortcuts="shortcutsOpen = true"
+      @diagnose="diagnoseOpen = true"
+      @new-connection="editingConnection = null"
     />
     <SettingsSheet
       v-model="settingsOpen"
       @manage-providers="providersOpen = true"
+      @manage-shortcuts="shortcutsOpen = true"
     />
     <ProviderSheet v-model="providersOpen" />
+    <ShortcutSheet v-model="shortcutsOpen" />
+    <DiagnoseSheet v-model="diagnoseOpen" />
+
+    <ConnectionEditor
+      v-if="editingConnection !== undefined"
+      :editing="editingConnection"
+      :keyring-available="connections.keyringAvailable"
+      @close="editingConnection = undefined"
+      @saved="onConnectionSaved"
+    />
   </div>
 </template>
 

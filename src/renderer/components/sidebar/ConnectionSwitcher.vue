@@ -23,12 +23,18 @@
 import { computed, ref } from 'vue';
 import { useTranslation } from 'i18next-vue';
 import { engineDescriptor } from '@shared/engines';
-import type { SavedConnection } from '@shared/types';
 import AppIcon from '../ui/AppIcon.vue';
 import ContextMenu, { type MenuItem } from '../ui/ContextMenu.vue';
-import ConnectionEditor from '../connection/ConnectionEditor.vue';
-import DiagnoseSheet from './DiagnoseSheet.vue';
 import { useConnections } from '../../stores/connections';
+
+/**
+ * The sheets are the workspace's, not this row's.
+ *
+ * Both of them are reachable from the command palette as well as from here, and
+ * a surface owned by whichever control happens to open it can only ever be
+ * opened by that one. The row asks; the window answers.
+ */
+const emit = defineEmits<{ diagnose: []; 'new-connection': [] }>();
 
 const connections = useConnections();
 const { t } = useTranslation();
@@ -145,9 +151,6 @@ function openMenu(): void {
   menuOpen.value = true;
 }
 
-const diagnoseOpen = ref(false);
-const editing = ref<SavedConnection | null | undefined>(undefined);
-
 function onChoose(id: string): void {
   if (id === 'disconnect') {
     void connections.disconnect();
@@ -155,13 +158,12 @@ function onChoose(id: string): void {
   }
 
   if (id === 'diagnose') {
-    diagnoseOpen.value = true;
+    emit('diagnose');
     return;
   }
 
-  // `null` is the editor's word for "a new one"; `undefined` is closed.
   if (id === 'new') {
-    editing.value = null;
+    emit('new-connection');
     return;
   }
 
@@ -175,11 +177,6 @@ function onChoose(id: string): void {
   const openId = id.startsWith('open:') ? id.slice('open:'.length) : '';
   const target = connections.saved.find((connection) => connection.id === openId);
   if (target) void connections.connect(target);
-}
-
-function onSaved(connection: SavedConnection, connectNow: boolean): void {
-  editing.value = undefined;
-  if (connectNow) void connections.connect(connection);
 }
 </script>
 
@@ -254,21 +251,6 @@ function onSaved(connection: SavedConnection, connectNow: boolean): void {
       :items="menuItems"
       :at="menuAt"
       @choose="onChoose"
-    />
-
-    <DiagnoseSheet v-model="diagnoseOpen" />
-
-    <!--
-      The start screen's own editor, over the workspace. Saving a connection
-      should not cost you the one you are in, so it opens here rather than
-      sending you back to the list to do it.
-    -->
-    <ConnectionEditor
-      v-if="editing !== undefined"
-      :editing="editing"
-      :keyring-available="connections.keyringAvailable"
-      @close="editing = undefined"
-      @saved="onSaved"
     />
   </div>
 </template>

@@ -1,4 +1,5 @@
 import { i18next, LOCALES } from '../i18n';
+import { SYNTAX_SCHEMES } from '@shared/syntaxThemes';
 import { ACCENT_PRESETS, oklch } from '../styles/theme';
 import { ROW_LIMITS } from '../stores/settings';
 import type { useSettings, Settings } from '../stores/settings';
@@ -238,6 +239,35 @@ export function buildCommands({ theme, settings, navigation }: CommandContext): 
       set: (value) => write('wrapLines', value),
     }),
 
+    /*
+     * One command per scheme, and it sets both halves.
+     *
+     * A scheme is a pair — a palette drawn for a dark background is unreadable
+     * on a light one — and the sheet lets the two be chosen apart. A palette
+     * row cannot: "Code colours: Nord" has to mean one thing, and a command
+     * that wrote only the half matching the current appearance would land
+     * somewhere different depending on the time of day. So this is the common
+     * case stated explicitly — that family, in both appearances — and telling
+     * them apart stays a job for the form.
+     */
+    ...enumCommands({
+      base: 'code',
+      icon: 'query',
+      label: t('settings.syntax'),
+      /*
+       * No "theme" in here. The group's keywords must be about the group and
+       * never its values — and "theme" is another group's word, so `/theme
+       * dark` matched Darcula as well, "dark" being inside it.
+       */
+      keywords: 'syntax highlighting editor code',
+      options: SYNTAX_SCHEMES.map((scheme) => ({
+        value: scheme.id,
+        word: scheme.id.toLowerCase(),
+        label: scheme.name,
+      })),
+      set: (value) => (theme.syntax = { light: value, dark: value, sync: true }),
+    }),
+
     {
       id: 'settings.materials-reset',
       section: 'settings',
@@ -278,6 +308,15 @@ export function buildCommands({ theme, settings, navigation }: CommandContext): 
 
 /** Preferences that are deliberately not reachable as commands, and why. */
 export const UNCOMMANDED: readonly (keyof Settings)[] = ['pageSize', 'editorFontSize'];
+
+/**
+ * ...and the appearance options that are not, for the same reason.
+ *
+ * The opacity dial is a continuous value with no named stops; the row that does
+ * exist for it puts it back where it started, which is the one thing about a
+ * slider you can say in words.
+ */
+export const UNCOMMANDED_APPEARANCE: readonly string[] = ['opacity'];
 
 /** Matches a `/…` query against the typed form of a command. */
 export function matchSlash(command: Command, query: string): boolean {

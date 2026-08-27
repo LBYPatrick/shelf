@@ -111,3 +111,39 @@ test('opens over the query editor, and takes the typing with it', async ({ page 
   await expect(page.locator('.monaco-editor')).toContainText('SELECT 1');
   await expect(page.locator('.monaco-editor')).not.toContainText('artist');
 });
+
+/*
+ * The two newest configurable things, from the palette.
+ *
+ * A preference that arrives with a form control and nothing else is one the
+ * palette quietly stops covering, and the only thing that notices is a parity
+ * test counting keys. This checks the other half: that the row is really there
+ * and really writes.
+ */
+test('sets the code colours and opens the keymap from the palette', async ({ page }) => {
+  await page.getByRole('button', { name: /Sample database/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+
+  const keyword = () =>
+    page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--syntax-keyword').trim()
+    );
+  const before = await keyword();
+
+  await page.keyboard.press('ControlOrMeta+k');
+  await page.getByRole('combobox').fill('/code nord');
+  const rows = page.locator('.palette__row');
+  await expect(rows).toHaveCount(1);
+  await page.keyboard.press('Enter');
+
+  await expect.poll(keyword).not.toBe(before);
+
+  // A scheme is a pair, and a palette row sets both halves: "Code colours:
+  // Nord" has to mean one thing whatever the time of day.
+  await page.keyboard.press('ControlOrMeta+k');
+  await page.getByRole('combobox').fill('/shortcuts');
+  await expect(page.locator('.palette__row')).toHaveCount(1);
+  await page.keyboard.press('Enter');
+
+  await expect(page.getByRole('dialog').getByText('New query tab')).toBeVisible();
+});

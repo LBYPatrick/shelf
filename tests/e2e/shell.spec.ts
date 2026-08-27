@@ -211,9 +211,14 @@ test('settings go out to a file and come back through the form', async ({ app, p
   const saved = JSON.parse(await readFile(target, 'utf8')) as {
     appearance: Record<string, unknown>;
     preferences: Record<string, unknown>;
+    keymap: Record<string, string[]>;
   };
   saved.appearance['density'] = 'compact';
   saved.preferences['pageSize'] = 250;
+  // The two newest configurable things travel with the rest, or an export is a
+  // partial copy that says nothing about what it left behind.
+  saved.appearance['syntax'] = { light: 'nord', dark: 'nord', sync: true };
+  saved.keymap = { 'tab.new': ['mod+shift+n'] };
   // A value no control could produce is dropped rather than written through.
   saved.appearance['mode'] = 'chartreuse';
   await writeFile(target, JSON.stringify(saved), 'utf8');
@@ -234,6 +239,19 @@ test('settings go out to a file and come back through the form', async ({ app, p
     'aria-checked',
     'true'
   );
+
+  // The colour scheme reached the document root, and the keymap reached the
+  // editor that draws it.
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        getComputedStyle(document.documentElement).getPropertyValue('--syntax-keyword').trim()
+      )
+    )
+    .toBe('#5e81ac');
+
+  await page.getByRole('button', { name: 'Customise' }).click();
+  await expect(page.getByRole('dialog').last().getByText('⌘⇧N')).toBeVisible();
 });
 
 /*

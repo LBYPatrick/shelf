@@ -137,6 +137,21 @@ component's props or a mock's shape has changed.
   were designed to have at every position of the slider — and the offset is
   sized so the pane lands on the dial's own number at the floor. A control that
   says 20% while painting 36% is not a control.
+- **A new option is three things, not one.** A control in the sheet, a row in
+  the command palette, and a key in the settings document — and the two that get
+  forgotten are the ones nothing fails without. The colour scheme arrived with a
+  form control and no palette row; the parity test of the day looked only at
+  `Settings` and never saw it. `APPEARANCE_KEYS` in `settingsFile.ts` is derived
+  from `Record<keyof AppearanceState, true>`, so the list cannot fall behind the
+  interface, and the test walks it: every option is reachable as a command or
+  named in `UNCOMMANDED_APPEARANCE`. An export that silently drops half the
+  state is the same fault wearing a different coat.
+- **A sheet is owned by the view, not by the control that opens it.** Settings
+  emits `manage-shortcuts` and `manage-providers` rather than holding those
+  sheets, because the palette opens them too — and a surface owned by one
+  control can only ever be opened from that one. Both views that show Settings
+  have to answer: the start screen's copy was emitting into nothing, so two rows
+  there had buttons that did nothing at all.
 - **A setting that changes nothing is worse than no setting.** There was a blur
   radius beside the opacity, and once the modal surfaces went opaque it drove
   nothing at all — so it is gone, not merely unused. Someone will move a dead
