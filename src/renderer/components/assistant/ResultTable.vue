@@ -104,7 +104,8 @@ function isNull(row: Row, field: Field): boolean {
   border: 1px solid var(--separator);
   border-radius: 0.75rem;
   overflow: hidden;
-  background: var(--fill-1);
+  /* The same paper the statement above it is on — see the note in `SqlBlock`. */
+  background: var(--surface-raised);
 }
 
 .rows__scroll {
@@ -133,8 +134,10 @@ function isNull(row: Row, field: Field): boolean {
   position: sticky;
   top: 0;
   z-index: 1;
-  /* Opaque, or the rows scroll visibly through the header behind it. */
-  background: var(--color-base-100);
+  /* Opaque, or the rows scroll visibly through the header behind it — and the
+     card's own surface, which it used not to be: a `--color-base-100` header on
+     a `--fill-1` card is two unrelated surfaces in one object. */
+  background: var(--surface-raised);
   font-weight: 600;
   font-size: 0.6875rem;
   letter-spacing: 0.01em;

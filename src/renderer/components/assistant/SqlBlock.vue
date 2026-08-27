@@ -117,7 +117,6 @@ function copy(): void {
       </PressButton>
       <PressButton
         size="sm"
-        variant="primary"
         @click="emit('open', pretty, title ?? '')"
       >
         <AppIcon
@@ -137,7 +136,16 @@ function copy(): void {
   margin: var(--gap) 0;
   border: 1px solid var(--separator);
   border-radius: 0.75rem;
-  background: var(--fill-1);
+  /*
+   * Paper standing on the well, not a slab sunk into it.
+   *
+   * This was a `--fill-1`, which is a tint of mid grey — so on the light theme
+   * the block came out *darker* than the transcript around it, which inverts
+   * the depth it is trying to express: a statement is an object laid on the
+   * page, and the page is the recessed one. `--surface-raised` is the token
+   * that knows which direction "away from the field" is in each appearance.
+   */
+  background: var(--surface-raised);
   overflow: hidden;
 }
 
