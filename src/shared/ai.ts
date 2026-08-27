@@ -23,7 +23,7 @@ import type { SchemaScope } from './schemaDoc';
 
 /** Which implementation answers for an instance. */
 export type AiDriverKind =
-  'claudeCode' | 'anthropic' | 'openai' | 'google' | 'openaiCompatible';
+  'claudeCode' | 'codex' | 'anthropic' | 'openai' | 'google' | 'openaiCompatible';
 
 /**
  * One configured provider.

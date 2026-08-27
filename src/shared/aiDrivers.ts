@@ -63,6 +63,26 @@ export const AI_DRIVERS: readonly AiDriverInfo[] = [
     capabilities: FULL,
   },
   {
+    /*
+     * Codex, run as a subprocess. It signs itself in, so there is no key to
+     * hold and nowhere to put one.
+     *
+     * `system: false` is the one real difference from Claude Code: the CLI has
+     * no flag that replaces the system prompt, so the composed instructions
+     * ride at the head of the message instead. Declared rather than discovered
+     * — the same rule the database drivers follow.
+     */
+    kind: 'codex',
+    label: 'Codex',
+    defaultBaseUrl: '',
+    baseUrlEditable: false,
+    needsKey: false,
+    acceptsKey: false,
+    defaultModel: 'default',
+    models: ['default', 'gpt-5-codex', 'gpt-5', 'o3'],
+    capabilities: { streaming: true, tools: true, system: false },
+  },
+  {
     kind: 'anthropic',
     label: 'Anthropic',
     defaultBaseUrl: 'https://api.anthropic.com',
