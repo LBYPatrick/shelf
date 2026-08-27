@@ -14,20 +14,11 @@ import {
  */
 
 describe('the scheme catalogue', () => {
-  it('gives every scheme both appearances, or neither', () => {
-    for (const scheme of SYNTAX_SCHEMES) {
-      const halves = [scheme.light, scheme.dark].filter(Boolean).length;
-      expect(halves, `${scheme.id} has one appearance and not the other`).not.toBe(1);
-    }
-  });
-
-  it('colours every token in every palette', () => {
+  it('colours every token in both appearances of every scheme', () => {
     for (const scheme of SYNTAX_SCHEMES) {
       for (const appearance of ['light', 'dark'] as const) {
-        const palette = scheme[appearance];
-        if (!palette) continue;
         for (const token of SYNTAX_TOKENS) {
-          expect(palette[token], `${scheme.id}.${appearance}.${token}`).toMatch(
+          expect(scheme[appearance][token], `${scheme.id}.${appearance}.${token}`).toMatch(
             /^#[0-9a-f]{6}$/i
           );
         }
@@ -35,11 +26,15 @@ describe('the scheme catalogue', () => {
     }
   });
 
-  it('leaves the built-in to the stylesheet', () => {
-    // Pasting Shelf's own values here would be a second copy that stops
-    // agreeing the first time either moves.
-    expect(syntaxProperties(DEFAULT_SCHEME, 'light')).toBeUndefined();
-    expect(syntaxProperties(DEFAULT_SCHEME, 'dark')).toBeUndefined();
+  it('defaults to a scheme with a name, not to the absence of one', () => {
+    /*
+     * There was a "Shelf" entry that wrote nothing and let the stylesheet
+     * answer — the one row in the list whose name told the reader nothing
+     * about what they were choosing.
+     */
+    expect(DEFAULT_SCHEME).toBe('monokaiPro');
+    expect(syntaxScheme(DEFAULT_SCHEME).name).toBe('Monokai Pro');
+    expect(SYNTAX_SCHEMES.map((scheme) => scheme.id)).not.toContain('shelf');
   });
 
   it('falls back rather than throwing on an id it does not know', () => {
@@ -52,6 +47,16 @@ describe('the scheme catalogue', () => {
     const ids = SYNTAX_SCHEMES.map((scheme) => scheme.id);
     for (const id of ['vscode', 'nord', 'tokyoNight', 'gruvbox', 'catppuccin', 'oneDark']) {
       expect(ids).toContain(id);
+    }
+  });
+
+  it('answers for a scheme in both appearances', () => {
+    // The properties are set unconditionally now, so a hole here would write
+    // `undefined` onto the root and take the token with it.
+    for (const appearance of ['light', 'dark'] as const) {
+      for (const token of SYNTAX_TOKENS) {
+        expect(syntaxProperties(DEFAULT_SCHEME, appearance)[token]).toMatch(/^#[0-9a-f]{6}$/i);
+      }
     }
   });
 
