@@ -133,7 +133,8 @@
     "toggleSidebar": "サイドバーの切り替え",
     "jobs": "ジョブ",
     "newQueryTab": "新しいクエリタブ",
-    "query": "クエリ"
+    "query": "クエリ",
+    "newTab": "新しいタブ"
   },
   "table": {
     "filterPlaceholder": "絞り込み — 例: name like 'A%'",

@@ -133,7 +133,8 @@
     "toggleSidebar": "Toggle sidebar",
     "jobs": "Jobs",
     "newQueryTab": "New query tab",
-    "query": "Query"
+    "query": "Query",
+    "newTab": "New tab"
   },
   "table": {
     "filterPlaceholder": "Filter — e.g. name like 'A%'",

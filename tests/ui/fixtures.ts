@@ -79,6 +79,20 @@ export const test = base.extend<UiFixtures>({
 export { expect } from '@playwright/test';
 
 /**
+ * Another query tab, by the keystroke rather than by the button.
+ *
+ * The `+` on the strip opens a menu of the two kinds now, so a click on it no
+ * longer produces a tab — and a test that wants *a tab* should not have to
+ * care which of the two ways it came. The shortcut is a real path a reader
+ * uses and is one call instead of two.
+ */
+export async function newQueryTab(page: Page, times = 1): Promise<void> {
+  for (let index = 0; index < times; index += 1) {
+    await page.keyboard.press('ControlOrMeta+t');
+  }
+}
+
+/**
  * Switches appearance the way the settings sheet does, and waits for it.
  *
  * The key and the field both have to be right, and for a long time neither was

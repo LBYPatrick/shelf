@@ -133,7 +133,8 @@
     "toggleSidebar": "사이드바 전환",
     "jobs": "작업",
     "newQueryTab": "새 쿼리 탭",
-    "query": "쿼리"
+    "query": "쿼리",
+    "newTab": "새 탭"
   },
   "table": {
     "filterPlaceholder": "필터 — 예: name like 'A%'",

@@ -26,6 +26,14 @@ export interface MenuItem {
   readonly disabled?: boolean;
   /** Separated from what came before it. */
   readonly startsGroup?: boolean;
+  /**
+   * The keystroke that does the same thing, at the end of the row.
+   *
+   * A menu is where people find out an action exists; a shortcut beside it is
+   * how they stop needing the menu. Right-aligned and quiet, because it is a
+   * fact about the row rather than part of what the row says.
+   */
+  readonly hint?: string;
 }
 
 const props = defineProps<{
@@ -171,7 +179,11 @@ onBeforeUnmount(() => {
               :name="item.icon"
               :size="12"
             />
-            <span>{{ item.label }}</span>
+            <span class="popmenu__label">{{ item.label }}</span>
+            <kbd
+              v-if="item.hint"
+              class="popmenu__hint"
+            >{{ item.hint }}</kbd>
           </button>
         </template>
       </div>
@@ -219,6 +231,28 @@ onBeforeUnmount(() => {
 .popmenu__icon {
   flex: 0 0 auto;
   opacity: 0.7;
+}
+
+.popmenu__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * At the end of the row, in the same tabular figures the rest of the app sets
+ * keys in. Quiet enough that the eye reads the label first and finds this only
+ * when it is looking for it, which is the moment it becomes useful.
+ */
+.popmenu__hint {
+  flex: 0 0 auto;
+  margin-inline-start: var(--gap-loose);
+  font-family: inherit;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
 }
 
 .popmenu__rule {

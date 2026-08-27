@@ -133,7 +133,8 @@
     "toggleSidebar": "Bật/tắt thanh bên",
     "jobs": "Tác vụ",
     "newQueryTab": "Thẻ truy vấn mới",
-    "query": "Truy vấn"
+    "query": "Truy vấn",
+    "newTab": "Tab mới"
   },
   "table": {
     "filterPlaceholder": "Lọc — ví dụ name like 'A%'",

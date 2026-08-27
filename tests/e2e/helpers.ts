@@ -47,6 +47,17 @@ export async function withClipboard<T>(run: () => Promise<T>): Promise<T> {
  * Creating a connection now happens in a sheet, so every test that needs an
  * open database goes through the same door a person would.
  */
+/**
+ * Another query tab, by the keystroke.
+ *
+ * The `+` on the strip opens a menu of the two kinds of tab now, so a click on
+ * it no longer produces one — and a test that wants *a tab* should not have to
+ * care which of the two ways it came.
+ */
+export async function newQueryTab(page: Page): Promise<void> {
+  await page.keyboard.press('ControlOrMeta+t');
+}
+
 export async function createConnection(
   page: Page,
   options: { engine: string; file: string; name?: string; connect?: boolean }

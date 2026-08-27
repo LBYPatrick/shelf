@@ -6,7 +6,7 @@
  * differ" — these fail with the reason, which is the difference between a gate
  * that gets fixed and one that gets its snapshots regenerated.
  */
-import { setAppearance, stabilize, test, expect } from './fixtures';
+import { newQueryTab, setAppearance, stabilize, test, expect } from './fixtures';
 import { openTable, revealTables, typeQuery } from '../e2e/helpers';
 import type { Page } from '@playwright/test';
 
@@ -203,9 +203,7 @@ test.describe('layout', () => {
      * active tab's own box, and it is a sibling of the tabs in the same list,
      * so counting children rather than tabs puts it one place to the left.
      */
-    const strip = sample.locator('.strip');
-    await strip.getByRole('button', { name: /new query tab/i }).click();
-    await strip.getByRole('button', { name: /new query tab/i }).click();
+    await newQueryTab(sample, 2);
     await expect(sample.locator('.striptab')).toHaveCount(2);
 
     const aligned = async () =>
@@ -251,12 +249,10 @@ test.describe('layout', () => {
      * their new width, so it chased a number that had already changed and came
      * to rest beside the open tab instead of on it.
      */
-    const add = sample.locator('.strip').getByRole('button', { name: /new query tab/i });
-
     for (let index = 0; index < 14; index += 1) {
       // The click itself is the assertion for the first defect: a covered
       // button times out here rather than failing a measurement later.
-      await add.click();
+      await newQueryTab(sample);
     }
 
     await sample.waitForTimeout(500);
@@ -1667,10 +1663,7 @@ test.describe('cost', () => {
 
     expect(Number(before)).toBeGreaterThan(0);
 
-    await sample
-      .locator('.strip')
-      .getByRole('button', { name: /new query tab/i })
-      .click();
+    await newQueryTab(sample);
     await sample.locator('.monaco-editor').waitFor();
     await sample.locator('.striptab').first().click();
     await sample.locator('.tabulator-row').first().waitFor();
@@ -2043,10 +2036,7 @@ async function frameworkClassesOn(page: Page): Promise<string[]> {
 test.describe('the tab strip', () => {
   async function openTabs(sample: Page, count: number): Promise<void> {
     for (let i = 0; i < count; i += 1) {
-      await sample
-        .locator('.strip')
-        .getByRole('button', { name: /new query tab/i })
-        .click();
+      await newQueryTab(sample);
     }
     await stabilize(sample);
   }
@@ -2264,10 +2254,7 @@ test.describe('the jobs rail', () => {
   test('a job card is the same container as a tab, and does not grow under the pointer', async ({
     sample,
   }) => {
-    await sample
-      .getByRole('button', { name: /new query tab/i })
-      .first()
-      .click();
+    await newQueryTab(sample);
     await typeQuery(sample, 'select id, name from music.artist');
     await sample.getByRole('button', { name: 'What Run performs' }).click();
     await sample.getByRole('menuitem', { name: 'Dispatch' }).click();
@@ -2360,10 +2347,7 @@ test.describe('the jobs rail', () => {
     // A card two lines tall has room for one button. Export, explain and "what
     // did this actually run" are exactly the questions a job that ran for four
     // minutes raises, and they had nowhere to live.
-    await sample
-      .getByRole('button', { name: /new query tab/i })
-      .first()
-      .click();
+    await newQueryTab(sample);
     await typeQuery(sample, 'select id, name from music.artist');
     await sample.getByRole('button', { name: 'What Run performs' }).click();
     await sample.getByRole('menuitem', { name: 'Dispatch' }).click();
@@ -2396,13 +2380,10 @@ test.describe('the assistant', () => {
    * chrome — and the remaining ways in are this, the palette, and a shortcut.
    */
   async function openChat(sample: Page): Promise<void> {
-    // The sidebar's, specifically. The empty workspace offers one too, which is
-    // a second way in rather than a second copy — and `getByRole` cannot tell
-    // those apart on a name alone.
-    await sample
-      .getByRole('complementary')
-      .getByRole('button', { name: /^new chat$/i })
-      .click();
+    // By the keystroke. The `+` on the strip opens a menu of the two kinds, and
+    // the empty workspace offers a button of its own — neither is what these
+    // tests are about, and both are one more thing to keep in step.
+    await sample.keyboard.press('ControlOrMeta+Shift+a');
     await sample.locator('.chat').waitFor({ timeout: 20_000 });
     await stabilize(sample);
   }

@@ -26,6 +26,7 @@ import { useTranslation } from 'i18next-vue';
 import { shortcutLabel } from '../../lib/keybindings';
 import { vTip } from '../../lib/hoverTip';
 import AppIcon from '../ui/AppIcon.vue';
+import ContextMenu, { type MenuItem } from '../ui/ContextMenu.vue';
 
 const tabs = useTabs();
 const { t } = useTranslation();
@@ -189,6 +190,39 @@ function beginDrag(event: PointerEvent, index: number): void {
   shifted = 0;
   dragOffset.value = 0;
   start(event);
+}
+
+/* ------------------------------------------------------------------ new tab */
+
+const newButton = ref<HTMLElement>();
+const newMenuOpen = ref(false);
+const newMenuAt = ref({ x: 0, y: 0 });
+
+const newMenuItems = computed<MenuItem[]>(() => [
+  {
+    id: 'query',
+    label: t('workspace.newQuery'),
+    icon: 'query',
+    hint: shortcutLabel('tab.new'),
+  },
+  {
+    id: 'chat',
+    label: t('assistant.newChat'),
+    icon: 'assistant',
+    hint: shortcutLabel('assistant.open'),
+  },
+]);
+
+/** Under the button, so the menu is visibly that button's. */
+function openNewMenu(): void {
+  const box = newButton.value?.getBoundingClientRect();
+  if (box) newMenuAt.value = { x: box.left, y: box.bottom + 4 };
+  newMenuOpen.value = true;
+}
+
+function onNewChoose(id: string): void {
+  if (id === 'query') tabs.openQuery();
+  else if (id === 'chat') tabs.openChat();
 }
 
 /* ----------------------------------------------------------------- renaming */
@@ -526,17 +560,37 @@ const KIND_ICON: Record<Tab['kind'], string> = {
       </div>
     </div>
 
+    <!--
+      The plus asks which kind.
+      ────────────────────────
+      There are two kinds of tab and one button that made one of them, so the
+      other kind needed its own way in and had a pair of buttons at the head of
+      the sidebar. Two places, two vocabularies, and a `+` that quietly meant
+      "query". It opens a menu of the two instead, each carrying the keystroke
+      that skips the menu — which is the thing a menu is for once you have
+      found it twice.
+    -->
     <button
-      v-tip="`${t('workspace.newQuery')} — ${shortcutLabel('tab.new')}`"
+      ref="newButton"
+      v-tip="t('workspace.newTab')"
       class="strip__new no-drag"
-      :aria-label="t('workspace.newQueryTab')"
-      @click="tabs.openQuery()"
+      :aria-label="t('workspace.newTab')"
+      :aria-expanded="newMenuOpen"
+      aria-haspopup="menu"
+      @click="openNewMenu"
     >
       <AppIcon
         name="plus"
         :size="13"
       />
     </button>
+
+    <ContextMenu
+      v-model="newMenuOpen"
+      :items="newMenuItems"
+      :at="newMenuAt"
+      @choose="onNewChoose"
+    />
   </div>
 </template>
 

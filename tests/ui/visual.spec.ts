@@ -9,7 +9,7 @@
  * Regenerate deliberately with `make ui-accept`, and read the diff before you
  * do; a snapshot updated without being looked at is worse than no snapshot.
  */
-import { setAppearance, stabilize, test, expect } from './fixtures';
+import { newQueryTab, setAppearance, stabilize, test, expect } from './fixtures';
 import { openTable } from '../e2e/helpers';
 
 test.describe('light', () => {
@@ -157,10 +157,7 @@ test.describe('corners', () => {
       .first()
       .click();
     await page.locator('.workspace').waitFor({ timeout: 30_000 });
-    await page
-      .locator('.strip')
-      .getByRole('button', { name: /new query tab/i })
-      .click();
+    await newQueryTab(page);
     await page.locator('.monaco-editor').waitFor();
     await stabilize(page);
 

@@ -25,12 +25,9 @@ import { useTranslation } from 'i18next-vue';
 import { engineDescriptor } from '@shared/engines';
 import AppIcon from '../ui/AppIcon.vue';
 import ContextMenu, { type MenuItem } from '../ui/ContextMenu.vue';
-import PressButton from '../ui/PressButton.vue';
 import { useConnections } from '../../stores/connections';
-import { useTabs } from '../../stores/tabs';
 
 const connections = useConnections();
-const tabs = useTabs();
 const { t } = useTranslation();
 
 const engine = computed(() =>
@@ -157,51 +154,6 @@ function onChoose(id: string): void {
       this app is for and it goes first; asking is the other way in, and sits
       beside it at the same size because it is a peer, not a footnote.
     -->
-    <!--
-      `no-drag`, or they are scenery.
-
-      The head of the sidebar is a drag region so the window can be moved by it,
-      and a drag region swallows every click that lands on it — the row has said
-      `no-drag` since it was written, and two buttons added inside the same
-      region without it looked completely normal and did nothing at all.
-
-      On each control rather than on the row around them: `-webkit-app-region`
-      is not inherited, so a `no-drag` wrapper exempts the wrapper and leaves
-      everything in it exactly as swallowed as before.
-    -->
-    <div class="switcher__actions">
-      <!--
-        One word each, and the whole phrase for anything that reads the name
-        aloud. "New" is what both of these buttons have in common, so it is the
-        part that says nothing: the noun is the choice being made.
-      -->
-      <PressButton
-        class="switcher__action no-drag"
-        variant="primary"
-        :aria-label="$t('workspace.newQuery')"
-        @click="tabs.openQuery()"
-      >
-        <AppIcon
-          name="query"
-          :size="13"
-        />
-        <span>{{ $t('workspace.query') }}</span>
-      </PressButton>
-
-      <PressButton
-        class="switcher__action no-drag"
-        variant="glass"
-        :aria-label="$t('assistant.newChat')"
-        @click="tabs.openChat()"
-      >
-        <AppIcon
-          name="assistant"
-          :size="13"
-        />
-        <span>{{ $t('assistant.chat') }}</span>
-      </PressButton>
-    </div>
-
     <ContextMenu
       v-model="menuOpen"
       :items="menuItems"
@@ -350,21 +302,6 @@ function onChoose(id: string): void {
 
 .switcher__chevron--open {
   transform: rotate(-90deg);
-}
-
-/*
- * Equal halves. Neither is the afterthought, and a row where one button is
- * wider says one of them is the real one.
- */
-.switcher__actions {
-  display: flex;
-  gap: var(--gap-tight);
-}
-
-.switcher__action {
-  flex: 1 1 0;
-  min-width: 0;
-  justify-content: center;
 }
 
 @media (hover: hover) and (pointer: fine) {

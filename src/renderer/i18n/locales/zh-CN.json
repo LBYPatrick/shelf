@@ -133,7 +133,8 @@
     "toggleSidebar": "切换侧边栏",
     "jobs": "任务",
     "newQueryTab": "新建查询标签页",
-    "query": "查询"
+    "query": "查询",
+    "newTab": "新建标签页"
   },
   "table": {
     "filterPlaceholder": "筛选 — 例如 name like 'A%'",
