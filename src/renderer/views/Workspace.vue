@@ -297,7 +297,7 @@ onBeforeUnmount(() => stopPersisting?.());
             />
             <input
               v-if="rail === 'chats'"
-              v-model="assistant.search"
+              v-model="assistant.filter.text"
               class="sidebar__find-input"
               type="search"
               :placeholder="$t('chats.find')"

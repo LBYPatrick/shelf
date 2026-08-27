@@ -20,7 +20,9 @@ import { computed, nextTick, onMounted, ref } from 'vue';
 import { useTranslation } from 'i18next-vue';
 import type { SavedChat } from '@shared/appdb';
 import { elapsedSince } from '@shared/elapsed';
+import { recordMatches, type CriterionKind } from '@shared/jobFilter';
 import AppIcon from '../ui/AppIcon.vue';
+import FilterChips from './FilterChips.vue';
 import { useAssistant } from '../../stores/assistant';
 import { useConnections } from '../../stores/connections';
 import { useTabs } from '../../stores/tabs';
@@ -44,10 +46,21 @@ onMounted(() => {
   void assistant.refreshChats(connections.active?.id ?? null);
 });
 
+/*
+ * The same narrowing the jobs get, asked of the facts a chat has.
+ *
+ * A conversation is a thing with a name and a moment, which is all the shared
+ * matcher needs; what differs between the two lists is only which questions
+ * each can answer, and that is the `kinds` the chips are given.
+ */
+/** A chat has one moment worth bracketing: when it was last added to. */
+const CHAT_KINDS: readonly CriterionKind[] = ['updated'];
+
 const shown = computed(() => {
-  const needle = assistant.search.trim().toLowerCase();
-  if (!needle) return assistant.chats;
-  return assistant.chats.filter((chat) => chat.title.toLowerCase().includes(needle));
+  const now = Date.now();
+  return assistant.chats.filter((chat) =>
+    recordMatches({ name: chat.title, at: chat.updatedAt }, assistant.filter, now)
+  );
 });
 
 /** Which card's name is being edited, and what it currently says. */
@@ -126,31 +139,36 @@ function when(at: number): string {
 
 <template>
   <div class="chats">
+    <FilterChips
+      v-model="assistant.filter"
+      :kinds="CHAT_KINDS"
+    />
+
     <p
       v-if="assistant.chats.length === 0"
-      class="chats__note type-label"
+      class="tilelist__note"
     >
       {{ $t('chats.empty') }}
     </p>
 
     <p
       v-else-if="shown.length === 0"
-      class="chats__note type-label"
+      class="tilelist__note"
     >
       {{ $t('chats.noMatch') }}
     </p>
 
     <ul
       v-else
-      class="chats__list"
+      class="tilelist"
     >
       <li
         v-for="chat in shown"
         :key="chat.id"
       >
         <div
-          class="chatcard"
-          :class="{ 'chatcard--open': tabs.tabs.some((tab) => tab.chatId === chat.id) }"
+          class="tile"
+          :class="{ 'tile--on': tabs.tabs.some((tab) => tab.chatId === chat.id) }"
         >
           <!--
             The whole card opens it. A row that is a button is a row where the
@@ -158,14 +176,14 @@ function when(at: number): string {
           -->
           <button
             type="button"
-            class="chatcard__face focus-fill"
+            class="tile__face focus-fill"
             @click="open(chat)"
           >
             <input
               v-if="editing === chat.id"
               ref="field"
               v-model="draft"
-              class="chatcard__field"
+              class="tile__field"
               :aria-label="$t('chats.rename')"
               spellcheck="false"
               @click.stop
@@ -184,12 +202,12 @@ function when(at: number): string {
             -->
             <span
               v-else
-              class="chatcard__name"
+              class="tile__name"
               @click.stop="onNameClick(chat)"
               @dblclick.stop="startRename(chat)"
             >{{ chat.title }}</span>
 
-            <span class="chatcard__when">{{ when(chat.updatedAt) }}</span>
+            <span class="tile__meta">{{ when(chat.updatedAt) }}</span>
           </button>
 
           <!--
@@ -198,11 +216,11 @@ function when(at: number): string {
             takes its width out of the row on hover re-wraps the name and grows
             the card under the hand reaching for it.
           -->
-          <span class="chatcard__tools">
+          <span class="tile__tools">
             <button
               v-tip="$t('chats.discard')"
               type="button"
-              class="chatcard__tool focus-fill"
+              class="tile__tool focus-fill"
               :aria-label="$t('chats.discard')"
               @click="discard(chat)"
             >
@@ -219,182 +237,16 @@ function when(at: number): string {
 </template>
 
 <style scoped>
+/*
+ * The list and its rows are `.tilelist` and `.tile`, defined once in
+ * `controls.css` and shared with the jobs, the saved queries and the history.
+ * They are the same kind of object — a thing that ran, has a name you can
+ * change, and can be thrown away — so they are the same object.
+ */
 .chats {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
-  overflow-y: auto;
-}
-
-.chats__note {
-  padding: var(--gap-loose) var(--gap-section);
-  opacity: 0.55;
-  line-height: 1.5;
-}
-
-.chats__list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap-hair);
-  margin: 0;
-  padding: 0 var(--gap) var(--gap);
-  list-style: none;
-}
-
-/*
- * The same container a job card is.
- *
- * Not a resemblance — the same object: a thing that ran, has a name you can
- * change, and can be thrown away. It had drifted into something else, with a
- * sparkle glyph on every row saying "this is a chat" in a list of nothing but
- * chats, a trash can in the text flow, and one card in three growing a second
- * line of timestamps and standing taller than its neighbours.
- */
-.chatcard {
-  position: relative;
-  display: flex;
-  align-items: stretch;
-  border-radius: var(--control-radius);
-  background: var(--fill-4);
-  transition: background-color var(--t-hover) var(--ease-out);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .chatcard:hover {
-    background: var(--fill-3);
-  }
-}
-
-/* The one on screen, marked the way the open tab is: tonal, not outlined. */
-.chatcard--open {
-  background: var(--fill-2);
-}
-
-.chatcard__face {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--gap-hair);
-  min-width: 0;
-  /* The trailing room is the overlay's, always. */
-  padding: var(--gap) calc(var(--hit-min) + var(--gap)) var(--gap) var(--gap);
-  border-radius: var(--control-radius);
-  text-align: start;
-}
-
-.chatcard__name {
-  align-self: stretch;
-  min-width: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  /* A question with a long identifier in it has nowhere else to break. */
-  overflow-wrap: anywhere;
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1.35;
-  min-height: calc(2 * 1.35em);
-  color: var(--color-base-content);
-}
-
-/*
- * The editor stands exactly where the name stood — same width, same two lines
- * of height — so beginning to rename moves neither the card nor the list.
- */
-.chatcard__field {
-  align-self: stretch;
-  min-width: 0;
-  min-height: calc(2 * 1.35em);
-  padding: 0;
-  border: 0;
-  border-bottom: 1px solid var(--color-primary);
-  background: transparent;
-  outline: none;
-  font: inherit;
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1.35;
-  color: var(--color-base-content);
-}
-
-/*
- * One time, not two.
- *
- * There were two — when it was last added to, and when it started — printed
- * side by side, which wrapped onto a second line on any card narrow enough or
- * old enough and made that card taller than the rest of the column. The second
- * fact is the weaker of the two by a distance: a list of conversations is
- * ordered by the first one, and nobody looks down it for when something began.
- */
-.chatcard__when {
-  font-size: 0.6875rem;
-  font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
-}
-
-.chatcard__tools {
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-end: 0;
-  display: flex;
-  align-items: flex-start;
-  /* The same inset from the top as from the right. */
-  padding: var(--gap) var(--gap) 0 0;
-  opacity: 0;
-  transition: opacity 140ms var(--ease-out);
-}
-
-/* On focus as well as hover: a control only a pointer can reach is not one. */
-.chatcard:hover .chatcard__tools,
-.chatcard:focus-within .chatcard__tools {
-  opacity: 1;
-}
-
-.chatcard__tool {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: var(--hit-min);
-  height: var(--hit-min);
-  border-radius: var(--control-radius);
-  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
-  transform: translateX(6px);
-  transition:
-    background-color var(--t-hover) var(--ease-out),
-    color var(--t-hover) var(--ease-out),
-    transform 200ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-.chatcard:hover .chatcard__tool,
-.chatcard:focus-within .chatcard__tool {
-  transform: none;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .chatcard__tool:hover {
-    background: var(--fill-2);
-    color: var(--color-base-content);
-  }
-}
-
-/* The press, not the release. */
-.chatcard__tool:active {
-  background: var(--fill-1);
-  transform: scale(0.94);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .chatcard,
-  .chatcard__tools,
-  .chatcard__tool {
-    transition: none;
-  }
-
-  .chatcard__tool {
-    transform: none;
-  }
 }
 </style>

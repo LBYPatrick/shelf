@@ -32,9 +32,22 @@ import { useDismiss } from '../../composables/useDismiss';
 import { vTip } from '../../lib/hoverTip';
 
 const filter = defineModel<JobFilter>({ required: true });
+
+/**
+ * Which conditions this list can be narrowed by.
+ *
+ * The chips were built for the jobs and were the only filter in the window, so
+ * every other panel either had none or had a bare text box. What differs
+ * between two lists is not how a condition looks or behaves — it is which
+ * questions that list can answer, which is exactly this.
+ */
+const props = withDefaults(defineProps<{ kinds?: readonly CriterionKind[] }>(), {
+  kinds: () => ['status', 'started', 'finished', 'took'] as const,
+});
+
 const { t } = useTranslation();
 
-const KINDS: readonly CriterionKind[] = ['status', 'started', 'finished', 'took'];
+const KINDS = computed(() => props.kinds);
 
 const kindLabel = (kind: CriterionKind) => t(`jobs.kind${cap(kind)}`);
 const valueLabel = (kind: CriterionKind, value: string) =>

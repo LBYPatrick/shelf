@@ -26,22 +26,26 @@ test('searches jobs by name, narrows them by status and length, and says so', as
   await page.getByRole('menuitem', { name: 'Dispatch' }).click();
 
   await page.getByRole('button', { name: 'Jobs' }).click();
-  const cards = page.locator('.job');
+  const cards = page.locator('.joblist .tile');
   await expect(cards).toHaveCount(1);
   await expect(cards.first().locator('.job__status')).toHaveText(/Done/, { timeout: 20_000 });
 
   // The two facts a finished job is looked back at for are on the card itself,
   // not only in the name it was given — which is the first thing a rename
   // throws away.
-  await expect(cards.first().locator('.job__when')).toContainText('Started');
-  await expect(cards.first().locator('.job__when')).toContainText('took');
+  /*
+   * One line that never wraps. "Started …" moved to the hover label when the
+   * tiles were made one shape: five facts laid out to fit meant they sometimes
+   * did not, and that card stood taller than its neighbours.
+   */
+  await expect(cards.first().locator('.tile__meta')).toContainText('took');
 
   // A name of its own, so the search is looking for something a reader chose.
-  await cards.first().locator('.job__name').dblclick();
+  await cards.first().locator('.tile__name').dblclick();
   const rename = page.getByLabel('Rename');
   await rename.fill('june refunds');
   await page.getByRole('button', { name: 'Confirm' }).click();
-  await expect(cards.first().locator('.job__name')).toHaveText('june refunds');
+  await expect(cards.first().locator('.tile__name')).toHaveText('june refunds');
 
   const find = page.getByPlaceholder('Find a job');
   await find.fill('refund');

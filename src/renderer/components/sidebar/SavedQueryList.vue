@@ -8,6 +8,7 @@
 import { useQueries } from '../../stores/queries';
 import { useTabs } from '../../stores/tabs';
 import AppIcon from '../ui/AppIcon.vue';
+import { vTip } from '../../lib/hoverTip';
 
 const queries = useQueries();
 const tabs = useTabs();
@@ -22,137 +23,61 @@ function excerpt(text: string): string {
   <div class="entries">
     <p
       v-if="queries.visibleSaved.length === 0"
-      class="entries__empty type-label"
+      class="tilelist__note"
     >
-      Nothing saved. Write a query and press ⌘S.
+      <!--
+        It used to say "press ⌘S", which is a key nothing is bound to: saving a
+        query is the button on the query tab's toolbar and always has been.
+      -->
+      {{ $t('saved.empty') }}
     </p>
 
-    <div
-      v-for="(query, index) in queries.visibleSaved"
-      :key="query.id"
-      class="entry"
-      :style="{ '--index': index }"
-      role="button"
-      tabindex="0"
-      :title="query.text"
-      @dblclick="tabs.openQuery(query.text)"
-      @keydown.enter="tabs.openQuery(query.text)"
+    <ul
+      v-else
+      class="tilelist"
     >
-      <AppIcon
-        class="entry__icon"
-        name="star"
-        :size="12"
-      />
-
-      <span class="entry__body">
-        <span class="entry__name">{{ query.name }}</span>
-        <span class="entry__text">{{ excerpt(query.text) }}</span>
-      </span>
-
-      <button
-        class="entry__remove"
-        :aria-label="`Delete ${query.name}`"
-        @click.stop="queries.remove(query.id)"
+      <li
+        v-for="query in queries.visibleSaved"
+        :key="query.id"
       >
-        <AppIcon
-          name="close"
-          :size="10"
-        />
-      </button>
-    </div>
+        <div class="tile">
+          <button
+            v-tip="query.text"
+            type="button"
+            class="tile__face focus-fill"
+            @click="tabs.openQuery(query.text)"
+          >
+            <span class="tile__name">{{ query.name }}</span>
+            <span class="tile__meta">{{ excerpt(query.text) }}</span>
+          </button>
+
+          <span class="tile__tools">
+            <button
+              v-tip="$t('saved.discard')"
+              type="button"
+              class="tile__tool focus-fill"
+              :aria-label="$t('saved.discard')"
+              @click="queries.remove(query.id)"
+            >
+              <AppIcon
+                name="close"
+                :size="12"
+              />
+            </button>
+          </span>
+        </div>
+      </li>
+    </ul>
   </div>
 </template>
 
 <style scoped>
+/* The list and its rows are `.tilelist` and `.tile`, defined once in
+   `controls.css`; this list adds nothing to them. */
 .entries {
+  display: flex;
   flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding-bottom: var(--gap);
-}
-
-.entries__empty {
-  padding: var(--gap) var(--gap-loose);
-  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
-}
-
-.entry {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--gap-tight);
-  padding: var(--gap-tight) var(--gap);
-  margin-inline: var(--gap-tight);
-  border-radius: 0.4rem;
-  cursor: default;
-  animation: entry-in 260ms var(--ease-out) backwards;
-  animation-delay: calc(min(var(--index) * 25ms, 240ms));
-  transition: background-color var(--t-press) var(--ease-out);
-}
-
-@keyframes entry-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-}
-
-.entry__icon {
-  margin-top: 3px;
-  color: color-mix(in oklab, var(--color-warning) 80%, var(--color-base-content));
-}
-
-.entry__body {
-  display: flex;
   flex-direction: column;
-  min-width: 0;
-  flex: 1;
-}
-
-.entry__name {
-  font-size: 0.75rem;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.entry__text {
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.entry__remove {
-  opacity: 0;
-  padding: 2px;
-  border-radius: 0.25rem;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
-  transition:
-    opacity var(--t-press) var(--ease-out),
-    color var(--t-press) var(--ease-out);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .entry:hover {
-    background: color-mix(in oklab, var(--color-primary) 8%, transparent);
-  }
-
-  .entry:hover .entry__remove,
-  .entry__remove:focus-visible {
-    opacity: 1;
-  }
-
-  .entry__remove:hover {
-    color: var(--color-error);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .entry {
-    animation: none;
-  }
+  min-height: 0;
 }
 </style>

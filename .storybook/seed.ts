@@ -112,7 +112,7 @@ export function withChats(): void {
 
   // Cleared, because the term lives in the store and a story that left one set
   // would narrow the next story's list with no field on screen saying why.
-  assistant.search = '';
+  assistant.filter = { text: '', criteria: [] };
 
   assistant.chats = [
     {

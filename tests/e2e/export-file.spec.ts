@@ -141,7 +141,7 @@ test('exports a dispatched job with its columns intact', async () => {
 
     // The job finishes in the sidebar, and opening it opens the spool.
     await page.getByRole('button', { name: 'Jobs' }).click();
-    const done = page.locator('.job__face:not([disabled])').first();
+    const done = page.locator('.joblist .tile__face[role="button"]').first();
     await expect(done).toBeVisible({ timeout: 20_000 });
     await done.click();
 

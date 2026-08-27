@@ -592,7 +592,8 @@
     "explain": "説明",
     "explainOf": "説明: {{name}}",
     "clearFilters": "絞り込みを解除",
-    "showSql": "元のクエリ"
+    "showSql": "元のクエリ",
+    "kindUpdated": "更新"
   },
   "value": {
     "asJson": "JSON として整形",
@@ -667,5 +668,9 @@
     "discard": "このチャットを削除",
     "updated": "更新 {{when}}",
     "started": "開始 {{when}}"
+  },
+  "saved": {
+    "empty": "まだ保存されていません。クエリを書いて「クエリを保存」を押してください。",
+    "discard": "このクエリを削除"
   }
 }

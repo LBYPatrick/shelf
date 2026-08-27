@@ -592,7 +592,8 @@
     "explain": "Explain",
     "explainOf": "Explain: {{name}}",
     "clearFilters": "Clear the filters",
-    "showSql": "Show original"
+    "showSql": "Show original",
+    "kindUpdated": "Updated"
   },
   "value": {
     "asJson": "formatted as JSON",
@@ -667,5 +668,9 @@
     "discard": "Delete this chat",
     "updated": "updated {{when}}",
     "started": "started {{when}}"
+  },
+  "saved": {
+    "empty": "Nothing saved yet. Write a query and press Save Query.",
+    "discard": "Delete this query"
   }
 }

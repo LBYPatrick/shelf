@@ -78,7 +78,7 @@ export const Searching: Story = {
     components: { ChatList },
     setup: () => {
       withChats();
-      useAssistant().search = 'rows';
+      useAssistant().filter = { text: 'rows', criteria: [] };
       return {};
     },
     template: `<div style="width:17rem; height:22rem;"><ChatList /></div>`,
@@ -91,7 +91,7 @@ export const NoMatch: Story = {
     components: { ChatList },
     setup: () => {
       withChats();
-      useAssistant().search = 'zzzz';
+      useAssistant().filter = { text: 'zzzz', criteria: [] };
       return {};
     },
     template: `<div style="width:17rem; height:22rem;"><ChatList /></div>`,

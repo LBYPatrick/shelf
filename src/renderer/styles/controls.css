@@ -563,3 +563,240 @@
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * A tile in a sidebar list.
+ *
+ * Four lists in this window hold things that ran or were saved — jobs, chats,
+ * saved queries, history — and each had drawn its own row. Two were cards and
+ * two were lines; one opened on a click and one on a double click; the delete
+ * was an overlay on one and in the text flow on another. They are the same kind
+ * of object, so they are the same object.
+ *
+ * The shape is fixed on purpose. A name gets two lines' worth of room whether
+ * or not it uses two, and everything under it is one line that never wraps — so
+ * every tile in a column is exactly as tall as every other and the column can
+ * be swept rather than read. A list whose rows are three different heights has
+ * to be read one row at a time.
+ * ------------------------------------------------------------------------- */
+
+/*
+ * Nothing at rest, a hairline between, a fill under the pointer.
+ *
+ * Every tile carrying its own filled surface turned a column of forty into
+ * forty boxes — the fill is a *state*, and something that is always on says
+ * nothing. A list of rows separated by a rule is the older and quieter answer:
+ * the reader sees the rows because the rules end them, not because each one is
+ * painted.
+ *
+ * The rule is on the top edge, not the bottom, and the first row does not get
+ * one: a divider is a thing *between* two rows, and a line above the first is a
+ * line under the search field it has nothing to do with.
+ */
+.tile {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--control-radius);
+  transition: background-color var(--t-hover) var(--ease-out);
+}
+
+.tilelist > li + li .tile::before {
+  content: '';
+  position: absolute;
+  inset-inline: var(--gap);
+  inset-block-start: 0;
+  height: 1px;
+  background: var(--separator);
+}
+
+/*
+ * The fill covers the rule above it while the pointer is there, so the row
+ * reads as one shape rather than as a shape with a line stuck to its top.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .tile:hover {
+    background: var(--fill-3);
+  }
+}
+
+.tile:hover::before,
+.tile:hover + .tile::before,
+.tilelist > li:hover + li .tile::before,
+.tile--on::before,
+.tilelist > li:has(.tile--on) + li .tile::before {
+  opacity: 0;
+}
+
+/* The one on screen, marked the way the open tab is: tonal, not outlined. */
+.tile--on {
+  background: var(--fill-2);
+}
+
+.tile__face {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gap-hair);
+  min-width: 0;
+  /* The trailing room is the overlay's, always — reserved rather than yielded
+     on hover, or the name reflows under the pointer reaching for it. */
+  padding: var(--gap) calc(var(--hit-min) + var(--gap)) var(--gap) var(--gap);
+  border-radius: var(--control-radius);
+  text-align: start;
+}
+
+/*
+ * Two lines, breaking anywhere: a default name is often one token with no
+ * spaces in it, and a wrap that only breaks at spaces cannot wrap it at all.
+ */
+.tile__name {
+  align-self: stretch;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+  min-height: calc(2 * 1.35em);
+  color: var(--color-base-content);
+}
+
+/*
+ * One line, and it truncates rather than wrapping.
+ *
+ * A job carries five facts and they used to be laid out to fit, which meant
+ * they sometimes did not: "Started Aug 24, 01:54 PM · took 4:04" went to two
+ * lines on a narrow sidebar and that card stood taller than its neighbours. The
+ * facts that do not fit belong on the hover label, not on a second line.
+ */
+.tile__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35em;
+  align-self: stretch;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+}
+
+.tile__dot {
+  opacity: 0.7;
+}
+
+/*
+ * The editor stands exactly where the name stood — same width, same two lines
+ * of height — so beginning to rename moves neither the tile nor the list.
+ */
+.tile__field {
+  align-self: stretch;
+  min-width: 0;
+  min-height: calc(2 * 1.35em);
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-primary);
+  background: transparent;
+  outline: none;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--color-base-content);
+}
+
+/*
+ * An overlay, not a column: taking width out of the row on hover re-wraps the
+ * name and grows the tile under the hand reaching for it.
+ */
+.tile__tools {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gap-hair);
+  /* The same inset from the top as from the right; a corner with two different
+     margins is the thing the eye notices before anything the corner holds. */
+  padding: var(--gap) var(--gap) 0 0;
+  opacity: 0;
+  transition: opacity 140ms var(--ease-out);
+}
+
+/* On focus as well as hover: a control only a pointer can reach is not one. */
+.tile:hover .tile__tools,
+.tile:focus-within .tile__tools {
+  opacity: 1;
+}
+
+.tile__tool {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--hit-min);
+  height: var(--hit-min);
+  border-radius: var(--control-radius);
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  transform: translateX(6px);
+  transition:
+    background-color var(--t-hover) var(--ease-out),
+    color var(--t-hover) var(--ease-out),
+    transform 200ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.tile:hover .tile__tool,
+.tile:focus-within .tile__tool {
+  transform: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tile__tool:hover {
+    background: var(--fill-2);
+    color: var(--color-base-content);
+  }
+}
+
+/* The press, not the release. */
+.tile__tool:active {
+  background: var(--fill-1);
+  transform: scale(0.94);
+}
+
+/* The column the tiles sit in. */
+.tilelist {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--gap-hair);
+  min-height: 0;
+  margin: 0;
+  padding: 0 var(--gap) var(--gap);
+  overflow-y: auto;
+  list-style: none;
+}
+
+.tilelist__note {
+  padding: var(--gap-loose) var(--gap-section);
+  opacity: 0.55;
+  line-height: 1.5;
+  font-size: 0.6875rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile,
+  .tile__tools,
+  .tile__tool {
+    transition: none;
+  }
+
+  .tile__tool {
+    transform: none;
+  }
+}

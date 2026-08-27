@@ -3,6 +3,7 @@ import i18next from 'i18next';
 import { computed, markRaw, ref } from 'vue';
 import type { AiItem, AiMessage, AiProvider, AiProviderInput } from '@shared/ai';
 import type { SavedChat } from '@shared/appdb';
+import { NO_FILTER, type JobFilter } from '@shared/jobFilter';
 import { chatTitle } from '@shared/chatTitle';
 import type { SchemaScope } from '@shared/schemaDoc';
 import { RpcCancelled } from '@shared/rpc';
@@ -73,13 +74,14 @@ export const useAssistant = defineStore('assistant', () => {
   const chats = ref<SavedChat[]>([]);
 
   /*
-   * What the sidebar is searching for.
+   * What the sidebar is searching for, and what it is narrowed by.
    *
    * Here rather than in the list, because the field is in the panel's header
-   * row — where every other panel's field is — and the list is a sibling of it.
-   * The jobs panel keeps its term in its own store for the same reason.
+   * row — where every other panel's field is — and the chips are a sibling of
+   * the list. The jobs panel keeps the same shape in its own store, which is
+   * what lets one set of chips serve both.
    */
-  const search = ref('');
+  const filter = ref<JobFilter>({ ...NO_FILTER, criteria: [] });
 
   /**
    * The provider a new turn uses.
@@ -376,7 +378,7 @@ export const useAssistant = defineStore('assistant', () => {
 
   return {
     providers,
-    search,
+    filter,
     preferredId,
     loaded,
     active,

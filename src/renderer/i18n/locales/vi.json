@@ -592,7 +592,8 @@
     "explain": "Giải thích",
     "explainOf": "Giải thích: {{name}}",
     "clearFilters": "Xóa bộ lọc",
-    "showSql": "Xem bản gốc"
+    "showSql": "Xem bản gốc",
+    "kindUpdated": "Cập nhật"
   },
   "value": {
     "asJson": "định dạng JSON",
@@ -667,5 +668,9 @@
     "discard": "Xóa cuộc trò chuyện này",
     "updated": "cập nhật {{when}}",
     "started": "bắt đầu {{when}}"
+  },
+  "saved": {
+    "empty": "Chưa lưu gì. Viết một câu truy vấn rồi nhấn Lưu truy vấn.",
+    "discard": "Xoá câu truy vấn này"
   }
 }

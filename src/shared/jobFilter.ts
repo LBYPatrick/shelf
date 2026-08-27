@@ -42,7 +42,7 @@ export type WhenChoice = 'hour' | 'today' | 'week';
  */
 export type TookChoice = 'instant' | 'seconds' | 'minute' | 'long';
 
-export type CriterionKind = 'status' | 'started' | 'finished' | 'took';
+export type CriterionKind = 'status' | 'started' | 'finished' | 'took' | 'updated';
 
 /**
  * One condition, and whether it is currently being applied.
@@ -61,6 +61,35 @@ export interface JobFilter {
   /** Matched against the name, case-insensitively, anywhere in it. */
   text: string;
   criteria: Criterion[];
+}
+
+/**
+ * Anything with a name and a moment, narrowed the way a job is.
+ *
+ * The chips were built for the jobs and are the only filter in the window, so
+ * every other list either had none or had a bare text box — which is four
+ * panels and two vocabularies for the same idea. This is the part that is not
+ * about jobs: a name to search and a moment to bracket.
+ */
+export interface FilterableRecord {
+  readonly name: string;
+  readonly at: number;
+}
+
+export function recordMatches(
+  record: FilterableRecord,
+  filter: JobFilter,
+  now: number
+): boolean {
+  const needle = filter.text.trim().toLowerCase();
+  if (needle && !record.name.toLowerCase().includes(needle)) return false;
+
+  return filter.criteria
+    .filter((criterion) => criterion.enabled)
+    .every((criterion) => {
+      const floor = floorOf(criterion.value, now);
+      return floor === undefined || record.at >= floor;
+    });
 }
 
 /** What "no filter at all" is. */
@@ -83,6 +112,7 @@ export const CHOICES: Readonly<Record<CriterionKind, readonly string[]>> = {
   started: ['hour', 'today', 'week'],
   finished: ['hour', 'today', 'week'],
   took: ['instant', 'seconds', 'minute', 'long'],
+  updated: ['hour', 'today', 'week'],
 };
 
 /**

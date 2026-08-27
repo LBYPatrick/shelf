@@ -592,7 +592,8 @@
     "explain": "解释",
     "explainOf": "解释：{{name}}",
     "clearFilters": "清除筛选",
-    "showSql": "查看原始查询"
+    "showSql": "查看原始查询",
+    "kindUpdated": "更新时间"
   },
   "value": {
     "asJson": "按 JSON 格式化",
@@ -667,5 +668,9 @@
     "discard": "删除此对话",
     "updated": "更新于 {{when}}",
     "started": "开始于 {{when}}"
+  },
+  "saved": {
+    "empty": "尚未保存任何内容。写一条查询后点击“保存查询”。",
+    "discard": "删除此查询"
   }
 }

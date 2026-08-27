@@ -29,6 +29,7 @@ import { useTabs } from '../../stores/tabs';
 import { useToasts } from '../../stores/toasts';
 import { host } from '../../lib/host';
 import AppIcon from '../ui/AppIcon.vue';
+import { vTip } from '../../lib/hoverTip';
 import ContextMenu, { type MenuItem } from '../ui/ContextMenu.vue';
 import ExportSheet from '../grid/ExportSheet.vue';
 import FilterChips from './FilterChips.vue';
@@ -370,7 +371,7 @@ function startedAt(job: Job): string {
       <div
         v-for="job in shown"
         :key="job.id"
-        class="job"
+        class="tile"
         @contextmenu="openMenu($event, job)"
       >
         <!--
@@ -382,7 +383,8 @@ function startedAt(job: Job): string {
           the role in the first place: it is text, and text can be double-clicked.
         -->
         <div
-          class="job__face focus-fill"
+          v-tip="t('jobs.startedAt', { time: startedAt(job) })"
+          class="tile__face focus-fill"
           :role="job.status === 'done' ? 'button' : undefined"
           :tabindex="job.status === 'done' ? 0 : undefined"
           :aria-label="
@@ -440,7 +442,7 @@ function startedAt(job: Job): string {
           </span>
           <span
             v-else
-            class="job__name"
+            class="tile__name"
             @click.stop="openAfterGrace(job)"
             @dblclick.stop="beginRename(job)"
           >{{ job.name }}</span>
@@ -495,12 +497,18 @@ function startedAt(job: Job): string {
             renaming a job throws away. They are the same two things the filter
             asks about, so a list narrowed by them shows what it was narrowed on.
           -->
-          <span class="job__when">
-            <span>{{ $t('jobs.startedAt', { time: startedAt(job) }) }}</span>
-            <span
-              class="job__dot"
-              aria-hidden="true"
-            >·</span>
+          <!--
+            One line, and it never wraps.
+            ─────────────────────────────
+            A job carries five facts and they used to be laid out to fit, which
+            meant they sometimes did not: "Started Aug 24, 01:54 PM · took 4:04"
+            went to two lines on a narrow sidebar and that card stood taller
+            than its neighbours. What survives is what you scan a log *for* —
+            whether it worked, how much came back, how long it took. When it
+            started is on the label, because it is the fact you look up rather
+            than scan.
+          -->
+          <span class="tile__meta">
             <span>{{ $t('jobs.tookTime', { time: duration(job) }) }}</span>
           </span>
 
@@ -531,11 +539,11 @@ function startedAt(job: Job): string {
           the eye stops seeing, where a card that resizes is something it cannot
           stop seeing.
         -->
-        <span class="job__tools">
+        <span class="tile__tools">
           <button
             v-tip="$t('jobs.discard')"
             type="button"
-            class="job__tool focus-fill"
+            class="tile__tool focus-fill"
             :aria-label="$t('jobs.discard')"
             @click="discard(job)"
           >
@@ -633,42 +641,6 @@ function startedAt(job: Job): string {
  * which left a column of outlined boxes — the look of a form rather than of a
  * list of things you can open.
  */
-.job {
-  position: relative;
-  display: flex;
-  align-items: stretch;
-  border-radius: var(--control-radius);
-  background: var(--fill-4);
-  transition: background-color var(--t-hover) var(--ease-out);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .job:hover {
-    background: var(--fill-3);
-  }
-}
-
-.job__face {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--gap-hair);
-  min-width: 0;
-  /*
-   * The trailing room is the overlay's, always. Reserved rather than yielded on
-   * hover: see the note on `.job__tools`.
-   */
-  padding: var(--gap) calc(var(--hit-min) + var(--gap)) var(--gap) var(--gap);
-  border-radius: var(--control-radius);
-  text-align: start;
-}
-
-/* A job with no rows to show is not a link; it still says what happened. */
-.job__face:disabled {
-  cursor: default;
-}
-
 .job__line {
   display: flex;
   align-items: center;
@@ -682,29 +654,6 @@ function startedAt(job: Job): string {
  * spaces in it, so a wrap that only breaks at spaces cannot wrap it at all and
  * falls back to cutting it off.
  */
-.job__name {
-  align-self: stretch;
-  min-width: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1.35;
-  /*
-   * Two lines' worth of room, whether or not two lines are used.
-   *
-   * The tools open into the row on hover, which narrows this box, which can
-   * push a name onto a second line — and the card grew taller under the
-   * pointer that was reaching for it. The name may reflow; the card may not
-   * move. Holding the height of the *text* is what makes the width safe to
-   * animate at all.
-   */
-  min-height: calc(2 * 1.35em);
-}
-
 /*
  * The editor stands exactly where the name stood: same width, same two lines of
  * height, so beginning to rename does not move the card or anything under it.
@@ -843,22 +792,6 @@ function startedAt(job: Job): string {
  * status above them is what keeps three stacked lines from reading as three
  * equal claims on the eye.
  */
-.job__when {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.3em;
-  font-size: 0.6875rem;
-  font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
-}
-
-.job__dot {
-  opacity: 0.7;
-}
-
-/* Three lines of it: enough for the sentence a driver actually writes, and a
-   bound so one broken job cannot push the rest of the list off the screen. */
 .job__error {
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -871,91 +804,13 @@ function startedAt(job: Job): string {
 }
 
 /*
- * The tools take no room until they are wanted.
- *
- * They used to hold their place always — invisible but occupying it — on the
- * argument that the name would otherwise re-wrap when the pointer arrived. That
- * bought stillness at the cost of a permanent bite out of every card: the one
- * thing on a job worth reading is its name, and a fifth of the width was
- * reserved for two buttons that are not there.
- *
- * So the column opens instead. Width is not a property to animate lightly — it
- * is laid out every frame — but this is two buttons in a sidebar, on a hover,
- * and the alternative is a permanent tax on the content. The curve decelerates
- * so the room arrives rather than snapping open, and the icons follow it in
- * from the edge they will leave by.
- */
-.job__tools {
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-end: 0;
-  display: flex;
-  align-items: flex-start;
-  gap: var(--gap-hair);
-  /*
-   * The same inset from the top as from the right. Pulling the buttons up to
-   * sit optically on the first line of text put them closer to one edge of the
-   * card than the other, and a corner with two different margins is the thing
-   * the eye notices before anything the corner contains.
-   */
-  padding: var(--gap) var(--gap) 0 0;
-  opacity: 0;
-  /* Only opacity and the glyph's slide: neither is laid out, so neither can
-     move anything else on the card. */
-  transition: opacity 140ms var(--ease-out);
-}
-
-.job:hover .job__tools,
-.job:focus-within .job__tools {
-  opacity: 1;
-}
-
-/*
- * Both the same square, both the same radius, both showing the same fill under
- * the pointer. One of them having a surface and the other not is what made them
- * look misaligned when they are in fact the same size.
- */
-.job__tool {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: var(--hit-min);
-  height: var(--hit-min);
-  border-radius: var(--control-radius);
-  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
-  transform: translateX(6px);
-  transition:
-    background-color var(--t-hover) var(--ease-out),
-    color var(--t-hover) var(--ease-out),
-    transform 200ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-.job:hover .job__tool,
-.job:focus-within .job__tool {
-  transform: none;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .job__tool:hover {
-    background: var(--fill-2);
-    color: var(--color-base-content);
-  }
-}
-
-/* The press, not the release. */
-.job__tool:active {
-  background: var(--fill-1);
-  transform: scale(0.94);
-}
-
-/*
  * Reduced motion keeps the room and loses the travel: the column still has to
  * open, because the buttons cannot be pressed inside a box of zero width — it
  * simply opens at once rather than arriving.
  */
 @media (prefers-reduced-motion: reduce) {
-  .job__tools,
-  .job__tool {
+  .tile__tools,
+  .tile__tool {
     transition: opacity 120ms linear;
     transform: none;
   }

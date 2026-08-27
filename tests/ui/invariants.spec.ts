@@ -2260,7 +2260,7 @@ test.describe('the jobs rail', () => {
     await sample.getByRole('menuitem', { name: 'Dispatch' }).click();
     await sample.getByRole('button', { name: 'Jobs' }).click();
 
-    const card = sample.locator('.job').first();
+    const card = sample.locator('.joblist .tile').first();
     await expect(card.locator('.job__status')).toHaveText(/Done/, { timeout: 20_000 });
 
     /*
@@ -2274,7 +2274,7 @@ test.describe('the jobs rail', () => {
         const style = getComputedStyle(document.querySelector(selector)!);
         return { radius: style.borderTopLeftRadius, border: style.borderTopWidth };
       };
-      return { card: read('.job'), tab: read('.striptab') };
+      return { card: read('.joblist .tile'), tab: read('.striptab') };
     });
     expect(shapes.card).toEqual(shapes.tab);
     expect(shapes.card.border).toBe('0px');
@@ -2290,12 +2290,12 @@ test.describe('the jobs rail', () => {
      * because the sample's default name is short enough to fit either way —
      * a gate that only exercises the easy case is a gate that reports nothing.
      */
-    await card.locator('.job__name').dblclick();
+    await card.locator('.tile__name').dblclick();
     const field = card.locator('.job__rename');
     await field.waitFor();
     await field.fill('client5 batch 004 shard 000 rebuild');
     await field.press('Enter');
-    await expect(card.locator('.job__name')).toContainText('client5');
+    await expect(card.locator('.tile__name')).toContainText('client5');
 
     const height = async () => (await card.boundingBox())!.height;
     const resting = await height();
@@ -2353,7 +2353,7 @@ test.describe('the jobs rail', () => {
     await sample.getByRole('menuitem', { name: 'Dispatch' }).click();
     await sample.getByRole('button', { name: 'Jobs' }).click();
 
-    const card = sample.locator('.job').first();
+    const card = sample.locator('.joblist .tile').first();
     await expect(card.locator('.job__status')).toHaveText(/Done/, { timeout: 20_000 });
 
     await card.click({ button: 'right' });
@@ -2458,7 +2458,7 @@ test.describe('the assistant', () => {
       });
     }, turns);
     await sample.getByRole('button', { name: 'Chats' }).click();
-    await sample.locator('.chats .chatcard').first().click();
+    await sample.locator('.chats .tile').first().click();
     await sample.locator('.chat').waitFor({ timeout: 20_000 });
     await stabilize(sample);
   }
