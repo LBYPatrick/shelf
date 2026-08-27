@@ -1848,7 +1848,10 @@ test.describe('the columns and the pane', () => {
      * lap over the pane — glass laid on an opaque surface composites against
      * *it* and comes out a shade off the thing it is matching.
      */
-    await sample.getByRole('button', { name: /sidebar/i }).first().click();
+    await sample
+      .getByRole('button', { name: /sidebar/i })
+      .first()
+      .click();
     await sample.waitForTimeout(500);
 
     const corner = await sample.evaluate(() => {
