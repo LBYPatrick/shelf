@@ -6,6 +6,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-27
+
 ### Changed
 
 - A connection exported to a file now carries its passwords, in plain text
@@ -15,8 +17,6 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   toast that confirms the export says it too — this is the one artefact that
   leaves the machine, and a file that quietly contains a password is the one
   people attach to a ticket.
-
-## [1.0.1] - 2026-08-27
 
 ### Fixed
 
