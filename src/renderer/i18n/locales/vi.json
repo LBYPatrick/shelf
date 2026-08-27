@@ -1,7 +1,6 @@
 {
   "app": {
-    "name": "Shelf",
-    "tagline": "Chín engine. Đầy đủ tính năng. Không cần tài khoản."
+    "name": "Shelf"
   },
   "action": {
     "cancel": "Huỷ",

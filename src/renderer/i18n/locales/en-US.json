@@ -1,7 +1,6 @@
 {
   "app": {
-    "name": "Shelf",
-    "tagline": "Nine engines. Every feature. No account."
+    "name": "Shelf"
   },
   "action": {
     "cancel": "Cancel",

@@ -1,7 +1,6 @@
 {
   "app": {
-    "name": "Shelf",
-    "tagline": "九种引擎。全部功能。无需账号。"
+    "name": "Shelf"
   },
   "action": {
     "cancel": "取消",

@@ -1,7 +1,6 @@
 {
   "app": {
-    "name": "Shelf",
-    "tagline": "아홉 가지 엔진. 모든 기능. 계정 불필요."
+    "name": "Shelf"
   },
   "action": {
     "cancel": "취소",

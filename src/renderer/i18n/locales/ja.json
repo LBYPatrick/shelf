@@ -1,7 +1,6 @@
 {
   "app": {
-    "name": "Shelf",
-    "tagline": "9 種類のエンジン。すべての機能。アカウント不要。"
+    "name": "Shelf"
   },
   "action": {
     "cancel": "キャンセル",

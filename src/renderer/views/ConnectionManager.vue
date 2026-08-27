@@ -291,9 +291,6 @@ watch(
           <h1 class="identity__title">
             {{ $t('app.name') }}
           </h1>
-          <p class="identity__sub">
-            {{ $t('app.tagline') }}
-          </p>
         </header>
 
         <div class="finder" style="--step: 1">
@@ -638,11 +635,6 @@ watch(
   font-weight: 650;
   letter-spacing: -0.028em;
   line-height: 1.1;
-}
-
-.identity__sub {
-  font-size: 0.85em;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
 }
 
 .finder {
