@@ -98,6 +98,13 @@ const DEFAULTS: Answers = {
   'changes/apply': () => undefined,
   'changes/preview': () => "UPDATE \"music\".\"album\" SET title = 'x' WHERE id = 1;",
 
+  /*
+   * A machine with Claude Code on it and no Codex, so the stories show both
+   * halves of the list at once: one provider that was found and the ones that
+   * were configured.
+   */
+  'ai/installed': () => ['claudeCode' as const],
+
   'ai/schema': () => ({
     kind: 'shelf.schema' as const,
     version: 1,

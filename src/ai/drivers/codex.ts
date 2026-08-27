@@ -1,9 +1,9 @@
 import { spawn } from 'node:child_process';
-import { accessSync, constants } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AiProvider } from '@shared/ai';
 import { driverInfo } from '@shared/aiDrivers';
+import { findExecutable } from '../cli';
 import { startToolBridge, BRIDGE_NAME, type ToolBridge } from '../mcp';
 import {
   AiError,
@@ -57,7 +57,9 @@ import {
  * the one the reader's shell builds, so `codex` is very often on the machine
  * and not on the path this process can see.
  */
-const CANDIDATES = [
+export const COMMAND = 'codex';
+
+export const CANDIDATES = [
   join(homedir(), '.local', 'bin', 'codex'),
   join(homedir(), '.codex', 'bin', 'codex'),
   '/opt/homebrew/bin/codex',
@@ -65,16 +67,9 @@ const CANDIDATES = [
   '/usr/bin/codex',
 ];
 
+/** Where it is, or the bare name. See the note on Claude Code's. */
 function executable(): string {
-  for (const candidate of CANDIDATES) {
-    try {
-      accessSync(candidate, constants.X_OK);
-      return candidate;
-    } catch {
-      // Not there, or not executable. Try the next one.
-    }
-  }
-  return 'codex';
+  return findExecutable(COMMAND, CANDIDATES) ?? COMMAND;
 }
 
 /**

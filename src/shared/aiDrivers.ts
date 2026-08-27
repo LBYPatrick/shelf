@@ -13,7 +13,7 @@
  * field is free text; these are what the field offers before it is typed in.
  */
 
-import type { AiCapabilities, AiDriverKind } from './ai';
+import type { AiCapabilities, AiDriverKind, AiProvider } from './ai';
 
 export interface AiDriverInfo {
   readonly kind: AiDriverKind;
@@ -37,6 +37,17 @@ export interface AiDriverInfo {
   readonly capabilities: AiCapabilities;
   /** Where the reader goes to get a key, shown beside the field. */
   readonly keyUrl?: string;
+  /**
+   * Whether this driver is found on the machine rather than configured.
+   *
+   * Claude Code and Codex are programs somebody installed. They sign themselves
+   * in, hold their own credentials and pick their own model, so there is
+   * nothing to fill in and nothing to name — and a name is worse than nothing,
+   * because "my Claude Code" and "Claude Code" would be two rows for one
+   * program that can only ever behave one way. They are detected on launch and
+   * offered when present; the rest are added, named and keyed by hand.
+   */
+  readonly detected: boolean;
 }
 
 const FULL: AiCapabilities = { streaming: true, tools: true, system: true };
@@ -53,6 +64,7 @@ export const AI_DRIVERS: readonly AiDriverInfo[] = [
      * MCP endpoint that lives for one turn — see `drivers/claudeCode.ts`.
      */
     kind: 'claudeCode',
+    detected: true,
     label: 'Claude Code',
     defaultBaseUrl: '',
     baseUrlEditable: false,
@@ -73,6 +85,7 @@ export const AI_DRIVERS: readonly AiDriverInfo[] = [
      * — the same rule the database drivers follow.
      */
     kind: 'codex',
+    detected: true,
     label: 'Codex',
     defaultBaseUrl: '',
     baseUrlEditable: false,
@@ -84,6 +97,7 @@ export const AI_DRIVERS: readonly AiDriverInfo[] = [
   },
   {
     kind: 'anthropic',
+    detected: false,
     label: 'Anthropic',
     defaultBaseUrl: 'https://api.anthropic.com',
     baseUrlEditable: true,
@@ -96,6 +110,7 @@ export const AI_DRIVERS: readonly AiDriverInfo[] = [
   },
   {
     kind: 'openai',
+    detected: false,
     label: 'OpenAI',
     defaultBaseUrl: 'https://api.openai.com/v1',
     baseUrlEditable: true,
@@ -108,6 +123,7 @@ export const AI_DRIVERS: readonly AiDriverInfo[] = [
   },
   {
     kind: 'google',
+    detected: false,
     label: 'Google Gemini',
     defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta',
     baseUrlEditable: true,
@@ -127,6 +143,7 @@ export const AI_DRIVERS: readonly AiDriverInfo[] = [
      * changed and the maintenance multiplied.
      */
     kind: 'openaiCompatible',
+    detected: false,
     label: 'OpenAI-compatible',
     defaultBaseUrl: 'http://localhost:11434/v1',
     baseUrlEditable: true,
@@ -139,6 +156,55 @@ export const AI_DRIVERS: readonly AiDriverInfo[] = [
     capabilities: FULL,
   },
 ];
+
+/** The drivers a reader adds, names and gives a key. Never the detected ones. */
+export const CONFIGURABLE_DRIVERS: readonly AiDriverInfo[] = AI_DRIVERS.filter(
+  (driver) => !driver.detected
+);
+
+/**
+ * The id a detected provider goes by.
+ *
+ * Prefixed rather than random because it is not stored anywhere: it is derived
+ * from the driver every time the machine is looked at, and the same CLI has to
+ * come back as the same provider across launches or the preferred-provider
+ * setting would forget which one was chosen every time the app started.
+ */
+export function detectedProviderId(kind: AiDriverKind): string {
+  return `cli:${kind}`;
+}
+
+export function isDetectedProviderId(id: string): boolean {
+  return detectedDriverOf(id) !== null;
+}
+
+/** The driver behind a detected id, or `null` if this is a stored provider. */
+export function detectedDriverOf(id: string): AiDriverKind | null {
+  const found = AI_DRIVERS.find(
+    (driver) => driver.detected && detectedProviderId(driver.kind) === id
+  );
+  return found ? found.kind : null;
+}
+
+/**
+ * The provider record for a detected CLI.
+ *
+ * Made rather than read. There is no row in the application database for these
+ * and there should not be: the machine is the record, so a stored copy could
+ * only go stale — still listing Codex on a machine it was removed from. The
+ * model is the driver's default, which for both CLIs means "whatever the CLI
+ * itself is set to use".
+ */
+export function detectedProvider(kind: AiDriverKind): AiProvider {
+  const info = driverInfo(kind);
+  return {
+    id: detectedProviderId(kind),
+    name: info.label,
+    driver: kind,
+    model: info.defaultModel,
+    createdAt: 0,
+  };
+}
 
 export function driverInfo(kind: AiDriverKind): AiDriverInfo {
   const found = AI_DRIVERS.find((driver) => driver.kind === kind);

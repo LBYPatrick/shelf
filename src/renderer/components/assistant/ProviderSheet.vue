@@ -15,7 +15,7 @@
 import { computed, ref, watch } from 'vue';
 import { useTranslation } from 'i18next-vue';
 import type { AiDriverKind, AiProvider } from '@shared/ai';
-import { AI_DRIVERS, driverInfo } from '@shared/aiDrivers';
+import { CONFIGURABLE_DRIVERS, driverInfo, isDetectedProviderId } from '@shared/aiDrivers';
 import { errorMessage } from '@shared/errors';
 import AppIcon from '../ui/AppIcon.vue';
 import FormField from '../ui/FormField.vue';
@@ -49,8 +49,13 @@ const form = ref({
 
 const info = computed(() => driverInfo(form.value.driver));
 
+/*
+ * Only the drivers a reader configures. Claude Code and Codex are found on the
+ * machine rather than added, so offering them here would be offering to make a
+ * second one — and there is only ever one `claude` on a computer.
+ */
 const driverOptions = computed(() =>
-  AI_DRIVERS.map((driver) => ({ value: driver.kind, label: driver.label }))
+  CONFIGURABLE_DRIVERS.map((driver) => ({ value: driver.kind, label: driver.label }))
 );
 
 const modelOptions = computed(() => info.value.models);
@@ -82,6 +87,10 @@ watch(
 );
 
 async function edit(provider: AiProvider): Promise<void> {
+  // Nothing to edit: it has no name of its own, no key, and picks its own
+  // model. Opening a form with every field disabled says less than not opening.
+  if (isDetectedProviderId(provider.id)) return;
+
   form.value = {
     id: provider.id,
     name: provider.name,
@@ -94,10 +103,15 @@ async function edit(provider: AiProvider): Promise<void> {
 }
 
 function add(): void {
-  const first = AI_DRIVERS[0]!;
+  const first = CONFIGURABLE_DRIVERS[0]!;
   form.value = {
     id: '',
-    name: first.label,
+    // Empty, not the driver's label. A name that arrives already filled in is a
+    // name nobody changes, so every provider ends up called after its driver
+    // and the field may as well not exist — and the field is the whole point
+    // when the reader has two accounts with one company. The placeholder shows
+    // what it will be called if they leave it alone.
+    name: '',
     driver: first.kind,
     model: first.defaultModel,
     baseUrl: '',
@@ -110,14 +124,12 @@ const saving = ref(false);
 const testing = ref(false);
 const problem = ref('');
 
-const valid = computed(
-  () => form.value.name.trim().length > 0 && form.value.model.trim().length > 0
-);
+const valid = computed(() => form.value.model.trim().length > 0);
 
 function input() {
   return {
     ...(form.value.id ? { id: form.value.id } : {}),
-    name: form.value.name.trim(),
+    name: form.value.name.trim() || info.value.label,
     driver: form.value.driver,
     model: form.value.model.trim(),
     ...(form.value.baseUrl.trim() ? { baseUrl: form.value.baseUrl.trim() } : {}),
@@ -189,17 +201,34 @@ async function remove(): Promise<void> {
 
       <ul v-if="assistant.providers.length > 0" class="list">
         <li v-for="provider in assistant.providers" :key="provider.id">
-          <button type="button" class="row focus-fill" @click="edit(provider)">
+          <component
+            :is="isDetectedProviderId(provider.id) ? 'div' : 'button'"
+            :type="isDetectedProviderId(provider.id) ? undefined : 'button'"
+            class="row"
+            :class="isDetectedProviderId(provider.id) ? 'row--detected' : 'focus-fill'"
+            @click="edit(provider)"
+          >
             <AppIcon class="row__glyph" name="assistant" filled :size="14" />
             <span class="row__names">
               <span class="row__name">{{ provider.name }}</span>
-              <span class="row__model">{{ provider.model }}</span>
+              <span class="row__model">
+                {{
+                  isDetectedProviderId(provider.id)
+                    ? $t('assistant.onThisMachine')
+                    : provider.model
+                }}
+              </span>
             </span>
             <span v-if="assistant.active?.id === provider.id" class="row__badge type-label">{{
               $t('assistant.inUse')
             }}</span>
-            <AppIcon class="row__caret" name="chevron" :size="12" />
-          </button>
+            <AppIcon
+              v-if="!isDetectedProviderId(provider.id)"
+              class="row__caret"
+              name="chevron"
+              :size="12"
+            />
+          </component>
         </li>
       </ul>
 
@@ -210,7 +239,7 @@ async function remove(): Promise<void> {
 
     <!-- The form. -->
     <template v-else>
-      <FormField :label="$t('assistant.fieldName')">
+      <FormField :label="$t('assistant.fieldName')" :help="$t('assistant.nameHelp')">
         <TextInput v-model="form.name" :placeholder="info.label" />
       </FormField>
 
@@ -343,6 +372,12 @@ async function remove(): Promise<void> {
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+
+/* Detected rows are shown rather than opened, so they lose the affordances
+   that say otherwise: no caret, no hover, no pointer. */
+.row--detected {
+  cursor: default;
 }
 
 .row__name {

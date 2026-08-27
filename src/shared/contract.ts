@@ -22,7 +22,14 @@ import type {
   StatementReport,
   Trigger,
 } from '../drivers/types';
-import type { AiDeltaEvent, AiItemEvent, AiMessage, AiReplaceEvent, AiTurn } from './ai';
+import type {
+  AiDeltaEvent,
+  AiDriverKind,
+  AiItemEvent,
+  AiMessage,
+  AiReplaceEvent,
+  AiTurn,
+} from './ai';
 import type { SchemaDocument, SchemaScope } from './schemaDoc';
 
 /**
@@ -222,6 +229,16 @@ export interface HostContract {
     };
     result: AiTurn;
   };
+
+  /**
+   * Which command-line assistants this machine has on it.
+   *
+   * Asked at launch and again whenever the picker opens, rather than stored:
+   * somebody installs Codex or removes Claude Code without telling the app, and
+   * a list built once would go on offering what is no longer there. It is a
+   * handful of `access` calls, so asking is cheaper than remembering.
+   */
+  'ai/installed': { payload: Record<string, never>; result: readonly AiDriverKind[] };
 
   /** Does this provider answer, with these credentials, for this model. */
   'ai/probe': {

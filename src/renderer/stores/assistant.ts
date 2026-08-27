@@ -3,6 +3,7 @@ import i18next from 'i18next';
 import { computed, markRaw, ref } from 'vue';
 import type { AiItem, AiMessage, AiProvider, AiProviderInput } from '@shared/ai';
 import type { SavedChat } from '@shared/appdb';
+import { detectedProvider, isDetectedProviderId } from '@shared/aiDrivers';
 import { NO_FILTER, type JobFilter } from '@shared/jobFilter';
 import { chatTitle } from '@shared/chatTitle';
 import type { SchemaScope } from '@shared/schemaDoc';
@@ -65,7 +66,9 @@ let counter = 0;
 const nextTurnId = () => `turn-${Date.now().toString(36)}-${++counter}`;
 
 export const useAssistant = defineStore('assistant', () => {
-  const providers = ref<AiProvider[]>([]);
+  const stored = ref<AiProvider[]>([]);
+  /** The command-line assistants found on this machine, as of the last look. */
+  const installed = ref<AiProvider[]>([]);
   const preferredId = ref<string | null>(null);
   const loaded = ref(false);
 
@@ -90,6 +93,15 @@ export const useAssistant = defineStore('assistant', () => {
    * because "you have one provider and it is not selected" is not a state worth
    * having an error message for.
    */
+  /**
+   * Everything the reader can choose between.
+   *
+   * The detected ones lead, because they are the ones that need nothing done to
+   * them: someone with Claude Code on this machine is already set up, and the
+   * rest of the list starts with a trip to a website for a key.
+   */
+  const providers = computed<AiProvider[]>(() => [...installed.value, ...stored.value]);
+
   const active = computed<AiProvider | null>(
     () =>
       providers.value.find((provider) => provider.id === preferredId.value) ??
@@ -100,12 +112,25 @@ export const useAssistant = defineStore('assistant', () => {
   const configured = computed(() => providers.value.length > 0);
 
   async function refresh(): Promise<void> {
-    const [list, stored] = await Promise.all([
+    /*
+     * The machine is asked every time, not only at first run. A CLI installed
+     * over lunch should appear the next time the picker opens, and one removed
+     * should stop being offered — a list built once would go on naming a
+     * program that is no longer there, and the failure would arrive as a failed
+     * spawn in the middle of a question.
+     *
+     * It is allowed to fail quietly. Detection not answering means the two rows
+     * it would have added are missing, which is the state everybody without
+     * either CLI is in anyway; the configured providers must not go with it.
+     */
+    const [list, preferred, cli] = await Promise.all([
       window.shelf.db.listAiProviders(),
       window.shelf.db.getSetting<string | null>(PREFERRED, null),
+      host.call('ai/installed', {}).catch(() => [] as const),
     ]);
-    providers.value = list;
-    preferredId.value = stored;
+    stored.value = list;
+    installed.value = cli.map(detectedProvider);
+    preferredId.value = preferred;
     loaded.value = true;
   }
 
@@ -124,6 +149,9 @@ export const useAssistant = defineStore('assistant', () => {
   }
 
   async function remove(id: string): Promise<void> {
+    // A detected provider is not ours to delete: it is a program on the
+    // machine, and the way to be rid of it is to uninstall it.
+    if (isDetectedProviderId(id)) return;
     await window.shelf.db.removeAiProvider(id);
     if (preferredId.value === id) {
       preferredId.value = null;

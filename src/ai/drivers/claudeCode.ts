@@ -1,9 +1,9 @@
 import { spawn } from 'node:child_process';
-import { accessSync, constants } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AiProvider } from '@shared/ai';
 import { driverInfo } from '@shared/aiDrivers';
+import { findExecutable } from '../cli';
 import { startToolBridge, type ToolBridge } from '../mcp';
 import { parseFrame } from '../sse';
 import {
@@ -60,7 +60,9 @@ import {
  * installers use is far better than reporting "not installed" to someone who
  * can run it in their terminal.
  */
-const CANDIDATES = [
+export const COMMAND = 'claude';
+
+export const CANDIDATES = [
   join(homedir(), '.local', 'bin', 'claude'),
   join(homedir(), '.claude', 'local', 'claude'),
   '/opt/homebrew/bin/claude',
@@ -68,18 +70,16 @@ const CANDIDATES = [
   '/usr/bin/claude',
 ];
 
+/**
+ * Where it is, or the bare name if the lookup came up empty.
+ *
+ * The same lookup decides whether this provider is offered at all — see
+ * `ai/cli.ts`. Spawning the bare name anyway is the last word: it costs one
+ * failed spawn in the case where detection was wrong, and it is the case where
+ * the reader can run `claude` in a terminal and would not believe us.
+ */
 function executable(): string {
-  for (const candidate of CANDIDATES) {
-    try {
-      accessSync(candidate, constants.X_OK);
-      return candidate;
-    } catch {
-      // Not there, or not executable. Try the next one.
-    }
-  }
-  // Let the shell's own resolution have the last word: a reader who installed
-  // it somewhere else entirely still has it on the path we inherited.
-  return 'claude';
+  return findExecutable(COMMAND, CANDIDATES) ?? COMMAND;
 }
 
 /** One line of the CLI's stream. Only three shapes matter to us. */

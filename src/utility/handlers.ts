@@ -1,5 +1,6 @@
 import { createClient } from '@drivers/registry';
 import type { HostChannel, HostContract } from '@shared/contract';
+import { installedDrivers } from '@ai/installed';
 import { changesShape } from '@ai/schemaCache';
 import { probe, schemaFor, turn } from './assistant';
 import { runExport } from './export';
@@ -272,6 +273,8 @@ export const handlers: Registry = {
     schemaFor(session, connectionId, scope, budget, signal),
 
   'ai/turn': (session, payload, signal) => turn(session, payload, signal),
+
+  'ai/installed': () => installedDrivers(),
 
   'ai/probe': (session, { handle }, signal) => probe(session, handle, signal),
 

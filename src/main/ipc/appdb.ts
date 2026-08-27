@@ -7,6 +7,7 @@ import {
   type SaveQueryInput,
 } from '@shared/appdb';
 import type { AiProviderInput } from '@shared/ai';
+import { detectedDriverOf, detectedProvider } from '@shared/aiDrivers';
 import type { SaveChatInput } from '@shared/appdb';
 import { ChatRepository } from '../appdb/chats';
 import { ProviderRepository } from '../appdb/providers';
@@ -136,11 +137,19 @@ export function registerAppDbHandlers(
     const window = BrowserWindow.fromWebContents(event.sender);
     if (!window) throw new Error('No window for this request');
 
-    const provider = providers.get(id);
+    /*
+     * A detected provider has no row to look up. It is a program on this
+     * machine that signs itself in, so the record is derived from the driver
+     * rather than stored — and it has no key, which is the whole reason it can
+     * be offered without being configured.
+     */
+    const detected = detectedDriverOf(id);
+    const provider = detected ? detectedProvider(detected) : providers.get(id);
     if (!provider) throw new Error('That assistant provider no longer exists.');
 
     const handle = randomUUID();
-    host.stageProvider(sessionIdFor(window), handle, provider, providers.apiKey(id));
+    const apiKey = detected ? undefined : providers.apiKey(id);
+    host.stageProvider(sessionIdFor(window), handle, provider, apiKey);
     return handle;
   });
 
