@@ -18,7 +18,7 @@ echo "==> prettier"
 pnpm exec prettier --write "src/**/*.{ts,vue,css}" "tests/**/*.ts" "*.{ts,js,json}" 2>/dev/null || \
     pnpm exec prettier --write "src/**/*.{ts,vue,css}"
 
-echo "==> eslint"
-pnpm exec eslint . --fix
+echo "==> oxlint"
+pnpm exec oxlint --fix
 
 echo "Done."

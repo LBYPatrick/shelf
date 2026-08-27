@@ -691,3 +691,19 @@ body rather than working around.
 Google's TypeScript style guide, 2-space indent, single quotes, named exports.
 Comments explain *why*, not *what* — if a line needs a comment to say what it
 does, rewrite the line.
+
+**The linter is oxlint, and it runs `correctness` only.** Adopting a linter is
+not adopting its opinions: ESLint here ran the recommended sets and five named
+rules, so that is what `.oxlintrc.json` reproduces. `unicorn`'s pedantic and
+style categories are off — `no-await-in-loop` alone fires ninety times on code
+that is sequential on purpose, and `no-useless-spread` cannot tell a redundant
+copy from a defensive one, which in `closeOthers` is a snapshot of a list the
+loop mutates.
+
+**What ESLint took with it, and where it went.** `vue/no-undef-components` has
+no equivalent: oxlint reads a `.vue` file's script and does not look inside its
+template, and `vue-tsc` does not see the tag either — both measured before the
+swap, not assumed. Nothing is registered globally here, so a component the
+template names and the script never imported renders as *nothing at all*, which
+is how the Export sheet shipped unopenable. `tests/unit/vueComponents.test.ts`
+is that rule now.
