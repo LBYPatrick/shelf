@@ -319,7 +319,8 @@
     "syntaxSync": "Dùng chung một bộ màu cho cả hai",
     "syntaxBoth": "Bộ màu",
     "syntaxLight": "Bộ màu sáng",
-    "syntaxDark": "Bộ màu tối"
+    "syntaxDark": "Bộ màu tối",
+    "syntaxPreview": "Mẫu của lược đồ này, sáng ở trên và tối ở dưới"
   },
   "palette": {
     "placeholder": "Tìm bảng, thẻ và thao tác…",

@@ -319,7 +319,8 @@
     "syntaxSync": "두 모드에 같은 색상 사용",
     "syntaxBoth": "색상",
     "syntaxLight": "라이트 색상",
-    "syntaxDark": "다크 색상"
+    "syntaxDark": "다크 색상",
+    "syntaxPreview": "이 스킴의 예시 (위는 밝은 테마, 아래는 어두운 테마)"
   },
   "palette": {
     "placeholder": "테이블, 탭, 동작 검색…",

@@ -319,7 +319,8 @@
     "syntaxSync": "両方の外観で同じ配色を使う",
     "syntaxBoth": "配色",
     "syntaxLight": "ライトの配色",
-    "syntaxDark": "ダークの配色"
+    "syntaxDark": "ダークの配色",
+    "syntaxPreview": "このスキームの見本（上が明るいテーマ、下が暗いテーマ）"
   },
   "palette": {
     "placeholder": "テーブル・タブ・操作を検索…",

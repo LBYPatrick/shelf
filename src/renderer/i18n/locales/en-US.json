@@ -319,7 +319,8 @@
     "syntaxSync": "Use one scheme for both appearances",
     "syntaxBoth": "Scheme",
     "syntaxLight": "Light scheme",
-    "syntaxDark": "Dark scheme"
+    "syntaxDark": "Dark scheme",
+    "syntaxPreview": "A sample of this scheme, light above dark"
   },
   "palette": {
     "placeholder": "Search tables, tabs and actions…",

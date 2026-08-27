@@ -30,6 +30,7 @@ import ToggleSwitch from '../ui/ToggleSwitch.vue';
 import Sheet from '../ui/Sheet.vue';
 import { SYNTAX_SCHEMES } from '@shared/syntaxThemes';
 import { applyOverrides, currentOverrides } from '../../lib/keybindings';
+import PaletteStrip from './PaletteStrip.vue';
 
 const open = defineModel<boolean>({ required: true });
 /*
@@ -392,12 +393,25 @@ const languageOptions = computed(() => [
             <span class="row__label">{{
               theme.syntax.sync ? $t('settings.syntaxBoth') : $t('settings.syntaxLight')
             }}</span>
-            <SelectMenu
-              v-model="theme.syntax.light"
-              class="row__control"
-              :options="schemes"
-              :aria-label="$t('settings.syntaxLight')"
-            />
+            <!--
+              The specimen sits with the picker, on its side of the row: a name
+              and what the name looks like are one answer, and separating them
+              puts the reader back to choosing, looking, and coming back.
+            -->
+            <span class="row__control scheme">
+              <SelectMenu
+                v-model="theme.syntax.light"
+                class="scheme__pick"
+                :options="schemes"
+                :aria-label="$t('settings.syntaxLight')"
+              />
+              <PaletteStrip
+                :light="theme.syntax.light"
+                :dark="theme.syntax.dark"
+                :appearances="theme.syntax.sync ? ['light', 'dark'] : ['light']"
+                :label="$t('settings.syntaxPreview')"
+              />
+            </span>
           </div>
 
           <div
@@ -405,12 +419,20 @@ const languageOptions = computed(() => [
             class="row"
           >
             <span class="row__label">{{ $t('settings.syntaxDark') }}</span>
-            <SelectMenu
-              v-model="theme.syntax.dark"
-              class="row__control"
-              :options="schemes"
-              :aria-label="$t('settings.syntaxDark')"
-            />
+            <span class="row__control scheme">
+              <SelectMenu
+                v-model="theme.syntax.dark"
+                class="scheme__pick"
+                :options="schemes"
+                :aria-label="$t('settings.syntaxDark')"
+              />
+              <PaletteStrip
+                :light="theme.syntax.light"
+                :dark="theme.syntax.dark"
+                :appearances="['dark']"
+                :label="$t('settings.syntaxPreview')"
+              />
+            </span>
           </div>
         </div>
       </section>
@@ -1063,6 +1085,17 @@ label.row__label {
 
 .row__control--number {
   width: 5.5rem;
+}
+
+/* The picker and its specimen are one control as far as the row is concerned. */
+.scheme {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+}
+
+.scheme__pick {
+  width: 11rem;
 }
 
 /* Wide enough for its longest option and no wider; `SelectMenu` fills what it

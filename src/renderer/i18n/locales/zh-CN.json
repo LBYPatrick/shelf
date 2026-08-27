@@ -319,7 +319,8 @@
     "syntaxSync": "两种外观使用同一套配色",
     "syntaxBoth": "配色",
     "syntaxLight": "浅色配色",
-    "syntaxDark": "深色配色"
+    "syntaxDark": "深色配色",
+    "syntaxPreview": "该配色的示例，上为浅色、下为深色"
   },
   "palette": {
     "placeholder": "搜索表、标签页和操作…",
