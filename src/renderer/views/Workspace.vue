@@ -346,31 +346,39 @@ onBeforeUnmount(() => stopPersisting?.());
             >
           </label>
           <!--
-            The count rides on the control that hides them: the choices fold
-            away, and a list quietly missing rows with nothing on screen saying
-            why is the failure mode of every filter ever built.
+            One action per panel, and the one that panel actually has.
+            ─────────────────────────────────────────────────────────
+            This slot used to mean "refresh" on four panels and "new chat" on
+            the fifth — the same position doing two unrelated jobs — and on
+            three of the four there was nothing to refresh: the history and the
+            jobs are logs this window writes itself, and refreshing a log you
+            just wrote is a button that cannot do anything.
+
+            "New chat" is gone from here entirely. It is one of the two primary
+            actions at the head of the sidebar now, and a second copy of it in
+            the panel below said the two were different things.
           -->
           <PressButton
-            v-if="rail === 'chats'"
-            v-tip="$t('assistant.newChat')"
-            size="sm"
-            :aria-label="$t('assistant.newChat')"
-            @click="tabs.openChat()"
-          >
-            <AppIcon
-              name="plus"
-              :size="13"
-            />
-          </PressButton>
-          <PressButton
-            v-else
+            v-if="rail === 'entities' || rail === 'queries'"
+            v-tip="$t('action.refresh')"
             size="sm"
             :aria-label="$t('action.refresh')"
-            :title="$t('action.refresh')"
             @click="rail === 'entities' ? entities.refresh() : queries.refresh()"
           >
             <AppIcon
               name="refresh"
+              :size="13"
+            />
+          </PressButton>
+          <PressButton
+            v-else-if="rail === 'history'"
+            v-tip="$t('history.clear')"
+            size="sm"
+            :aria-label="$t('history.clear')"
+            @click="queries.clearHistory()"
+          >
+            <AppIcon
+              name="trash"
               :size="13"
             />
           </PressButton>

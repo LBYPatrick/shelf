@@ -129,7 +129,6 @@
     "loadingColumns": "Đang tải các cột…",
     "disconnect": "{{version}} — nhấp để ngắt kết nối",
     "readOnly": "chỉ đọc",
-    "disconnectHint": "nhấp để ngắt kết nối",
     "searchEntities": "Tìm bảng",
     "toggleSidebar": "Bật/tắt thanh bên",
     "jobs": "Tác vụ",

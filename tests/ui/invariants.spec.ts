@@ -83,7 +83,7 @@ test.describe('layout', () => {
       };
       return {
         icon: centre('.rail__item'),
-        connection: centre('.switcher__button'),
+        connection: centre('.switcher__row'),
         top: document.querySelector('.rail__item')?.getBoundingClientRect().top ?? 0,
       };
     });
@@ -2373,7 +2373,13 @@ test.describe('the assistant', () => {
    * chrome — and the remaining ways in are this, the palette, and a shortcut.
    */
   async function openChat(sample: Page): Promise<void> {
-    await sample.getByRole('button', { name: /^new chat$/i }).click();
+    // The sidebar's, specifically. The empty workspace offers one too, which is
+    // a second way in rather than a second copy — and `getByRole` cannot tell
+    // those apart on a name alone.
+    await sample
+      .getByRole('complementary')
+      .getByRole('button', { name: /^new chat$/i })
+      .click();
     await sample.locator('.chat').waitFor({ timeout: 20_000 });
     await stabilize(sample);
   }

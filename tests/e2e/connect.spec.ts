@@ -93,7 +93,10 @@ test('runs a query and shows its results', async ({ page }) => {
 
   await createConnection(page, { engine: 'SQLite', file: file, name: 'Query' });
 
-  await page.getByRole('button', { name: 'New query', exact: true }).click();
+  await page
+    .getByRole('complementary')
+    .getByRole('button', { name: 'New query', exact: true })
+    .click();
 
   await typeQuery(page, 'CREATE TABLE t (id INTEGER PRIMARY KEY, name TEXT);');
   await page.keyboard.press('ControlOrMeta+Enter');
@@ -165,7 +168,10 @@ test('exports a table to a file without loading it into the interface', async ({
 
   await createConnection(page, { engine: 'SQLite', file: database });
 
-  await page.getByRole('button', { name: 'New query', exact: true }).click();
+  await page
+    .getByRole('complementary')
+    .getByRole('button', { name: 'New query', exact: true })
+    .click();
   await typeQuery(page, 'CREATE TABLE e (id INTEGER PRIMARY KEY, label TEXT);');
   await page.keyboard.press('ControlOrMeta+Enter');
   await typeQuery(page, "INSERT INTO e VALUES (1, 'alpha'), (2, 'be,ta');");
@@ -197,7 +203,10 @@ test('restores the tabs that were open, including unfinished query text', async 
 
   await createConnection(page, { engine: 'SQLite', file: file, name: 'Session' });
 
-  await page.getByRole('button', { name: 'New query', exact: true }).click();
+  await page
+    .getByRole('complementary')
+    .getByRole('button', { name: 'New query', exact: true })
+    .click();
   await typeQuery(page, 'SELECT 1 -- half written');
 
   // Give the debounced save time to land before the window goes away.
@@ -220,7 +229,10 @@ test('asks the server for a preview rather than for everything', async ({ page }
   const file = join(await mkdtemp(join(tmpdir(), 'shelf-limit-')), 'l.db');
 
   await createConnection(page, { engine: 'SQLite', file, name: 'Preview' });
-  await page.getByRole('button', { name: 'New query', exact: true }).click();
+  await page
+    .getByRole('complementary')
+    .getByRole('button', { name: 'New query', exact: true })
+    .click();
 
   /*
    * A statement with no end to it. The row limit used to be a cut made after
@@ -265,7 +277,10 @@ test('shows how the database would run a statement', async ({ page }) => {
 
   await createConnection(page, { engine: 'SQLite', file, name: 'Plan' });
 
-  await page.getByRole('button', { name: 'New query', exact: true }).click();
+  await page
+    .getByRole('complementary')
+    .getByRole('button', { name: 'New query', exact: true })
+    .click();
   await typeQuery(page, 'CREATE TABLE p (id INTEGER PRIMARY KEY, name TEXT);');
   await page.keyboard.press('ControlOrMeta+Enter');
 
@@ -282,7 +297,10 @@ test('adds and drops a column, showing the SQL before it runs', async ({ page })
 
   await createConnection(page, { engine: 'SQLite', file, name: 'Schema' });
 
-  await page.getByRole('button', { name: 'New query', exact: true }).click();
+  await page
+    .getByRole('complementary')
+    .getByRole('button', { name: 'New query', exact: true })
+    .click();
   await typeQuery(page, 'CREATE TABLE s (id INTEGER PRIMARY KEY, name TEXT);');
   await page.keyboard.press('ControlOrMeta+Enter');
 
@@ -315,7 +333,10 @@ test('confirms a schema change, and says what the engine will not do', async ({ 
 
   await createConnection(page, { engine: 'SQLite', file, name: 'Drop' });
 
-  await page.getByRole('button', { name: 'New query', exact: true }).click();
+  await page
+    .getByRole('complementary')
+    .getByRole('button', { name: 'New query', exact: true })
+    .click();
   // Two columns, because the one thing this test is named for can only be
   // reached on a column that is *not* the key: the drop control is not offered
   // on a primary key, and a table with nothing else in it has nothing to drop.
@@ -379,7 +400,10 @@ test('imports a CSV file into an existing table', async ({ app, page }) => {
 
   await createConnection(page, { engine: 'SQLite', file: database, name: 'People DB' });
 
-  await page.getByRole('button', { name: 'New query', exact: true }).click();
+  await page
+    .getByRole('complementary')
+    .getByRole('button', { name: 'New query', exact: true })
+    .click();
   await typeQuery(page, 'CREATE TABLE people (id INTEGER PRIMARY KEY, name TEXT, note TEXT);');
   await page.keyboard.press('ControlOrMeta+Enter');
 
@@ -407,7 +431,9 @@ test('sample mode opens the whole app with no database at all', async ({ page })
   // asserting the schemas before the tables rather than instead of them.
   await expect(page.getByRole('treeitem', { name: 'sample' })).toBeVisible();
   await expect(page.getByRole('treeitem', { name: 'music' })).toBeVisible();
-  await expect(page.getByText('Sample data (no database)')).toBeVisible();
+  // In the status bar. The sidebar's head names the engine too now, so the
+  // string is on screen twice and a bare `getByText` cannot say which.
+  await expect(page.locator('.statusbar').getByText('Sample data (no database)')).toBeVisible();
 
   await revealTables(page);
   await expect(page.getByRole('treeitem', { name: 'album' })).toBeVisible();
@@ -496,7 +522,11 @@ test('filters a table with the builder, without anyone writing SQL', async ({ pa
 test('the editor brings find and replace, and says where the caret is', async ({ page }) => {
   await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
-  await page.getByRole('button', { name: 'New query', exact: true }).first().click();
+  await page
+    .getByRole('complementary')
+    .getByRole('button', { name: 'New query', exact: true })
+    .first()
+    .click();
 
   await typeQuery(page, 'SELECT one\nFROM two\nWHERE one = 1');
   await expect(page.locator('.statusbar')).toContainText('of 3');
@@ -658,7 +688,11 @@ test('the status bar says when work succeeded and when it failed', async ({ page
   await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
 
-  await page.getByRole('button', { name: 'New query', exact: true }).first().click();
+  await page
+    .getByRole('complementary')
+    .getByRole('button', { name: 'New query', exact: true })
+    .first()
+    .click();
   const bar = page.locator('.statusbar');
   await expect(bar).not.toHaveClass(/statusbar--ok|statusbar--error/);
 

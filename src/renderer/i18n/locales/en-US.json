@@ -129,7 +129,6 @@
     "loadingColumns": "Loading columns…",
     "disconnect": "{{version}} — click to disconnect",
     "readOnly": "read-only",
-    "disconnectHint": "click to disconnect",
     "searchEntities": "Search tables",
     "toggleSidebar": "Toggle sidebar",
     "jobs": "Jobs",

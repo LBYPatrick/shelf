@@ -129,7 +129,6 @@
     "loadingColumns": "正在加载列…",
     "disconnect": "{{version}} — 点击断开连接",
     "readOnly": "只读",
-    "disconnectHint": "点击断开连接",
     "searchEntities": "搜索表",
     "toggleSidebar": "切换侧边栏",
     "jobs": "任务",

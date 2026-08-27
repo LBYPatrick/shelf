@@ -129,7 +129,6 @@
     "loadingColumns": "열을 불러오는 중…",
     "disconnect": "{{version}} — 클릭하면 연결 해제",
     "readOnly": "읽기 전용",
-    "disconnectHint": "클릭하면 연결 해제",
     "searchEntities": "테이블 검색",
     "toggleSidebar": "사이드바 전환",
     "jobs": "작업",
