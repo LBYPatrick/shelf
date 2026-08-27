@@ -508,11 +508,15 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
   border-radius: var(--radius-field);
   color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
   opacity: 0;
+  /* Invisible means gone, including to the pointer: it was still catching a
+     hover and drawing its own label over the row beside it. */
+  pointer-events: none;
   transition: opacity var(--t-hover) var(--ease-out);
 }
 
 .keys__restore--on {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .record {

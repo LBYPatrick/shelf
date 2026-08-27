@@ -1255,6 +1255,38 @@ test.describe('controls', () => {
     expect(unnamed).toEqual([]);
   });
 
+  test('a drawn label belongs to a control the reader can see', async ({ sample }) => {
+    /*
+     * `v-tip` is the label an icon does not carry, and it fires on
+     * `pointerenter` — which an element with `opacity: 0` still receives. The
+     * shortcuts sheet keeps a restore button on every row so the column does
+     * not reshuffle as bindings are changed, hidden on the rows that have not
+     * moved; hidden, it went on catching the pointer and drawing "Back to the
+     * default" over the row beside it.
+     *
+     * Invisible has to mean gone to the pointer as well as to the eye, so the
+     * rule is one or the other: be visible, or take no pointer events.
+     */
+    await sample.getByRole('button', { name: 'Settings', exact: true }).click();
+    await sample.getByRole('button', { name: 'Customise' }).click();
+    await expect(sample.getByText('New query tab')).toBeVisible();
+
+    const ghosts = await sample.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>('[data-tip]')]
+        .filter((el) => {
+          const style = getComputedStyle(el);
+          if (style.pointerEvents === 'none') return false;
+          if (style.visibility === 'hidden' || style.display === 'none') return false;
+          return Number.parseFloat(style.opacity) < 0.05;
+        })
+        .map((el) => `${el.tagName.toLowerCase()}.${el.className}`.slice(0, 80))
+    );
+    expect(ghosts).toEqual([]);
+
+    await sample.keyboard.press('Escape');
+    await sample.keyboard.press('Escape');
+  });
+
   test('no component wears a framework component class', async ({ page, sample }) => {
     /*
      * daisyUI ships `.select`, `.input`, `.btn`, `.card` and friends. A

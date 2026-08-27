@@ -88,6 +88,11 @@ export const vTip: Directive<HTMLElement, string | undefined> = {
   mounted(element, binding) {
     const label = () => binding.value ?? '';
 
+    // Marked so the design gate can sweep them: a drawn label on a control
+    // nobody can see is a label for nothing, and there is no other way to find
+    // one from the document.
+    element.dataset['tip'] = '';
+
     element.addEventListener('pointerenter', () => show(element, label()));
     element.addEventListener('pointerleave', hideTip);
     // A label describing what you just did is noise, and it would otherwise sit
