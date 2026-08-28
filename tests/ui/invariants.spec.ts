@@ -259,8 +259,11 @@ test.describe('layout', () => {
 
     await sample.waitForTimeout(500);
 
+    // `.strip__scroll`, not `.strip`: the bar stopped being the scrolling box
+    // when the new-tab button moved out of it, so that it could stay put while
+    // the tabs run past the edge.
     const overflow = await sample.evaluate(() => {
-      const strip = document.querySelector('.strip') as HTMLElement;
+      const strip = document.querySelector('.strip__scroll') as HTMLElement;
       return strip.scrollWidth - strip.clientWidth;
     });
     expect(overflow, 'fourteen tabs still fit; the case is not being tested').toBeGreaterThan(
@@ -545,6 +548,154 @@ test.describe('layout', () => {
       heights['database'],
       `both popups took the same room: ${JSON.stringify(heights)}`
     ).toBeLessThan(heights['table']! - 20);
+  });
+
+  test('a popup whose content arrives late is as tall as the content', async ({ sample }) => {
+    /*
+     * The sheet measures its content with a `ResizeObserver`, and an observer
+     * that measures and then writes a height is a loop by construction: the
+     * write resizes the panel, the panel resizes the content's box, and the
+     * observer is due again. Chromium protects itself by *stopping delivery*
+     * partway through, and which notification it drops depends on how the frame
+     * went — so the stored-data sheet settled at the right height on one run and
+     * thirteen pixels short on the next, with a scrollbar down a panel that had
+     * room to spare. The tell was that hovering the footer button fixed it: a
+     * button's own transition ending is what woke the fallback measurement.
+     *
+     * **This does not reproduce that race, and does not pretend to.** Which
+     * notification the browser drops depends on how the frame went; the same
+     * build settled correctly on four runs out of six and short on the other
+     * two, and every synthetic version of the cascade tried here was delivered
+     * perfectly. What it asserts is the weaker property underneath, which is
+     * true, cheap to check, and was never guarded: a sheet that has finished
+     * opening still follows content that arrives afterwards, with nothing else
+     * on screen moving to prompt it. The fix for the race is in `Sheet.vue`
+     * and is reasoned from instrumentation rather than from this test.
+     */
+    /*
+     * The stored-data sheet, because it is short.
+     *
+     * A sheet already at the ceiling scrolls by design, so it cannot show the
+     * difference between following its content and not — and Settings is at the
+     * ceiling. This one settles at about half the room it is allowed, which
+     * leaves somewhere to grow into.
+     */
+    await sample.getByRole('button', { name: 'Settings', exact: true }).click();
+    await expect(sample.getByRole('dialog', { name: 'Settings' })).toBeVisible();
+    await sample.getByRole('button', { name: 'Manage…' }).click();
+
+    const dialog = sample.getByRole('dialog', { name: 'Stored data' });
+    await expect(dialog).toBeVisible();
+    // Past the enter transition and the resize that follows the first
+    // measurement; a box read mid-flight is neither size.
+    await sample.waitForTimeout(800);
+
+    const before = Math.round((await dialog.boundingBox())!.height);
+
+    /*
+     * Grown from the outside, over three frames, well after everything has
+     * stopped.
+     *
+     * Nothing here transitions or animates, so the fallback that measures when
+     * something on screen finishes moving cannot be what catches it — the
+     * observer has to. Three frames rather than one because that is the shape
+     * real content has when a fetch lands and the values it fills in reflow the
+     * text around them.
+     */
+    const GROWTH = 40;
+    await sample.evaluate((by) => {
+      const bodies = [...document.querySelectorAll('.panel__body')];
+      const wrapper = bodies[bodies.length - 1]?.firstElementChild as HTMLElement | null;
+      if (!wrapper) throw new Error('the sheet has no content wrapper to grow');
+
+      const grow = (left: number): void => {
+        const block = document.createElement('div');
+        block.dataset['grown'] = 'yes';
+        block.style.height = `${by}px`;
+        wrapper.append(block);
+        if (left > 1) requestAnimationFrame(() => grow(left - 1));
+      };
+
+      grow(3);
+    }, GROWTH);
+
+    await sample.waitForTimeout(700);
+    const after = Math.round((await dialog.boundingBox())!.height);
+
+    /*
+     * It either grew by what was added or it hit the ceiling, and both are
+     * correct — what is not correct is standing still with content hanging out
+     * of the bottom. So the overflow is the assertion and the growth is the
+     * evidence.
+     */
+    const short = await sample.evaluate(() => {
+      const body = [...document.querySelectorAll('.panel__body')].pop()!;
+      return body.scrollHeight - body.clientHeight;
+    });
+
+    expect(
+      short,
+      `the sheet stayed ${before}px and its content overflows by ${short}px`
+    ).toBeLessThanOrEqual(0);
+    expect(after, 'the sheet did not follow content added after it settled').toBeGreaterThan(
+      before
+    );
+
+    await sample.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await sample.keyboard.press('Escape');
+  });
+
+  test('a popup that fits does not fade its own last row', async ({ sample }) => {
+    /*
+     * The body carries a mask so that content passing under the chrome fades
+     * rather than being guillotined — the Settings pane used to end mid-control
+     * with nothing to say there was more. The top of that mask was conditional
+     * from the start: it appears once you have scrolled. The bottom was a
+     * constant.
+     *
+     * So every sheet that fitted perfectly well dimmed its own last row, and on
+     * the stored-data sheet that row is the button that does the thing: it read
+     * as disabled, under a shadow, in a panel with room to spare. A fade is a
+     * promise that there is more below; on a sheet that fits there is not, and
+     * making it anyway is the interface saying something untrue about itself.
+     */
+    await sample.getByRole('button', { name: 'Settings', exact: true }).click();
+    await expect(sample.getByRole('dialog', { name: 'Settings' })).toBeVisible();
+    await sample.getByRole('button', { name: 'Manage…' }).click();
+
+    const stored = sample.getByRole('dialog', { name: 'Stored data' });
+    await expect(stored).toBeVisible();
+    await sample.waitForTimeout(900);
+
+    const edge = await sample.evaluate(() => {
+      const body = [...document.querySelectorAll('.panel__body')].pop()!;
+      return {
+        scrolls: body.classList.contains('panel__body--scrolls'),
+        overflow: body.scrollHeight - body.clientHeight,
+        mask: getComputedStyle(body).maskImage,
+      };
+    });
+
+    // The premise: this sheet fits. If it ever stops fitting the assertion
+    // below stops meaning anything, so it is checked rather than assumed.
+    expect(edge.scrolls, 'the sheet under test is scrolling, so it proves nothing').toBe(false);
+    expect(edge.overflow, 'the sheet under test overflows').toBeLessThanOrEqual(0);
+
+    /*
+     * Read off the computed mask rather than the custom property behind it,
+     * because the property is only one of the ways the fade could come back —
+     * the version this replaced had the distance written into the gradient
+     * itself. Opaque to the last pixel resolves to a black stop at `100%`; a
+     * fade of any length resolves to `calc(100% - Npx)`.
+     */
+    expect(edge.mask, 'a sheet that fits is fading its last row').toContain(
+      'rgb(0, 0, 0) 100%'
+    );
+
+    await sample.keyboard.press('Escape');
+    await expect(stored).toBeHidden();
+    await sample.keyboard.press('Escape');
   });
 
   test('a popup that loses content gets shorter, and travels there', async ({ sample }) => {
@@ -2159,6 +2310,110 @@ test.describe('the tab strip', () => {
     }
     await stabilize(sample);
   }
+
+  test('closing a tab does not move the row under the pointer', async ({ sample }) => {
+    /*
+     * Chrome's behaviour, and the reason you can close five tabs in a row
+     * without moving the mouse: while the pointer is in the strip the remaining
+     * tabs do *not* grow to fill the gap, so every close button stays under the
+     * cursor that just used one. The row re-flows when the pointer leaves.
+     *
+     * Without it, closing one tab widens all of them — which slides the next
+     * close button out from under the finger aiming at it, and, in a strip that
+     * scrolls, moves the whole row while the scroll position is being clamped to
+     * a content box that is shrinking and growing at the same time.
+     */
+    for (let index = 0; index < 6; index += 1) {
+      await newQueryTab(sample);
+      await sample.waitForTimeout(60);
+    }
+    await sample.waitForTimeout(600);
+
+    const widthOf = () =>
+      sample.evaluate(() =>
+        Math.round(document.querySelector('.striptab')!.getBoundingClientRect().width)
+      );
+
+    const third = sample.locator('.striptab').nth(2);
+    await third.hover();
+    await sample.waitForTimeout(250);
+    const before = await widthOf();
+
+    await third.locator('.striptab__close').click();
+    await sample.waitForTimeout(600);
+
+    expect(await widthOf(), 'the tabs grew under the pointer that had just closed one').toBe(
+      before
+    );
+
+    // And they take the room back once the pointer has gone.
+    await sample.mouse.move(10, 600);
+    await sample.waitForTimeout(600);
+    expect(
+      await widthOf(),
+      'the tabs never took back the room the closed one left'
+    ).toBeGreaterThan(before);
+  });
+
+  test('a full strip keeps the open tab and the new-tab button on screen', async ({
+    sample,
+  }) => {
+    /*
+     * Two things went wrong once the tabs stopped fitting, and they were the
+     * same mistake: the scroller held the `+` as well as the tabs.
+     *
+     * The button was carried off the end with them, so the control you press to
+     * get another tab left the screen exactly when you had enough tabs for it
+     * to be hard to find. And the tab you had just opened was past the trailing
+     * edge, so the one thing that had happened was the one thing not shown —
+     * the strip scrolled for it and then `scrollLeft` was clamped to a content
+     * width that was still a tab short of what it was about to be.
+     */
+    /*
+     * Opened without `stabilize`, deliberately.
+     *
+     * That helper zeroes every duration in the document, and the second half of
+     * this — the tab being scrolled to — only goes wrong *because* the row is
+     * animating: `scrollLeft` is clamped to a content width that is still a tab
+     * short of what it is about to be. With the animations off there is nothing
+     * to clamp against and the bug cannot happen, so the test would pass on a
+     * build that has it.
+     */
+    for (let i = 0; i < 12; i += 1) {
+      await newQueryTab(sample);
+      await sample.waitForTimeout(60);
+    }
+    await sample.waitForTimeout(700);
+
+    const geometry = await sample.evaluate(() => {
+      const scroller = document.querySelector('.strip__scroll')!.getBoundingClientRect();
+      const plus = document.querySelector('.strip__new')!.getBoundingClientRect();
+      const open = document.querySelector('.striptab--on')!.getBoundingClientRect();
+      const strip = document.querySelector('.strip')!.getBoundingClientRect();
+      return { scroller, plus, open, strip };
+    });
+
+    // The button is outside the scrolling box and inside the bar, which is what
+    // makes it stay put however far the tabs run on.
+    expect(
+      Math.round(geometry.plus.left),
+      'the new-tab button is inside the scroller and can scroll away'
+    ).toBeGreaterThanOrEqual(Math.round(geometry.scroller.right));
+    expect(
+      Math.round(geometry.plus.right),
+      'the new-tab button is off the end of the bar'
+    ).toBeLessThanOrEqual(Math.round(geometry.strip.right) + 1);
+
+    // And the tab that was just opened is the one you can see.
+    expect(
+      Math.round(geometry.open.right),
+      'the open tab is past the trailing edge of the strip'
+    ).toBeLessThanOrEqual(Math.round(geometry.scroller.right) + 1);
+    expect(
+      Math.round(geometry.open.left),
+      'the open tab is off the leading edge of the strip'
+    ).toBeGreaterThanOrEqual(Math.round(geometry.scroller.left) - 1);
+  });
 
   const titles = (sample: Page) => sample.locator('.strip .striptab__title').allInnerTexts();
 

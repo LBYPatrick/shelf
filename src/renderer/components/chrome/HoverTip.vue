@@ -19,22 +19,50 @@ const MARGIN = 8;
 /** Wide enough for a rail label, short enough that a long one wraps. */
 const MAX_WIDTH = 260;
 
+/** What a label needs vertically, for deciding whether it fits under a control. */
+const ROOM = 32;
+
 /**
- * Beside the trigger, on whichever side it fits.
+ * Beside the trigger where it fits, and under it where it does not.
  *
  * The rail is at the window's leading edge, so a label to its trailing side is
  * the natural place — it reads outward, in the direction the eye is already
  * travelling, and it never covers the icon it is naming.
+ *
+ * **A control near the trailing edge used to flip and open backwards over the
+ * window.** The new-tab button is the case: it sits at the end of the tab
+ * strip, so its label opened leftwards and laid itself across the last two
+ * tabs — a label naming one control while hiding two others. Under it is the
+ * answer, because a tooltip below a control covers the thing the control acts
+ * on rather than its neighbours, and because that is where a tooltip on a
+ * toolbar button goes everywhere else.
+ *
+ * Above, in the one case where below would leave the window. Nothing in this
+ * app is close enough to the bottom edge for that today; it is here because
+ * "off the bottom of the screen" is a worse failure than either placement.
  */
 const placement = computed(() => {
   const { top, bottom, left, right } = tip.anchor;
-  const flip = right + GAP + MAX_WIDTH + MARGIN > globalThis.innerWidth;
+  void left;
+
+  if (right + GAP + MAX_WIDTH + MARGIN <= globalThis.innerWidth) {
+    return {
+      beside: true,
+      top: `${(top + bottom) / 2}px`,
+      left: `${right + GAP}px`,
+      origin: 'left center',
+    };
+  }
+
+  const below = bottom + GAP + ROOM + MARGIN <= globalThis.innerHeight;
 
   return {
-    top: `${(top + bottom) / 2}px`,
-    ...(flip
-      ? { right: `${globalThis.innerWidth - left + GAP}px`, origin: 'right center' }
-      : { left: `${right + GAP}px`, origin: 'left center' }),
+    beside: false,
+    top: below ? `${bottom + GAP}px` : `${top - GAP - ROOM}px`,
+    // Aligned to the trigger's trailing edge, which is the edge it was pushed
+    // against — anything else would put the label back over the window.
+    right: `${globalThis.innerWidth - right}px`,
+    origin: below ? 'top right' : 'bottom right',
   };
 });
 </script>
@@ -45,7 +73,7 @@ const placement = computed(() => {
       <div
         v-if="tip.visible"
         class="hovertip"
-        :class="{ 'hovertip--instant': tip.instant }"
+        :class="{ 'hovertip--instant': tip.instant, 'hovertip--beside': placement.beside }"
         :style="{
           top: placement.top,
           left: placement.left,
@@ -67,10 +95,14 @@ const placement = computed(() => {
  * `aria-label`, which is what a screen reader announces; a tooltip repeating it
  * is the same word twice.
  */
+/*
+ * Centred on the trigger only when it is beside it. Under or over it, the
+ * `top` already names the edge the label starts at, and half a label's height
+ * of correction would put it back across the control.
+ */
 .hovertip {
   position: fixed;
   z-index: 300;
-  translate: 0 -50%;
   padding: 0.3rem 0.6rem;
   border-radius: 0.5rem;
   background: var(--color-base-100);
@@ -80,6 +112,13 @@ const placement = computed(() => {
   line-height: 1.35;
   white-space: normal;
   pointer-events: none;
+}
+
+/* Centred on the trigger only when it is beside it. Under or over it, `top`
+   already names the edge the label starts at, and half a label's height of
+   correction would put it back across the control. */
+.hovertip--beside {
+  translate: 0 -50%;
 }
 
 /*

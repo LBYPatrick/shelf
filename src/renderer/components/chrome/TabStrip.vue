@@ -312,6 +312,18 @@ function onAuxClick(event: MouseEvent, tab: Tab): void {
 const tabSize = ref(0);
 
 /**
+ * Withholds the scroller's edge fades for one frame after mounting.
+ *
+ * The same guard the sheet takes, for the same reason: an element carrying an
+ * `animation-timeline: scroll()` inserted in the commit that first makes it
+ * visible has crashed the renderer outright before now. The workspace is
+ * mounted on a connection opening, which is exactly that commit.
+ */
+const scrollEl = ref<HTMLElement>();
+const edges = ref(false);
+onMounted(() => requestAnimationFrame(() => (edges.value = true)));
+
+/**
  * Tabs that have just been opened, so they can arrive rather than appear.
  *
  * A new tab used to be there in one frame at full width while every other tab
@@ -400,6 +412,31 @@ function bound(name: string, fallback: number): number {
     : value;
 }
 
+/**
+ * The width the tabs are held at while the pointer is in the strip.
+ *
+ * Chrome's behaviour, and it is the reason you can close five tabs in a row
+ * without moving the mouse: the remaining tabs do *not* grow to fill the gap
+ * while you are still in there, so every close button stays under the cursor
+ * that just used one. The row re-flows when the pointer leaves.
+ *
+ * Only ever holds them *back*. Opening a tab while hovering still narrows them,
+ * because the alternative is a row that overflows rather than one that fits.
+ */
+let held = 0;
+const hovering = ref(false);
+
+function onStripEnter(): void {
+  hovering.value = true;
+  held = tabSize.value;
+}
+
+function onStripLeave(): void {
+  hovering.value = false;
+  held = 0;
+  void relayout();
+}
+
 function sizeTabs(): void {
   const strip = stripEl.value;
   const count = tabs.tabs.length;
@@ -410,9 +447,12 @@ function sizeTabs(): void {
 
   const newButton = strip.querySelector<HTMLElement>('.strip__new');
   const gap = Number.parseFloat(getComputedStyle(strip).gap) || 0;
+  // The button is outside the scroller now, so its width and the gap before it
+  // come off the room the tabs have; the rest of the gaps are between them.
   const room = strip.clientWidth - (newButton?.offsetWidth ?? 0) - gap * (count + 1);
 
-  tabSize.value = Math.round(Math.max(min, Math.min(max, room / count)));
+  const fair = Math.round(Math.max(min, Math.min(max, room / count)));
+  tabSize.value = hovering.value && held > 0 ? Math.min(fair, held) : fair;
 }
 
 /**
@@ -424,15 +464,126 @@ function sizeTabs(): void {
  * the marker sized and placed for the old layout: a white slab hanging off the
  * end of the last tab, or sitting over the tab before the open one.
  */
-async function relayout(): Promise<void> {
+async function relayout(bringActiveIntoView = false): Promise<void> {
   sizeTabs();
   await nextTick();
   measure();
+  if (bringActiveIntoView) reveal();
 }
+
+/**
+ * The open tab is always on screen.
+ *
+ * Once the strip scrolls, opening a tab put it past the trailing edge and left
+ * the reader looking at the tabs they already had — the one thing that had just
+ * happened was the one thing not shown. `inline: 'nearest'` is the whole
+ * behaviour: a tab already visible is not moved, and one that is not is brought
+ * just far enough in, so walking the row with the keyboard walks rather than
+ * jumps.
+ *
+ * Called from `relayout` and not from a watcher of its own, because the widths
+ * change in the same breath as the count does and a position measured before
+ * that lands on the wrong tab.
+ */
+/**
+ * How long the reveal keeps trying, in frames.
+ *
+ * Long enough to outlast the 260ms the widths take to settle, and it stops the
+ * moment the scroll lands — so on a strip that is not animating it costs one
+ * pass.
+ */
+const REVEAL_FRAMES = 24;
+
+let revealing = 0;
+
+function reveal(left = REVEAL_FRAMES): void {
+  const box = scrollEl.value;
+  const list = listEl.value;
+  if (!box || !list || tabSize.value === 0) return;
+
+  const index = tabs.tabs.findIndex((tab) => tab.id === tabs.activeId);
+  if (index === -1) return;
+
+  /*
+   * Where the tab *will* be, not where it is.
+   *
+   * `scrollIntoView` reads live geometry, and every tab in the row is part-way
+   * through a 260ms width animation whenever the count has just changed — so it
+   * scrolled to a position correct for a layout the strip was still leaving,
+   * and the new tab stayed a hundred pixels off the end. Every tab is the same
+   * width by construction, so the arithmetic is exact whatever frame this runs
+   * on.
+   */
+  const gap = Number.parseFloat(getComputedStyle(list).gap) || 0;
+  const start = index * (tabSize.value + gap);
+  const end = start + tabSize.value;
+
+  const want =
+    start < box.scrollLeft
+      ? start
+      : end > box.scrollLeft + box.clientWidth
+        ? end - box.clientWidth
+        : box.scrollLeft;
+
+  box.scrollLeft = want;
+
+  /*
+   * ...and again next frame if it did not land.
+   *
+   * `scrollLeft` is clamped to the content width, and while a tab is animating
+   * in from nothing the content is one tab narrower than it is about to be — so
+   * the correct number is clamped short and the browser does not put it back
+   * when the row finishes growing. The last clamp is what the reader is left
+   * looking at: a new tab a hundred pixels off the end of a strip that had just
+   * scrolled for it.
+   *
+   * Retried rather than hung off `transitionend`, because the events do not
+   * cover it: at the floor width the existing tabs do not transition at all,
+   * and the arriving tab's own animation is cancelled rather than ended when
+   * its class is dropped.
+   */
+  cancelAnimationFrame(revealing);
+  if (Math.abs(box.scrollLeft - want) > 1 && left > 0) {
+    revealing = requestAnimationFrame(() => reveal(left - 1));
+  }
+}
+
+/**
+ * A tab arriving is brought into view; a tab leaving is not.
+ *
+ * Closing one must not move the row under the pointer that closed it — that is
+ * the whole point of holding the widths — and scrolling as well would move it
+ * twice. Chrome does the same: the scroll position after a close is the scroll
+ * position it had before it.
+ */
+let counted = tabs.tabs.length;
 
 watch(
   () => tabs.tabs.length,
-  () => void relayout()
+  (count) => {
+    const grew = count > counted;
+    counted = count;
+    void relayout(grew);
+  }
+);
+
+/**
+ * The open tab is always on screen.
+ *
+ * Once the strip scrolls, opening a tab put it past the trailing edge and left
+ * the reader looking at the tabs they had before — the one thing that had just
+ * happened was the one thing not shown. `inline: 'nearest'` is the whole
+ * behaviour: a tab already visible is not moved, and one that is not is brought
+ * just far enough in, so switching along a row with the keyboard walks rather
+ * than jumps.
+ *
+ * After the widths, not with them: the tabs resize when the count changes, and
+ * scrolling to a position measured before that lands somewhere else.
+ */
+watch(
+  () => tabs.activeId,
+  () => void relayout(true),
+  { flush: 'post' }
 );
 
 let observer: ResizeObserver | undefined;
@@ -447,6 +598,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   observer?.disconnect();
+  cancelAnimationFrame(revealing);
   for (const timer of [...enterTimers.values(), ...leaveTimers.values()]) clearTimeout(timer);
   enterTimers.clear();
   leaveTimers.clear();
@@ -477,50 +629,66 @@ const KIND_ICON: Record<Tab['kind'], string> = {
     ref="stripEl"
     class="strip drag-region"
     :class="props.tight ? 'mat-regular panel-sidebar' : 'panel-content'"
+    @pointerenter="onStripEnter"
+    @pointerleave="onStripLeave"
   >
     <!--
       The tablist holds tabs and nothing else. The new-tab button used to sit
       inside it, which makes assistive technology announce a control that is not
       one of the tabs as though it were one.
     -->
-    <div
-      ref="listEl"
-      class="strip__tabs"
-      role="tablist"
-      :style="{ '--tab-w': tabSize ? `${tabSize}px` : undefined }"
-    >
-      <span
-        v-if="marker"
-        class="strip__marker"
-        :class="{ 'strip__marker--held': dragIndex !== null }"
-        :style="markerStyle"
-        aria-hidden="true"
-      />
-
+    <!--
+      The tabs scroll; the button that makes another one does not.
+      ───────────────────────────────────────────────────────────
+      Both used to be in one scrolling box, so past about a dozen tabs the `+`
+      was carried off the end with them: the control you press to get another
+      tab left the screen exactly when you had enough tabs for it to be hard to
+      find. It sits outside the scroller now, pinned to the trailing edge — and
+      while the tabs still fit, the scroller is only as wide as they are, so the
+      button stays immediately after the rightmost tab, which is where every
+      other tabbed interface puts it and where the eye goes for it.
+    -->
+    <div ref="scrollEl" class="strip__scroll" :class="{ 'strip__scroll--edges': edges }">
       <div
-        v-for="(tab, index) in tabs.tabs"
-        :key="tab.id"
-        class="striptab no-drag"
-        :class="{
-          'striptab--on': tab.id === tabs.activeId,
-          'striptab--dragging': dragIndex === index,
-          'striptab--entering': entering.has(tab.id),
-          'striptab--leaving': leaving.has(tab.id),
-        }"
-        :style="dragIndex === index ? { transform: `translateX(${dragOffset}px)` } : undefined"
-        role="tab"
-        :aria-selected="tab.id === tabs.activeId"
-        tabindex="0"
-        @pointerdown="
-          tabs.focus(tab.id);
-          beginDrag($event, index);
-        "
-        @auxclick="onAuxClick($event, tab)"
-        @dblclick="beginRename(tab)"
-        @keydown.delete="closeTab(tab.id)"
+        ref="listEl"
+        class="strip__tabs"
+        role="tablist"
+        :style="{ '--tab-w': tabSize ? `${tabSize}px` : undefined }"
       >
-        <AppIcon class="striptab__mark" :name="KIND_ICON[tab.kind]" :size="12" />
-        <!--
+        <span
+          v-if="marker"
+          class="strip__marker"
+          :class="{ 'strip__marker--held': dragIndex !== null }"
+          :style="markerStyle"
+          aria-hidden="true"
+        />
+
+        <div
+          v-for="(tab, index) in tabs.tabs"
+          :key="tab.id"
+          class="striptab no-drag"
+          :class="{
+            'striptab--on': tab.id === tabs.activeId,
+            'striptab--dragging': dragIndex === index,
+            'striptab--entering': entering.has(tab.id),
+            'striptab--leaving': leaving.has(tab.id),
+          }"
+          :style="
+            dragIndex === index ? { transform: `translateX(${dragOffset}px)` } : undefined
+          "
+          role="tab"
+          :aria-selected="tab.id === tabs.activeId"
+          tabindex="0"
+          @pointerdown="
+            tabs.focus(tab.id);
+            beginDrag($event, index);
+          "
+          @auxclick="onAuxClick($event, tab)"
+          @dblclick="beginRename(tab)"
+          @keydown.delete="closeTab(tab.id)"
+        >
+          <AppIcon class="striptab__mark" :name="KIND_ICON[tab.kind]" :size="12" />
+          <!--
           The name, and the field it becomes.
           ──────────────────────────────────
           Double-click renames it in place, the way a file is renamed: the text
@@ -531,37 +699,38 @@ const KIND_ICON: Record<Tab['kind'], string> = {
           having typed a name and looked elsewhere is not an instruction to
           discard it.
         -->
-        <input
-          v-if="renaming === tab.id"
-          :ref="(el) => bindRenameField(el)"
-          v-model="draftTitle"
-          class="striptab__title striptab__rename"
-          spellcheck="false"
-          :aria-label="`Rename ${tab.title}`"
-          @pointerdown.stop
-          @dblclick.stop
-          @keydown.enter.prevent="commitRename()"
-          @keydown.esc.prevent="renaming = null"
-          @blur="commitRename()"
-        />
-        <span v-else class="striptab__title">{{ tab.title }}</span>
-        <span v-if="tab.subtitle" class="striptab__scope">{{ tab.subtitle }}</span>
+          <input
+            v-if="renaming === tab.id"
+            :ref="(el) => bindRenameField(el)"
+            v-model="draftTitle"
+            class="striptab__title striptab__rename"
+            spellcheck="false"
+            :aria-label="`Rename ${tab.title}`"
+            @pointerdown.stop
+            @dblclick.stop
+            @keydown.enter.prevent="commitRename()"
+            @keydown.esc.prevent="renaming = null"
+            @blur="commitRename()"
+          />
+          <span v-else class="striptab__title">{{ tab.title }}</span>
+          <span v-if="tab.subtitle" class="striptab__scope">{{ tab.subtitle }}</span>
 
-        <!--
+          <!--
           The dot is the unsaved mark and the cross is the action, in one place
           because they are one place on every other tabbed interface: the mark
           you are looking at is the target you are already aiming for.
         -->
-        <button
-          class="striptab__close"
-          :class="{ 'striptab__close--unsaved': tab.unsaved }"
-          :aria-label="`Close ${tab.title}`"
-          @pointerdown.stop
-          @click.stop="closeTab(tab.id)"
-        >
-          <span v-if="tab.unsaved" class="striptab__dot" aria-hidden="true" />
-          <AppIcon class="striptab__cross" name="close" :size="9" />
-        </button>
+          <button
+            class="striptab__close"
+            :class="{ 'striptab__close--unsaved': tab.unsaved }"
+            :aria-label="`Close ${tab.title}`"
+            @pointerdown.stop
+            @click.stop="closeTab(tab.id)"
+          >
+            <span v-if="tab.unsaved" class="striptab__dot" aria-hidden="true" />
+            <AppIcon class="striptab__cross" name="close" :size="9" />
+          </button>
+        </div>
       </div>
     </div>
 
@@ -638,9 +807,73 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   /* The material changes when the sidebar closes — see `tight` — and it moves
      on the sidebar's own curve so the bar and the columns arrive together. */
   transition: background-color 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/*
+ * The scrolling box, which holds the tabs and nothing else.
+ *
+ * `flex: 0 1 auto` is the whole arrangement: as wide as its tabs while they
+ * fit, so the new-tab button sits immediately after the rightmost one — and
+ * shrunk, never grown, when they do not, so the tabs run off inside it and the
+ * button stays where it is.
+ */
+.strip__scroll {
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
+  /*
+   * The overflowing ends fade rather than being cut.
+   *
+   * A tab guillotined mid-word against the edge of the bar reads as a drawing
+   * mistake; the same tab fading out reads as "there are more this way", which
+   * is what it is. Both fades are conditional on there actually being more —
+   * each is driven from its own end of the scroll, so a strip whose tabs fit
+   * has no mask at all and the first and last tabs keep their full edges.
+   */
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--strip-edge-start, 0px),
+    #000 calc(100% - var(--strip-edge-end, 0px)),
+    transparent 100%
+  );
+}
+
+@supports (animation-timeline: scroll()) {
+  .strip__scroll--edges {
+    animation:
+      strip-edge-start linear both,
+      strip-edge-end linear both;
+    animation-timeline: scroll(self inline), scroll(self inline);
+    animation-range:
+      0 1.5rem,
+      calc(100% - 1.5rem) 100%;
+  }
+
+  @keyframes strip-edge-start {
+    from {
+      --strip-edge-start: 0px;
+    }
+    to {
+      --strip-edge-start: 1.5rem;
+    }
+  }
+
+  @keyframes strip-edge-end {
+    from {
+      --strip-edge-end: 1.5rem;
+    }
+    to {
+      --strip-edge-end: 0px;
+    }
+  }
+}
+
+.strip__scroll::-webkit-scrollbar {
+  display: none;
 }
 
 /*
