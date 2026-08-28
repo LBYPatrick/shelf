@@ -13,6 +13,16 @@ import type { AppDatabase } from './appdb/database';
  * entries so that deleting a connection reliably deletes its secrets, and so a
  * connection with several secrets does not scatter a dozen entries through the
  * user's keychain.
+ *
+ * **Which means nothing of the reader's is *in* the keychain — only the key
+ * that opens it.** That distinction is easy to lose, and it was lost: the
+ * password field said "Stored in the system keychain, never in the app
+ * database", which is exactly backwards, and the stored-data sheet offered to
+ * remove passwords "from the system keychain" when what it removes is rows from
+ * `shelf.db`. Both were found by somebody reading one screen against the other.
+ * The strings that describe this are `connection.savePasswordHelp`,
+ * `assistant.keyHelp`, `assistant.settingsDesc`, `storage.secretsGo` and
+ * `start.exported`; a change to where these bytes live is a change to those.
  */
 
 export interface SecretStore {

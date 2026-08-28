@@ -54,7 +54,15 @@ component's props or a mock's shape has changed.
   in the open: `secrets` is its own key rather than mixed into `config`, so it
   can be seen and deleted; the document's `note` says what the file holds in
   its first line; and the toast that confirms the export says it too. Importing
-  puts them straight into the keyring — the file is a transport, not a store.
+  puts them straight into the encrypted store — the file is a transport, not a
+  store.
+- **A secret is encrypted by the OS and stored by us, not stored by the OS.**
+  `safeStorage` does the encrypting and its master key is the only thing in the
+  Keychain; the ciphertext is a row in `shelf.db`. Saying "kept in the keyring"
+  is the shorthand that put "never in the app database" under the password
+  field, which is the opposite of true — and made the stored-data sheet offer to
+  clear something it does not touch. Copy that describes this says where the
+  bytes are and what the keyring holds.
 - **Secrets go keyring → main → host, and the renderer gets a handle.** It
   receives a single-use token from `window.shelf.db.prepareConnection` and never
   a password — with one deliberate, narrow exception: the connection editor asks
@@ -62,7 +70,8 @@ component's props or a mock's shape has changed.
   it already holds. A field that hides its value and declines to hold it makes
   changing a port an act of remembering a password, and "leave blank to keep the
   saved one" is a rule the reader has to be told and then remember. It reveals
-  nothing they could not read out of the OS keychain themselves.
+  nothing to the reader that is not already theirs, on their own machine, behind
+  their own login.
 - **New host channels go in `src/shared/contract.ts` first.** The renderer client
   and the host registry are checked against that one declaration, so adding a
   channel to one without the other is a type error rather than a runtime
