@@ -6,6 +6,73 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-28
+
+### Added
+
+- **Stored data**, in Settings or from the command palette: everything Shelf
+  keeps on this machine, by category — query history, conversations, job
+  results, workspace state, statistics history, saved queries, assistant
+  providers and connections — with what each is holding beside it, and a button
+  that clears exactly the ones you tick. The things you made by hand start
+  unticked. Job results moved into the app's own folder alongside its database,
+  out of the system temp directory the operating system is entitled to empty.
+- **AWS Bedrock and Azure AI Foundry** as assistant providers. Bedrock asks for
+  no key at all — it signs with the AWS credentials this machine already has, so
+  there is nothing to copy in — and takes the region your models are enabled in.
+  Azure takes your resource's own endpoint and the name of the deployment you
+  turned on.
+- **Every engine draws its own mark.** The connection list, the engine picker
+  and the sidebar show the database's logo rather than two letters.
+- **The assistant checks Claude Code and Codex are signed in before asking them
+  anything.** One that is installed but signed out used to leave the chat
+  waiting indefinitely on a subprocess with no terminal to ask for a login; it
+  now says so straight away and shows the command to run.
+- **A notice raised while you are in another application reaches the desktop.**
+
+### Changed
+
+- **Notices are rebuilt.** A bar along the bottom shows how long one has left,
+  and it stops while the pointer is on it, while the pile is open, or while the
+  window is not the one you are looking at. Several of them stack into a pile
+  and open into a column when you look at them, one can be thrown away with a
+  swipe, and the kind of notice is now readable from across the screen instead
+  of from one small coloured glyph.
+- **Reset puts back every setting**, not just the data ones: appearance, data,
+  the editor and the keyboard shortcuts. It used to leave two of those four
+  alone, so somebody who had made the window unreadable could press the only
+  button called Reset and watch nothing happen.
+- **The assistant says which wait it is in.** It claimed to be reading the
+  schema on every turn; the reads are remembered per connection, so after the
+  first turn the wait is the model's and it says so.
+- A conversation in the sidebar is marked the way every other card in every
+  other panel is.
+
+### Fixed
+
+- The assistant could not read a table it asked to inspect: the tool came back
+  "Could not read the schema: input is not defined" and the answer carried on
+  without the columns.
+- Saving a query while on the sample database — or on any connection you had
+  not saved — silently did nothing.
+- A conversation filtered by when it was last added to matched nothing at all.
+- In a full tab strip: the `+` scrolled off the end with the tabs, a tab at the
+  edge was cut off mid-word, a newly opened tab was not scrolled to, and closing
+  one moved the row out from under the pointer that closed it. Closing several
+  in a row now keeps every close button where it was, the way a browser does.
+- The ring that traces a busy control drew two lines at every corner and jumped
+  once a lap.
+- A popup could settle a few pixels short of its own content, and one that fitted
+  perfectly well dimmed its last row — which on the stored-data sheet is the
+  button that does the thing.
+- The assistant's opening note mixed languages, describing what it can see in
+  English inside a translated sentence.
+- The password field claimed passwords are stored in the system keychain and
+  never in the app's database. It is the other way round: they are encrypted
+  with a key from the keyring and kept in the app's own database, so a copy of
+  that file is not a copy of your passwords. Everything that describes this now
+  says where the bytes are.
+
 ## [1.0.1] - 2026-08-27
 
 ### Changed
