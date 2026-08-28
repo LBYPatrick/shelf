@@ -151,10 +151,7 @@ function when(at: number): string {
 
     <ul v-else class="tilelist">
       <li v-for="chat in shown" :key="chat.id">
-        <div
-          class="tile"
-          :class="{ 'tile--on': tabs.tabs.some((tab) => tab.chatId === chat.id) }"
-        >
+        <div class="tile">
           <!--
             The whole card opens it. A row that is a button is a row where the
             gap between two words is not a dead spot.

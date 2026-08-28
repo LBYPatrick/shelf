@@ -628,21 +628,19 @@
 }
 
 /*
- * A filled row swallows the rules on both of its edges, so it reads as one
+ * A hovered row swallows the rules on both of its edges, so it reads as one
  * shape rather than as a shape with a line stuck to it.
+ *
+ * Hover is the only state that fills a tile. A chat whose tab was open used to
+ * be filled as well — one of five tile panels marking something the other four
+ * do not, which reads as a fault in the four rather than a feature of the one.
+ * The tab strip already says which conversation is on screen, and it says it in
+ * the place people look for that.
  */
 .tile:hover::before,
 .tile:hover + .tile::before,
-.tile--on::before,
-.tile--on + .tile::before,
-.tilelist > li:hover + li .tile::before,
-.tilelist > li:has(.tile--on) + li .tile::before {
+.tilelist > li:hover + li .tile::before {
   opacity: 0;
-}
-
-/* The one on screen, marked the way the open tab is: tonal, not outlined. */
-.tile--on {
-  background: var(--fill-2);
 }
 
 .tile__face {
