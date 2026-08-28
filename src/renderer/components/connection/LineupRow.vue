@@ -10,16 +10,25 @@
  * The row is a container rather than a button because a connection carries two
  * more actions, and a button cannot hold a button.
  */
+import { computed } from 'vue';
+import type { EngineId } from '@drivers/types';
+import { engineDescriptor } from '@shared/engines';
 import AppIcon from '../ui/AppIcon.vue';
+import EngineMark from './EngineMark.vue';
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     title: string;
     subtitle?: string;
-    /** Two letters, when the row stands for an engine. */
-    mark?: string;
-    /** The engine's hue. Without one the mark is drawn in the neutral fill. */
-    hue?: number;
+    /**
+     * The engine this row stands for, when it stands for one.
+     *
+     * It used to be a two-letter string and a hue, passed side by side, both
+     * read out of the same descriptor by the caller — which is one fact in two
+     * arguments and two chances to hand over a mark that does not match its
+     * colour. The row takes the engine and reads both itself.
+     */
+    engine?: EngineId;
     /** An icon, for the rows that are an action rather than a database. */
     icon?: string;
     /** The accessible name, when the visible title is not the whole story. */
@@ -42,8 +51,7 @@ withDefaults(
   }>(),
   {
     subtitle: undefined,
-    mark: undefined,
-    hue: undefined,
+    engine: undefined,
     icon: undefined,
     label: undefined,
     accent: undefined,
@@ -54,6 +62,9 @@ withDefaults(
 );
 
 defineEmits<{ open: [] }>();
+
+/** The tile's colour, which is the engine's — absent, it stays neutral fill. */
+const hue = computed(() => (props.engine ? engineDescriptor(props.engine).hue : undefined));
 </script>
 
 <template>
@@ -70,7 +81,7 @@ defineEmits<{ open: [] }>();
         aria-hidden="true"
       >
         <AppIcon v-if="icon" :name="icon" :size="16" />
-        <span v-else class="row__glyph">{{ mark }}</span>
+        <EngineMark v-else-if="engine" class="row__glyph" :engine="engine" :size="16" />
       </span>
 
       <span class="row__text">
@@ -182,8 +193,22 @@ defineEmits<{ open: [] }>();
   box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.3);
 }
 
+/*
+ * The mark grows with the row, like the icon beside it does.
+ *
+ * `EngineMark` takes a pixel size because two of its three callers are fixed
+ * tiles; this row is the one that is sized in `em` all the way down, so the
+ * drawn mark is overridden here and the fallback letters take their size from
+ * the same place they always did.
+ */
 .row__glyph {
   font-size: 0.66em;
+}
+
+.row__glyph.mark,
+.row__mark .mark {
+  width: 1.15em;
+  height: 1.15em;
 }
 
 /* The icon is drawn at a fixed pixel size, so it is the one thing in the row

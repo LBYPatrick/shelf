@@ -24,6 +24,7 @@ import { computed, ref } from 'vue';
 import { useTranslation } from 'i18next-vue';
 import { engineDescriptor } from '@shared/engines';
 import AppIcon from '../ui/AppIcon.vue';
+import EngineMark from '../connection/EngineMark.vue';
 import ContextMenu, { type MenuItem } from '../ui/ContextMenu.vue';
 import { useConnections } from '../../stores/connections';
 
@@ -224,8 +225,9 @@ function onChoose(id: string): void {
           class="switcher__mark"
           :style="{ '--engine-hue': engine?.hue ?? 250 }"
           aria-hidden="true"
-          >{{ engine?.mark }}</span
         >
+          <EngineMark v-if="engine" :engine="engine.id" :size="15" />
+        </span>
       </span>
 
       <span class="switcher__text">

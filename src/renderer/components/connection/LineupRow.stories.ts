@@ -4,13 +4,17 @@ import LineupRow from './LineupRow.vue';
 /**
  * One row of the start screen: a saved connection, or an action.
  *
- * The mark carries the engine's hue, which is what makes a list of six
- * connections scannable without reading any of them.
+ * The mark is the engine's own logo on the engine's own hue, which is what
+ * makes a list of six connections scannable without reading any of them.
  */
 const meta = {
   title: 'Connection/LineupRow',
   component: LineupRow,
-  args: { title: 'Local Postgres', subtitle: 'localhost:5432 · records', mark: 'PG', hue: 220 },
+  args: {
+    title: 'Local Postgres',
+    subtitle: 'localhost:5432 · records',
+    engine: 'postgres' as const,
+  },
   render: (args) => ({
     components: { LineupRow },
     setup: () => ({ args }),
@@ -28,35 +32,41 @@ export const Action: Story = {
   args: {
     title: 'New connection',
     subtitle: undefined,
-    mark: undefined,
+    engine: undefined,
     icon: 'plus',
-    hue: undefined,
   },
 };
 
-/** No hue: the mark falls back to the neutral fill rather than inventing one. */
-export const NoHue: Story = { args: { hue: undefined, mark: 'DK' } };
+/**
+ * The one engine `simple-icons` does not carry.
+ *
+ * Amazon's service marks are not in the set, so DynamoDB falls back to the two
+ * letters the catalogue has always held. It is here because it is the state
+ * every future engine is in until somebody maps it.
+ */
+export const NoLogo: Story = { args: { engine: 'dynamodb' as const } };
 
 /** A name long enough to truncate, and a path long enough to test the subtitle. */
 export const Long: Story = {
   args: {
     title: 'Analytics warehouse — production replica (read only)',
     subtitle: '/Users/you/Library/Application Support/shelf/warehouse.duckdb',
-    mark: 'DB',
-    hue: 40,
+    engine: 'duckdb' as const,
   },
 };
 
-/** Several, which is the only way to see whether the hues actually separate. */
+/** Several, which is the only way to see whether the marks actually separate. */
 export const Lineup: Story = {
   render: () => ({
     components: { LineupRow },
     template: `
       <div style="width:26rem; display:flex; flex-direction:column; gap:0.25rem;">
-        <LineupRow title="Local Postgres" subtitle="localhost:5432" mark="PG" :hue="220" />
-        <LineupRow title="Staging" subtitle="staging.internal:3306" mark="MY" :hue="30" />
-        <LineupRow title="Analytics" subtitle="warehouse.duckdb" mark="DK" :hue="120" />
-        <LineupRow title="Cache" subtitle="localhost:6379" mark="RD" :hue="0" />
+        <LineupRow title="Local Postgres" subtitle="localhost:5432" engine="postgres" />
+        <LineupRow title="Staging" subtitle="staging.internal:3306" engine="mysql" />
+        <LineupRow title="Analytics" subtitle="warehouse.duckdb" engine="duckdb" />
+        <LineupRow title="Cache" subtitle="localhost:6379" engine="redis" />
+        <LineupRow title="Documents" subtitle="cluster0.mongodb.net" engine="mongodb" />
+        <LineupRow title="Events" subtitle="eu-west-1" engine="dynamodb" />
         <LineupRow title="New connection" icon="plus" />
       </div>
     `,

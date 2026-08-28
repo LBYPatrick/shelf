@@ -7,6 +7,7 @@
  * product: all nine are equally supported and equally free.
  */
 import type { EngineId } from '@drivers/types';
+import EngineMark from './EngineMark.vue';
 import { ENGINES } from '@shared/engines';
 
 const model = defineModel<EngineId | null>({ required: true });
@@ -25,7 +26,9 @@ const model = defineModel<EngineId | null>({ required: true });
       :aria-checked="model === engine.id"
       @click="model = engine.id"
     >
-      <span class="engine__mark" aria-hidden="true">{{ engine.mark }}</span>
+      <span class="engine__mark" aria-hidden="true">
+        <EngineMark :engine="engine.id" :size="14" />
+      </span>
       <span class="engine__name">{{ engine.name }}</span>
     </button>
   </div>

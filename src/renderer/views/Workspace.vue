@@ -16,6 +16,9 @@ import EntityTree from '../components/sidebar/EntityTree.vue';
 import HistoryList from '../components/sidebar/HistoryList.vue';
 import SavedQueryList from '../components/sidebar/SavedQueryList.vue';
 import ChatTab from '../components/assistant/ChatTab.vue';
+import EngineMark from '../components/connection/EngineMark.vue';
+import CliSignInSheet from '../components/assistant/CliSignInSheet.vue';
+import StorageSheet from '../components/settings/StorageSheet.vue';
 import ProviderSheet from '../components/assistant/ProviderSheet.vue';
 import ErdTab from '../components/tabs/ErdTab.vue';
 import JobList from '../components/sidebar/JobList.vue';
@@ -38,6 +41,7 @@ import { useTabs } from '../stores/tabs';
 import { useHotkeys } from '../composables/useHotkeys';
 import { vTip } from '../lib/hoverTip';
 import { engineDescriptor } from '@shared/engines';
+import type { AiDriverKind } from '@shared/ai';
 import type { SavedConnection } from '@shared/types';
 import { shortcutLabel } from '../lib/keybindings';
 import { useTranslation } from 'i18next-vue';
@@ -94,7 +98,23 @@ const paletteOpen = ref(false);
 const settingsOpen = ref(false);
 const providersOpen = ref(false);
 const shortcutsOpen = ref(false);
+const storageOpen = ref(false);
 const diagnoseOpen = ref(false);
+
+/*
+ * The sheet that says how to sign a command-line assistant in.
+ *
+ * Two pieces of state rather than one, because the sheet is closed by setting
+ * the boolean and the kind has to survive the closing animation — clearing it
+ * on the same tick empties the sheet while it is still on screen.
+ */
+const signInOpen = ref(false);
+const signInKind = ref<AiDriverKind | null>(null);
+
+function askToSignIn(kind: AiDriverKind): void {
+  signInKind.value = kind;
+  signInOpen.value = true;
+}
 
 /**
  * The connection editor, over the workspace.
@@ -111,11 +131,6 @@ function onConnectionSaved(connection: SavedConnection, connectNow: boolean): vo
   if (connectNow) void connections.connect(connection);
 }
 
-// Built as a computed so the labels follow a language change rather than
-// keeping whichever language the component happened to mount in.
-const engineMark = computed(() =>
-  connections.active ? engineDescriptor(connections.active.engine).mark : ''
-);
 const engineHue = computed(() =>
   connections.active ? engineDescriptor(connections.active.engine).hue : 250
 );
@@ -546,6 +561,7 @@ onBeforeUnmount(() => stopPersisting?.());
                 :active="tab.id === tabs.activeId"
                 :scope="tab.ask"
                 @configure="providersOpen = true"
+                @sign-in="askToSignIn"
               />
             </div>
           </template>
@@ -571,8 +587,9 @@ onBeforeUnmount(() => stopPersisting?.());
                 class="opening__mark"
                 :style="{ '--engine-hue': engineHue }"
                 aria-hidden="true"
-                >{{ engineMark }}</span
               >
+                <EngineMark :engine="connections.active.engine" :size="28" />
+              </span>
 
               <h2 class="opening__title">
                 {{ connections.active?.name }}
@@ -604,6 +621,7 @@ onBeforeUnmount(() => stopPersisting?.());
       v-model="paletteOpen"
       @open-settings="settingsOpen = true"
       @open-shortcuts="shortcutsOpen = true"
+      @open-storage="storageOpen = true"
       @diagnose="diagnoseOpen = true"
       @new-connection="editingConnection = null"
     />
@@ -611,9 +629,12 @@ onBeforeUnmount(() => stopPersisting?.());
       v-model="settingsOpen"
       @manage-providers="providersOpen = true"
       @manage-shortcuts="shortcutsOpen = true"
+      @manage-storage="storageOpen = true"
     />
     <ProviderSheet v-model="providersOpen" />
+    <CliSignInSheet v-model="signInOpen" :kind="signInKind" />
     <ShortcutSheet v-model="shortcutsOpen" />
+    <StorageSheet v-model="storageOpen" />
     <DiagnoseSheet v-model="diagnoseOpen" />
 
     <ConnectionEditor
