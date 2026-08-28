@@ -52,27 +52,36 @@ interface SavedRow {
 export class QueryRepository {
   constructor(private readonly db: AppDatabase) {}
 
+  /**
+   * The connection id to file a row under, which is `null` unless it is real.
+   *
+   * `connection_id` is a foreign key and not every open connection is a row in
+   * that table: sample mode has none at all, and a connection opened from a URL
+   * without being saved has none either. Writing the open connection's id
+   * regardless throws `FOREIGN KEY constraint failed` — inside a promise nobody
+   * awaits, so the write silently does not happen and the only sign of it is a
+   * line in the console.
+   *
+   * The column is nullable and every reader already handles null, which is the
+   * honest place for a row whose connection the app does not have on file.
+   *
+   * A method rather than four lines repeated, because it *was* four lines
+   * repeated in one place and absent in the other: the history had this and
+   * saving a query did not, so saving one in sample mode failed exactly the
+   * same way, months apart, for exactly the same reason.
+   */
+  private onFile(connectionId: string | null): string | null {
+    if (connectionId === null) return null;
+
+    const row = this.db.prepare('SELECT 1 FROM connection WHERE id = ?').get(connectionId);
+    return row === undefined ? null : connectionId;
+  }
+
   record(entry: Omit<HistoryEntry, 'id' | 'executedAt'>): void {
     const text = entry.text.trim();
     if (!text) return;
 
-    /*
-     * A connection that was never saved files its history under no connection.
-     *
-     * `connection_id` is a foreign key, and not every open connection is a row
-     * in that table — sample mode has none at all, and a connection opened from
-     * a URL without being saved has none either. Every statement run in either
-     * threw `FOREIGN KEY constraint failed` inside a promise nobody awaited, so
-     * the history was silently not being written and the only sign of it was a
-     * line in the console. The column is nullable and the reader already
-     * handles null, which is the honest place for a statement whose connection
-     * the app does not have on file.
-     */
-    const known =
-      entry.connectionId !== null &&
-      this.db.prepare('SELECT 1 FROM connection WHERE id = ?').get(entry.connectionId) !==
-        undefined;
-    const connectionId = known ? entry.connectionId : null;
+    const connectionId = this.onFile(entry.connectionId);
 
     // A statement re-run within a few seconds is the same act, not two: keeping
     // both would fill the list with near-duplicates of whatever is being
@@ -185,7 +194,14 @@ export class QueryRepository {
          ON CONFLICT(id) DO UPDATE SET
            name = excluded.name, text = excluded.text, updated_at = excluded.updated_at`
       )
-      .run(id, input.name, input.text, input.connectionId, existing?.created_at ?? now, now);
+      .run(
+        id,
+        input.name,
+        input.text,
+        this.onFile(input.connectionId),
+        existing?.created_at ?? now,
+        now
+      );
 
     // Every save is a version, so a query that was working an hour ago can be
     // recovered after it stops working.

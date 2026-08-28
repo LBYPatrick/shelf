@@ -405,6 +405,69 @@ test('imports a CSV file into an existing table', async ({ app, page }) => {
   await expect(page.getByRole('gridcell', { name: 'Doe, Jane' })).toBeVisible();
 });
 
+test('a connection that was never saved can still be written about', async ({ page }) => {
+  /*
+   * `connection_id` is a foreign key, and not every open connection is a row in
+   * that table: sample mode has none at all, and a connection opened from a URL
+   * without being saved has none either. Anything filed against one throws
+   * `FOREIGN KEY constraint failed` — inside a promise nobody awaits, so the
+   * write silently does not happen and the only sign is a line in the console.
+   *
+   * It has now been that bug twice: the history was fixed and saving a query was
+   * not, so somebody in sample mode pressed Save Query and nothing happened.
+   * They go through one helper, and this is the test of that helper — asked of
+   * every write that carries a connection id, so a third one cannot be added
+   * without it.
+   */
+  await page.getByRole('button', { name: /Sample database/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+
+  const outcome = await page.evaluate(async () => {
+    const db = (window as unknown as { shelf: { db: Record<string, Function> } }).shelf.db;
+    const results: Record<string, string> = {};
+
+    const writes: Record<string, () => Promise<unknown>> = {
+      history: () =>
+        db['recordHistory']!({
+          connectionId: 'sample',
+          text: 'select 1',
+          rowCount: 1,
+          durationMs: 1,
+          succeeded: true,
+        }),
+      saved: () =>
+        db['saveQuery']!({
+          name: 'unsaved connection',
+          text: 'select 1',
+          connectionId: 'sample',
+        }),
+    };
+
+    for (const [name, write] of Object.entries(writes)) {
+      try {
+        await write();
+        results[name] = 'ok';
+      } catch (error) {
+        results[name] = (error as Error).message;
+      }
+    }
+
+    return results;
+  });
+
+  expect(outcome).toEqual({ history: 'ok', saved: 'ok' });
+
+  // And it is actually there, filed under no connection rather than swallowed.
+  const saved = await page.evaluate(() =>
+    (
+      window as unknown as {
+        shelf: { db: { listSavedQueries: (id: string | null) => Promise<{ name: string }[]> } };
+      }
+    ).shelf.db.listSavedQueries(null)
+  );
+  expect(saved.map((query) => query.name)).toContain('unsaved connection');
+});
+
 test('sample mode opens the whole app with no database at all', async ({ page }) => {
   await page.getByRole('button', { name: /Sample database/ }).click();
   await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
