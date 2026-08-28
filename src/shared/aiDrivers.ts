@@ -48,6 +48,49 @@ export interface AiDriverInfo {
    * offered when present; the rest are added, named and keyed by hand.
    */
   readonly detected: boolean;
+  /**
+   * The command somebody runs in a terminal to sign this provider in.
+   *
+   * Only the detected CLIs have one, and it is here rather than in the sheet
+   * that shows it for the same reason every other per-driver fact is: a sheet
+   * with a `switch` in it is a second catalogue, and the two go out of step the
+   * first time a CLI renames a subcommand.
+   */
+  readonly signInCommand?: string;
+  /**
+   * What the base-URL field actually holds for this driver.
+   *
+   * Three answers, because three things get typed into one box.
+   *
+   * `url` is the ordinary case: optional, and blank means the provider's own.
+   * `region` is Bedrock, which needs an AWS region — SigV4 signs for one, and a
+   * request signed for the wrong region is refused before it is read; asking
+   * for it in a field labelled "Address" would be the interface lying about
+   * what it wants. `resource` is Azure, where the address is a URL and is
+   * *required*: an Azure endpoint is per-account, so there is no default that
+   * could stand in and the placeholder is an example rather than a fallback.
+   *
+   * Declared here so the form relabels itself rather than carrying a `switch`
+   * on the driver kind.
+   */
+  readonly baseUrlAs?: 'url' | 'region' | 'resource';
+  /**
+   * Whether `model` names a model or a deployment of one.
+   *
+   * Azure is the only one where it is a deployment: a name somebody gave a
+   * model they turned on in their own resource, which no list here could
+   * predict. The field is the same field; what it is asking for is not, and the
+   * help under it has to say which.
+   */
+  readonly modelAs?: 'model' | 'deployment';
+  /**
+   * Where the credential comes from, when it does not come from this form.
+   *
+   * Only for a driver that accepts no key. Claude Code and Codex sign
+   * themselves in; Bedrock reads the machine's AWS credentials. Either way the
+   * form has nothing to show and somebody still has to be told why.
+   */
+  readonly credentialsNote?: 'cli' | 'aws';
 }
 
 const FULL: AiCapabilities = { streaming: true, tools: true, system: true };
@@ -73,6 +116,8 @@ export const AI_DRIVERS: readonly AiDriverInfo[] = [
     defaultModel: 'default',
     models: ['default', 'claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'],
     capabilities: FULL,
+    signInCommand: 'claude auth login',
+    credentialsNote: 'cli',
   },
   {
     /*
@@ -94,6 +139,8 @@ export const AI_DRIVERS: readonly AiDriverInfo[] = [
     defaultModel: 'default',
     models: ['default', 'gpt-5-codex', 'gpt-5', 'o3'],
     capabilities: { streaming: true, tools: true, system: false },
+    signInCommand: 'codex login',
+    credentialsNote: 'cli',
   },
   {
     kind: 'anthropic',
@@ -133,6 +180,67 @@ export const AI_DRIVERS: readonly AiDriverInfo[] = [
     models: ['gemini-2.5-pro', 'gemini-2.5-flash'],
     capabilities: FULL,
     keyUrl: 'https://aistudio.google.com/apikey',
+  },
+  {
+    /*
+     * The same Claude models, billed through an AWS account.
+     *
+     * A driver rather than a base URL on the Anthropic row, because the
+     * difference is the credential: Bedrock signs with AWS keys instead of
+     * carrying one, and the SDK reads those from wherever the machine already
+     * keeps them. So this is the second provider in the list that asks for no
+     * key at all — and, like the two CLIs, the reason is that the reader has
+     * already set it up somewhere this app has no business duplicating.
+     *
+     * The model ids are Bedrock's own, which are not Anthropic's: they carry a
+     * vendor prefix, a version suffix, and for the current models a region
+     * prefix naming an inference profile. The list is a starting point, as
+     * every list here is — the field takes whatever the account actually has.
+     */
+    kind: 'bedrock',
+    detected: false,
+    label: 'AWS Bedrock',
+    defaultBaseUrl: 'us-east-1',
+    baseUrlEditable: true,
+    baseUrlAs: 'region',
+    needsKey: false,
+    acceptsKey: false,
+    defaultModel: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+    models: [
+      'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+      'us.anthropic.claude-haiku-4-5-20251001-v1:0',
+      'anthropic.claude-3-5-sonnet-20241022-v2:0',
+    ],
+    capabilities: FULL,
+    credentialsNote: 'aws',
+  },
+  {
+    /*
+     * OpenAI's models in somebody's own Azure resource.
+     *
+     * Azure's answer to Bedrock, and it differs from OpenAI in two ways a base
+     * URL cannot express: the deployment goes in the path and the key goes in
+     * `api-key` rather than in `Authorization`. Hence a driver rather than a
+     * row of `openaiCompatible`.
+     *
+     * `model` is the *deployment name* — whatever the account called the model
+     * it turned on — so there is no model list worth offering. The suggestions
+     * are the names people most often give a deployment, which is a guess at a
+     * convention rather than a fact about an API.
+     */
+    kind: 'azure',
+    detected: false,
+    label: 'Azure AI Foundry',
+    defaultBaseUrl: 'https://your-resource.openai.azure.com',
+    baseUrlEditable: true,
+    baseUrlAs: 'resource',
+    needsKey: true,
+    acceptsKey: true,
+    defaultModel: 'gpt-5',
+    models: ['gpt-5', 'gpt-5-mini', 'gpt-4.1'],
+    modelAs: 'deployment',
+    capabilities: FULL,
+    keyUrl: 'https://ai.azure.com/',
   },
   {
     /*

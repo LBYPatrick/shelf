@@ -30,6 +30,9 @@ const PATHS: Record<string, string> = {
      16 units; a full row of them reads as a grid. */
   keyboard: 'M1.5 4h13v8h-13zM4 6.5h.1M6.5 6.5h.1M9 6.5h.1M11.5 6.5h.1M5 9.5h6',
   search: 'M7 11.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zM10.5 10.5L14 14',
+  /* A window with a prompt in it: the chevron and the caret line, which is
+     what a terminal is drawn as everywhere and is legible at 13 units. */
+  terminal: 'M1.5 3h13v10h-13zM4.5 7L6.5 9L4.5 11M8.5 11.2h3.5',
   close: 'M4 4l8 8M12 4l-8 8',
   plus: 'M8 3.5v9M3.5 8h9',
   minus: 'M3.5 8h9',

@@ -1,7 +1,8 @@
 import { runTurn } from '@ai/agent';
+import { requireSignIn } from '@ai/installed';
 import { createAiAdapter } from '@ai/registry';
 import { gatherSchema } from '@ai/schema';
-import type { AiTurn } from '@shared/ai';
+import type { AiPhase, AiTurn } from '@shared/ai';
 import type { SchemaScope } from '@shared/schemaDoc';
 import type { Session } from './session';
 
@@ -58,15 +59,42 @@ export async function turn(
 ): Promise<AiTurn> {
   const client = session.require(payload.connectionId);
   const staged = session.consumeProvider(payload.handle);
+
+  /*
+   * Before anything else, and before the schema in particular.
+   *
+   * A command-line assistant that nobody is signed in to is the one failure
+   * that cannot be fixed from inside this window, and it used to arrive as
+   * nothing at all: the subprocess waited for a login it had no terminal to ask
+   * for, and the chat sat on "Reading the schema…" indefinitely. Asking first
+   * costs one cheap status command and turns an indefinite wait into a sheet
+   * with the command to run in it.
+   */
+  await requireSignIn(staged.provider.driver);
+
   const adapter = createAiAdapter(staged.provider, staged.apiKey);
 
   const cache = session.schemaCache(payload.connectionId);
 
+  /*
+   * Which half of the wait this is.
+   *
+   * Reading the schema and waiting for a model are seconds of nothing on
+   * screen either way, and the interface called both of them "Reading the
+   * schema…" — which was true on a connection's first turn and a lie on every
+   * one after it, because the reads are cached. Saying which is happening costs
+   * two events a turn.
+   */
+  const phase = (which: AiPhase) =>
+    session.emit('ai/phase', { turnId: payload.turnId, phase: which });
+
+  phase('schema');
   const document = await gatherSchema(client, payload.scope, {
     budget: SCHEMA_BUDGET,
     signal,
     cache,
   });
+  phase('waiting');
 
   const outcome = await runTurn(
     {

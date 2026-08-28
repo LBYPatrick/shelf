@@ -27,7 +27,9 @@ import type {
   AiDriverKind,
   AiItemEvent,
   AiMessage,
+  AiPhaseEvent,
   AiReplaceEvent,
+  AiSignInState,
   AiTurn,
 } from './ai';
 import type { SchemaDocument, SchemaScope } from './schemaDoc';
@@ -240,6 +242,15 @@ export interface HostContract {
    */
   'ai/installed': { payload: Record<string, never>; result: readonly AiDriverKind[] };
 
+  /**
+   * Whether a command-line assistant has anybody signed in to it.
+   *
+   * Asked before a turn runs, and again by the sheet that tells somebody how to
+   * sign in — a "check again" that lands on the same answer the turn will get is
+   * the whole reason that button is worth having.
+   */
+  'ai/signedIn': { payload: { kind: AiDriverKind }; result: AiSignInState };
+
   /** Does this provider answer, with these credentials, for this model. */
   'ai/probe': {
     payload: { handle: string };
@@ -260,6 +271,7 @@ export interface HostEvents {
   'connection/lost': { connectionId: string; message: string };
   'export/progress': { exportId: string; rowsWritten: number; done: boolean };
   'ai/item': AiItemEvent;
+  'ai/phase': AiPhaseEvent;
   'ai/delta': AiDeltaEvent;
   'ai/replace': AiReplaceEvent;
 }

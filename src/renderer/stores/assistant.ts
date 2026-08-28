@@ -1,13 +1,21 @@
 import { defineStore } from 'pinia';
 import i18next from 'i18next';
 import { computed, markRaw, ref } from 'vue';
-import type { AiItem, AiMessage, AiProvider, AiProviderInput } from '@shared/ai';
+import { AI_NOT_SIGNED_IN } from '@shared/ai';
+import type {
+  AiDriverKind,
+  AiItem,
+  AiMessage,
+  AiPhase,
+  AiProvider,
+  AiProviderInput,
+} from '@shared/ai';
 import type { SavedChat } from '@shared/appdb';
 import { detectedProvider, isDetectedProviderId } from '@shared/aiDrivers';
 import { NO_FILTER, type JobFilter } from '@shared/jobFilter';
 import { chatTitle } from '@shared/chatTitle';
 import type { SchemaScope } from '@shared/schemaDoc';
-import { RpcCancelled } from '@shared/rpc';
+import { RpcCancelled, RpcError } from '@shared/rpc';
 import { host } from '../lib/host';
 import { saveSetting } from '../lib/settings';
 
@@ -39,6 +47,21 @@ export interface ChatTurn {
   items: AiItem[];
   state: 'running' | 'done' | 'failed' | 'stopped';
   error?: string;
+  /**
+   * What the host is doing while nothing is on screen yet.
+   *
+   * Only meaningful while the turn is running, which is why nothing clears it
+   * when the turn ends: the one place it is read is behind that condition.
+   */
+  phase?: AiPhase;
+  /**
+   * The CLI that has nobody signed in to it, when that is why this failed.
+   *
+   * The one failure whose fix is in a terminal rather than in this window, so
+   * it is kept apart from `error` — the interface answers it with the command
+   * to run rather than with the sentence the host wrote.
+   */
+  signIn?: AiDriverKind;
 }
 
 export interface Conversation {
@@ -311,7 +334,18 @@ export const useAssistant = defineStore('assistant', () => {
     if (!chat) return;
 
     const turnId = nextTurnId();
-    chat.turns.push({ id: turnId, question, items: [], state: 'running' });
+    // `schema` rather than nothing, because it is what the host does first and
+    // a label that arrives one round trip late is a flash of no label at all.
+    chat.turns.push({ id: turnId, question, items: [], state: 'running', phase: 'schema' });
+
+    /*
+     * Which provider this turn is being asked of, read before the request.
+     *
+     * A sign-in failure comes back as a code and not as a provider, and by the
+     * time it arrives the reader may well have changed the picker — so the
+     * answer to "which CLI do I sign in to" is taken here, where it is certain.
+     */
+    const driver = active.value?.driver;
 
     /*
      * The turn as the interface sees it, not the object that was pushed.
@@ -345,6 +379,9 @@ export const useAssistant = defineStore('assistant', () => {
         const item = turn.items[at];
         if (!item || (item.kind !== 'text' && item.kind !== 'thinking')) return;
         turn.items.splice(at, 1, { ...item, text: item.text + payload.text });
+      }),
+      host.on('ai/phase', (payload) => {
+        if (mine(payload)) turn.phase = payload.phase;
       }),
       host.on('ai/replace', (payload) => {
         if (!mine(payload)) return;
@@ -390,6 +427,12 @@ export const useAssistant = defineStore('assistant', () => {
       } else {
         turn.state = 'failed';
         turn.error = error instanceof Error ? error.message : String(error);
+        // Branching on the code rather than on the message: the sentence is
+        // there to be improved, and a match on English prose is a branch that
+        // breaks the first time somebody improves it.
+        if (error instanceof RpcError && error.code === AI_NOT_SIGNED_IN && driver) {
+          turn.signIn = driver;
+        }
       }
     } finally {
       for (const off of stop) off();

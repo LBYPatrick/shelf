@@ -3,7 +3,7 @@ import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AiProvider } from '@shared/ai';
 import { driverInfo } from '@shared/aiDrivers';
-import { findExecutable } from '../cli';
+import { cliFailure, findExecutable } from '../cli';
 import { startToolBridge, type ToolBridge } from '../mcp';
 import { parseFrame } from '../sse';
 import {
@@ -338,10 +338,19 @@ function run(
         const tail = buffer.trim();
         if (tail) consume(tail);
 
-        if (failed) return reject(new AiError(failed));
+        /*
+         * Classified rather than passed straight on, because one of these
+         * failures has its fix somewhere else entirely. A CLI that reports it
+         * is not signed in comes back as a `AiSignInError`, which the interface
+         * answers with the command to run instead of a red line of prose.
+         */
+        if (failed) return reject(cliFailure('claudeCode', failed));
         if (exitCode !== 0) {
           return reject(
-            new AiError(stderr.trim().slice(0, 400) || `Claude Code exited with ${exitCode}.`)
+            cliFailure(
+              'claudeCode',
+              stderr.trim().slice(0, 400) || `Claude Code exited with ${exitCode}.`
+            )
           );
         }
         resolve({ text, calls: [], stop: 'end', ...(usage ? { usage } : {}) });

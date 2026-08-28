@@ -105,6 +105,9 @@ const DEFAULTS: Answers = {
    */
   'ai/installed': () => ['claudeCode' as const],
 
+  // Signed out, because that is the only state the sign-in sheet is about.
+  'ai/signedIn': () => 'out' as const,
+
   'ai/schema': () => ({
     kind: 'shelf.schema' as const,
     version: 1,

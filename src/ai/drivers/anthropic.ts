@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { AiProvider } from '@shared/ai';
+import { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk';
+import type { AiDriverKind } from '@shared/ai';
 import { resolveBaseUrl, driverInfo } from '@shared/aiDrivers';
 import {
   AiError,
@@ -79,18 +80,24 @@ function toContent(request: AiRequest): Anthropic.MessageParam[] {
   return messages;
 }
 
-function createAdapter(instance: AiProvider, apiKey: string | undefined): AiAdapter {
-  const client = new Anthropic({
-    apiKey: apiKey ?? '',
-    baseURL: resolveBaseUrl('anthropic', instance.baseUrl),
-    // The host retries nothing else; a rate limit answered by the library is
-    // the one place a retry is both correct and invisible.
-    maxRetries: 2,
-  });
-
+/**
+ * The messages API, given something that speaks it.
+ *
+ * Two drivers reach this: Anthropic's own API and AWS Bedrock. Bedrock is the
+ * same models behind a different front door — the SDK's `AnthropicBedrock`
+ * exposes the identical `messages.stream`, differing only in that it signs with
+ * AWS credentials instead of carrying a key — so the turn logic is shared and
+ * the two drivers are the two client constructors. Copying a hundred lines to
+ * change one of them would be a hundred lines that stop agreeing.
+ *
+ * The parameter is the union of the two clients rather than the SDK's shared
+ * base class: the base class is the transport and does not declare `messages`,
+ * which is the only thing this function uses.
+ */
+function adapterOver(kind: AiDriverKind, client: Anthropic | AnthropicBedrock): AiAdapter {
   return {
-    kind: 'anthropic',
-    capabilities: driverInfo('anthropic').capabilities,
+    kind,
+    capabilities: driverInfo(kind).capabilities,
 
     async send(request: AiRequest, sink: AiSink, signal: AbortSignal): Promise<AiReply> {
       const stream = client.messages.stream(
@@ -188,5 +195,46 @@ function createAdapter(instance: AiProvider, apiKey: string | undefined): AiAdap
 export const AnthropicDriver: AiDriver = {
   kind: 'anthropic',
   capabilities: driverInfo('anthropic').capabilities,
-  create: createAdapter,
+  create: (instance, apiKey) =>
+    adapterOver(
+      'anthropic',
+      new Anthropic({
+        apiKey: apiKey ?? '',
+        baseURL: resolveBaseUrl('anthropic', instance.baseUrl),
+        // The host retries nothing else; a rate limit answered by the library
+        // is the one place a retry is both correct and invisible.
+        maxRetries: 2,
+      })
+    ),
+};
+
+/**
+ * The same models, through AWS.
+ *
+ * **No key, and none is asked for.** Bedrock authenticates with AWS
+ * credentials, and the SDK reads them the way every other AWS tool on the
+ * machine does — the environment, `~/.aws/credentials`, a profile, an SSO
+ * session, or an instance role. Copying an access key and a secret into this
+ * app's keyring would be a second place for a credential to live and go stale,
+ * and it is the one thing somebody with Bedrock access already has set up. So
+ * the catalogue declares `acceptsKey: false` and the form shows no field.
+ *
+ * What it does need is the **region**, because SigV4 signs for one and a
+ * request signed for the wrong region is rejected before it is read. That is
+ * what this driver keeps in `baseUrl` — declared as a region in the catalogue
+ * so the form asks for a region rather than a URL — and the SDK builds the
+ * endpoint from it. Passing the endpoint instead does not work: the client
+ * takes the URL and goes on signing for `us-east-1`.
+ */
+export const BedrockDriver: AiDriver = {
+  kind: 'bedrock',
+  capabilities: driverInfo('bedrock').capabilities,
+  create: (instance) =>
+    adapterOver(
+      'bedrock',
+      new AnthropicBedrock({
+        awsRegion: resolveBaseUrl('bedrock', instance.baseUrl),
+        maxRetries: 2,
+      })
+    ),
 };

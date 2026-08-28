@@ -19,6 +19,7 @@
  * implementations and must never be reachable from the renderer.
  */
 
+import { AI_NOT_SIGNED_IN } from '@shared/ai';
 import type { AiCapabilities, AiDriverKind, AiProvider, AiToolName, AiUsage } from '@shared/ai';
 
 /** A tool, as every provider's JSON-schema dialect happens to agree on it. */
@@ -162,6 +163,26 @@ export class AiError extends Error {
     super(message);
     this.name = 'AiError';
     this.status = status;
+  }
+}
+
+/**
+ * A provider that is on this machine and has nobody signed in to it.
+ *
+ * Its own failure, not the database's and not the model's, and the only one
+ * whose fix is somewhere else entirely: a terminal. So it carries a code the
+ * interface can branch on rather than a sentence it has to match, and the kind
+ * of CLI, so the sheet it raises can name the command to run.
+ */
+export class AiSignInError extends AiError {
+  /** Read by `serializeError`, which is how this crosses to the renderer. */
+  readonly code = AI_NOT_SIGNED_IN;
+  readonly kind: AiDriverKind;
+
+  constructor(kind: AiDriverKind, message: string) {
+    super(message);
+    this.name = 'AiSignInError';
+    this.kind = kind;
   }
 }
 

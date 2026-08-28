@@ -46,7 +46,13 @@ import { useAssistant } from '../../stores/assistant';
 import { useConnections } from '../../stores/connections';
 import { useEntities } from '../../stores/entities';
 import { useTabs } from '../../stores/tabs';
+import { driverInfo } from '@shared/aiDrivers';
 import { vTip } from '../../lib/hoverTip';
+
+/** A driver's own name for itself, for a sentence that has to name it. */
+function driverLabel(kind: AiDriverKind): string {
+  return driverInfo(kind).label;
+}
 
 const props = defineProps<{
   tabId: string;
@@ -55,7 +61,14 @@ const props = defineProps<{
   scope?: SchemaScope;
 }>();
 
-const emit = defineEmits<{ configure: [] }>();
+/*
+ * The sign-in sheet is raised by the view, not held here.
+ *
+ * The same rule the settings sheets follow: a surface owned by the one control
+ * that opens it can only ever be opened from that control, and this one has
+ * every reason to be reachable from the provider list as well.
+ */
+const emit = defineEmits<{ configure: []; 'sign-in': [AiDriverKind] }>();
 
 const assistant = useAssistant();
 const connections = useConnections();
@@ -80,13 +93,36 @@ const running = computed(() => chat.value.turns.some((turn) => turn.state === 'r
  * apologised for. A tab opened from a table keeps that table as an option even
  * though it is not in the general list.
  */
+/**
+ * What the assistant can see, in the reader's language.
+ *
+ * `scopeLabel` is the *host's* label. It goes into the prompt, where English is
+ * the language the model is being addressed in, and two of its three answers
+ * are identifiers — a table name, a schema name — which must never be
+ * translated for exactly the reason the prompt says so: a reader sent hunting
+ * for a column that was renamed into their own language is worse off than one
+ * reading an English identifier.
+ *
+ * The third answer is prose, and prose is the half that has to be translated.
+ * Dropped into an already-translated sentence it produced the line that found
+ * this: "助手可以看到 the whole connection".
+ *
+ * It is its own key rather than the picker's label, because the two are the
+ * same words in two grammatical positions: a row in a menu is "The whole
+ * connection" and the middle of a sentence is "the whole connection". One
+ * string for both gets one of them wrong in every language that capitalises.
+ */
+function scopeName(scope: SchemaScope): string {
+  return scope.kind === 'connection' ? t('assistant.scopeWhole') : scopeLabel(scope);
+}
+
 const scopeOptions = computed<MenuItem[]>(() => {
   const options: MenuItem[] = [
     { id: 'connection', label: t('assistant.wholeConnection'), icon: 'database' },
   ];
 
   if (props.scope?.kind === 'entity') {
-    options.push({ id: 'entity', label: scopeLabel(props.scope), icon: 'table' });
+    options.push({ id: 'entity', label: scopeName(props.scope), icon: 'table' });
   }
 
   for (const schema of entities.schemas) {
@@ -301,7 +337,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
             {{ $t('assistant.openingTitle') }}
           </h2>
           <p class="opening__note">
-            {{ $t('assistant.openingNote', { scope: scopeLabel(chat.scope) }) }}
+            {{ $t('assistant.openingNote', { scope: scopeName(chat.scope) }) }}
           </p>
 
           <button
@@ -338,7 +374,15 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
               class="turn__waiting"
             >
               <span class="turn__pulse" aria-hidden="true" />
-              <span class="type-label">{{ $t('assistant.reading') }}</span>
+              <!--
+                Which half of the wait this is. Both used to say "Reading the
+                schema…", which was true on a connection's first turn and a
+                lie on every one after it — the reads are cached, so the wait
+                somebody is actually watching is the model's.
+              -->
+              <span class="type-label">{{
+                turn.phase === 'schema' ? $t('assistant.reading') : $t('assistant.waiting')
+              }}</span>
             </span>
 
             <ChatItem
@@ -349,9 +393,27 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
               @open="openInTab"
             />
 
+            <!--
+              A failure whose fix is in a terminal says so, and offers the way
+              there. Everything else is the sentence the host wrote: it is the
+              only thing anybody can act on for the general case, and burying
+              it behind a button would be one click to read an error.
+            -->
             <p v-if="turn.state === 'failed'" class="turn__failure">
               <AppIcon name="warning" :size="13" />
-              <span>{{ turn.error }}</span>
+              <span v-if="turn.signIn">
+                {{ $t('assistant.signInNeeded', { name: driverLabel(turn.signIn) }) }}
+              </span>
+              <span v-else>{{ turn.error }}</span>
+
+              <button
+                v-if="turn.signIn"
+                type="button"
+                class="turn__fix focus-fill"
+                @click="emit('sign-in', turn.signIn)"
+              >
+                {{ $t('assistant.signInHow') }}
+              </button>
             </p>
             <p v-else-if="turn.state === 'stopped'" class="turn__stopped type-label">
               {{ $t('assistant.stopped') }}
@@ -573,6 +635,19 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
   margin: var(--gap) 0 0;
   font-size: 0.75rem;
   color: var(--color-error, var(--color-base-content));
+}
+
+/* A link rather than a button-shaped control: it sits inside a sentence, and
+   a filled control in a line of prose reads as the thing that failed. */
+.turn__fix {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
 }
 
 .turn__stopped {

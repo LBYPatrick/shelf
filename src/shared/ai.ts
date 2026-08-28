@@ -23,7 +23,14 @@ import type { SchemaScope } from './schemaDoc';
 
 /** Which implementation answers for an instance. */
 export type AiDriverKind =
-  'claudeCode' | 'codex' | 'anthropic' | 'openai' | 'google' | 'openaiCompatible';
+  | 'claudeCode'
+  | 'codex'
+  | 'anthropic'
+  | 'openai'
+  | 'google'
+  | 'bedrock'
+  | 'azure'
+  | 'openaiCompatible';
 
 /**
  * One configured provider.
@@ -183,6 +190,38 @@ export interface AiUsage {
   readonly outputTokens?: number;
 }
 
+/**
+ * Whether a command-line assistant is signed in, as far as we can tell.
+ *
+ * Three states rather than a boolean, and the third one is the point. Both CLIs
+ * answer a status command, and both are programs that get updated — a version
+ * that has renamed the command, or one that answers in a shape we do not
+ * recognise, must not be read as "not signed in". Only a *confident* negative
+ * stops a turn; anything else lets it run and lets the CLI itself be the judge.
+ */
+export type AiSignInState = 'in' | 'out' | 'unknown';
+
+/**
+ * The code a "this CLI is not signed in" failure travels under.
+ *
+ * A code rather than a message, because the interface has to branch on it — it
+ * raises a sheet with the command to run — and matching on English prose is a
+ * branch that breaks the first time the wording is improved.
+ */
+export const AI_NOT_SIGNED_IN = 'AI_NOT_SIGNED_IN';
+
+/**
+ * What the host is doing while a turn shows nothing yet.
+ *
+ * The wait before the first word has two halves that feel nothing alike, and
+ * the interface used to call both of them "Reading the schema…". Reading it is
+ * a burst of round trips against the reader's own database, and it usually does
+ * not happen at all — the reads are cached per connection, so every turn after
+ * the first skips straight past it. Saying so on every turn is a progress
+ * message that has stopped being about progress.
+ */
+export type AiPhase = 'schema' | 'waiting';
+
 /** A turn the interface can hold on to, which is a turn and its items. */
 export interface AiTurn {
   readonly id: string;
@@ -198,6 +237,12 @@ export interface AiTurn {
 export interface AiItemEvent {
   readonly turnId: string;
   readonly item: AiItem;
+}
+
+/** Which half of the wait the turn is in, before anything is on screen. */
+export interface AiPhaseEvent {
+  readonly turnId: string;
+  readonly phase: AiPhase;
 }
 
 /** Text appended to an item already on screen. */

@@ -252,7 +252,18 @@ async function remove(): Promise<void> {
         />
       </FormField>
 
-      <FormField :label="$t('assistant.fieldModel')" :help="$t('assistant.modelHelp')">
+      <FormField
+        :label="
+          info.modelAs === 'deployment'
+            ? $t('assistant.fieldDeployment')
+            : $t('assistant.fieldModel')
+        "
+        :help="
+          info.modelAs === 'deployment'
+            ? $t('assistant.deploymentHelp')
+            : $t('assistant.modelHelp')
+        "
+      >
         <template #default="{ id }">
           <SuggestInput
             :id="id"
@@ -266,8 +277,14 @@ async function remove(): Promise<void> {
 
       <FormField
         v-if="info.baseUrlEditable"
-        :label="$t('assistant.fieldBaseUrl')"
-        :help="$t('assistant.baseUrlHelp')"
+        :label="
+          info.baseUrlAs === 'region'
+            ? $t('assistant.fieldRegion')
+            : $t('assistant.fieldBaseUrl')
+        "
+        :help="
+          info.baseUrlAs === 'region' ? $t('assistant.regionHelp') : $t('assistant.baseUrlHelp')
+        "
       >
         <TextInput v-model="form.baseUrl" monospace :placeholder="info.defaultBaseUrl" />
       </FormField>
@@ -284,6 +301,20 @@ async function remove(): Promise<void> {
           :placeholder="info.needsKey ? '' : $t('assistant.keyNone')"
         />
       </FormField>
+
+      <!--
+        A provider that takes no key still has to say where its credentials come
+        from. Without this the form for Bedrock is a region and a model and no
+        hint that the account it will bill is whichever one the machine's AWS
+        configuration points at.
+      -->
+      <p v-if="info.credentialsNote" class="note">
+        {{
+          info.credentialsNote === 'aws'
+            ? $t('assistant.credentialsAws')
+            : $t('assistant.credentialsCli')
+        }}
+      </p>
 
       <p v-if="problem && !info.acceptsKey" class="problem" role="alert">
         {{ problem }}
@@ -423,6 +454,16 @@ async function remove(): Promise<void> {
   margin: 0 0 var(--gap-loose);
   font-size: 0.75rem;
   color: var(--color-error, var(--color-base-content));
+}
+
+/* Quieter than a field's help, because it is a fact about the provider rather
+   than an instruction about the box above it. */
+.note {
+  /* Its own paragraph, not a second line of the help above it. */
+  margin: var(--gap-tight) 0 var(--gap-loose);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
 }
 
 .working {

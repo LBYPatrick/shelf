@@ -93,7 +93,61 @@ function toMessages(request: AiRequest): unknown[] {
   return messages;
 }
 
-function createAdapter(kind: AiDriverKind, instance: AiProvider, apiKey?: string): AiAdapter {
+/**
+ * Where a request goes, and how it is signed.
+ *
+ * The body below is identical everywhere — that is the whole reason one adapter
+ * serves four drivers — and Azure differs in exactly these two things: it puts
+ * the deployment in the path rather than the model in the body, and it carries
+ * its key in `api-key` rather than in `Authorization`. Declaring the difference
+ * as two functions keeps it out of the send path, where it would be a `switch`
+ * on the driver kind in the middle of a stream reader.
+ */
+interface Route {
+  readonly url: (base: string, model: string) => string;
+  readonly headers: (apiKey: string | undefined) => Readonly<Record<string, string>>;
+}
+
+const OPENAI_ROUTE: Route = {
+  url: (base) => `${base}/chat/completions`,
+  // A local server has no key and rejects the header outright on some builds,
+  // so it is sent only when there is one to send.
+  headers: (apiKey): Record<string, string> =>
+    apiKey ? { authorization: `Bearer ${apiKey}` } : {},
+};
+
+/**
+ * The version of the Azure surface this speaks.
+ *
+ * Pinned rather than left to the service's default, because Azure's data-plane
+ * API is versioned in the query string and an unversioned request is refused.
+ * This is a GA version: the preview ones move, and a desktop app that ships
+ * every few weeks should not be following them.
+ */
+const AZURE_API_VERSION = '2024-10-21';
+
+/**
+ * Azure names the *deployment*, not the model.
+ *
+ * A deployment is somebody's own name for a model they turned on in their own
+ * resource — `gpt-4o-prod`, or `chat`, or whatever their platform team called
+ * it — and it goes in the path. So `model` on an Azure provider is that name,
+ * which is why the field's help says so rather than offering a model list that
+ * would be wrong on every account.
+ */
+const AZURE_ROUTE: Route = {
+  url: (base, model) =>
+    `${base}/openai/deployments/${encodeURIComponent(model)}/chat/completions` +
+    `?api-version=${AZURE_API_VERSION}`,
+  headers: (apiKey): Record<string, string> => (apiKey ? { 'api-key': apiKey } : {}),
+};
+
+function createAdapter(
+  kind: AiDriverKind,
+  route: Route,
+  instance: AiProvider,
+  apiKey?: string
+): AiAdapter {
   const base = resolveBaseUrl(kind, instance.baseUrl);
   const info = driverInfo(kind);
 
@@ -102,14 +156,12 @@ function createAdapter(kind: AiDriverKind, instance: AiProvider, apiKey?: string
     capabilities: info.capabilities,
 
     async send(request: AiRequest, sink: AiSink, signal: AbortSignal): Promise<AiReply> {
-      const response = await fetch(`${base}/chat/completions`, {
+      const response = await fetch(route.url(base, request.model), {
         method: 'POST',
         signal,
         headers: {
           'content-type': 'application/json',
-          // A local server has no key and rejects the header outright on some
-          // builds, so it is sent only when there is one to send.
-          ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
+          ...route.headers(apiKey),
         },
         body: JSON.stringify({
           model: request.model,
@@ -213,11 +265,28 @@ function createAdapter(kind: AiDriverKind, instance: AiProvider, apiKey?: string
 export const OpenAiDriver: AiDriver = {
   kind: 'openai',
   capabilities: driverInfo('openai').capabilities,
-  create: (instance, apiKey) => createAdapter('openai', instance, apiKey),
+  create: (instance, apiKey) => createAdapter('openai', OPENAI_ROUTE, instance, apiKey),
 };
 
 export const OpenAiCompatibleDriver: AiDriver = {
   kind: 'openaiCompatible',
   capabilities: driverInfo('openaiCompatible').capabilities,
-  create: (instance, apiKey) => createAdapter('openaiCompatible', instance, apiKey),
+  create: (instance, apiKey) =>
+    createAdapter('openaiCompatible', OPENAI_ROUTE, instance, apiKey),
+};
+
+/**
+ * Azure AI Foundry — OpenAI's models, in somebody's own Azure resource.
+ *
+ * The same protocol behind a different front door, which is exactly the case
+ * this file was written to absorb: the body, the stream framing and the tool
+ * shape are OpenAI's, and only the URL and the header differ. It is a driver of
+ * its own rather than a configuration of `openaiCompatible` because those two
+ * differences cannot be expressed as a base URL — the deployment goes in the
+ * path and the key goes in a header nothing else uses.
+ */
+export const AzureDriver: AiDriver = {
+  kind: 'azure',
+  capabilities: driverInfo('azure').capabilities,
+  create: (instance, apiKey) => createAdapter('azure', AZURE_ROUTE, instance, apiKey),
 };
