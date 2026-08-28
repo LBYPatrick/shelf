@@ -34,6 +34,7 @@ import AppMark from '../components/ui/AppMark.vue';
 import DisclosureGroup from '../components/ui/DisclosureGroup.vue';
 import SettingsSheet from '../components/settings/SettingsSheet.vue';
 import ShortcutSheet from '../components/settings/ShortcutSheet.vue';
+import StorageSheet from '../components/settings/StorageSheet.vue';
 import ProviderSheet from '../components/assistant/ProviderSheet.vue';
 import { useConnections } from '../stores/connections';
 import { useToasts } from '../stores/toasts';
@@ -57,6 +58,7 @@ const opening = ref<string | null>(null);
 const sampling = ref(false);
 const settingsOpen = ref(false);
 const shortcutsOpen = ref(false);
+const storageOpen = ref(false);
 const providersOpen = ref(false);
 
 /**
@@ -393,8 +395,7 @@ watch(
               :title="connection.name"
               :subtitle="where(connection)"
               :meta="lastUsed(connection)"
-              :mark="engineDescriptor(connection.engine).mark"
-              :hue="engineDescriptor(connection.engine).hue"
+              :engine="connection.engine"
               :accent="connection.labelColor"
               :label="$t('start.connectTo', { name: connection.name })"
               :busy="opening === connection.id"
@@ -478,9 +479,11 @@ watch(
       v-model="settingsOpen"
       @manage-shortcuts="shortcutsOpen = true"
       @manage-providers="providersOpen = true"
+      @manage-storage="storageOpen = true"
     />
     <ShortcutSheet v-model="shortcutsOpen" />
     <ProviderSheet v-model="providersOpen" />
+    <StorageSheet v-model="storageOpen" />
 
     <ConnectionEditor
       v-if="editing !== undefined"

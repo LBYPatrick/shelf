@@ -29,6 +29,7 @@ const open = defineModel<boolean>({ required: true });
 const emit = defineEmits<{
   openSettings: [];
   openShortcuts: [];
+  openStorage: [];
   newConnection: [];
   diagnose: [];
 }>();
@@ -110,6 +111,15 @@ const navigation = computed<Command[]>(() => [
     slash: '/shortcuts',
     keywords: 'keys keyboard bindings keymap accelerator',
     run: () => emit('openShortcuts'),
+  },
+  {
+    id: 'nav.storage',
+    section: 'navigation',
+    icon: 'database',
+    title: t('storage.title'),
+    slash: '/storage',
+    keywords: 'clear delete cache history chats jobs disk space',
+    run: () => emit('openStorage'),
   },
   {
     id: 'nav.newConnection',

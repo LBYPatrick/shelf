@@ -4,6 +4,7 @@ import {
   ACCENT_PRESETS,
   DEFAULT_ACCENT,
   DEFAULT_MATERIALS,
+  DEFAULT_SYNTAX,
   applyTheme,
   clampMaterials,
   clampSyntax,
@@ -108,6 +109,23 @@ export const useTheme = defineStore('theme', () => {
     materials.value = { ...DEFAULT_MATERIALS };
   }
 
+  /**
+   * Every appearance setting back to what it ships as.
+   *
+   * Here rather than in the sheet that offers it, because the store is the only
+   * thing that knows what "every appearance setting" is. Spelled out in the
+   * sheet, it would be a list to keep in step with this file, and the way it
+   * would fall behind is the way `resetMaterials` was already a partial reset
+   * that read like a whole one.
+   */
+  function reset(): void {
+    mode.value = 'system';
+    accent.value = DEFAULT_ACCENT;
+    density.value = 'default';
+    materials.value = { ...DEFAULT_MATERIALS };
+    syntax.value = { ...DEFAULT_SYNTAX };
+  }
+
   return {
     mode,
     accent,
@@ -118,5 +136,6 @@ export const useTheme = defineStore('theme', () => {
     presets,
     activePreset,
     resetMaterials,
+    reset,
   };
 });

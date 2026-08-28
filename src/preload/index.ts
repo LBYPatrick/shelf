@@ -32,6 +32,8 @@ const windowApi: WindowApi = {
   setAppearance: (appearance: Appearance) =>
     ipcRenderer.send(WINDOW_CHANNELS.setAppearance, appearance),
   setCompact: (compact: boolean) => ipcRenderer.send(WINDOW_CHANNELS.setCompact, compact),
+  notify: (notice: { title: string; body: string }) =>
+    ipcRenderer.send(WINDOW_CHANNELS.notify, notice),
   onMaximizedChanged: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, maximized: boolean) =>
       listener(maximized);
@@ -102,6 +104,9 @@ const appDb: AppDbApi = {
   removeChat: (id: string) => ipcRenderer.invoke(APPDB_CHANNELS.removeChat, id),
   getSetting: (key: string, fallback: unknown) =>
     ipcRenderer.invoke(APPDB_CHANNELS.getSetting, key, fallback),
+  storageUsage: () => ipcRenderer.invoke(APPDB_CHANNELS.storageUsage),
+  clearStorage: (categories: readonly string[]) =>
+    ipcRenderer.invoke(APPDB_CHANNELS.clearStorage, [...categories]),
   setSetting: (key: string, value: unknown) =>
     ipcRenderer.invoke(APPDB_CHANNELS.setSetting, key, value),
 };

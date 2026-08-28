@@ -2,7 +2,22 @@ import type { ShelfApi } from '../../src/preload';
 import type { AiProvider, AiProviderInput } from '@shared/ai';
 import type { HistoryEntry, SavedChat, SavedQuery } from '@shared/appdb';
 import type { SavedConnection } from '@shared/connections';
+import type { StorageUsage } from '@shared/storage';
 import { FOLDERS, SAVED_CONNECTIONS } from '../fixtures/database';
+
+/** A machine that has been used: one huge category and several small ones. */
+const USAGE: StorageUsage = {
+  directory: '/Users/you/Library/Application Support/Shelf',
+  categories: [
+    { id: 'history', items: 412, bytes: 96_400 },
+    { id: 'chats', items: 9, bytes: 184_000 },
+    { id: 'jobs', items: 3, bytes: 214_000_000 },
+    { id: 'workspace', items: 14, bytes: 21_000 },
+    { id: 'saved', items: 6, bytes: 8_200 },
+    { id: 'providers', items: 2, bytes: 120 },
+    { id: 'connections', items: 4, bytes: 1_900 },
+  ],
+};
 
 /**
  * The preload bridge, in a browser.
@@ -122,6 +137,9 @@ export const mockShelf: ShelfApi = {
     isMaximized: () => settle(false, 0),
     setAppearance: noop,
     setCompact: noop,
+    // A browser has no desktop to put a banner on, and a story that raised one
+    // would raise it on whoever is reading the storybook.
+    notify: noop,
     onMaximizedChanged: () => noop,
   },
 
@@ -276,6 +294,20 @@ export const mockShelf: ShelfApi = {
       store.settings.set(key, value);
       return settle(undefined, 0);
     },
+
+    /*
+     * A machine with a real amount of data on it, so the storage sheet shows
+     * what it is for: one category far larger than the rest. Zeroes everywhere
+     * would only ever draw the empty state.
+     */
+    storageUsage: () => settle(USAGE),
+    clearStorage: (categories) =>
+      settle({
+        ...USAGE,
+        categories: USAGE.categories.map((category) =>
+          categories.includes(category.id) ? { ...category, items: 0, bytes: 0 } : category
+        ),
+      }),
   },
 
   dialogs: {

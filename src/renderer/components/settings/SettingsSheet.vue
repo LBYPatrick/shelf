@@ -29,7 +29,7 @@ import SelectMenu from '../ui/SelectMenu.vue';
 import ToggleSwitch from '../ui/ToggleSwitch.vue';
 import Sheet from '../ui/Sheet.vue';
 import { SYNTAX_SCHEMES } from '@shared/syntaxThemes';
-import { applyOverrides, currentOverrides } from '../../lib/keybindings';
+import { applyOverrides, currentOverrides, resetKeymap } from '../../lib/keybindings';
 import PaletteStrip from './PaletteStrip.vue';
 
 const open = defineModel<boolean>({ required: true });
@@ -38,7 +38,11 @@ const open = defineModel<boolean>({ required: true });
  * it is a list with an editor behind it — two levels of navigation inside a
  * pane that is already a long scroll. Settings names it and hands it over.
  */
-const emit = defineEmits<{ 'manage-providers': []; 'manage-shortcuts': [] }>();
+const emit = defineEmits<{
+  'manage-providers': [];
+  'manage-shortcuts': [];
+  'manage-storage': [];
+}>();
 
 const assistant = useAssistant();
 const theme = useTheme();
@@ -217,7 +221,18 @@ let disarm: ReturnType<typeof setTimeout> | undefined;
 /** Long enough to read the second label, short enough not to stay dangerous. */
 const DISARM_MS = 4000;
 
-function resetData(): void {
+/**
+ * Everything on this page back to what it ships as.
+ *
+ * It used to be "reset data settings", which put back two of the four groups
+ * this sheet holds and left the appearance and the shortcuts alone. That is the
+ * shape of a control nobody can predict: somebody who has made the window
+ * unreadable presses the only button called Reset and the window does not
+ * change. Each store answers for its own defaults — the sheet does not hold a
+ * list of what a default is, because a list here is a second one to keep in
+ * step with three files.
+ */
+function resetAll(): void {
   clearTimeout(disarm);
 
   if (!confirmingReset.value) {
@@ -227,7 +242,9 @@ function resetData(): void {
   }
 
   confirmingReset.value = false;
+  theme.reset();
   settings.reset();
+  resetKeymap();
   toasts.show({ id: 'settings-file', tone: 'success', message: t('settings.wasReset') });
 }
 
@@ -706,6 +723,35 @@ const languageOptions = computed(() => [
         </div>
       </section>
 
+      <!--
+        Stored data is its own sheet, for the reason the provider list is.
+        ────────────────────────────────────────────────────────────────
+        It is seven categories with sizes beside them and a destructive verb at
+        the end — a panel, not a row. Settings names it and hands it over, and
+        the palette opens the same sheet directly, which is exactly why the
+        surface is owned by the view rather than by this control.
+      -->
+      <section class="panel-section">
+        <div class="panel-section__head">
+          <h3 class="type-title">
+            {{ $t('storage.title') }}
+          </h3>
+          <p class="panel-section__desc">
+            {{ $t('storage.row') }}
+          </p>
+        </div>
+
+        <div class="rows">
+          <div class="row">
+            <span class="row__label">{{ $t('storage.manage') }}</span>
+            <PressButton class="row__control" size="sm" @click="emit('manage-storage')">
+              <AppIcon name="database" :size="13" />
+              {{ $t('storage.open') }}
+            </PressButton>
+          </div>
+        </div>
+      </section>
+
       <section class="panel-section">
         <div class="panel-section__head">
           <h3 class="type-title">
@@ -726,16 +772,16 @@ const languageOptions = computed(() => [
               the button arms, and forgets if you walk away.
             -->
             <span class="row__label">{{
-              confirmingReset ? $t('settings.resetConfirm') : $t('settings.resetData')
+              confirmingReset ? $t('settings.resetConfirm') : $t('settings.resetRow')
             }}</span>
             <PressButton
               class="row__control"
               size="sm"
               :variant="confirmingReset ? 'danger' : undefined"
               :aria-label="
-                confirmingReset ? $t('settings.resetConfirm') : $t('settings.resetData')
+                confirmingReset ? $t('settings.resetConfirm') : $t('settings.resetRow')
               "
-              @click="resetData"
+              @click="resetAll"
             >
               <AppIcon name="refresh" :size="13" />
               {{ confirmingReset ? $t('action.confirm') : $t('action.reset') }}

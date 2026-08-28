@@ -40,6 +40,8 @@ export class ConnectionHost {
     this.process = utilityProcess.fork(entry, [], {
       serviceName: 'shelf-connection-host',
       stdio: 'inherit',
+      // The host writes spooled results under the app's own directory, which is
+      // the one thing only this process can locate.
       env: { ...process.env, SHELF_USER_DATA: app.getPath('userData') },
     });
 

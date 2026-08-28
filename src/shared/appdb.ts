@@ -1,6 +1,7 @@
 import type { AiProvider, AiProviderInput } from './ai';
 import type { ConnectionConfig } from '../drivers/types';
 import type { ConnectionFolder, SaveConnectionInput, SavedConnection } from './connections';
+import type { StorageCategoryId, StorageUsage } from './storage';
 
 export interface HistoryInput {
   readonly connectionId: string | null;
@@ -98,6 +99,8 @@ export const APPDB_CHANNELS = {
   removeChat: 'appdb:chats:remove',
   getSetting: 'appdb:settings:get',
   setSetting: 'appdb:settings:set',
+  storageUsage: 'appdb:storage:usage',
+  clearStorage: 'appdb:storage:clear',
 } as const;
 
 export interface AppDbApi {
@@ -158,4 +161,15 @@ export interface AppDbApi {
   removeChat(id: string): Promise<void>;
   getSetting<T>(key: string, fallback: T): Promise<T>;
   setSetting(key: string, value: unknown): Promise<void>;
+
+  /**
+   * What the app is holding on this machine, by category.
+   *
+   * Measured on demand rather than kept: it is a directory listing and half a
+   * dozen counts, and a cached figure that says a gigabyte after the gigabyte
+   * has been deleted is worse than no figure at all.
+   */
+  storageUsage(): Promise<StorageUsage>;
+  /** Empties the categories named. Everything else is left exactly as it was. */
+  clearStorage(categories: readonly StorageCategoryId[]): Promise<StorageUsage>;
 }

@@ -5,6 +5,7 @@ import { createInterface } from 'node:readline';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Cursor, Field, Row } from '@drivers/types';
+import { JOBS_SUBDIR } from '@shared/storage';
 
 /**
  * A dispatched query's whole answer, on disk.
@@ -26,9 +27,23 @@ import type { Cursor, Field, Row } from '@drivers/types';
  * The first line is the field list, so a spool describes itself.
  */
 
-/** Where spools live. One directory so an orphan is easy to find and sweep. */
+/**
+ * Where spools live.
+ *
+ * Under the app's own directory, beside `shelf.db`, rather than in the system
+ * temp directory. A dispatched query is a *result somebody asked for* — it is
+ * paged through, exported from, and reopened from the jobs panel days later —
+ * and the temp directory is a place the OS is entitled to empty. It also made
+ * the app's storage unaccountable: the one thing here that can reach gigabytes
+ * was the one thing the app could not say it was holding.
+ *
+ * `SHELF_USER_DATA` comes from main, which is the only process that can ask
+ * Electron where that is. The fallback is for a host started outside the app —
+ * the driver suites do that — where a temp directory is the right answer.
+ */
 export function spoolDirectory(): string {
-  return join(tmpdir(), 'shelf-jobs');
+  const managed = process.env['SHELF_USER_DATA'];
+  return managed ? join(managed, JOBS_SUBDIR) : join(tmpdir(), 'shelf-jobs');
 }
 
 export function spoolPath(jobId: string): string {

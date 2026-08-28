@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { BrowserWindow, ipcMain } from 'electron';
+import { join } from 'node:path';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import {
   APPDB_CHANNELS,
   type HistoryInput,
@@ -11,6 +12,8 @@ import { detectedDriverOf, detectedProvider } from '@shared/aiDrivers';
 import type { SaveChatInput } from '@shared/appdb';
 import { ChatRepository } from '../appdb/chats';
 import { ProviderRepository } from '../appdb/providers';
+import { StorageRepository } from '../appdb/storage';
+import { JOBS_SUBDIR, type StorageCategoryId } from '@shared/storage';
 import type { SaveConnectionInput } from '@shared/connections';
 import type { ConnectionConfig } from '@drivers/types';
 import type { ConnectionRepository } from '../appdb/connections';
@@ -184,5 +187,29 @@ export function registerAppDbHandlers(
 
   ipcMain.handle(APPDB_CHANNELS.setSetting, (_event, key: string, value: unknown) => {
     writeSetting.run(key, JSON.stringify(value));
+  });
+
+  /*
+   * Storage, measured and emptied.
+   *
+   * `clearStorage` answers with the new figures rather than with nothing, so
+   * the sheet redraws from what actually happened instead of from what it
+   * assumed would happen. A clear that failed halfway is then visible in the
+   * one place anybody would look.
+   */
+  const directory = app.getPath('userData');
+  const storage = new StorageRepository(
+    db,
+    connections,
+    providers,
+    directory,
+    join(directory, JOBS_SUBDIR)
+  );
+
+  ipcMain.handle(APPDB_CHANNELS.storageUsage, () => storage.usage());
+
+  ipcMain.handle(APPDB_CHANNELS.clearStorage, (_event, categories: StorageCategoryId[]) => {
+    storage.clear(categories);
+    return storage.usage();
   });
 }

@@ -33,10 +33,23 @@ const FILES = [...sources('src/renderer/**/*.vue'), ...sources('src/renderer/**/
 
 type Bundle = Record<string, Record<string, string>>;
 
+/**
+ * The suffixes i18next appends to a plural key.
+ *
+ * A call site asks for `storage.amount` and the bundle holds `amount_one` and
+ * `amount_other`; i18next picks between them from the `count` it was passed, so
+ * the base key is real even though nothing in the file is spelled that way.
+ * Without this, pluralising a string makes its own call site look missing.
+ */
+const PLURALS = /_(zero|one|two|few|many|other)$/;
+
 function known(): Set<string> {
   const keys = new Set<string>();
   for (const [section, entries] of Object.entries(en as Bundle)) {
-    for (const key of Object.keys(entries)) keys.add(`${section}.${key}`);
+    for (const key of Object.keys(entries)) {
+      keys.add(`${section}.${key}`);
+      if (PLURALS.test(key)) keys.add(`${section}.${key.replace(PLURALS, '')}`);
+    }
   }
   return keys;
 }
