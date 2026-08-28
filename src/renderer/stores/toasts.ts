@@ -33,6 +33,15 @@ export interface Toast {
 /** How long an ordinary toast stays up when it does not say otherwise. */
 const DEFAULT_EXPIRE = 5000;
 
+/**
+ * What a desktop banner is titled when the notice carried no title of its own.
+ *
+ * Most do not: a toast is a sentence in a window that is already named. On the
+ * desktop it is a banner among other applications' banners, and one with no
+ * name on it is one nobody can attribute.
+ */
+const APP_NAME = 'Shelf';
+
 export const useToasts = defineStore('toasts', () => {
   const toasts = ref<Toast[]>([]);
   let counter = 0;
@@ -55,6 +64,26 @@ export const useToasts = defineStore('toasts', () => {
     };
 
     toasts.value = [...toasts.value.filter((existing) => existing.id !== id), next];
+
+    /*
+     * And to the desktop, when nobody is looking at this window.
+     *
+     * A notice in the corner of a window is quiet on purpose, and quiet is
+     * exactly wrong for the case that matters most: an import that finishes, or
+     * a connection that drops, while the reader is in another application. Main
+     * decides whether it actually raises anything — it is the only process that
+     * can answer "is this window focused" without racing — so this is sent
+     * unconditionally and ignored where it is not wanted.
+     *
+     * The in-app notice is raised either way. Dropping it while the window is
+     * hidden would turn a message into a banner that expired at somebody's
+     * empty desk.
+     */
+    window.shelf.window.notify({
+      title: next.title ?? APP_NAME,
+      body: next.message,
+    });
+
     return id;
   }
 

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { BrowserWindow, app, ipcMain, nativeTheme } from 'electron';
+import { BrowserWindow, Notification, app, ipcMain, nativeTheme } from 'electron';
 import { platformIdFrom, type PlatformInfo } from '@shared/platform';
 import { HOST_CHANNELS, WINDOW_CHANNELS, type Appearance } from '@shared/window';
 import { ConnectionRepository } from './appdb/connections';
@@ -73,6 +73,34 @@ function registerWindowHandlers(): void {
 
   ipcMain.on(WINDOW_CHANNELS.setCompact, (event, compact: boolean) => {
     setCompactMode(senderWindow(event), compact);
+  });
+
+  /*
+   * A notice, on the desktop, but only while nobody is looking at the window.
+   *
+   * The in-app toast is quiet by design — it is a sentence in the corner of a
+   * window you are already reading — and that is exactly wrong for the case it
+   * matters most in: an import that finishes, or a connection that drops, while
+   * the reader is in another application. The OS banner is the one thing that
+   * reaches them there.
+   *
+   * The focus test is made here rather than in the renderer because it is the
+   * only place it can be made without racing: an answer that travelled to the
+   * renderer and a notification that travelled back would be describing a
+   * moment that had already passed.
+   *
+   * Never under test. The suite runs with a window that is never shown, so
+   * every toast would qualify — and each one would raise a real banner on the
+   * machine running the tests.
+   */
+  ipcMain.on(WINDOW_CHANNELS.notify, (event, notice: { title: string; body: string }) => {
+    if (process.env['SHELF_E2E']) return;
+    if (!Notification.isSupported()) return;
+
+    const window = senderWindow(event);
+    if (window?.isFocused()) return;
+
+    new Notification({ title: notice.title, body: notice.body }).show();
   });
 
   ipcMain.handle(WINDOW_CHANNELS.platformInfo, (): PlatformInfo => {

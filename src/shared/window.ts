@@ -9,6 +9,7 @@ export const WINDOW_CHANNELS = {
   platformInfo: 'window:platform-info',
   setAppearance: 'window:set-appearance',
   setCompact: 'window:set-compact',
+  notify: 'window:notify',
 } as const;
 
 export const DIALOG_CHANNELS = {
@@ -108,4 +109,18 @@ export interface WindowApi {
    * shrinks to fit it and grows back to whatever it was when a database opens.
    */
   setCompact(compact: boolean): void;
+  /**
+   * Hands a notice to the operating system.
+   *
+   * Only reaches the desktop when this window is *not* the one being looked at.
+   * The renderer asks whenever it raises something worth reading and main is
+   * the one that decides, because "is the window focused" is a fact only main
+   * can answer without racing: by the time an answer travelled to the renderer
+   * and a notification travelled back, the reader could have switched twice.
+   *
+   * The in-app notice is raised either way. Dropping it while the window is
+   * hidden would mean a message that only ever existed in a banner somebody may
+   * not have been at their desk for.
+   */
+  notify(notice: { title: string; body: string }): void;
 }
