@@ -317,7 +317,7 @@ export async function runTurn(
                 // below the prose that preceded it and above the prose that
                 // follows.
                 seal();
-                return executeCall(input.client, call, emit, signal);
+                return executeCall(input.client, call, emit, signal, input.cache);
               },
             }
           : {}),
@@ -364,7 +364,7 @@ export async function runTurn(
     const results: AiToolResult[] = [];
 
     for (const call of reply.calls) {
-      const step = await executeCall(input.client, call, emit, signal);
+      const step = await executeCall(input.client, call, emit, signal, input.cache);
       results.push(step);
     }
 
@@ -384,7 +384,18 @@ async function executeCall(
   client: DatabaseClient,
   call: AiToolCall,
   emit: (item: AiItem) => void,
-  signal: AbortSignal
+  signal: AbortSignal,
+  /*
+   * The connection's remembered reads.
+   *
+   * Passed in rather than reached for. It used to read `input.cache` from a
+   * `TurnInput` that is not in this function's scope at all, which is a
+   * `ReferenceError` at the moment the model asks for a table — the tool came
+   * back "Could not read the schema: input is not defined" and the turn carried
+   * on without it. The gate did not catch it because the gate's typecheck was
+   * checking nothing; both halves of that are fixed.
+   */
+  cache: SchemaCache | undefined
 ): Promise<AiToolResult> {
   const tool = call.name as AiToolName;
   const stepId = nextId('step');
@@ -404,7 +415,7 @@ async function executeCall(
     });
 
     try {
-      const document = await gatherTables(client, tables, input.cache);
+      const document = await gatherTables(client, tables, cache);
       emit({
         kind: 'step',
         id: stepId,
