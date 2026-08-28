@@ -189,6 +189,19 @@ function matchesCriterion(job: FilterableJob, criterion: Criterion, now: number)
 
     case 'took':
       return tookMatches(jobDuration(job, now), criterion.value);
+
+    /*
+     * A chat's one moment, and a job does not have one.
+     *
+     * The kind exists because the chats list reuses these criteria — through
+     * `recordMatches`, which never gets here. Answered rather than left to fall
+     * out of the bottom of the switch: a function that returns `undefined` for
+     * a kind it does not know matches *nothing*, so a chip somebody switched on
+     * would empty the list rather than leave it alone. Not narrowing is the
+     * honest answer to a question this list cannot ask.
+     */
+    case 'updated':
+      return true;
   }
 }
 

@@ -319,9 +319,17 @@ export class MongodbClient implements DatabaseClient {
       ? Object.fromEntries(request.select.map((field) => [field, 1]))
       : undefined;
 
+    /*
+     * The direction is annotated, not inferred. `-1 : 1` widens to `number`,
+     * and the driver's `Sort` takes the two literals — so an unannotated map
+     * builds a perfectly correct object the type system will not accept.
+     */
     const sort = request.orderBy?.length
       ? Object.fromEntries(
-          request.orderBy.map((order) => [order.column, order.direction === 'desc' ? -1 : 1])
+          request.orderBy.map((order): [string, 1 | -1] => [
+            order.column,
+            order.direction === 'desc' ? -1 : 1,
+          ])
         )
       : undefined;
 

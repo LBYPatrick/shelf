@@ -639,10 +639,17 @@ export class PostgresClient implements DatabaseClient {
     ).rows[0];
 
     if (!counts) {
-      const message =
-        (census as { error?: unknown }).error instanceof Error
-          ? (census as { error: Error }).error.message
-          : '';
+      /*
+       * Read once, through `unknown`.
+       *
+       * The catch above puts an `error` on a value the driver's own types say
+       * is a `QueryResult`, so a direct cast to `{ error: Error }` is one the
+       * compiler refuses — the two shapes do not overlap enough for it to
+       * believe the assertion, which is exactly right and exactly not the
+       * point here.
+       */
+      const failure = (census as unknown as { error?: unknown }).error;
+      const message = failure instanceof Error ? failure.message : '';
       // The view exists because its columns do, so a failure to read it is
       // either the missing preload — which says so in as many words — or a
       // privilege the role does not have.

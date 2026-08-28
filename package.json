@@ -18,7 +18,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "typecheck": "vue-tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "prettier --write \"src/**/*.{ts,vue,css}\" \"tests/**/*.ts\"",
@@ -39,6 +39,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,vue,css}\" \"tests/**/*.ts\" \"*.{ts,js,json}\""
   },
   "dependencies": {
+    "@anthropic-ai/bedrock-sdk": "^0.33.2",
     "@anthropic-ai/sdk": "^0.120.0",
     "@aws-sdk/client-dynamodb": "^3.1109.0",
     "@aws-sdk/credential-providers": "^3.1109.0",
@@ -57,6 +58,7 @@
     "pg": "^8.23.0",
     "pg-cursor": "^2.15.4",
     "portfinder": "^1.0.38",
+    "simple-icons": "^16.28.0",
     "ssh-config": "^5.0.3",
     "ssh2": "^1.17.0"
   },
@@ -68,6 +70,7 @@
     "@storybook/addon-docs": "^10.5.10",
     "@storybook/vue3-vite": "^10.5.10",
     "@tailwindcss/vite": "^4.3.3",
+    "@types/better-sqlite3": "9.6.0",
     "@types/d3-array": "^3.2.2",
     "@types/d3-drag": "^3.0.7",
     "@types/d3-force": "^3.0.10",
@@ -78,6 +81,7 @@
     "@types/d3-zoom": "^3.0.8",
     "@types/node": "^22.10.5",
     "@types/pg": "^8.11.10",
+    "@types/pg-cursor": "2.7.2",
     "@types/ssh2": "^1.15.1",
     "@vitejs/plugin-vue": "^6.0.8",
     "axe-core": "^4.13.0",

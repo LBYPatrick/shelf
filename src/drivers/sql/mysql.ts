@@ -1,3 +1,4 @@
+import type { Readable } from 'node:stream';
 import { limitStatement } from '@shared/rowLimit';
 import { createPool, type Pool, type PoolConnection, type RowDataPacket } from 'mysql2/promise';
 import { capabilities } from '../capabilities';
@@ -764,7 +765,23 @@ export class MysqlClient implements DatabaseClient {
     // out of a `for await` loop calls the iterator's `return()`, which destroys
     // the underlying stream — so the first chunk would arrive and every read
     // after it would abort.
-    const stream = connection.connection.query(sql, params as unknown[]).stream({
+    /*
+     * The *base* connection, not the promise wrapper over it.
+     *
+     * `mysql2/promise` types `PoolConnection.connection` as another promise
+     * connection, whose `query` returns a promise and has no `stream` on it.
+     * At run time it is the callback-style connection underneath, whose `query`
+     * returns the `Query` this needs. The cast says which of the two the object
+     * actually is; nothing else here would work if it were the other.
+     */
+    const base = connection.connection as unknown as {
+      query(
+        sql: string,
+        values: unknown[]
+      ): { stream(options: { highWaterMark: number }): Readable };
+    };
+
+    const stream = base.query(sql, params as unknown[]).stream({
       highWaterMark: request.chunkSize,
     });
 

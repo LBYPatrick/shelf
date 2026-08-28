@@ -3,7 +3,7 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "lib": ["ES2023"],
+    "lib": ["ES2023", "DOM"],
     "types": ["node"],
     "strict": true,
     "noUncheckedIndexedAccess": true,
@@ -20,8 +20,7 @@
     "paths": {
       "@shared/*": ["src/shared/*"],
       "@drivers/*": ["src/drivers/*"],
-      "@ai/*": ["src/ai/*"],
-      "@renderer/*": ["src/renderer/*"]
+      "@ai/*": ["src/ai/*"]
     }
   },
   "include": [
@@ -31,7 +30,6 @@
     "src/drivers/**/*.ts",
     "src/ai/**/*.ts",
     "src/shared/**/*.ts",
-    "tests/**/*.ts",
     "electron.vite.config.ts",
     "electron-builder.config.cjs",
     "vitest.config.ts"
