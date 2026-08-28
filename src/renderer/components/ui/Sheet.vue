@@ -146,6 +146,54 @@ const SCRIM = 0.04;
 const height = ref<number | null>(null);
 const overflowing = ref(false);
 let sizer: ResizeObserver | undefined;
+let queued = 0;
+
+/**
+ * How many frames a measurement is allowed to keep changing for.
+ *
+ * Four, because the content here settles in three steps and the fourth is what
+ * proves it has stopped. It is a ceiling on a loop that normally runs twice,
+ * not a duration anybody waits out.
+ */
+const SETTLE_FRAMES = 4;
+
+/**
+ * Measures until the answer stops moving, a frame at a time.
+ *
+ * A `ResizeObserver` that measures and writes a height is a loop by
+ * construction: the write resizes the panel, the panel resizes the content's
+ * box, and the observer is due again. Chromium protects itself by *stopping
+ * delivery* partway through — and which notification it drops depends on how
+ * the frame went, so this sheet settled at the right height on one run and
+ * thirteen pixels short on the next.
+ *
+ * Instrumented, the wrapper here grew in three steps — 392, then 410 when the
+ * measured sizes arrived, then 422 when the last of it reflowed — and the
+ * observer reported the first two and never the third. The panel kept the
+ * second answer, and the only thing that corrected it was the fallback below
+ * firing on some unrelated transition: hovering the footer button was enough,
+ * which is how this was found.
+ *
+ * So the observer stops being the thing that has to be right. It starts a short
+ * loop that re-measures each frame and stops as soon as two measurements agree
+ * — which is the same question the observer was being asked, put to the layout
+ * directly rather than to a notification queue that is allowed to drop it.
+ */
+function measureSoon(): void {
+  let left = SETTLE_FRAMES;
+
+  const pump = (): void => {
+    queued = requestAnimationFrame(() => {
+      const before = height.value;
+      resize();
+      // Agreed with the last answer, or out of frames: it has settled.
+      if (height.value !== before && --left > 0) pump();
+    });
+  };
+
+  cancelAnimationFrame(queued);
+  pump();
+}
 
 function resize(): void {
   const body = measure.value?.parentElement;
@@ -223,6 +271,7 @@ function resize(): void {
 watch([open, measure], async ([isOpen]) => {
   sizer?.disconnect();
   sizer = undefined;
+  cancelAnimationFrame(queued);
 
   if (!isOpen) {
     height.value = null;
@@ -233,7 +282,7 @@ watch([open, measure], async ([isOpen]) => {
   resize();
 
   if (measure.value) {
-    sizer = new ResizeObserver(resize);
+    sizer = new ResizeObserver(measureSoon);
     sizer.observe(measure.value);
   }
 });
@@ -263,6 +312,7 @@ onMounted(() => window.addEventListener('resize', onWindowResize));
 
 onBeforeUnmount(() => {
   sizer?.disconnect();
+  cancelAnimationFrame(queued);
   window.removeEventListener('resize', onWindowResize);
 });
 
@@ -495,14 +545,22 @@ void props;
 }
 
 /*
- * A scroll edge, not a hard cut.
+ * A scroll edge, not a hard cut — and only where something is actually cut off.
  *
  * A sheet taller than the window used to guillotine its content against the
  * footer — the Settings pane ended mid-control with nothing to say there was
  * more. The mask fades the last few millimetres out where the content passes
  * under the chrome, which reads as "this continues" without spending a divider
- * on it. `animation-timeline: scroll()` fades the top edge in only once you
- * have actually scrolled, so a sheet that fits shows no edge at all.
+ * on it.
+ *
+ * **Both edges are conditional, and the bottom one was not.** The top faded in
+ * only once you had scrolled, as it should; the bottom was a constant, so every
+ * sheet that fitted perfectly well dimmed its own last row for no reason — on
+ * the stored-data sheet that row is the button that does the thing, and it
+ * looked like it had been disabled. The two edges now answer the same question
+ * from the two ends of the same scroll: is there anything above, is there
+ * anything below. Nothing above or below means no mask at all, which is the
+ * case almost every sheet in this app is in.
  */
 .panel__body {
   flex: 1;
@@ -514,16 +572,36 @@ void props;
     to bottom,
     transparent 0,
     #000 var(--sheet-edge-top, 0px),
-    #000 calc(100% - 1.25rem),
+    #000 calc(100% - var(--sheet-edge-bottom, 0px)),
     transparent 100%
   );
 }
 
+.panel__body--scrolls {
+  overflow-y: auto;
+  /*
+   * The static answer, for an engine with no scroll timeline: content that
+   * overflows keeps its bottom edge whatever the scroll position. Overridden
+   * below where the timeline exists, which is every build this ships in — it is
+   * here so the rule does not depend on a feature to be *safe*, only to be
+   * exact.
+   */
+  --sheet-edge-bottom: 1.25rem;
+}
+
 @supports (animation-timeline: scroll()) {
   .panel__body--edges {
-    animation: sheet-edge-top linear both;
-    animation-timeline: scroll(self block);
-    animation-range: 0 1.25rem;
+    animation:
+      sheet-edge-top linear both,
+      sheet-edge-bottom linear both;
+    animation-timeline: scroll(self block), scroll(self block);
+    /* The first over the opening centimetre of the scroll, the second over the
+       closing one — so each edge is present exactly while there is something
+       past it. A body that does not scroll has no timeline, and both hold at
+       their fallback of nothing. */
+    animation-range:
+      0 1.25rem,
+      calc(100% - 1.25rem) 100%;
   }
 
   @keyframes sheet-edge-top {
@@ -534,10 +612,15 @@ void props;
       --sheet-edge-top: 1.25rem;
     }
   }
-}
 
-.panel__body--scrolls {
-  overflow-y: auto;
+  @keyframes sheet-edge-bottom {
+    from {
+      --sheet-edge-bottom: 1.25rem;
+    }
+    to {
+      --sheet-edge-bottom: 0px;
+    }
+  }
 }
 
 .panel__body--flush {
