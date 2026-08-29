@@ -3,6 +3,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { globSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { FRAMEWORK_COMPONENTS, FRAMEWORK_UTILITIES } from '../frameworkClasses';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -61,7 +62,7 @@ function usedClasses(): { file: string; name: string }[] {
     const add = (name: string) => {
       // Interpolated names cannot be resolved from the source, so they are the
       // one thing this cannot check.
-      if (name.includes('${') || !/(__|--)/.test(name)) return;
+      if (name.includes('${')) return;
       used.push({ file: where, name });
     };
 
@@ -82,10 +83,36 @@ describe('class names', () => {
   it('defines every BEM class the templates use', () => {
     const defined = definedClasses();
     const orphans = usedClasses()
+      // Only the BEM ones here: a bare word may be a Tailwind utility or a hook
+      // a test holds on to, and neither is defined in a stylesheet of ours.
+      .filter((entry) => /(__|--)/.test(entry.name))
       .filter((entry) => !defined.has(entry.name))
       .map((entry) => `${entry.file}: .${entry.name}`);
 
     expect([...new Set(orphans)]).toEqual([]);
+  });
+
+  /*
+   * The gate has this rule already, and it looks at what is on screen.
+   *
+   * That is the right check and it cannot be the only one, because a surface it
+   * never opens is a surface it never sees. The CLI sign-in sheet opens for one
+   * state — a command-line assistant nobody is signed in to — and it wore
+   * `.steps` and `.step` for as long as it existed: daisyUI drew its own
+   * numbered circles down the far side of the sheet and centred every line
+   * between the two sets of them, and nothing failed.
+   *
+   * Reading the templates catches it wherever it is, opened or not. It is the
+   * same list the gate uses, kept in one place, because two lists is one list
+   * that falls behind.
+   */
+  it('takes no framework component or utility class name', () => {
+    const theirs = new Set([...FRAMEWORK_COMPONENTS, ...FRAMEWORK_UTILITIES]);
+    const taken = usedClasses()
+      .filter((entry) => theirs.has(entry.name))
+      .map((entry) => `${entry.file}: .${entry.name}`);
+
+    expect([...new Set(taken)]).toEqual([]);
   });
 
   it('is looking at something', () => {

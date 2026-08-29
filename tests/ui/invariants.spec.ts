@@ -7,6 +7,7 @@
  * that gets fixed and one that gets its snapshots regenerated.
  */
 import { dispatchQuery, expect, newQueryTab, setAppearance, stabilize, test } from './fixtures';
+import { FRAMEWORK_COMPONENTS, FRAMEWORK_UTILITIES } from '../frameworkClasses';
 import { openTable, revealTables, typeQuery } from '../e2e/helpers';
 import type { Page } from '@playwright/test';
 
@@ -2199,108 +2200,24 @@ test.describe('tree', () => {
  * can only run in one place is a check with a blind spot.
  */
 async function frameworkClassesOn(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    /*
-     * The full set of daisyUI component names. Two of these had already been
-     * taken by our own components before this list existed — `.select` drew a
-     * box inside a box, and `.status` painted a grey pill the width of the
-     * status bar — so it is deliberately the whole list rather than the ones
-     * that have bitten so far.
-     */
-    const OWNED = [
-      'alert',
-      'avatar',
-      'badge',
-      'breadcrumbs',
-      'btn',
-      'card',
-      'carousel',
-      'chat',
-      'checkbox',
-      'collapse',
-      'countdown',
-      'diff',
-      'divider',
-      'dock',
-      'drawer',
-      'dropdown',
-      'fieldset',
-      'filter',
-      'footer',
-      'hero',
-      'indicator',
-      'input',
-      'join',
-      'kbd',
-      'label',
-      'link',
-      'list',
-      'loading',
-      'mask',
-      'menu',
-      'mockup',
-      'modal',
-      'navbar',
-      'progress',
-      'radio',
-      'range',
-      'rating',
-      'select',
-      'skeleton',
-      'stat',
-      'status',
-      'steps',
-      'swap',
-      'tab',
-      'table',
-      'tabs',
-      'textarea',
-      'timeline',
-      'toast',
-      'toggle',
-      'tooltip',
-      'stack',
-      'validator',
-    ];
+  return page.evaluate(
+    ({ owned, utilities }) => {
+      /*
+       * Ours only. Monaco and Tabulator bring their own DOM and their own class
+       * names — Monaco's scrollbars are literally `.visible` — and neither is a
+       * component of ours that could have inherited a daisyUI rule by accident.
+       * Their subtrees are skipped rather than the names being struck off the
+       * list, so a component of *ours* called `.visible` would still be caught.
+       */
+      const theirs = (element: Element) =>
+        element.closest('.monaco-editor, .tabulator') !== null;
 
-    /*
-     * Tailwind's own utilities, which are not components and bite harder for
-     * it. `.grid` is one declaration — `display: grid` — so a scoped rule
-     * that sets a table's width and `table-layout` but never its `display`
-     * does not outrank it: the structure view's table was a grid container,
-     * its head and body were blockified into two separate anonymous tables,
-     * and each sized its own columns. The header sat at two thirds the width
-     * of the rows under it for as long as this list held only daisyUI's names.
-     */
-    const UTILITIES = [
-      'block',
-      'contents',
-      'flex',
-      'grid',
-      'hidden',
-      'inline',
-      'isolate',
-      'relative',
-      'absolute',
-      'fixed',
-      'sticky',
-      'static',
-      'visible',
-    ];
-
-    /*
-     * Ours only. Monaco and Tabulator bring their own DOM and their own class
-     * names — Monaco's scrollbars are literally `.visible` — and neither is a
-     * component of ours that could have inherited a daisyUI rule by accident.
-     * Their subtrees are skipped rather than the names being struck off the
-     * list, so a component of *ours* called `.visible` would still be caught.
-     */
-    const theirs = (element: Element) => element.closest('.monaco-editor, .tabulator') !== null;
-
-    return [...OWNED, ...UTILITIES].filter((name) =>
-      [...document.querySelectorAll(`.${name}`)].some((element) => !theirs(element))
-    );
-  });
+      return [...owned, ...utilities].filter((name) =>
+        [...document.querySelectorAll(`.${name}`)].some((element) => !theirs(element))
+      );
+    },
+    { owned: FRAMEWORK_COMPONENTS, utilities: FRAMEWORK_UTILITIES }
+  );
 }
 
 test.describe('the tab strip', () => {
@@ -2756,7 +2673,7 @@ test.describe('the assistant', () => {
     // the empty workspace offers a button of its own — neither is what these
     // tests are about, and both are one more thing to keep in step.
     await sample.keyboard.press('ControlOrMeta+Shift+a');
-    await sample.locator('.chat').waitFor({ timeout: 20_000 });
+    await sample.locator('.chattab').waitFor({ timeout: 20_000 });
     await stabilize(sample);
   }
 
@@ -2831,7 +2748,7 @@ test.describe('the assistant', () => {
     }, turns);
     await sample.getByRole('button', { name: 'Chats' }).click();
     await sample.locator('.chats .tile').first().click();
-    await sample.locator('.chat').waitFor({ timeout: 20_000 });
+    await sample.locator('.chattab').waitFor({ timeout: 20_000 });
     await stabilize(sample);
   }
 
@@ -2881,7 +2798,7 @@ test.describe('the assistant', () => {
     ]);
 
     // The step's own fold, not the statement's fold nested inside it.
-    const folds = sample.locator('.chat .aside > .aside__fold');
+    const folds = sample.locator('.chattab .aside > .aside__fold');
     await expect(folds).toHaveCount(2);
 
     const heights = await folds.evaluateAll((els) =>
@@ -2891,7 +2808,7 @@ test.describe('the assistant', () => {
     expect(heights[1]).toBeGreaterThan(0);
 
     // And the reader can overrule the model in both directions.
-    await sample.locator('.chat .aside__head').first().click();
+    await sample.locator('.chattab .aside__head').first().click();
     await stabilize(sample);
     const opened = await folds.first().evaluate((el) => el.getBoundingClientRect().height);
     expect(opened).toBeGreaterThan(0);
@@ -2942,14 +2859,14 @@ test.describe('the assistant', () => {
 
     // Two opens per step: the outer one for the rows, the inner one for the
     // statement behind them.
-    await sample.locator('.chat .aside__head').first().click();
+    await sample.locator('.chattab .aside__head').first().click();
     await stabilize(sample);
-    for (const head of await sample.locator('.chat .aside__inner-head').all()) {
+    for (const head of await sample.locator('.chattab .aside__inner-head').all()) {
       await head.click();
     }
     await stabilize(sample);
 
-    const blocks = sample.locator('.chat .sqlblock');
+    const blocks = sample.locator('.chattab .sqlblock');
     await expect(blocks).toHaveCount(2);
 
     // Coloured, not a wall of monospace: the one thing a plain <pre> would lose.
@@ -2998,15 +2915,15 @@ test.describe('the assistant', () => {
       },
     ]);
 
-    const table = sample.locator('.chat .rows');
+    const table = sample.locator('.chattab .rows');
     /*
      * The fold, not the block inside it: `overflow: hidden` clips what is
      * painted and leaves the descendant's own box at its natural height, so
      * measuring the `.sqlblock` would report a statement that is nowhere on
      * screen as eighty pixels tall.
      */
-    const block = sample.locator('.chat .aside__body > .aside__fold');
-    const inner = sample.locator('.chat .aside__inner-head');
+    const block = sample.locator('.chattab .aside__body > .aside__fold');
+    const inner = sample.locator('.chattab .aside__inner-head');
 
     // Open on arrival, because the model called it the answer — and showing the
     // rows, not the SQL.
@@ -3016,9 +2933,9 @@ test.describe('the assistant', () => {
 
     // The rows are above the statement's own control, not below it.
     const order = await sample.evaluate(() => {
-      const rowsAt = document.querySelector('.chat .rows')?.getBoundingClientRect().top ?? 0;
+      const rowsAt = document.querySelector('.chattab .rows')?.getBoundingClientRect().top ?? 0;
       const sqlAt =
-        document.querySelector('.chat .aside__inner-head')?.getBoundingClientRect().top ?? 0;
+        document.querySelector('.chattab .aside__inner-head')?.getBoundingClientRect().top ?? 0;
       return { rowsAt, sqlAt };
     });
     expect(order.rowsAt).toBeLessThan(order.sqlAt);
@@ -3028,9 +2945,9 @@ test.describe('the assistant', () => {
     expect(await block.evaluate((el) => el.getBoundingClientRect().height)).toBeGreaterThan(0);
 
     // Shut the step; reopen it; the statement is folded away again.
-    await sample.locator('.chat .aside__head').first().click();
+    await sample.locator('.chattab .aside__head').first().click();
     await stabilize(sample);
-    await sample.locator('.chat .aside__head').first().click();
+    await sample.locator('.chattab .aside__head').first().click();
     await stabilize(sample);
     expect(await block.evaluate((el) => el.getBoundingClientRect().height)).toBe(0);
   });
@@ -3070,7 +2987,7 @@ test.describe('the assistant', () => {
     ]);
 
     const drawn = await sample
-      .locator('.chat .aside__body')
+      .locator('.chattab .aside__body')
       .first()
       .evaluate((el) => {
         const style = getComputedStyle(el);
@@ -3108,7 +3025,7 @@ test.describe('the assistant', () => {
     ]);
 
     await sample
-      .locator('.chat .sqlblock')
+      .locator('.chattab .sqlblock')
       .getByRole('button', { name: /open in query tab/i })
       .click();
     await stabilize(sample);
@@ -3209,10 +3126,10 @@ test.describe('the assistant', () => {
       const at = (selector: string) =>
         getComputedStyle(document.querySelector(selector)!).userSelect;
       return {
-        prose: at('.chat .prose'),
-        statement: at('.chat .sqlcode'),
-        table: at('.chat .rows'),
-        control: at('.chat .aside__head'),
+        prose: at('.chattab .prose'),
+        statement: at('.chattab .sqlcode'),
+        table: at('.chattab .rows'),
+        control: at('.chattab .aside__head'),
       };
     });
 
@@ -3224,7 +3141,7 @@ test.describe('the assistant', () => {
     // And it actually selects — a computed value is a claim about the CSS, not
     // about what a pointer does with it.
     const taken = await sample.evaluate(() => {
-      const node = document.querySelector('.chat .prose')!;
+      const node = document.querySelector('.chattab .prose')!;
       const range = document.createRange();
       range.selectNodeContents(node);
       const selection = getSelection()!;
@@ -3260,7 +3177,7 @@ test.describe('the assistant', () => {
       },
     ]);
 
-    const shown = await sample.locator('.chat .sqlcode').innerText();
+    const shown = await sample.locator('.chattab .sqlcode').innerText();
     expect(shown, 'the statement was shown exactly as the model wrote it').not.toContain(
       'select a.name, count(*) from'
     );

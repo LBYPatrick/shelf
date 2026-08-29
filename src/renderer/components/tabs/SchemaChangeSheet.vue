@@ -58,7 +58,7 @@ async function copy(): Promise<void> {
       {{ describe(change) }}
     </p>
 
-    <p class="label type-label">
+    <p class="changelabel type-label">
       {{ $t('structure.whatWillRun') }}
     </p>
     <pre class="sql">{{ sql }}</pre>
@@ -114,7 +114,7 @@ async function copy(): Promise<void> {
   background: color-mix(in oklab, var(--color-error) 14%, transparent);
 }
 
-.label {
+.changelabel {
   color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
   margin-bottom: var(--gap-tight);
 }

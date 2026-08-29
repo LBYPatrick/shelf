@@ -242,7 +242,7 @@ const verdict = computed<{ tone: Tone; text: string }>(() => {
         {{ failure }}
       </p>
 
-      <section class="block">
+      <section class="diagblock">
         <header class="block__head">
           <h3 class="block__title">
             {{ $t('diagnose.roundTrip') }}
@@ -279,7 +279,7 @@ const verdict = computed<{ tone: Tone; text: string }>(() => {
         </dl>
       </section>
 
-      <section class="block">
+      <section class="diagblock">
         <header class="block__head">
           <h3 class="block__title">
             {{ $t('diagnose.catalogue') }}
@@ -305,7 +305,7 @@ const verdict = computed<{ tone: Tone; text: string }>(() => {
         </ul>
       </section>
 
-      <section class="block">
+      <section class="diagblock">
         <header class="block__head">
           <h3 class="block__title">
             {{ $t('diagnose.about') }}
@@ -405,7 +405,7 @@ const verdict = computed<{ tone: Tone; text: string }>(() => {
   color: var(--color-error);
 }
 
-.block {
+.diagblock {
   display: flex;
   flex-direction: column;
   gap: var(--gap);

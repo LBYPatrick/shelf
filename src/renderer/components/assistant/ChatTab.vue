@@ -322,7 +322,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
 </script>
 
 <template>
-  <div class="chat">
+  <div class="chattab">
     <div ref="scroller" class="chat__scroll selectable" @scroll="onScroll">
       <!--
         Pushed to the bottom by `margin-block-start: auto`. A short conversation
@@ -528,7 +528,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
  * max-width and a padding applied at different levels, which is why nothing
  * lined up with anything.
  */
-.chat {
+.chattab {
   --chat-measure: 44rem;
 
   display: flex;

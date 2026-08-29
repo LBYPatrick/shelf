@@ -203,7 +203,7 @@ test('capture the interface', async ({ app, page }) => {
     await settle(400);
 
     await page.keyboard.press('ControlOrMeta+Shift+a');
-    await page.locator('.chat').waitFor({ timeout: 20_000 });
+    await page.locator('.chattab').waitFor({ timeout: 20_000 });
     await settle(600);
 
     const composer = page.getByPlaceholder('Ask about the data, or describe a query');

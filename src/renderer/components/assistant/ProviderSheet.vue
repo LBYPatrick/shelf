@@ -200,7 +200,7 @@ async function remove(): Promise<void> {
         {{ $t('assistant.providersNote') }}
       </p>
 
-      <ul v-if="assistant.providers.length > 0" class="list">
+      <ul v-if="assistant.providers.length > 0" class="providerlist">
         <li v-for="provider in assistant.providers" :key="provider.id">
           <component
             :is="isDetectedProviderId(provider.id) ? 'div' : 'button'"
@@ -370,7 +370,7 @@ async function remove(): Promise<void> {
   margin-bottom: 0;
 }
 
-.list {
+.providerlist {
   display: flex;
   flex-direction: column;
   gap: var(--gap-hair);

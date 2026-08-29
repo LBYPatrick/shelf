@@ -24,7 +24,7 @@ const WIDTHS = [92, 64, 78, 55, 86, 70, 60, 88];
 </script>
 
 <template>
-  <div class="skeleton" role="status" :aria-label="$t('query.running')">
+  <div class="gridskeleton" role="status" :aria-label="$t('query.running')">
     <div class="skeleton__head">
       <span
         v-for="column in columns"
@@ -48,7 +48,7 @@ const WIDTHS = [92, 64, 78, 55, 86, 70, 60, 88];
 </template>
 
 <style scoped>
-.skeleton {
+.gridskeleton {
   position: relative;
   display: flex;
   flex: 1;
