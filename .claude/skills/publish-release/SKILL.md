@@ -5,10 +5,19 @@ description: Cut and publish a Shelf release — decide the version, move the ch
 
 # Publishing a release
 
-`make publish` does the mechanical half: it brings `package.json` to whatever
-`VERSION` says, runs the gate, commits, pushes `main`, tags, and drafts the
-release page. The packaging workflow attaches the macOS, Linux and Windows
-files and takes the draft live about forty minutes later.
+`make publish` does the mechanical half: it brings `package.json` **and the
+README's version badge** to whatever `VERSION` says, runs the gate, commits,
+pushes `main`, tags, and drafts the release page. The packaging workflow
+attaches the macOS, Linux and Windows files and takes the draft live about forty
+minutes later.
+
+The badge is in there rather than in these steps on purpose. It is the version
+most people actually see — the first line of the page GitHub opens on, where
+`package.json` is a file nobody reads — and it sat at 1.0.0 through two releases
+because it was a step in a list, and a step in a list is the thing that gets
+forgotten. If the script ever reports that the badge did not match, somebody has
+reworded that line: fix the pattern in `scripts/publish.sh`, do not paste the
+number in by hand, or the next release loses it again.
 
 What it cannot do is decide which number this is or say what changed. That is
 this skill.
@@ -38,6 +47,9 @@ If the user named a version, use it. Otherwise say which you picked and why in
 one sentence, and continue — do not stop to ask.
 
 ### 3. Move the changelog under that number
+
+The changelog is the one document with the version in it that the script does
+not touch, because only a person can say what changed.
 
 Rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` with today's real date,
 and put a fresh empty `## [Unreleased]` above it. Commit that on its own:

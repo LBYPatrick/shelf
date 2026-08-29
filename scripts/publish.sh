@@ -61,6 +61,44 @@ write_manifest_version() {
   ' "$1"
 }
 
+# The README's badge, which is the version most people actually see: it is the
+# first line of the page GitHub opens on, where `package.json` is a file nobody
+# reads. It was left at 1.0.0 across two releases, because it was a step in a
+# checklist and a checklist is the thing that gets forgotten — so it is here
+# with the other two rather than in the instructions.
+#
+# A regular expression, unlike the manifest, because the badge is a URL inside
+# markup rather than a field: shields.io encodes the number into the path, and
+# the alt text repeats it. Anchored on the badge's own colour so it cannot match
+# the MIT or platform badges beside it, and on `img.shields.io/badge/version-`
+# so it cannot match the version numbers in the prose further down — those are
+# history, and 1.0.0 is meant to stay 1.0.0 there.
+write_readme_version() {
+  node -e '
+    const fs = require("node:fs");
+    const [version] = process.argv.slice(1);
+    const before = fs.readFileSync("README.md", "utf8");
+    const after = before.replace(
+      /(img\.shields\.io\/badge\/version-)[0-9]+\.[0-9]+\.[0-9]+(-4C6EF5" alt="Version )[0-9]+\.[0-9]+\.[0-9]+(")/,
+      `$1${version}$2${version}$3`
+    );
+    if (after === before) {
+      console.error("  The README badge did not match; it has been reworded.");
+      process.exit(1);
+    }
+    fs.writeFileSync("README.md", after);
+  ' "$1"
+}
+
+readme_version() {
+  node -p '
+    const found = require("node:fs")
+      .readFileSync("README.md", "utf8")
+      .match(/img\.shields\.io\/badge\/version-([0-9]+\.[0-9]+\.[0-9]+)-4C6EF5/);
+    found ? found[1] : "";
+  '
+}
+
 # ---------------------------------------------------------------- preconditions
 
 git rev-parse --git-dir &>/dev/null || die "Not a git repository."
@@ -72,7 +110,7 @@ current="$(git rev-parse --abbrev-ref HEAD)"
 # The version files are the two this script is allowed to find already edited —
 # editing VERSION and then running publish is the expected way round. Anything
 # else uncommitted would ride along in the release commit unannounced.
-stray="$(git status --porcelain | grep -Ev '^.. (VERSION|package\.json)$' || true)"
+stray="$(git status --porcelain | grep -Ev '^.. (VERSION|package\.json|README\.md)$' || true)"
 if [[ -n "$stray" ]]; then
   echo "" >&2
   echo "  Uncommitted changes other than the version files:" >&2
@@ -143,9 +181,11 @@ fi
 step "Version"
 from_file="$(file_version)"
 from_manifest="$(manifest_version)"
+from_readme="$(readme_version)"
 
 note "VERSION       $from_file"
 note "package.json  $from_manifest"
+note "README badge  ${from_readme:-not found}"
 
 if [[ "$from_file" != "$from_manifest" ]]; then
   warn "They disagree. VERSION is the answer; the manifest will be brought to it."
@@ -176,11 +216,12 @@ git rev-parse -q --verify "refs/tags/$TAG" >/dev/null &&
 
 [[ "$chosen" == "$from_file" ]] || echo "$chosen" > VERSION
 [[ "$chosen" == "$from_manifest" ]] || write_manifest_version "$chosen"
+[[ "$chosen" == "$from_readme" ]] || write_readme_version "$chosen"
 
-if git diff --quiet -- VERSION package.json; then
+if git diff --quiet -- VERSION package.json README.md; then
   note "Both already say $chosen; there is nothing to write."
 else
-  note "Set to $chosen in VERSION and package.json."
+  note "Set to $chosen in VERSION, package.json and the README badge."
 fi
 
 # A release page wants a name. Without one given, the tag is the name — which is
@@ -202,7 +243,7 @@ step "Ready"
 note "branch   $BRANCH -> $REMOTE"
 note "tag      $TAG -> $REMOTE"
 
-if git diff --quiet -- VERSION package.json; then
+if git diff --quiet -- VERSION package.json README.md; then
   note "commit   nothing to commit; $(git rev-parse --short HEAD) is what gets tagged"
 else
   note "commit   chore(release): $chosen"
@@ -229,9 +270,9 @@ fi
 
 # ---------------------------------------------------------------------- publish
 
-if ! git diff --quiet -- VERSION package.json; then
+if ! git diff --quiet -- VERSION package.json README.md; then
   step "Committing"
-  git add VERSION package.json
+  git add VERSION package.json README.md
   git commit -m "chore(release): $chosen"
 fi
 
