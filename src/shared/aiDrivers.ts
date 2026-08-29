@@ -270,6 +270,90 @@ export const AI_DRIVERS: readonly AiDriverInfo[] = [
     capabilities: FULL,
     keyUrl: 'https://ai.azure.com/',
   },
+  /*
+   * Five vendors that speak OpenAI's protocol, each with its own row.
+   *
+   * The rule below still holds — one driver, not five — and these are rows
+   * against that one driver rather than five copies of it. What a row buys is
+   * the thing `openaiCompatible` cannot: a reader who wants DeepSeek should
+   * pick DeepSeek, not pick "OpenAI-compatible" and then go and find out what
+   * its base URL is. The adapter is the same object in every case; only the
+   * address, the suggestions and the place you get a key differ, and all three
+   * are data.
+   *
+   * The addresses are the international ones. Four of these five also run a
+   * mainland endpoint, and that is a field edit rather than a second row —
+   * which is exactly what `baseUrlEditable` is for.
+   */
+  {
+    kind: 'deepseek',
+    detected: false,
+    label: 'DeepSeek',
+    defaultBaseUrl: 'https://api.deepseek.com/v1',
+    baseUrlEditable: true,
+    needsKey: true,
+    acceptsKey: true,
+    defaultModel: 'deepseek-chat',
+    models: ['deepseek-chat', 'deepseek-reasoner'],
+    capabilities: FULL,
+    keyUrl: 'https://platform.deepseek.com/api_keys',
+  },
+  {
+    kind: 'kimi',
+    detected: false,
+    label: 'Kimi',
+    // Moonshot's global endpoint; `api.moonshot.cn` is the mainland one.
+    defaultBaseUrl: 'https://api.moonshot.ai/v1',
+    baseUrlEditable: true,
+    needsKey: true,
+    acceptsKey: true,
+    defaultModel: 'kimi-k2-0711-preview',
+    models: ['kimi-k2-0711-preview', 'moonshot-v1-128k', 'moonshot-v1-32k', 'moonshot-v1-8k'],
+    capabilities: FULL,
+    keyUrl: 'https://platform.moonshot.ai/console/api-keys',
+  },
+  {
+    kind: 'qwen',
+    detected: false,
+    label: 'Qwen',
+    // DashScope's compatible mode. Drop the `-intl` for the mainland endpoint.
+    defaultBaseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+    baseUrlEditable: true,
+    needsKey: true,
+    acceptsKey: true,
+    defaultModel: 'qwen-plus',
+    models: ['qwen-max', 'qwen-plus', 'qwen-turbo'],
+    capabilities: FULL,
+    keyUrl: 'https://bailian.console.alibabacloud.com/',
+  },
+  {
+    kind: 'glm',
+    detected: false,
+    label: 'GLM',
+    // Z.ai is the global front door; `open.bigmodel.cn/api/paas/v4` is the
+    // mainland one, and the models are the same either side.
+    defaultBaseUrl: 'https://api.z.ai/api/paas/v4',
+    baseUrlEditable: true,
+    needsKey: true,
+    acceptsKey: true,
+    defaultModel: 'glm-4.6',
+    models: ['glm-4.6', 'glm-4.5', 'glm-4.5-air'],
+    capabilities: FULL,
+    keyUrl: 'https://z.ai/manage-apikey/apikey-list',
+  },
+  {
+    kind: 'minimax',
+    detected: false,
+    label: 'MiniMax',
+    defaultBaseUrl: 'https://api.minimaxi.com/v1',
+    baseUrlEditable: true,
+    needsKey: true,
+    acceptsKey: true,
+    defaultModel: 'MiniMax-Text-01',
+    models: ['MiniMax-Text-01', 'MiniMax-M1'],
+    capabilities: FULL,
+    keyUrl: 'https://platform.minimaxi.com/user-center/basic-information/interface-key',
+  },
   {
     /*
      * One driver for every server that speaks OpenAI's chat protocol, which by

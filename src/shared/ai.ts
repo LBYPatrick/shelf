@@ -31,6 +31,11 @@ export type AiDriverKind =
   | 'google'
   | 'bedrock'
   | 'azure'
+  | 'deepseek'
+  | 'kimi'
+  | 'qwen'
+  | 'glm'
+  | 'minimax'
   | 'openaiCompatible';
 
 /**

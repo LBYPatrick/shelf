@@ -276,6 +276,27 @@ export const OpenAiCompatibleDriver: AiDriver = {
 };
 
 /**
+ * The vendors whose only difference from OpenAI is where they answer.
+ *
+ * Built from a list rather than written out five times, because that is the
+ * whole claim being made about them: same body, same stream framing, same tool
+ * shape, different host. Each gets its own row in the catalogue so a reader
+ * picks the vendor by name instead of picking "OpenAI-compatible" and then
+ * going to find out what its base URL is — and every one of those rows resolves
+ * to this same adapter with this same route.
+ *
+ * If one of them ever stops being merely a URL — a header nothing else uses, a
+ * deployment in the path — it earns a driver of its own, the way Azure did.
+ */
+const OPENAI_SHAPED = ['deepseek', 'kimi', 'qwen', 'glm', 'minimax'] as const;
+
+export const OpenAiShapedDrivers: readonly AiDriver[] = OPENAI_SHAPED.map((kind) => ({
+  kind,
+  capabilities: driverInfo(kind).capabilities,
+  create: (instance, apiKey) => createAdapter(kind, OPENAI_ROUTE, instance, apiKey),
+}));
+
+/**
  * Azure AI Foundry — OpenAI's models, in somebody's own Azure resource.
  *
  * The same protocol behind a different front door, which is exactly the case

@@ -4,7 +4,12 @@ import { ClaudeCodeDriver } from './drivers/claudeCode';
 import { CodexDriver } from './drivers/codex';
 import { GrokDriver } from './drivers/grok';
 import { GoogleDriver } from './drivers/google';
-import { AzureDriver, OpenAiCompatibleDriver, OpenAiDriver } from './drivers/openai';
+import {
+  AzureDriver,
+  OpenAiCompatibleDriver,
+  OpenAiDriver,
+  OpenAiShapedDrivers,
+} from './drivers/openai';
 import { AiError, type AiAdapter, type AiDriver } from './types';
 
 /**
@@ -26,6 +31,7 @@ const DRIVERS: readonly AiDriver[] = [
   GoogleDriver,
   BedrockDriver,
   AzureDriver,
+  ...OpenAiShapedDrivers,
   OpenAiCompatibleDriver,
 ];
 
