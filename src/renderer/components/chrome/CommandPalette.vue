@@ -11,6 +11,15 @@
  * is why the sidebar no longer carries a filter box. Narrowing a tree in place
  * only ever showed you what you already had open; this reaches the whole
  * database and opens what you pick.
+ *
+ * **It does not animate, and that is the point.** It opened on a 280ms rise and
+ * a fade, which is a perfectly nice animation on a surface nobody reaches for
+ * fifty times a day. This one is reached from the keyboard, and an animation on
+ * a keyboard action is a delay between the keystroke and a field the reader is
+ * already typing into — every time, forever. Raycast has no open or close
+ * animation at all; that is the standard being matched here rather than a
+ * corner being cut. The correct duration for this surface is zero, so there is
+ * no `<Transition>` to shorten.
  */
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useDismiss } from '../../composables/useDismiss';
@@ -436,168 +445,166 @@ function commit(): void {
 
 <template>
   <Teleport to="body">
-    <Transition name="palette">
-      <div
-        v-if="open"
-        class="scrim"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="$t('palette.label')"
-        @click.self="open = false"
-      >
-        <div class="palette surface-sheet mat-edge-top">
-          <div class="palette__field">
-            <!--
-              The glyph is the mode. A chevron for commands, a magnifier for
-              tables — drawn in the same stroke weight, because the field has
-              not become a different control, only a different mode of one.
-            -->
-            <AppIcon
-              class="palette__glyph"
-              :class="{ 'palette__glyph--command': commandMode }"
-              :name="commandMode ? 'chevron' : 'search'"
-              :size="15"
-            />
+    <div
+      v-if="open"
+      class="scrim"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="$t('palette.label')"
+      @click.self="open = false"
+    >
+      <div class="palette surface-sheet mat-edge-top">
+        <div class="palette__field">
+          <!--
+            The glyph is the mode. A chevron for commands, a magnifier for
+            tables — drawn in the same stroke weight, because the field has
+            not become a different control, only a different mode of one.
+          -->
+          <AppIcon
+            class="palette__glyph"
+            :class="{ 'palette__glyph--command': commandMode }"
+            :name="commandMode ? 'chevron' : 'search'"
+            :size="15"
+          />
 
-            <input
-              ref="input"
-              v-model="query"
-              class="palette__input"
-              type="text"
-              :placeholder="
-                commandMode ? $t('commands.commandPlaceholder') : $t('commands.placeholder')
-              "
-              spellcheck="false"
-              autocomplete="off"
-              role="combobox"
-              aria-controls="palette-results"
-              aria-autocomplete="list"
-              :aria-expanded="rows.length > 0"
-              :aria-activedescendant="rows.length ? `palette-option-${selected}` : undefined"
-              @keydown.down.prevent="move(1)"
-              @keydown.up.prevent="move(-1)"
-              @keydown.page-down.prevent="move(page())"
-              @keydown.page-up.prevent="move(-page())"
-              @keydown.home.prevent="jump(0)"
-              @keydown.end.prevent="jump(rows.length - 1)"
-              @keydown.enter.prevent="commit"
-            />
+          <input
+            ref="input"
+            v-model="query"
+            class="palette__input"
+            type="text"
+            :placeholder="
+              commandMode ? $t('commands.commandPlaceholder') : $t('commands.placeholder')
+            "
+            spellcheck="false"
+            autocomplete="off"
+            role="combobox"
+            aria-controls="palette-results"
+            aria-autocomplete="list"
+            :aria-expanded="rows.length > 0"
+            :aria-activedescendant="rows.length ? `palette-option-${selected}` : undefined"
+            @keydown.down.prevent="move(1)"
+            @keydown.up.prevent="move(-1)"
+            @keydown.page-down.prevent="move(page())"
+            @keydown.page-up.prevent="move(-page())"
+            @keydown.home.prevent="jump(0)"
+            @keydown.end.prevent="jump(rows.length - 1)"
+            @keydown.enter.prevent="commit"
+          />
 
-            <button
-              v-if="query"
-              type="button"
-              class="palette__clear focus-fill"
-              :aria-label="$t('action.clear')"
-              @click="
-                query = '';
-                input?.focus();
-              "
-            >
-              <AppIcon name="close" :size="11" />
-            </button>
-
-            <kbd class="palette__key">esc</kbd>
-          </div>
-
-          <div
-            v-if="rows.length"
-            id="palette-results"
-            ref="list"
-            class="palette__list"
-            role="listbox"
+          <button
+            v-if="query"
+            type="button"
+            class="palette__clear focus-fill"
+            :aria-label="$t('action.clear')"
+            @click="
+              query = '';
+              input?.focus();
+            "
           >
-            <template v-for="section in sections" :key="section.key">
-              <p class="palette__section type-label">
-                {{ section.label }} ·
-                {{
-                  section.key === 'tables' && truncated > 0
-                    ? $t('commands.someOf', {
-                        shown: section.items.length,
-                        total: matchedTables.length,
-                      })
-                    : section.items.length
-                }}
-              </p>
+            <AppIcon name="close" :size="11" />
+          </button>
 
-              <div
-                v-for="entry in section.items"
-                :id="`palette-option-${entry.index}`"
-                :key="entry.index"
-                class="palette__row"
-                :class="{ 'palette__row--on': entry.index === selected }"
-                :data-index="entry.index"
-                role="option"
-                :aria-selected="entry.index === selected"
-                @mouseenter="selected = entry.index"
-                @click="choose(entry.row)"
-              >
-                <template v-if="entry.row.kind === 'command'">
-                  <span
-                    v-if="entry.row.command.swatch"
-                    class="palette__swatch"
-                    :style="{ background: entry.row.command.swatch }"
-                  />
-                  <AppIcon
-                    v-else
-                    class="palette__icon"
-                    :name="entry.row.command.icon"
-                    :size="13"
-                  />
-                  <span class="palette__label">{{ entry.row.command.title }}</span>
-                  <span class="palette__slash">{{ entry.row.command.slash }}</span>
-                </template>
+          <kbd class="palette__key">esc</kbd>
+        </div>
 
-                <template v-else-if="entry.row.kind === 'tab'">
-                  <AppIcon class="palette__icon" name="query" :size="13" />
-                  <span class="palette__label">{{ entry.row.title }}</span>
-                  <span class="palette__slash">{{ entry.row.subtitle }}</span>
-                </template>
+        <div
+          v-if="rows.length"
+          id="palette-results"
+          ref="list"
+          class="palette__list"
+          role="listbox"
+        >
+          <template v-for="section in sections" :key="section.key">
+            <p class="palette__section type-label">
+              {{ section.label }} ·
+              {{
+                section.key === 'tables' && truncated > 0
+                  ? $t('commands.someOf', {
+                      shown: section.items.length,
+                      total: matchedTables.length,
+                    })
+                  : section.items.length
+              }}
+            </p>
 
-                <template v-else>
-                  <AppIcon class="palette__icon" name="table" :size="13" />
-                  <!-- The qualifier is dimmed and the name is not: the path is
-                       there to disambiguate, not to be read. -->
-                  <span class="palette__label">
-                    <span class="palette__qualifier">{{
-                      entry.row.hit.path.slice(
-                        0,
-                        entry.row.hit.path.length - entry.row.hit.entity.name.length
-                      )
-                    }}</span
-                    >{{ entry.row.hit.entity.name }}
-                  </span>
-                  <span class="palette__slash">{{ entry.row.hit.entity.kind }}</span>
-                </template>
-              </div>
-            </template>
-          </div>
+            <div
+              v-for="entry in section.items"
+              :id="`palette-option-${entry.index}`"
+              :key="entry.index"
+              class="palette__row"
+              :class="{ 'palette__row--on': entry.index === selected }"
+              :data-index="entry.index"
+              role="option"
+              :aria-selected="entry.index === selected"
+              @mouseenter="selected = entry.index"
+              @click="choose(entry.row)"
+            >
+              <template v-if="entry.row.kind === 'command'">
+                <span
+                  v-if="entry.row.command.swatch"
+                  class="palette__swatch"
+                  :style="{ background: entry.row.command.swatch }"
+                />
+                <AppIcon
+                  v-else
+                  class="palette__icon"
+                  :name="entry.row.command.icon"
+                  :size="13"
+                />
+                <span class="palette__label">{{ entry.row.command.title }}</span>
+                <span class="palette__slash">{{ entry.row.command.slash }}</span>
+              </template>
 
-          <div v-else class="palette__empty">
-            <p>{{ query ? $t('commands.nothing') : $t('palette.openSomething') }}</p>
+              <template v-else-if="entry.row.kind === 'tab'">
+                <AppIcon class="palette__icon" name="query" :size="13" />
+                <span class="palette__label">{{ entry.row.title }}</span>
+                <span class="palette__slash">{{ entry.row.subtitle }}</span>
+              </template>
 
-            <!-- The path was wrong, not the search. Here is the right one. -->
-            <template v-if="elsewhere.length > 0">
-              <p class="palette__aside">
-                {{ $t('commands.tryPath') }}
-              </p>
-              <ul class="palette__paths">
-                <li v-for="path of elsewhere" :key="path">
-                  <button type="button" class="palette__path" @click="query = path">
-                    {{ path }}
-                  </button>
-                </li>
-              </ul>
-            </template>
-          </div>
+              <template v-else>
+                <AppIcon class="palette__icon" name="table" :size="13" />
+                <!-- The qualifier is dimmed and the name is not: the path is
+                     there to disambiguate, not to be read. -->
+                <span class="palette__label">
+                  <span class="palette__qualifier">{{
+                    entry.row.hit.path.slice(
+                      0,
+                      entry.row.hit.path.length - entry.row.hit.entity.name.length
+                    )
+                  }}</span
+                  >{{ entry.row.hit.entity.name }}
+                </span>
+                <span class="palette__slash">{{ entry.row.hit.entity.kind }}</span>
+              </template>
+            </div>
+          </template>
+        </div>
 
-          <div class="palette__foot type-label">
-            <span><kbd class="palette__key">↵</kbd> {{ $t('commands.openHint') }}</span>
-            <span><kbd class="palette__key">/</kbd> {{ $t('commands.commandHint') }}</span>
-            <span class="palette__hint">{{ $t('commands.hintPath') }}</span>
-          </div>
+        <div v-else class="palette__empty">
+          <p>{{ query ? $t('commands.nothing') : $t('palette.openSomething') }}</p>
+
+          <!-- The path was wrong, not the search. Here is the right one. -->
+          <template v-if="elsewhere.length > 0">
+            <p class="palette__aside">
+              {{ $t('commands.tryPath') }}
+            </p>
+            <ul class="palette__paths">
+              <li v-for="path of elsewhere" :key="path">
+                <button type="button" class="palette__path" @click="query = path">
+                  {{ path }}
+                </button>
+              </li>
+            </ul>
+          </template>
+        </div>
+
+        <div class="palette__foot type-label">
+          <span><kbd class="palette__key">↵</kbd> {{ $t('commands.openHint') }}</span>
+          <span><kbd class="palette__key">/</kbd> {{ $t('commands.commandHint') }}</span>
+          <span class="palette__hint">{{ $t('commands.hintPath') }}</span>
         </div>
       </div>
-    </Transition>
+    </div>
   </Teleport>
 </template>
 
@@ -811,34 +818,5 @@ function commit(): void {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-mono);
-}
-
-.palette-enter-active,
-.palette-leave-active {
-  transition: opacity 180ms ease-out;
-}
-
-.palette-enter-active .palette,
-.palette-leave-active .palette {
-  transition:
-    transform 280ms cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 180ms ease-out;
-}
-
-.palette-enter-from,
-.palette-leave-to {
-  opacity: 0;
-}
-
-.palette-enter-from .palette,
-.palette-leave-to .palette {
-  transform: translateY(-10px) scale(0.98);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .palette-enter-from .palette,
-  .palette-leave-to .palette {
-    transform: none;
-  }
 }
 </style>
