@@ -14,10 +14,10 @@
  * these runs in the background.
  *
  * **It can be thrown away.** Dragging horizontally moves it one to one with the
- * pointer and fades it as it goes; past 80% of its own width — react-toastify's
- * `draggablePercent` — releasing it dismisses it, and anything short of that
- * springs back. A close button is a small target reached by aiming; a swipe is
- * a gesture, and for something you are dismissing rather than reading it is the
+ * pointer and fades it as it goes; let go where the momentum would carry it
+ * past 80% of its own width and it goes, and anything short of that springs
+ * back. A close button is a small target reached by aiming; a swipe is a
+ * gesture, and for something you are dismissing rather than reading it is the
  * better of the two.
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -45,12 +45,11 @@ const live = computed(() =>
 
 /* -------------------------------------------------------------------- swipe */
 
-/** How far across its own width a notice has to be thrown to go. Theirs is 80%. */
+/** How far across its own width a throw has to be headed to count as one. */
 const THROW = 0.8;
 
 const root = ref<HTMLElement>();
 const offset = ref(0);
-const thrown = ref(false);
 
 /**
  * How far a swipe has got, as a fraction, for the fade.
@@ -70,7 +69,17 @@ const { start, dragging } = useDrag({
   onDrag: (state) => (offset.value = state.value),
   onRelease: (state) => {
     const width = root.value?.offsetWidth ?? 320;
-    if (Math.abs(state.value) < width * THROW) {
+
+    /*
+     * Where the flick would come to rest, not where the finger let go.
+     *
+     * Judging the throw on distance alone makes a quick flick fail: it is
+     * released early by definition, so a gesture that plainly meant "go" is
+     * answered by the card sliding back under the hand that threw it.
+     * `projected` is the composable's own momentum projection, which is what it
+     * computes it for.
+     */
+    if (Math.abs(state.projected) < width * THROW) {
       // Short of the threshold: back where it was, on the same curve
       // everything else in this app returns on.
       offset.value = 0;
@@ -78,18 +87,20 @@ const { start, dragging } = useDrag({
     }
 
     /*
-     * Sent the way it was going, and dismissed when it gets there. The element
-     * has to leave the screen before it leaves the DOM, or the ones below it
-     * close the gap while this one is still visibly mid-flight.
+     * Gone at once, and left where the hand put it.
+     *
+     * There was a flight off the trailing edge here, dismissed on its
+     * `transitionend`. It animated nothing anybody could see — the fade is tied
+     * to the distance, so a card past the threshold is already fully
+     * transparent — while holding its place in the column for the length of it,
+     * so the gap took a fifth of a second to close after a gesture that had
+     * finished. Worse, under `prefers-reduced-motion` `base.css` takes
+     * `transform` out of `transition-property` altogether: the event never
+     * fired, and a thrown notice stayed in the list, invisible, for good.
      */
-    thrown.value = true;
-    offset.value = Math.sign(state.value) * width * 2;
+    emit('dismiss');
   },
 });
-
-function onSettled(): void {
-  if (thrown.value) emit('dismiss');
-}
 
 function onGrab(event: PointerEvent): void {
   // Not from the close button or the action: those are targets, and a press on
@@ -166,7 +177,6 @@ watch(
   () => props.notice.message,
   () => {
     offset.value = 0;
-    thrown.value = false;
     hold();
     remaining = props.notice.expire ?? 0;
     if (!paused.value) run();
@@ -191,7 +201,6 @@ function act(): void {
     @pointerleave="hovered = false"
     @focusin="hovered = true"
     @focusout="hovered = false"
-    @transitionend.self="onSettled"
   >
     <AppIcon class="notice__mark" :name="ICON[notice.tone]" :size="14" />
 
@@ -322,10 +331,9 @@ function act(): void {
   }
 }
 
-/* The throw still tracks the hand; only the spring back is dropped. */
-@media (prefers-reduced-motion: reduce) {
-  .notice:not(.notice--dragging) {
-    transition-duration: 1ms;
-  }
-}
+/*
+ * Reduced motion is answered in `base.css`, not here: its global rule takes
+ * `transform` out of `transition-property`, so the card still tracks the hand
+ * — the drag sets the transform directly — and simply stops springing back.
+ */
 </style>
