@@ -2,6 +2,8 @@ import { defineStore } from 'pinia';
 import { computed, ref, watchEffect } from 'vue';
 import {
   ACCENT_PRESETS,
+  accentId,
+  readAccent,
   DEFAULT_ACCENT,
   DEFAULT_MATERIALS,
   DEFAULT_SYNTAX,
@@ -20,7 +22,8 @@ const STORAGE_KEY = 'shelf.appearance';
 
 interface StoredAppearance {
   mode: ThemeMode;
-  accent: Oklch;
+  /** The preset's id. Older builds wrote the triple; `readAccent` takes both. */
+  accent: string;
   density: Density;
   materials: Materials;
   syntax: Syntax;
@@ -40,7 +43,7 @@ export const useTheme = defineStore('theme', () => {
   const stored = readStored();
 
   const mode = ref<ThemeMode>(stored.mode ?? 'system');
-  const accent = ref<Oklch>(stored.accent ?? DEFAULT_ACCENT);
+  const accent = ref<Oklch>(readAccent(stored.accent) ?? DEFAULT_ACCENT);
   const density = ref<Density>(stored.density ?? 'default');
   // Clamped on the way in as well as on the way out: a hand-edited or
   // half-written store should not be able to put the window into a state with
@@ -67,12 +70,7 @@ export const useTheme = defineStore('theme', () => {
   const presets = ACCENT_PRESETS;
 
   const activePreset = computed(() =>
-    presets.find(
-      (preset) =>
-        preset.seed.h === accent.value.h &&
-        preset.seed.c === accent.value.c &&
-        preset.seed.l === accent.value.l
-    )
+    presets.find((preset) => preset.id === accentId(accent.value))
   );
 
   watchEffect(() => {
@@ -93,7 +91,7 @@ export const useTheme = defineStore('theme', () => {
         STORAGE_KEY,
         JSON.stringify({
           mode: mode.value,
-          accent: accent.value,
+          accent: accentId(accent.value) ?? ACCENT_PRESETS[0]!.id,
           density: density.value,
           materials: materials.value,
           syntax: syntax.value,

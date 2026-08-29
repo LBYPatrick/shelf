@@ -17,7 +17,13 @@ import { useToasts } from '../../stores/toasts';
 import { parseSettings, serializeSettings, type SettingsState } from '@shared/settingsFile';
 import { documentFileName } from '@shared/fileNames';
 import { errorMessage } from '@shared/errors';
-import { DEFAULT_MATERIALS, MATERIAL_LIMITS, oklch } from '../../styles/theme';
+import {
+  ACCENT_PRESETS,
+  DEFAULT_MATERIALS,
+  MATERIAL_LIMITS,
+  accentSeed,
+  oklch,
+} from '../../styles/theme';
 import AppIcon from '../ui/AppIcon.vue';
 import AppMark from '../ui/AppMark.vue';
 import CheckBox from '../ui/CheckBox.vue';
@@ -86,7 +92,7 @@ function currentState(): SettingsState {
     appearance: {
       mode: theme.mode,
       density: theme.density,
-      accent: { l: theme.accent.l, c: theme.accent.c, h: theme.accent.h },
+      accent: theme.activePreset?.id ?? ACCENT_PRESETS[0]!.id,
       opacity: theme.materials.opacity,
       syntax: { ...theme.syntax },
     },
@@ -98,7 +104,7 @@ function currentState(): SettingsState {
 function applyState(state: SettingsState): void {
   theme.mode = state.appearance.mode as typeof theme.mode;
   theme.density = state.appearance.density as typeof theme.density;
-  theme.accent = state.appearance.accent;
+  theme.accent = accentSeed(state.appearance.accent) ?? theme.accent;
   theme.materials = { ...theme.materials, opacity: state.appearance.opacity };
   theme.syntax = { ...state.appearance.syntax };
   settings.values = { ...settings.values, ...state.preferences } as typeof settings.values;

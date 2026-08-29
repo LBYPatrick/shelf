@@ -21,6 +21,7 @@
 import { UNLIMITED } from './rowLimit';
 import { isObject } from './json';
 import { SYNTAX_SCHEMES } from './syntaxThemes';
+import { accentId, readAccent as readStoredAccent } from './accents';
 import { normalizeAccelerator, type KeymapOverrides } from './keymap';
 
 export const SETTINGS_DOCUMENT_KIND = 'shelf.settings';
@@ -30,7 +31,15 @@ export const SETTINGS_DOCUMENT_VERSION = 1;
 export interface AppearanceState {
   readonly mode: string;
   readonly density: string;
-  readonly accent: { readonly l: number; readonly c: number; readonly h: number };
+  /**
+   * The name of the accent that was chosen — `"blue"`, `"graphite"`.
+   *
+   * Not its three numbers. The interface offers eight decided colours and no
+   * free well, so a triple here would be a value that could be anything holding
+   * one that can only ever be one of eight — and it invited a hand-edited file
+   * to ask for a colour with no swatch to show it as chosen.
+   */
+  readonly accent: string;
   readonly opacity: number;
   /**
    * The code palette, as a pair.
@@ -225,14 +234,17 @@ function readKeymap(current: KeymapOverrides, incoming: unknown): KeymapOverride
   return next;
 }
 
-/** The accent is three numbers that only mean something together, so it is
- *  taken whole or not at all. */
-function readAccent(current: AppearanceState['accent'], incoming: unknown) {
-  if (!isObject(incoming)) return current;
-  const { l, c, h } = incoming;
-  if (typeof l !== 'number' || typeof c !== 'number' || typeof h !== 'number') return current;
-  if (!Number.isFinite(l) || !Number.isFinite(c) || !Number.isFinite(h)) return current;
-  return { l: Math.min(1, Math.max(0, l)), c: Math.max(0, c), h };
+/**
+ * The accent named in a document, or what is in force if it names none.
+ *
+ * `readAccent` in `theme.ts` does the recognising, because that file owns the
+ * list of what an accent may be — and it takes both shapes, so a document
+ * written by a build that stored the triple still restores the right colour
+ * rather than silently falling back to blue.
+ */
+function readAccentName(current: AppearanceState['accent'], incoming: unknown) {
+  const seed = readStoredAccent(incoming);
+  return seed ? (accentId(seed) ?? current) : current;
 }
 
 function applySettingsDocument(input: unknown, current: SettingsState): ApplyResult {
@@ -253,7 +265,7 @@ function applySettingsDocument(input: unknown, current: SettingsState): ApplyRes
           },
           appearance
         ),
-        accent: readAccent(current.appearance.accent, appearance['accent']),
+        accent: readAccentName(current.appearance.accent, appearance['accent']),
         syntax: readSyntax(current.appearance.syntax, appearance['syntax']),
       },
       preferences: merge(current.preferences, preferences),

@@ -12,6 +12,14 @@
 
 import { contrastRatio, type Oklch } from '@shared/color';
 import {
+  ACCENT_PRESETS,
+  DEFAULT_ACCENT,
+  accentId,
+  accentSeed,
+  readAccent,
+  type AccentPreset,
+} from '@shared/accents';
+import {
   DEFAULT_SCHEME,
   SYNTAX_TOKENS,
   syntaxProperties,
@@ -157,28 +165,8 @@ export function alphaTransform(opacity: number): { scale: number; lift: number }
   return { scale: toSolid, lift: 1 - toSolid };
 }
 
-export interface AccentPreset {
-  readonly id: string;
-  readonly name: string;
-  readonly seed: Oklch;
-}
-
-/**
- * Presets sit at a lightness that reads as the same weight across hues, rather
- * than at a fixed chroma, which would make yellow scream and blue whisper.
- */
-export const ACCENT_PRESETS: readonly AccentPreset[] = [
-  { id: 'blue', name: 'Blue', seed: { l: 0.6, c: 0.21, h: 250 } },
-  { id: 'purple', name: 'Purple', seed: { l: 0.57, c: 0.23, h: 300 } },
-  { id: 'pink', name: 'Pink', seed: { l: 0.63, c: 0.21, h: 355 } },
-  { id: 'red', name: 'Red', seed: { l: 0.58, c: 0.21, h: 25 } },
-  { id: 'orange', name: 'Orange', seed: { l: 0.68, c: 0.18, h: 55 } },
-  { id: 'yellow', name: 'Yellow', seed: { l: 0.79, c: 0.16, h: 90 } },
-  { id: 'green', name: 'Green', seed: { l: 0.65, c: 0.17, h: 150 } },
-  { id: 'graphite', name: 'Graphite', seed: { l: 0.55, c: 0.02, h: 250 } },
-];
-
-export const DEFAULT_ACCENT = ACCENT_PRESETS[0]!.seed;
+export { ACCENT_PRESETS, DEFAULT_ACCENT, accentId, accentSeed, readAccent };
+export type { AccentPreset };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 

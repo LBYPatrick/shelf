@@ -150,7 +150,7 @@ const state: SettingsState = {
   appearance: {
     mode: 'system',
     density: 'default',
-    accent: { l: 0.6, c: 0.15, h: 250 },
+    accent: 'graphite',
     opacity: 0.9,
     syntax: { light: 'monokaiPro', dark: 'monokaiPro', sync: true },
   },
@@ -209,20 +209,42 @@ describe('settings documents', () => {
     if (result.ok) expect(result.state.preferences['fromTheFuture']).toBeUndefined();
   });
 
-  it('takes the accent whole or not at all', () => {
-    const partial = parseSettings(
-      JSON.stringify({ appearance: { accent: { l: 0.4 } } }),
-      state
-    );
-    expect(partial.ok).toBe(true);
-    if (partial.ok) expect(partial.state.appearance.accent).toEqual(state.appearance.accent);
+  /*
+   * The accent is a name now, and the set of names is closed.
+   *
+   * It used to be the three numbers, taken whole — which meant a hand-edited
+   * document could ask for any colour in the space, and get one that no swatch
+   * in the interface could show as chosen. The interface offers eight decided
+   * colours and no free well, so the document says which of the eight.
+   */
+  it('takes an accent it has a swatch for, and no other', () => {
+    const known = parseSettings(JSON.stringify({ appearance: { accent: 'green' } }), state);
+    expect(known.ok).toBe(true);
+    if (known.ok) expect(known.state.appearance.accent).toBe('green');
 
-    const whole = parseSettings(
-      JSON.stringify({ appearance: { accent: { l: 0.5, c: 0.2, h: 30 } } }),
+    for (const asked of ['chartreuse', '', 42, null, { l: 0.5, c: 0.2, h: 30 }]) {
+      const result = parseSettings(JSON.stringify({ appearance: { accent: asked } }), state);
+      expect(result.ok, `${JSON.stringify(asked)} is not a document error`).toBe(true);
+      if (result.ok) {
+        expect(result.state.appearance.accent, `${JSON.stringify(asked)} stands`).toBe(
+          state.appearance.accent
+        );
+      }
+    }
+  });
+
+  /*
+   * A document written by a build that stored the triple is a document somebody
+   * still has. The numbers recover their name exactly, because only a preset
+   * could ever have set them.
+   */
+  it('reads the shape older builds wrote', () => {
+    const old = parseSettings(
+      JSON.stringify({ appearance: { accent: { l: 0.65, c: 0.17, h: 150 } } }),
       state
     );
-    expect(whole.ok).toBe(true);
-    if (whole.ok) expect(whole.state.appearance.accent).toEqual({ l: 0.5, c: 0.2, h: 30 });
+    expect(old.ok).toBe(true);
+    if (old.ok) expect(old.state.appearance.accent).toBe('green');
   });
 
   it('says why, when it is not a document at all', () => {
