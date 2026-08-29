@@ -233,9 +233,37 @@ async function remove(): Promise<void> {
         </li>
       </ul>
 
-      <p v-else class="intro intro--empty">
+      <p v-else-if="assistant.unavailable.length === 0" class="intro intro--empty">
         {{ $t('assistant.noProviderYet') }}
       </p>
+
+      <!--
+        The command-line assistants this machine has not got.
+        ────────────────────────────────────────────────────
+        Shown rather than omitted, because a list that leaves them out answers
+        "can I use Codex with this?" by saying nothing at all — the reader
+        cannot tell a provider that is missing from one that was never
+        supported. They are not rows you can press: there is nothing to
+        configure about a program that is not here, and the fix is a terminal
+        rather than this sheet.
+
+        The reason is said once, above them, rather than on each row. Three rows
+        each carrying the same sentence is the same fact three times, and it was
+        drawn in the monospace face this list keeps for model ids — which is
+        right for `gpt-5` and wrong for a sentence.
+      -->
+      <template v-if="assistant.unavailable.length > 0">
+        <p class="absent__label type-label">{{ $t('assistant.notInstalledHelp') }}</p>
+
+        <ul class="providerlist providerlist--absent">
+          <li v-for="provider in assistant.unavailable" :key="provider.id">
+            <div class="row row--detected row--absent">
+              <ProviderMark class="row__glyph" :driver="provider.driver" :size="14" />
+              <span class="row__name">{{ provider.name }}</span>
+            </div>
+          </li>
+        </ul>
+      </template>
     </template>
 
     <!-- The form. -->
@@ -368,6 +396,25 @@ async function remove(): Promise<void> {
 
 .intro--empty {
   margin-bottom: 0;
+}
+
+/*
+ * Dimmed as a set rather than a colour per line, so the two lists read as one
+ * list with a quiet half rather than as two kinds of row that happen to sit
+ * near each other. The mark keeps its own colour at this opacity, which is what
+ * makes the row still recognisable as the provider it names.
+ */
+.providerlist--absent {
+  opacity: 0.55;
+}
+
+.absent__label {
+  margin: var(--gap) 0 0;
+  color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
+}
+
+.row--absent {
+  cursor: default;
 }
 
 .providerlist {

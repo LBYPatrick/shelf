@@ -736,7 +736,9 @@
     "cutOff": "cut off at the row limit",
     "chooseProvider": "Choose a provider",
     "theQuery": "Query",
-    "chat": "Chat"
+    "chat": "Chat",
+    "notInstalled": "Not installed",
+    "notInstalledHelp": "Not on this machine — install one and it appears here"
   },
   "chats": {
     "title": "Chats",

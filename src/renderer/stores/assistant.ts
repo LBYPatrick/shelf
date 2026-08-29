@@ -11,7 +11,7 @@ import type {
   AiProviderInput,
 } from '@shared/ai';
 import type { SavedChat } from '@shared/appdb';
-import { detectedProvider, isDetectedProviderId } from '@shared/aiDrivers';
+import { AI_DRIVERS, detectedProvider, isDetectedProviderId } from '@shared/aiDrivers';
 import { NO_FILTER, type JobFilter } from '@shared/jobFilter';
 import { chatTitle } from '@shared/chatTitle';
 import type { SchemaScope } from '@shared/schemaDoc';
@@ -124,6 +124,29 @@ export const useAssistant = defineStore('assistant', () => {
    * rest of the list starts with a trip to a website for a key.
    */
   const providers = computed<AiProvider[]>(() => [...installed.value, ...stored.value]);
+
+  /**
+   * The command-line assistants this build knows about and this machine has not
+   * got.
+   *
+   * Shown, and not choosable. A list that simply omits them answers "can I use
+   * Codex with this?" by saying nothing at all — the reader cannot tell a
+   * provider that is missing from one that was never supported, and the only
+   * way to find out is to install something and look again. Named and greyed,
+   * the list is the answer.
+   *
+   * Deliberately *not* part of `providers`. That is the set a turn can actually
+   * use, and it is what `configured` and `active` are computed from — folding
+   * these in would make an unconfigured machine claim it had an assistant, warm
+   * a schema nobody can ask about, and offer a name-suggestion button that
+   * cannot answer.
+   */
+  const unavailable = computed<AiProvider[]>(() => {
+    const here = new Set(installed.value.map((provider) => provider.driver));
+    return AI_DRIVERS.filter((driver) => driver.detected && !here.has(driver.kind)).map(
+      (driver) => detectedProvider(driver.kind)
+    );
+  });
 
   const active = computed<AiProvider | null>(
     () =>
@@ -528,6 +551,7 @@ export const useAssistant = defineStore('assistant', () => {
 
   return {
     providers,
+    unavailable,
     filter,
     preferredId,
     loaded,

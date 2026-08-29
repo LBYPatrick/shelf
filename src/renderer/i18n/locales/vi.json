@@ -736,7 +736,9 @@
     "cutOff": "bị cắt ở giới hạn hàng",
     "chooseProvider": "Chọn nhà cung cấp",
     "theQuery": "Câu truy vấn",
-    "chat": "Trò chuyện"
+    "chat": "Trò chuyện",
+    "notInstalled": "Chưa cài đặt",
+    "notInstalledHelp": "Không có trên máy này — cài đặt xong nó sẽ xuất hiện ở đây"
   },
   "chats": {
     "title": "Trò chuyện",

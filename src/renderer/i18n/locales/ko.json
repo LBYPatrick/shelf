@@ -736,7 +736,9 @@
     "cutOff": "행 제한에서 잘림",
     "chooseProvider": "공급자 선택",
     "theQuery": "쿼리",
-    "chat": "대화"
+    "chat": "대화",
+    "notInstalled": "설치되지 않음",
+    "notInstalledHelp": "이 컴퓨터에 없음 — 설치하면 여기에 나타납니다"
   },
   "chats": {
     "title": "대화",

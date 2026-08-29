@@ -165,17 +165,33 @@ const providerOptions = computed<MenuItem[]>(() => [
     id: provider.id,
     label: `${provider.name} · ${provider.model}`,
   })),
+  /*
+   * The command-line assistants this machine has not got, named and disabled.
+   *
+   * Leaving them out answers "can I use Codex with this?" by saying nothing:
+   * the reader cannot tell a provider that is missing from one that was never
+   * supported, and the only way to find out is to install something and look
+   * again. They say what is wrong rather than only being grey, because a row
+   * that is dim and silent is a row that reads as broken.
+   */
+  ...assistant.unavailable.map((provider) => ({
+    id: provider.id,
+    label: `${provider.name} · ${t('assistant.notInstalled')}`,
+    disabled: true,
+  })),
   {
     id: MANAGE,
     label: t('assistant.manageProviders'),
     icon: 'settings',
-    startsGroup: assistant.providers.length > 0,
+    startsGroup: assistant.providers.length + assistant.unavailable.length > 0,
   },
 ]);
 
 /** The driver behind a row, so the list can wear each provider's own mark. */
 function driverFor(id: string): AiDriverKind | undefined {
-  return assistant.providers.find((provider) => provider.id === id)?.driver;
+  return [...assistant.providers, ...assistant.unavailable].find(
+    (provider) => provider.id === id
+  )?.driver;
 }
 
 const providerValue = computed<string>({

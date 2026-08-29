@@ -736,7 +736,9 @@
     "cutOff": "行数上限で打ち切り",
     "chooseProvider": "提供元を選択",
     "theQuery": "クエリ",
-    "chat": "チャット"
+    "chat": "チャット",
+    "notInstalled": "未インストール",
+    "notInstalledHelp": "このマシンにはありません。インストールするとここに表示されます"
   },
   "chats": {
     "title": "チャット",

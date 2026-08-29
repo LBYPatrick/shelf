@@ -736,7 +736,9 @@
     "cutOff": "已到行数上限",
     "chooseProvider": "选择提供方",
     "theQuery": "查询",
-    "chat": "对话"
+    "chat": "对话",
+    "notInstalled": "未安装",
+    "notInstalledHelp": "这台机器上没有 — 安装后就会出现在这里"
   },
   "chats": {
     "title": "对话",
