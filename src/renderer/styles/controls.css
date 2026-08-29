@@ -292,7 +292,26 @@
   white-space: nowrap;
   transition:
     background-color var(--t-hover) var(--ease-out),
-    color var(--t-hover) var(--ease-out);
+    color var(--t-hover) var(--ease-out),
+    transform var(--t-press) var(--ease-out);
+}
+
+/*
+ * The press, answered.
+ *
+ * These are the most-pressed controls in the window — Run, Run current, Format,
+ * Explain, Save — and they gave no sign of having been pressed at all, because
+ * they are bare buttons rather than `PressButton` and inherited nothing from
+ * it. The rule is already written down: feedback lands on the press, not on the
+ * click, and a control that waits for the click to acknowledge one has already
+ * felt slow by the time it does.
+ *
+ * `0.97`, which is `PressButton`'s own number. Two controls sitting in the same
+ * row answering a press by different amounts is worse than neither answering.
+ */
+.toolbar__action:active:not(:disabled),
+.toolbar__mode:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 /* A square target for an action that is only ever an icon. */
@@ -655,6 +674,20 @@
   padding: var(--gap) calc(var(--hit-min) + var(--gap)) var(--gap) var(--gap);
   border-radius: var(--control-radius);
   text-align: start;
+  transition: transform var(--t-press) var(--ease-out);
+}
+
+/*
+ * Every card in the sidebar is one of these — a connection, a job, a chat, a
+ * history row, a saved query — and none of them moved under the finger.
+ *
+ * `0.985` rather than the `0.97` a button gets. A tile is four times the width,
+ * and the same ratio on a box that wide is a visible lurch where on a button it
+ * is a nudge; what has to match between them is that *something* happens, not
+ * how many pixels it is.
+ */
+.tile__face:active {
+  transform: scale(0.985);
 }
 
 /*

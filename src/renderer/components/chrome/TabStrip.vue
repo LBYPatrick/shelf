@@ -1038,7 +1038,22 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   transition:
     width var(--t-panel) var(--ease-sheet),
     background-color var(--t-hover) var(--ease-out),
-    color var(--t-hover) var(--ease-out);
+    color var(--t-hover) var(--ease-out),
+    transform var(--t-press) var(--ease-out);
+}
+
+/*
+ * A tab is the most-clicked target in the window and answered a press with
+ * nothing, being a bare button rather than a `PressButton`.
+ *
+ * `0.98`, smaller than the `0.97` a toolbar button gets, because the marker
+ * travelling to the tab is already an answer and two responses to one click
+ * compete. And not while it is being carried: a dragged tab is moved by an
+ * inline transform, which beats this rule anyway, so the exclusion is here to
+ * say that on purpose rather than to rely on it.
+ */
+.striptab:active:not(.striptab--dragging) {
+  transform: scale(0.98);
 }
 
 /*
