@@ -47,6 +47,8 @@ import { useConnections } from '../../stores/connections';
 import { useEntities } from '../../stores/entities';
 import { useTabs } from '../../stores/tabs';
 import { driverInfo } from '@shared/aiDrivers';
+import { IMAGE_TYPES } from '@shared/aiAttachments';
+import { useAttachments } from '../../composables/useAttachments';
 import { vTip } from '../../lib/hoverTip';
 
 /** A driver's own name for itself, for a sentence that has to name it. */
@@ -272,13 +274,76 @@ const canSend = computed(
   () => draft.value.trim().length > 0 && !running.value && assistant.configured
 );
 
+/* ---------------------------------------------------------------- files */
+
+const files = useAttachments(() =>
+  assistant.active?.driver ? driverInfo(assistant.active.driver).capabilities.images : false
+);
+
+const picker = ref<HTMLInputElement>();
+const dropping = ref(false);
+
+function onPicked(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  if (input.files) void files.add(input.files);
+  // Cleared so choosing the same file twice in a row still fires a change.
+  input.value = '';
+}
+
+/*
+ * A drop anywhere on the tab, not only on the composer.
+ *
+ * The composer is a strip at the foot of a tall panel, and aiming a dragged
+ * file at it is a precision task for no reason — the whole tab is unambiguously
+ * "this conversation". The counter is because `dragleave` fires when the
+ * pointer crosses into a child, so a boolean alone flickers the highlight off
+ * halfway across the panel.
+ */
+let dragDepth = 0;
+
+function onDragEnter(): void {
+  dragDepth += 1;
+  dropping.value = true;
+}
+
+function onDragLeave(): void {
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (dragDepth === 0) dropping.value = false;
+}
+
+function onDrop(event: DragEvent): void {
+  dragDepth = 0;
+  dropping.value = false;
+  if (event.dataTransfer?.files.length) void files.add(event.dataTransfer.files);
+}
+
+/** A screenshot pasted into the field, which is how most images arrive. */
+function onPaste(event: ClipboardEvent): void {
+  const pasted = [...(event.clipboardData?.files ?? [])];
+  if (pasted.length === 0) return;
+  event.preventDefault();
+  void files.add(pasted);
+}
+
+/** What the picker offers, which is only ever what this provider can read. */
+const acceptedFiles = computed(() =>
+  [
+    '.sql,.csv,.tsv,.json,.jsonl,.txt,.log,.md,.yaml,.yml,.xml',
+    ...(assistant.active && driverInfo(assistant.active.driver).capabilities.images
+      ? IMAGE_TYPES
+      : []),
+  ].join(',')
+);
+
 async function send(): Promise<void> {
   if (!canSend.value) return;
   const question = draft.value.trim();
+  const attached = [...files.items.value];
   draft.value = '';
+  files.clear();
   await nextTick(grow);
   pinned.value = true;
-  await assistant.ask(props.tabId, connections.requireId(), question);
+  await assistant.ask(props.tabId, connections.requireId(), question, attached);
 }
 
 function onKeydown(event: KeyboardEvent): void {
@@ -338,7 +403,14 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
 </script>
 
 <template>
-  <div class="chattab">
+  <div
+    class="chattab"
+    :class="{ 'chattab--dropping': dropping }"
+    @dragenter.prevent="onDragEnter"
+    @dragover.prevent
+    @dragleave.prevent="onDragLeave"
+    @drop.prevent="onDrop"
+  >
     <div ref="scroller" class="chat__scroll selectable" @scroll="onScroll">
       <!--
         Pushed to the bottom by `margin-block-start: auto`. A short conversation
@@ -448,6 +520,36 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
     -->
     <div class="composer">
       <div class="composer__inner">
+        <!--
+          What is going with the question, above the field it is going with.
+          Above rather than below, because the field grows downward as you type
+          and a row under it would be pushed around by the sentence.
+        -->
+        <ul v-if="files.items.value.length > 0" class="clips">
+          <li v-for="(file, index) in files.items.value" :key="`${file.name}-${index}`">
+            <span class="clip">
+              <AppIcon :name="file.kind === 'image' ? 'eye' : 'query'" :size="11" />
+              <span class="clip__name">{{ file.name }}</span>
+              <button
+                type="button"
+                class="clip__drop focus-fill"
+                :aria-label="$t('assistant.removeFile', { name: file.name })"
+                @click="files.remove(index)"
+              >
+                <AppIcon name="close" :size="9" />
+              </button>
+            </span>
+          </li>
+        </ul>
+
+        <p v-if="files.rejected.value.length > 0" class="clips__refused" role="status">
+          {{
+            $t('assistant.fileRefused', {
+              names: files.rejected.value.map((one) => one.name).join(', '),
+            })
+          }}
+        </p>
+
         <div class="composer__box">
           <!--
             The edge of the box lights up while a turn is running.
@@ -472,6 +574,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
             :aria-label="$t('assistant.placeholder')"
             spellcheck="false"
             @keydown="onKeydown"
+            @paste="onPaste"
           />
 
           <div class="composer__floor">
@@ -501,6 +604,31 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
               :aria-label="$t('assistant.scope')"
               icon="database"
             />
+
+            <!--
+              The paperclip sits with the other two pickers, because it is the
+              same kind of thing: what this question is going to be asked
+              *with*. Hidden where no provider is configured, since there is
+              nothing to attach it to.
+            -->
+            <input
+              ref="picker"
+              class="composer__picker"
+              type="file"
+              multiple
+              :accept="acceptedFiles"
+              @change="onPicked"
+            />
+            <button
+              v-if="assistant.configured"
+              v-tip="$t('assistant.attach')"
+              type="button"
+              class="composer__clip focus-fill"
+              :aria-label="$t('assistant.attach')"
+              @click="picker?.click()"
+            >
+              <AppIcon name="upload" :size="12" />
+            </button>
 
             <span class="composer__spacer" />
 
@@ -547,6 +675,9 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
 .chattab {
   --chat-measure: 44rem;
 
+  /* The containing block for the drop outline, which is drawn inside the pane
+     rather than over the window. */
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -845,6 +976,120 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
   height: 0.9rem;
   margin-inline: var(--gap-tight);
   background: var(--separator);
+}
+
+/*
+ * What is going with the question.
+ *
+ * A row of chips rather than a list, because these are things you glance at to
+ * check and then stop looking at — a name and a way to take it off, and nothing
+ * else. They wrap, since six files is a real thing somebody will do.
+ */
+.clips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-tight);
+  margin: 0 0 var(--gap-tight);
+  padding: 0;
+  list-style: none;
+}
+
+.clip {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-hair);
+  max-width: 14rem;
+  padding: var(--gap-hair) var(--gap-hair) var(--gap-hair) var(--gap-tight);
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-selector);
+  background: var(--surface-well);
+  font-size: 0.6875rem;
+  color: color-mix(in oklab, var(--color-base-content) 80%, transparent);
+}
+
+.clip__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clip__drop {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: var(--radius-selector);
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  transition:
+    color var(--t-hover) var(--ease-out),
+    background-color var(--t-hover) var(--ease-out),
+    transform var(--t-press) var(--ease-out);
+}
+
+.clip__drop:active {
+  transform: scale(0.92);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .clip__drop:hover {
+    background: var(--fill-4);
+    color: var(--color-base-content);
+  }
+}
+
+/* Said once, about everything that was refused, rather than a line per file. */
+.clips__refused {
+  margin: 0 0 var(--gap-tight);
+  font-size: 0.6875rem;
+  color: var(--color-warning);
+}
+
+/* The input itself is never seen; the paperclip is what is pressed. */
+.composer__picker {
+  display: none;
+}
+
+.composer__clip {
+  display: grid;
+  place-items: center;
+  width: var(--hit-min);
+  height: var(--hit-min);
+  border-radius: var(--control-radius);
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  transition:
+    color var(--t-hover) var(--ease-out),
+    background-color var(--t-hover) var(--ease-out),
+    transform var(--t-press) var(--ease-out);
+}
+
+.composer__clip:active {
+  transform: scale(0.94);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .composer__clip:hover {
+    background: var(--fill-4);
+    color: var(--color-base-content);
+  }
+}
+
+/*
+ * A file dragged anywhere over the conversation.
+ *
+ * An outline drawn inside the pane rather than a scrim over it: the point is to
+ * say "let go and it lands here", and dimming the transcript to say so hides
+ * the thing the file is about to be asked about.
+ */
+.chattab--dropping::after {
+  content: '';
+  position: absolute;
+  inset: var(--gap-tight);
+  z-index: 5;
+  border: 2px dashed var(--color-primary);
+  border-radius: var(--radius-box);
+  background: color-mix(in oklab, var(--color-primary) 6%, transparent);
+  pointer-events: none;
 }
 
 .composer__spacer {

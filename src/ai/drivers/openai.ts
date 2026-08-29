@@ -61,7 +61,21 @@ function toMessages(request: AiRequest): unknown[] {
 
   for (const message of request.messages) {
     if (message.role === 'user') {
-      messages.push({ role: 'user', content: message.text });
+      // A data URL rather than a link, because the file never leaves this
+      // machine except as part of the request it belongs to.
+      messages.push({
+        role: 'user',
+        content:
+          message.images && message.images.length > 0
+            ? [
+                { type: 'text', text: message.text },
+                ...message.images.map((image) => ({
+                  type: 'image_url',
+                  image_url: { url: `data:${image.mediaType};base64,${image.base64}` },
+                })),
+              ]
+            : message.text,
+      });
       continue;
     }
 

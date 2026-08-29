@@ -738,7 +738,10 @@
     "theQuery": "クエリ",
     "chat": "チャット",
     "notInstalled": "未インストール",
-    "notInstalledHelp": "このマシンにはありません。インストールするとここに表示されます"
+    "notInstalledHelp": "このマシンにはありません。インストールするとここに表示されます",
+    "attach": "ファイルを添付",
+    "removeFile": "{{name}} を外す",
+    "fileRefused": "{{names}} は添付できません。このプロバイダーはテキストファイルを読み、画像は対応している場合のみです。"
   },
   "chats": {
     "title": "チャット",

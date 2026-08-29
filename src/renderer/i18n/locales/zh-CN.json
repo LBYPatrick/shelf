@@ -738,7 +738,10 @@
     "theQuery": "查询",
     "chat": "对话",
     "notInstalled": "未安装",
-    "notInstalledHelp": "这台机器上没有 — 安装后就会出现在这里"
+    "notInstalledHelp": "这台机器上没有 — 安装后就会出现在这里",
+    "attach": "添加文件",
+    "removeFile": "移除 {{name}}",
+    "fileRefused": "无法添加 {{names}}——该提供方可读取文本文件，图片仅在其支持时可用。"
   },
   "chats": {
     "title": "对话",

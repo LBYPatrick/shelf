@@ -738,7 +738,10 @@
     "theQuery": "Câu truy vấn",
     "chat": "Trò chuyện",
     "notInstalled": "Chưa cài đặt",
-    "notInstalledHelp": "Không có trên máy này — cài đặt xong nó sẽ xuất hiện ở đây"
+    "notInstalledHelp": "Không có trên máy này — cài đặt xong nó sẽ xuất hiện ở đây",
+    "attach": "Đính kèm tệp",
+    "removeFile": "Bỏ {{name}}",
+    "fileRefused": "Không đính kèm được {{names}} — nhà cung cấp này đọc tệp văn bản, và ảnh chỉ khi được hỗ trợ."
   },
   "chats": {
     "title": "Trò chuyện",

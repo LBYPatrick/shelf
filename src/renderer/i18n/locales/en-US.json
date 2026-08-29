@@ -738,7 +738,10 @@
     "theQuery": "Query",
     "chat": "Chat",
     "notInstalled": "Not installed",
-    "notInstalledHelp": "Not on this machine — install one and it appears here"
+    "notInstalledHelp": "Not on this machine — install one and it appears here",
+    "attach": "Attach a file",
+    "removeFile": "Remove {{name}}",
+    "fileRefused": "Could not attach {{names}} — this provider reads text files, and images only where it says so."
   },
   "chats": {
     "title": "Chats",

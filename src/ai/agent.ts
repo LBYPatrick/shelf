@@ -1,5 +1,14 @@
 import type { DatabaseClient } from '@drivers/types';
-import type { AiIntent, AiItem, AiMessage, AiRows, AiToolName, AiUsage } from '@shared/ai';
+import type {
+  AiAttachment,
+  AiIntent,
+  AiItem,
+  AiMessage,
+  AiRows,
+  AiToolName,
+  AiUsage,
+} from '@shared/ai';
+import { imagesOf, questionWithAttachments } from '@shared/aiAttachments';
 import { splitReply, systemPrompt } from '@shared/aiPrompt';
 import { classifyStatement } from '@shared/sqlSafety';
 import { schemaDocumentText, type SchemaDocument } from '@shared/schemaDoc';
@@ -106,6 +115,7 @@ export interface TurnSink {
 }
 
 export interface TurnInput {
+  readonly attachments?: readonly AiAttachment[];
   readonly adapter: AiAdapter;
   readonly client: DatabaseClient;
   readonly document: SchemaDocument;
@@ -208,13 +218,32 @@ export async function runTurn(
     ...(input.locale ? { locale: input.locale } : {}),
   });
 
+  /*
+   * Pictures only where the provider takes one. The composer already refuses to
+   * attach an image to a provider that cannot read it, so this is the second
+   * of the two places that rule is enforced rather than the only one — and it
+   * is the one that holds if a conversation is carried to another provider
+   * after the file was chosen.
+   */
+  const images = input.adapter.capabilities.images ? imagesOf(input.attachments) : [];
+
   const messages: AiWireMessage[] = [
     ...input.history.map((message): AiWireMessage =>
       message.role === 'user'
         ? { role: 'user', text: message.text }
         : { role: 'assistant', text: message.text, calls: [] }
     ),
-    { role: 'user', text: input.question },
+    /*
+     * The question, with the attached files written into it, and any pictures
+     * hung off the message itself. Only this message carries them: the history
+     * is what was *said*, and re-sending every image from every earlier turn
+     * would grow what a conversation costs without anybody asking it to.
+     */
+    {
+      role: 'user',
+      text: questionWithAttachments(input.question, input.attachments),
+      ...(images.length > 0 ? { images } : {}),
+    },
   ];
 
   const items: AiItem[] = [];

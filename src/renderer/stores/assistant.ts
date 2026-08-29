@@ -3,6 +3,7 @@ import i18next from 'i18next';
 import { computed, markRaw, ref } from 'vue';
 import { AI_NOT_SIGNED_IN } from '@shared/ai';
 import type {
+  AiAttachment,
   AiDriverKind,
   AiItem,
   AiMessage,
@@ -431,7 +432,20 @@ export const useAssistant = defineStore('assistant', () => {
    * a listener that outlives its turn writes another conversation's tokens into
    * this one's.
    */
-  async function ask(tabId: string, connectionId: string, question: string): Promise<void> {
+  async function ask(
+    tabId: string,
+    connectionId: string,
+    question: string,
+    /**
+     * Files put with this question.
+     *
+     * Not kept on the turn. A conversation is not persisted, and a transcript
+     * that redrew the attachments would be redrawing what was *sent* rather
+     * than what was said — the text of them is already in the question the
+     * model answered, and a picture is not something this view can show back.
+     */
+    attachments: readonly AiAttachment[] = []
+  ): Promise<void> {
     const chat = conversations.value.get(tabId);
     if (!chat) return;
 
@@ -505,6 +519,7 @@ export const useAssistant = defineStore('assistant', () => {
           // The turn being added is not part of its own history.
           history: historyOf(chat).slice(0, -1),
           question,
+          ...(attachments.length > 0 ? { attachments } : {}),
           /*
            * Which language the reader reads. The host cannot work this out: it
            * is a renderer setting, and a utility process's own OS locale is not

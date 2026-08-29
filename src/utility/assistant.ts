@@ -2,7 +2,7 @@ import { runTurn } from '@ai/agent';
 import { requireSignIn } from '@ai/installed';
 import { createAiAdapter } from '@ai/registry';
 import { gatherSchema } from '@ai/schema';
-import type { AiPhase, AiTurn } from '@shared/ai';
+import type { AiAttachment, AiPhase, AiTurn } from '@shared/ai';
 import type { SchemaScope } from '@shared/schemaDoc';
 import { namePrompt, tidyGeneratedName } from '@shared/queryName';
 import type { Session } from './session';
@@ -54,6 +54,7 @@ export async function turn(
     scope: SchemaScope;
     history: readonly { role: 'user' | 'assistant'; text: string }[];
     question: string;
+    attachments?: readonly AiAttachment[];
     locale?: string;
   },
   signal: AbortSignal
@@ -106,6 +107,7 @@ export async function turn(
       maxTokens: CHAT_TOKENS,
       history: payload.history,
       question: payload.question,
+      ...(payload.attachments ? { attachments: payload.attachments } : {}),
       cache,
       ...(payload.locale ? { locale: payload.locale } : {}),
     },

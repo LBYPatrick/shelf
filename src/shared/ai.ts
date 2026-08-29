@@ -80,11 +80,46 @@ export interface AiCapabilities {
   readonly tools: boolean;
   /** Takes a system prompt as its own field rather than as a first message. */
   readonly system: boolean;
+  /**
+   * Takes an image alongside the question.
+   *
+   * Declared rather than discovered, like every other difference between
+   * providers here. Text attachments need no capability at all — they are
+   * folded into the question before any adapter sees them, so every provider
+   * gets them — but a picture has to be a content block the provider
+   * understands, and three of ours have nowhere to put one.
+   */
+  readonly images: boolean;
 }
 
 // ---------------------------------------------------------------------------
 // Conversation
 // ---------------------------------------------------------------------------
+
+/**
+ * Something the reader attached to a question.
+ *
+ * Two kinds, because they travel differently and only one of them needs the
+ * provider's permission. A *text* attachment — a CSV sample, a schema dump, the
+ * error someone is staring at — is folded into the question as a fenced block
+ * before any adapter sees it, so it works everywhere and needs no capability. An
+ * *image* has to become a content block in whatever shape the provider takes,
+ * and the ones that cannot take one say so.
+ *
+ * Both carry their name, because "the file you attached" is how a reader will
+ * refer to it and the model should be able to as well. Base64 for the image
+ * rather than a Buffer: this crosses a process boundary, and a string survives a
+ * structured clone where a Buffer needs the transcoder.
+ */
+export type AiAttachment =
+  | { readonly kind: 'text'; readonly name: string; readonly text: string }
+  | {
+      readonly kind: 'image';
+      readonly name: string;
+      /** The IANA type, which the provider is told verbatim. */
+      readonly mediaType: string;
+      readonly base64: string;
+    };
 
 export type AiRole = 'user' | 'assistant';
 

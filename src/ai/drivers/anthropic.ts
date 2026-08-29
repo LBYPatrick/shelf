@@ -41,7 +41,35 @@ function toContent(request: AiRequest): Anthropic.MessageParam[] {
 
   for (const message of request.messages) {
     if (message.role === 'user') {
-      messages.push({ role: 'user', content: message.text });
+      /*
+       * A string while there is only text, an array of blocks when a picture
+       * came with it. Both are valid; the string is what this sent before
+       * attachments existed and is left alone so an ordinary turn is byte for
+       * byte the request it always was.
+       */
+      messages.push({
+        role: 'user',
+        content:
+          message.images && message.images.length > 0
+            ? [
+                ...message.images.map((image): Anthropic.ContentBlockParam => ({
+                  type: 'image',
+                  source: {
+                    type: 'base64',
+                    /*
+                     * The SDK narrows this to the four types the API takes.
+                     * The composer only ever attaches one of those four, so
+                     * the assertion is a restatement of a rule enforced where
+                     * the file is chosen rather than a hole in one.
+                     */
+                    media_type: image.mediaType as Anthropic.Base64ImageSource['media_type'],
+                    data: image.base64,
+                  },
+                })),
+                { type: 'text', text: message.text },
+              ]
+            : message.text,
+      });
       continue;
     }
 

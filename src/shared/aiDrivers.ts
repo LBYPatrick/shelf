@@ -93,7 +93,23 @@ export interface AiDriverInfo {
   readonly credentialsNote?: 'cli' | 'aws';
 }
 
-const FULL: AiCapabilities = { streaming: true, tools: true, system: true };
+const FULL: AiCapabilities = { streaming: true, tools: true, system: true, images: true };
+
+/**
+ * Everything a subprocess CLI can do, which is everything but a picture.
+ *
+ * All three are driven by handing them text — on a command line, on standard
+ * input, or as an ACP content block — and none of them takes an image that way.
+ * Declared rather than attempted: the composer reads this and does not offer
+ * the picture in the first place, which is a better answer than an error after
+ * the file has been chosen.
+ */
+const TEXT_ONLY: AiCapabilities = {
+  streaming: true,
+  tools: true,
+  system: false,
+  images: false,
+};
 
 export const AI_DRIVERS: readonly AiDriverInfo[] = [
   {
@@ -115,7 +131,9 @@ export const AI_DRIVERS: readonly AiDriverInfo[] = [
     acceptsKey: false,
     defaultModel: 'default',
     models: ['default', 'claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'],
-    capabilities: FULL,
+    // Everything but a picture: it is given the question as a command-line
+    // argument, and there is nowhere in that to put one.
+    capabilities: { ...FULL, system: true, images: false },
     signInCommand: 'claude auth login',
     credentialsNote: 'cli',
   },
@@ -138,7 +156,7 @@ export const AI_DRIVERS: readonly AiDriverInfo[] = [
     acceptsKey: false,
     defaultModel: 'default',
     models: ['default', 'gpt-5-codex', 'gpt-5', 'o3'],
-    capabilities: { streaming: true, tools: true, system: false },
+    capabilities: TEXT_ONLY,
     signInCommand: 'codex login',
     credentialsNote: 'cli',
   },
@@ -166,7 +184,7 @@ export const AI_DRIVERS: readonly AiDriverInfo[] = [
     acceptsKey: false,
     defaultModel: 'grok-build',
     models: ['grok-build'],
-    capabilities: { streaming: true, tools: true, system: false },
+    capabilities: TEXT_ONLY,
     signInCommand: 'grok login',
     credentialsNote: 'cli',
   },

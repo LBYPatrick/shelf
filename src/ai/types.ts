@@ -55,7 +55,20 @@ export interface AiToolResult {
  * never types and the interface draws as steps rather than as messages.
  */
 export type AiWireMessage =
-  | { readonly role: 'user'; readonly text: string }
+  | {
+      readonly role: 'user';
+      readonly text: string;
+      /**
+       * Pictures to send with this turn, for an adapter that takes them.
+       *
+       * Only ever set on the message being asked *now* — the history is what
+       * was said, and re-sending every image from every earlier turn would grow
+       * a conversation's cost without being asked to. Adapters that declare
+       * `images: false` never see this field set, because the composer does not
+       * let one be attached in the first place.
+       */
+      readonly images?: readonly { readonly mediaType: string; readonly base64: string }[];
+    }
   | {
       readonly role: 'assistant';
       readonly text: string;

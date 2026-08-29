@@ -51,7 +51,15 @@ function toContents(request: AiRequest): unknown[] {
 
   for (const message of request.messages) {
     if (message.role === 'user') {
-      contents.push({ role: 'user', parts: [{ text: message.text }] });
+      contents.push({
+        role: 'user',
+        parts: [
+          { text: message.text },
+          ...(message.images ?? []).map((image) => ({
+            inline_data: { mime_type: image.mediaType, data: image.base64 },
+          })),
+        ],
+      });
       continue;
     }
 

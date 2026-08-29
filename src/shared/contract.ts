@@ -24,6 +24,7 @@ import type {
 } from '../drivers/types';
 import type {
   AiDeltaEvent,
+  AiAttachment,
   AiDriverKind,
   AiItemEvent,
   AiMessage,
@@ -222,6 +223,14 @@ export interface HostContract {
       scope: SchemaScope;
       history: readonly AiMessage[];
       question: string;
+      /**
+       * Files the reader put with the question.
+       *
+       * Text ones are folded into the question by the agent, so every provider
+       * gets them; images become a content block and only reach the providers
+       * that declare they take one.
+       */
+      attachments?: readonly AiAttachment[];
       /**
        * The interface's language, as a BCP-47 tag, so the reply can default to
        * it. The host has no way to know this: it is a renderer setting and the
