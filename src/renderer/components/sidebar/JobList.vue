@@ -753,7 +753,7 @@ function startedAt(job: Job): string {
 @media (prefers-reduced-motion: reduce) {
   .tile__tools,
   .tile__tool {
-    transition: opacity 120ms linear;
+    transition: opacity var(--t-press) linear;
     transform: none;
   }
 }

@@ -676,7 +676,7 @@ watch(
   padding: 1px 7px;
   border-radius: 999px;
   background: color-mix(in oklab, var(--color-success) 24%, transparent);
-  animation: done-in 260ms var(--ease-out);
+  animation: done-in var(--t-panel) var(--ease-out);
 }
 
 @keyframes done-in {

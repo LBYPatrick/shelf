@@ -128,12 +128,12 @@ const placement = computed(() => {
  */
 .tip-enter-active {
   transition:
-    opacity 130ms var(--ease-out),
-    scale 130ms var(--ease-out);
+    opacity var(--t-press) var(--ease-out),
+    scale var(--t-press) var(--ease-out);
 }
 
 .tip-leave-active {
-  transition: opacity 90ms var(--ease-out);
+  transition: opacity var(--t-press) var(--ease-out);
 }
 
 .tip-enter-from,

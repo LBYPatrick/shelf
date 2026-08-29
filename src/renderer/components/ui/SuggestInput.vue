@@ -253,7 +253,7 @@ function onInput(): void {
    rule the select follows. */
 .suggest__chevron {
   transform: rotate(90deg);
-  transition: transform 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform var(--t-pop) var(--ease-sheet);
 }
 
 .suggest__chevron--open {

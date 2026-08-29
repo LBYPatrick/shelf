@@ -47,7 +47,7 @@ withDefaults(defineProps<{ ariaLabel: string; disabled?: boolean }>(), { disable
   height: 1.25rem;
   border-radius: 999px;
   background: color-mix(in oklab, var(--color-base-content) 22%, transparent);
-  transition: background-color 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: background-color var(--t-pop) var(--ease-sheet);
 }
 
 .switch--on {
@@ -75,7 +75,7 @@ withDefaults(defineProps<{ ariaLabel: string; disabled?: boolean }>(), { disable
   box-shadow:
     0 1px 2px rgb(0 0 0 / 25%),
     0 0 0 0.5px rgb(0 0 0 / 6%);
-  transition: transform 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform var(--t-pop) var(--ease-sheet);
 }
 
 .switch--on .switch__knob {

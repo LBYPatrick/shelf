@@ -713,7 +713,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
 }
 
 .opening__item {
-  animation: rise 260ms var(--ease-out) both;
+  animation: rise var(--t-panel) var(--ease-out) both;
 }
 
 @keyframes rise {

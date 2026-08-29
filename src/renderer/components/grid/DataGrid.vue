@@ -724,7 +724,7 @@ watch(
   -webkit-backdrop-filter: blur(1px);
   backdrop-filter: blur(1px);
   pointer-events: none;
-  animation: veil-in 140ms ease-out;
+  animation: veil-in var(--t-press) var(--ease-out);
 }
 
 @keyframes veil-in {

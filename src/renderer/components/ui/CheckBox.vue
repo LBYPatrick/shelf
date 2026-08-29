@@ -116,7 +116,7 @@ const model = defineModel<boolean>({ required: true });
 .check__tick path {
   stroke-dasharray: 22;
   stroke-dashoffset: 22;
-  transition: stroke-dashoffset 200ms var(--ease-out);
+  transition: stroke-dashoffset var(--t-pop) var(--ease-out);
 }
 
 .check__input:checked + .check__box .check__tick path {
@@ -152,7 +152,7 @@ const model = defineModel<boolean>({ required: true });
 @media (prefers-reduced-motion: reduce) {
   .check__box,
   .check__tick path {
-    transition-duration: 120ms;
+    transition-duration: var(--t-press);
   }
 
   .check:active .check__box {

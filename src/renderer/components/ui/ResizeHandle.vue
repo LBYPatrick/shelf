@@ -133,9 +133,9 @@ function nudge(delta: number): void {
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.6);
   transition:
-    opacity 180ms ease,
-    transform 180ms cubic-bezier(0.32, 0.72, 0, 1),
-    background-color 180ms ease;
+    opacity var(--t-hover) ease,
+    transform var(--t-hover) var(--ease-sheet),
+    background-color var(--t-hover) ease;
 }
 
 .handle--horizontal .handle__line::after {
@@ -167,7 +167,7 @@ function nudge(delta: number): void {
 
 @media (prefers-reduced-motion: reduce) {
   .handle__line::after {
-    transition: opacity 120ms ease;
+    transition: opacity var(--t-press) ease;
     transform: translate(-50%, -50%);
   }
 

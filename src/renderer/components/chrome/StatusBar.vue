@@ -108,7 +108,7 @@ const activity = useActivity();
 
 .statusbar--busy .statusbar__wash {
   background: var(--color-primary);
-  animation: statusbar-breathe 1.8s ease-in-out infinite;
+  animation: statusbar-breathe 1.8s var(--ease-in-out) infinite;
 }
 
 .statusbar--ok .statusbar__wash {

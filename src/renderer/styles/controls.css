@@ -505,7 +505,7 @@
   /* Scales from the control rather than from its own centre, so the
      relationship between the two is visible in the movement. */
   transform-origin: top center;
-  animation: menulist-in 160ms cubic-bezier(0.32, 0.72, 0, 1);
+  animation: menulist-in var(--t-hover) var(--ease-sheet);
 }
 
 /* Opening upwards, it grows from the edge nearest the control. */
@@ -737,7 +737,7 @@
      margins is the thing the eye notices before anything the corner holds. */
   padding: var(--gap) var(--gap) 0 0;
   opacity: 0;
-  transition: opacity 140ms var(--ease-out);
+  transition: opacity var(--t-press) var(--ease-out);
 }
 
 /* On focus as well as hover: a control only a pointer can reach is not one. */
@@ -758,7 +758,7 @@
   transition:
     background-color var(--t-hover) var(--ease-out),
     color var(--t-hover) var(--ease-out),
-    transform 200ms cubic-bezier(0.32, 0.72, 0, 1);
+    transform var(--t-pop) var(--ease-sheet);
 }
 
 .tile:hover .tile__tool,

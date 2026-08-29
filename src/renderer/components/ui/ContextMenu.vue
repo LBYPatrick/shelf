@@ -276,8 +276,8 @@ onBeforeUnmount(() => {
 .menu-enter-active,
 .menu-leave-active {
   transition:
-    transform 160ms var(--ease-out),
-    opacity 120ms var(--ease-out);
+    transform var(--t-hover) var(--ease-out),
+    opacity var(--t-press) var(--ease-out);
 }
 
 .menu-enter-from,

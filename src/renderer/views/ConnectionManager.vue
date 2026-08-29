@@ -598,7 +598,7 @@ watch(
 .intro__action,
 .keyring,
 .fold {
-  animation: lift-in 420ms var(--ease-out) backwards;
+  animation: lift-in var(--t-panel) var(--ease-out) backwards;
   animation-delay: calc(var(--step) * 55ms);
 }
 
@@ -807,7 +807,7 @@ watch(
 }
 
 .group__row {
-  animation: lift-in 320ms var(--ease-out) backwards;
+  animation: lift-in var(--t-sheet) var(--ease-out) backwards;
   animation-delay: min(calc(var(--index) * 35ms), 280ms);
 }
 

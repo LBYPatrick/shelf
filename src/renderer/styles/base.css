@@ -227,10 +227,25 @@ textarea,
   /* The iOS sheet curve: fast departure, long settle. */
   --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
 
-  /* Durations. Anything a user triggers repeatedly stays under 200ms. */
+  /*
+   * Durations. Anything a user triggers repeatedly stays under 200ms.
+   *
+   * Five steps, and the scale is only worth having if every call site is on
+   * one. It was not: the curve above was hand-typed at twenty-two call sites
+   * with 120, 160, 200, 260 and 280 in front of it — five values doing the work
+   * of four tokens, none of them named, all of them agreeing by coincidence.
+   *
+   * `--t-panel` is the step that was missing rather than a value snapped to the
+   * nearest neighbour. Eight surfaces were already at 260ms — the sidebar, the
+   * tab strip's width, the segmented control's thumb — and they are a panel
+   * resizing, which is genuinely slower than a thing popping and faster than a
+   * sheet arriving. Forcing them onto `--t-sheet` would have retimed a drag
+   * release by forty milliseconds to tidy a list.
+   */
   --t-press: 140ms;
   --t-hover: 180ms;
   --t-pop: 220ms;
+  --t-panel: 260ms;
   --t-sheet: 300ms;
 }
 

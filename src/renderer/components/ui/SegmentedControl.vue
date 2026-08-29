@@ -144,9 +144,9 @@ onBeforeUnmount(() => {
      job twice and thickening the capsule by 2px. */
   box-shadow: var(--elev-thumb);
   transition:
-    transform 260ms cubic-bezier(0.32, 0.72, 0, 1),
-    width 260ms cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 140ms ease;
+    transform var(--t-panel) var(--ease-sheet),
+    width var(--t-panel) var(--ease-sheet),
+    opacity var(--t-press) ease;
 }
 
 .segmented__option {
@@ -184,7 +184,7 @@ onBeforeUnmount(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .segmented__indicator {
-    transition: opacity 140ms ease;
+    transition: opacity var(--t-press) ease;
   }
 }
 </style>

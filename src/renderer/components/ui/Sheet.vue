@@ -443,7 +443,7 @@ void props;
    * being dragged to one. Linear here would look mechanical at exactly the
    * moment the reader is deciding whether the interface is responding to them.
    */
-  transition: height 280ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: height var(--t-panel) var(--ease-sheet);
 }
 
 .panel--wide {
@@ -643,13 +643,13 @@ void props;
 .sheet-enter-active .panel,
 .sheet-leave-active .panel {
   transition:
-    transform 300ms cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 220ms ease-out;
+    transform var(--t-sheet) var(--ease-sheet),
+    opacity var(--t-pop) var(--ease-out);
 }
 
 .sheet-enter-active,
 .sheet-leave-active {
-  transition: opacity 220ms ease-out;
+  transition: opacity var(--t-pop) var(--ease-out);
 }
 
 .sheet-enter-from,

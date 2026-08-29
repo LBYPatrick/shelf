@@ -1231,7 +1231,7 @@ watch(
 
 .query__chevron {
   transform: rotate(90deg);
-  transition: transform 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform var(--t-pop) var(--ease-sheet);
 }
 
 /* Points at the menu it opened, and turns back when it closes. */

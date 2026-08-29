@@ -30,7 +30,7 @@ defineProps<{ tone?: 'primary' | 'error' }>();
   inset-block: 0;
   inset-inline-start: -40%;
   width: 40%;
-  animation: sweep 1.1s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  animation: sweep 1.1s var(--ease-in-out) infinite;
 }
 
 .bar__sweep--primary {

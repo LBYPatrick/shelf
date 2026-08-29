@@ -423,7 +423,7 @@ defineExpose({ toSvg, toPng });
  * The delay is capped so a deep plan does not take a noticeable time to settle.
  */
 .plan__node {
-  animation: node-in 260ms var(--ease-out) backwards;
+  animation: node-in var(--t-panel) var(--ease-out) backwards;
   animation-delay: calc(min(var(--index) * 30ms, 300ms));
 }
 

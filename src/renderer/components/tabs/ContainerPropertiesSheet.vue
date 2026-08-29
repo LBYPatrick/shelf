@@ -285,11 +285,11 @@ watch(
  * in: the reader has already decided, and is waiting on the answer.
  */
 .pane-enter-active {
-  transition: opacity 140ms var(--ease-out);
+  transition: opacity var(--t-press) var(--ease-out);
 }
 
 .pane-leave-active {
-  transition: opacity 90ms var(--ease-out);
+  transition: opacity var(--t-press) var(--ease-out);
 }
 
 .pane-enter-from,

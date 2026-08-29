@@ -713,7 +713,7 @@ onBeforeUnmount(() => stopPersisting?.());
   min-width: var(--columns-w);
   height: 100%;
   padding-inline: max(var(--gap-tight), var(--controls-inset, 0px)) var(--gap-tight);
-  transition: min-width 260ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: min-width var(--t-panel) var(--ease-sheet);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -756,7 +756,7 @@ onBeforeUnmount(() => stopPersisting?.());
   min-height: 0;
   width: var(--columns-w);
   overflow: hidden;
-  transition: width 260ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: width var(--t-panel) var(--ease-sheet);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -880,7 +880,7 @@ onBeforeUnmount(() => stopPersisting?.());
 }
 
 .rail__item--gear :deep(.icon) {
-  transition: transform 380ms var(--ease-out);
+  transition: transform var(--t-hover) var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -925,7 +925,7 @@ onBeforeUnmount(() => stopPersisting?.());
    */
   overflow: hidden;
   width: var(--sidebar-w, 0px);
-  transition: width 260ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: width var(--t-panel) var(--ease-sheet);
 }
 
 .sidebar--collapsed {
@@ -1222,7 +1222,7 @@ onBeforeUnmount(() => stopPersisting?.());
  * instead of being painted in place and then snapping back to start.
  */
 .content__pane--opening > * > * {
-  animation: pane-region-in 340ms var(--ease-out) backwards;
+  animation: pane-region-in var(--t-sheet) var(--ease-out) backwards;
 }
 
 .content__pane--opening > * > :nth-child(2) {
@@ -1260,7 +1260,7 @@ onBeforeUnmount(() => stopPersisting?.());
 
 @media (prefers-reduced-motion: reduce) {
   .content__pane--opening > * > * {
-    animation: pane-region-fade 160ms var(--ease-out) backwards;
+    animation: pane-region-fade var(--t-hover) var(--ease-out) backwards;
   }
 
   @keyframes pane-region-fade {
@@ -1308,7 +1308,7 @@ onBeforeUnmount(() => stopPersisting?.());
 }
 
 .opening > * {
-  animation: opening-in 320ms var(--ease-out) backwards;
+  animation: opening-in var(--t-sheet) var(--ease-out) backwards;
 }
 
 .opening__mark {

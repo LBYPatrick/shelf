@@ -360,8 +360,8 @@ const any = computed(() => filter.value.criteria.length > 0);
 .pop-enter-active,
 .pop-leave-active {
   transition:
-    transform 160ms var(--ease-out),
-    opacity 120ms var(--ease-out);
+    transform var(--t-hover) var(--ease-out),
+    opacity var(--t-press) var(--ease-out);
   transform-origin: top left;
 }
 
@@ -374,8 +374,8 @@ const any = computed(() => filter.value.criteria.length > 0);
 .chip-enter-active,
 .chip-leave-active {
   transition:
-    transform 180ms var(--ease-out),
-    opacity 140ms var(--ease-out);
+    transform var(--t-hover) var(--ease-out),
+    opacity var(--t-press) var(--ease-out);
 }
 
 .chip-enter-from,
@@ -386,7 +386,7 @@ const any = computed(() => filter.value.criteria.length > 0);
 
 /* The survivors slide into the gap rather than jumping across it. */
 .chip-move {
-  transition: transform 180ms var(--ease-out);
+  transition: transform var(--t-hover) var(--ease-out);
 }
 
 @media (prefers-reduced-motion: reduce) {

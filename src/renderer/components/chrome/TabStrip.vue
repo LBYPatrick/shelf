@@ -806,7 +806,7 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   padding-inline: var(--gap-tight);
   /* The material changes when the sidebar closes — see `tight` — and it moves
      on the sidebar's own curve so the bar and the columns arrive together. */
-  transition: background-color 260ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: background-color var(--t-panel) var(--ease-sheet);
 }
 
 /*
@@ -974,11 +974,11 @@ const KIND_ICON: Record<Tab['kind'], string> = {
 }
 
 .striptab--entering {
-  animation: tab-in 260ms cubic-bezier(0.32, 0.72, 0, 1);
+  animation: tab-in var(--t-panel) var(--ease-sheet);
 }
 
 .striptab--leaving {
-  animation: tab-out 180ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  animation: tab-out var(--t-hover) var(--ease-sheet) both;
   pointer-events: none;
 }
 
@@ -999,7 +999,7 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   }
 
   .striptab--leaving {
-    animation-duration: 90ms;
+    animation-duration: var(--t-press);
   }
 }
 
@@ -1036,7 +1036,7 @@ const KIND_ICON: Record<Tab['kind'], string> = {
    * already changed underneath it.
    */
   transition:
-    width 260ms cubic-bezier(0.32, 0.72, 0, 1),
+    width var(--t-panel) var(--ease-sheet),
     background-color var(--t-hover) var(--ease-out),
     color var(--t-hover) var(--ease-out);
 }

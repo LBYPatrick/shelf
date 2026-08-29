@@ -689,7 +689,7 @@ const KIND_ICON: Record<string, string> = {
 }
 
 .row--revealed {
-  animation: row-reveal 200ms var(--ease-out) both;
+  animation: row-reveal var(--t-pop) var(--ease-out) both;
   animation-delay: calc(min(var(--reveal, 0), 12) * 18ms);
 }
 
@@ -709,7 +709,7 @@ const KIND_ICON: Record<string, string> = {
 }
 
 .row--leaving {
-  animation: row-leave 140ms var(--ease-out) both;
+  animation: row-leave var(--t-press) var(--ease-out) both;
   pointer-events: none;
 }
 
@@ -805,8 +805,8 @@ const KIND_ICON: Record<string, string> = {
   opacity: 0;
   color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
   transition:
-    opacity 120ms ease-out,
-    color 120ms ease-out;
+    opacity var(--t-press) var(--ease-out),
+    color var(--t-press) var(--ease-out);
 }
 
 .row--entity:hover .row__action,

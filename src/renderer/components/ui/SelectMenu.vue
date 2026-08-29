@@ -175,9 +175,9 @@ function move(delta: number): void {
   font-size: 0.8125rem;
   text-align: start;
   transition:
-    background-color 0.18s ease,
-    border-color 0.18s ease,
-    transform 0.12s cubic-bezier(0.32, 0.72, 0, 1);
+    background-color var(--t-hover) ease,
+    border-color var(--t-hover) ease,
+    transform var(--t-press) var(--ease-sheet);
 }
 
 .select__trigger:active {
@@ -196,7 +196,7 @@ function move(delta: number): void {
   flex: 0 0 auto;
   opacity: 0.45;
   transform: rotate(90deg);
-  transition: transform 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform var(--t-pop) var(--ease-sheet);
 }
 
 .select__chevron--open {

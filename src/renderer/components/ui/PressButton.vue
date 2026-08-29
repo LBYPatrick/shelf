@@ -52,11 +52,11 @@ withDefaults(
   font-weight: 500;
   color: var(--color-base-content);
   transition:
-    background-color 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    color 0.18s ease,
-    transform 0.12s cubic-bezier(0.32, 0.72, 0, 1);
+    background-color var(--t-hover) ease,
+    border-color var(--t-hover) ease,
+    box-shadow var(--t-hover) ease,
+    color var(--t-hover) ease,
+    transform var(--t-press) var(--ease-sheet);
 }
 
 /*

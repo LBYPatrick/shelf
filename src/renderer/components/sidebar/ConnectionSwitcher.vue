@@ -424,7 +424,7 @@ function onChoose(id: string): void {
   flex: 0 0 auto;
   color: color-mix(in oklab, var(--color-base-content) 32%, transparent);
   transform: rotate(90deg);
-  transition: transform 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform var(--t-pop) var(--ease-sheet);
 }
 
 .switcher__chevron--open {

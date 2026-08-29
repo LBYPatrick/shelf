@@ -139,7 +139,7 @@
   margin-inline-start: auto;
   opacity: 0;
   color: var(--color-primary-text, var(--color-primary));
-  transition: opacity 140ms ease-out;
+  transition: opacity var(--t-press) var(--ease-out);
 }
 
 .tabulator .tabulator-col[aria-sort='ascending'] .tabulator-col-sorter,
@@ -314,7 +314,7 @@
 
 .tabulator .tabulator-cell.cell-applied {
   background: color-mix(in oklab, var(--color-success) 20%, transparent);
-  transition: background-color 900ms ease-out;
+  transition: background-color 900ms var(--ease-out);
 }
 
 .tabulator .tabulator-cell.cell-failed {

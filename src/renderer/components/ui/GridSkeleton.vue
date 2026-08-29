@@ -106,7 +106,7 @@ const WIDTHS = [92, 64, 78, 55, 86, 70, 60, 88];
     color-mix(in oklab, var(--color-base-content) 6%, transparent),
     transparent
   );
-  animation: skeleton-sheen 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: skeleton-sheen 1.6s var(--ease-in-out) infinite;
   will-change: transform;
 }
 

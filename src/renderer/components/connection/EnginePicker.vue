@@ -132,7 +132,7 @@ const model = defineModel<EngineId | null>({ required: true });
   .engine__mark,
   .engine:active {
     transform: none;
-    transition-duration: 120ms;
+    transition-duration: var(--t-press);
   }
 }
 </style>

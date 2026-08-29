@@ -472,8 +472,8 @@ defineExpose({ fit });
   stroke: color-mix(in oklab, var(--color-base-content) 46%, transparent);
   stroke-width: 1.75;
   transition:
-    opacity 200ms ease-out,
-    stroke 200ms ease-out;
+    opacity var(--t-pop) var(--ease-out),
+    stroke var(--t-pop) var(--ease-out);
 }
 
 .erd__edge--dim {
@@ -482,7 +482,7 @@ defineExpose({ fit });
 
 .erd-node {
   cursor: default;
-  transition: opacity 200ms ease-out;
+  transition: opacity var(--t-pop) var(--ease-out);
 }
 
 .erd-node--dim {

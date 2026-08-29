@@ -1091,7 +1091,7 @@ label.row__label {
   height: var(--hit-min);
   border-radius: 999px;
   background: var(--chip);
-  transition: transform 100ms ease-out;
+  transition: transform var(--t-press) var(--ease-out);
 }
 
 .accent:hover {
