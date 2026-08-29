@@ -146,6 +146,47 @@ test.describe('layout', () => {
     expect(geometry.sidebar).toBeGreaterThanOrEqual(geometry.barBottom - 1);
   });
 
+  test('a rail item shows its panel, and never hides one', async ({ sample }) => {
+    /*
+     * The five rail items are destinations, and pressing one answers the same
+     * way whichever one it is: show that panel, and open the column if it is
+     * shut.
+     *
+     * Pressing the item already showing used to collapse the sidebar. It reads
+     * as a shortcut and behaves as a trap — the same gesture on the same-looking
+     * button did two opposite things depending on where you already were, so
+     * aiming at the panel you were on to bring it back closed the column
+     * instead. It also left the collapsed rail nearly inert: a press there
+     * reopened whichever panel happened to be last rather than the one aimed at.
+     */
+    const sidebar = sample.locator('.sidebar');
+    const width = () => sidebar.evaluate((el) => Math.round(el.getBoundingClientRect().width));
+
+    const open = await width();
+    expect(open).toBeGreaterThan(0);
+
+    // The one already showing. Twice, because once was the old toggle.
+    await sample.locator('.rail__item').first().click();
+    await sample.waitForTimeout(400);
+    expect(await width(), 'the active item does not collapse the column').toBe(open);
+
+    await sample.locator('.rail__item').first().click();
+    await sample.waitForTimeout(400);
+    expect(await width(), 'nor does pressing it again').toBe(open);
+
+    // Shut it the one way that shuts it, then reach for a panel from the
+    // collapsed rail: it opens on the one that was asked for.
+    await sample.locator('.rail__item--bottom').click();
+    await sample.waitForTimeout(400);
+    expect(await width()).toBe(0);
+
+    const queries = sample.locator('.rail__item').nth(1);
+    await queries.click();
+    await sample.waitForTimeout(400);
+    expect(await width(), 'a collapsed rail still reaches a panel').toBe(open);
+    await expect(queries).toHaveAttribute('aria-pressed', 'true');
+  });
+
   test('nothing sits under the window controls, collapsed or not', async ({ sample }) => {
     /*
      * The strip used to live inside the content pane, so collapsing the sidebar
@@ -159,8 +200,13 @@ test.describe('layout', () => {
       .first()
       .click();
     await sample.locator('.monaco-editor').waitFor();
-    await sample.locator('.rail__item').first().click();
+    // The switch at the foot of the rail, which is the only thing that
+    // collapses the column. This used to press the active rail item, which
+    // collapsed it as a side effect — and when that stopped being true the
+    // assertion went on passing against a sidebar that was never shut.
+    await sample.locator('.rail__item--bottom').click();
     await sample.waitForTimeout(400);
+    await expect(sample.locator('.sidebar')).toHaveJSProperty('clientWidth', 0);
 
     const geometry = await sample.evaluate(() => {
       const inset = Number.parseFloat(

@@ -180,14 +180,27 @@ const railItems = computed<readonly { id: RailItem; label: string; icon: string 
  */
 const railIndex = computed(() => railItems.value.findIndex((item) => item.id === rail.value));
 
+/**
+ * A rail item shows its panel. It never hides one.
+ *
+ * Pressing the item already showing used to collapse the sidebar, which reads
+ * as a shortcut and behaves as a trap: the five items are a set of
+ * *destinations*, and one of them being a toggle means the same gesture on the
+ * same-looking button does two opposite things depending on where you already
+ * were. Aiming at the panel you are on — to bring it back to the front, or
+ * because you misremembered which was open — closed the column instead.
+ *
+ * So the answer to any of the five is the same answer: show that panel, and
+ * open the column if it is shut. That makes the collapsed rail useful rather
+ * than inert — a press goes straight to the panel you wanted instead of opening
+ * whichever one happened to be last.
+ *
+ * Collapsing has its own control, directly below these and in the same column,
+ * plus its shortcut. One button, one job.
+ */
 function selectRail(item: RailItem): void {
-  // Clicking the item that is already showing collapses the sidebar, which is
-  // the fastest way to reclaim the space and put it back.
-  if (rail.value === item) sidebarCollapsed.value = !sidebarCollapsed.value;
-  else {
-    rail.value = item;
-    sidebarCollapsed.value = false;
-  }
+  rail.value = item;
+  sidebarCollapsed.value = false;
 }
 
 useHotkeys({
