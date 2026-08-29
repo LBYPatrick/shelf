@@ -38,7 +38,8 @@
     "showSuggestions": "Show suggestions",
     "disconnect": "Disconnect",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "change": "Change"
   },
   "time": {
     "justNow": "just now",
@@ -115,7 +116,10 @@
     "noKeyringHelp": "Unavailable: no system keyring was found on this machine.",
     "sshKeyFile": "Key file",
     "sshPasswordMode": "Password",
-    "andMore": "{{count}} more…"
+    "andMore": "{{count}} more…",
+    "groupServer": "Server",
+    "groupCredentials": "Credentials",
+    "groupOptions": "Options"
   },
   "workspace": {
     "entities": "Entities",

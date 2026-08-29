@@ -147,6 +147,38 @@ test('escape dismisses one overlay at a time, from the top', async ({ page }) =>
  * to be told and then remember, and one that silently discards a password the
  * moment they type a single character and delete it again.
  */
+/**
+ * The engine is chosen once, and then it is a row.
+ *
+ * Nine marks in two wrapping rows was the loudest thing on the sheet and it was
+ * there on every visit — including the ones where somebody came to change a
+ * port. It is the whole content while nothing is chosen, which is the honest
+ * first step of a new connection, and one line afterwards.
+ */
+test('the engine picker collapses once an engine is chosen', async ({ page }) => {
+  await page
+    .getByRole('button', { name: /New connection/ })
+    .first()
+    .click();
+
+  // Nothing chosen: the grid is the content, and it is how the choice is made.
+  await expect(page.getByRole('radio', { name: 'PostgreSQL', exact: true })).toBeVisible();
+  await page.getByRole('radio', { name: 'PostgreSQL', exact: true }).click();
+
+  // Chosen: one row that names it, and the grid is gone rather than merely
+  // scrolled past.
+  await expect(page.locator('.engine-row__name')).toHaveText('PostgreSQL');
+  await expect(page.getByRole('radio', { name: 'PostgreSQL', exact: true })).toHaveCount(0);
+  // And the fields it was hiding are the ones that matter now.
+  await expect(page.getByLabel('Host')).toBeVisible();
+
+  // Changing it is one press, and choosing again settles it again.
+  await page.getByRole('button', { name: 'Change' }).click();
+  await expect(page.getByRole('radio', { name: 'MySQL', exact: true })).toBeVisible();
+  await page.getByRole('radio', { name: 'MySQL', exact: true }).click();
+  await expect(page.locator('.engine-row__name')).toHaveText('MySQL');
+});
+
 test('editing a connection shows the password it saved', async ({ page }) => {
   await page
     .getByRole('button', { name: /New connection/ })

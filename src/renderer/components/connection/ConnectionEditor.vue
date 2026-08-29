@@ -123,17 +123,28 @@ function close(): void {
       @test="test"
     />
 
+    <!--
+      A check on the left, decisions on the right.
+      ───────────────────────────────────────────
+      All four used to sit in one cluster, so the row read as four things you
+      might press to finish — and two of them, Save and Connect, both finish.
+      Test does not: it tells you whether the details are right and leaves you
+      exactly where you were. Position is what separates the kinds, which is
+      cheaper than a word explaining it, and the filled button is the one action
+      that commits.
+    -->
     <template #footer>
+      <PressButton variant="glass" :disabled="!ready || testing" @click="runTest">
+        {{ testing ? $t('connection.testing') : $t('action.test') }}
+      </PressButton>
+
       <span v-if="problem" class="problem">{{ problem }}</span>
 
-      <PressButton @click="close">
+      <PressButton class="footer__decisions" @click="close">
         {{ $t('action.cancel') }}
       </PressButton>
       <PressButton :disabled="!ready" @click="submit(false)">
         {{ $t('action.save') }}
-      </PressButton>
-      <PressButton variant="glass" :disabled="!ready || testing" @click="runTest">
-        {{ testing ? $t('connection.testing') : $t('action.test') }}
       </PressButton>
       <PressButton variant="primary" :disabled="!ready" @click="submit(true)">
         {{ $t('action.connect') }}
@@ -150,8 +161,16 @@ function close(): void {
  * read before anything has been attempted — and amber on a form nobody has
  * touched spends the warning colour on the one state where nothing is wrong.
  */
+/*
+ * Everything from Cancel rightwards is pushed over, rather than the check being
+ * pushed left. The problem line comes and goes, and hanging the split on it
+ * would close the gap the moment the form became valid.
+ */
+.footer__decisions {
+  margin-inline-start: auto;
+}
+
 .problem {
-  margin-inline-end: auto;
   font-size: 0.6875rem;
   color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
 }

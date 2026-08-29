@@ -38,7 +38,8 @@
     "showSuggestions": "제안 보기",
     "disconnect": "연결 끊기",
     "yes": "예",
-    "no": "아니요"
+    "no": "아니요",
+    "change": "변경"
   },
   "time": {
     "justNow": "방금",
@@ -115,7 +116,10 @@
     "noKeyringHelp": "사용할 수 없음: 이 기기에는 시스템 키체인이 없습니다.",
     "sshKeyFile": "키 파일",
     "sshPasswordMode": "비밀번호",
-    "andMore": "{{count}}개 더…"
+    "andMore": "{{count}}개 더…",
+    "groupServer": "서버",
+    "groupCredentials": "자격 증명",
+    "groupOptions": "옵션"
   },
   "workspace": {
     "entities": "객체",

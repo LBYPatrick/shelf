@@ -11,7 +11,7 @@ import { useTranslation } from 'i18next-vue';
 import type { ConnectionConfig, EngineId } from '@drivers/types';
 import type { SaveConnectionInput, SavedConnection } from '@shared/connections';
 import type { ParsedConnection } from '@shared/connectionUrl';
-import { engineDescriptor, isFileEngine } from '@shared/engines';
+import { ENGINES, engineDescriptor, isFileEngine } from '@shared/engines';
 import CheckBox from '../ui/CheckBox.vue';
 import DisclosureGroup from '../ui/DisclosureGroup.vue';
 import FormField from '../ui/FormField.vue';
@@ -21,6 +21,7 @@ import SegmentedControl from '../ui/SegmentedControl.vue';
 import SelectMenu from '../ui/SelectMenu.vue';
 import TextInput from '../ui/TextInput.vue';
 import EnginePicker from './EnginePicker.vue';
+import EngineMark from './EngineMark.vue';
 
 const props = defineProps<{
   /** The connection being edited, or null when creating a new one. */
@@ -139,6 +140,16 @@ const sshModes = computed(() => [
 ]);
 
 const descriptor = computed(() => (draft.engine ? engineDescriptor(draft.engine) : null));
+
+/**
+ * The engine as a row rather than a grid, once there is one.
+ *
+ * `changingEngine` is what re-opens it, and it is reset by the picker's own
+ * change event rather than by a watcher: choosing is the whole reason the grid
+ * was open, so the choice closes it.
+ */
+const changingEngine = ref(false);
+const chosen = computed(() => ENGINES.find((engine) => engine.id === draft.engine) ?? null);
 const shows = (field: string) => descriptor.value?.fields.includes(field as never) ?? false;
 
 /** Load the selected connection into the form, or reset for a new one. */
@@ -372,103 +383,179 @@ async function pickFile(): Promise<void> {
 
 <template>
   <form class="form" @submit.prevent="valid && emit('connect', buildInput())">
-    <FormField label="Engine">
-      <EnginePicker v-model="draft.engine" />
-    </FormField>
-
-    <template v-if="descriptor">
-      <div class="pairs">
-        <FormField v-if="shows('file')" v-slot="{ id }" label="Database file" class="span-2">
-          <div class="row">
-            <TextInput
-              :id="id"
-              v-model="draft.filePath"
-              monospace
-              placeholder="/path/to/database.db"
-            />
-            <PressButton variant="glass" type="button" @click="pickFile"> Choose… </PressButton>
-          </div>
-        </FormField>
-
-        <FormField v-if="shows('host')" v-slot="{ id }" label="Host" class="span-2">
-          <TextInput :id="id" v-model="draft.host" placeholder="localhost" />
-        </FormField>
-
-        <FormField v-if="descriptor.defaultPort" v-slot="{ id }" label="Port">
-          <TextInput
-            :id="id"
-            v-model="draft.port"
-            type="number"
-            :placeholder="String(descriptor.defaultPort)"
-          />
-        </FormField>
-
-        <FormField v-if="shows('username')" v-slot="{ id }" label="User">
-          <TextInput :id="id" v-model="draft.username" />
-        </FormField>
-
-        <FormField v-if="shows('password')" v-slot="{ id }" label="Password">
-          <!--
-            Masked until asked, but present: a field that hides what it holds
-            *and* declines to hold it is a field you cannot check against the
-            thing you are debugging.
-          -->
-          <div class="secret">
-            <TextInput
-              :id="id"
-              v-model="draft.password"
-              :type="revealed ? 'text' : 'password'"
-            />
-            <button
-              type="button"
-              class="secret__reveal"
-              :aria-pressed="revealed"
-              :aria-label="revealed ? 'Hide password' : 'Show password'"
-              :title="revealed ? 'Hide password' : 'Show password'"
-              @click="revealed = !revealed"
-            >
-              <AppIcon :name="revealed ? 'eyeOff' : 'eye'" :size="13" />
-            </button>
-          </div>
-        </FormField>
-
-        <FormField
-          v-if="shows('database')"
-          v-slot="{ id }"
-          :label="descriptor.databaseLabel ?? 'Database'"
-        >
-          <TextInput :id="id" v-model="draft.database" />
-        </FormField>
-
-        <FormField
-          v-for="option in descriptor.options ?? []"
-          :key="option.key"
-          v-slot="{ id }"
-          :label="option.label"
-          :help="option.help"
-        >
-          <!--
-            The app's own list. These are a driver's own options — a Postgres
-            SSL mode, a DynamoDB region — and a native `<select>` here hands
-            the popup to the operating system to draw in the middle of a sheet
-            built from our own tokens.
-          -->
-          <SelectMenu
-            v-if="option.kind === 'select'"
-            :id="id"
-            v-model="draft.options[option.key]"
-            :options="option.choices ?? []"
-            :aria-label="option.label"
-          />
-          <TextInput
-            v-else
-            :id="id"
-            v-model="draft.options[option.key]"
-            :type="option.kind === 'password' ? 'password' : 'text'"
-          />
-        </FormField>
+    <!--
+      The engine is chosen once and then it is a fact about this connection.
+      ─────────────────────────────────────────────────────────────────────
+      Nine marks in two wrapping rows is the loudest thing on the sheet, and it
+      was there on every visit — including the ones where somebody came to
+      change a port. So it is the whole content while nothing is chosen, which
+      is the honest first step of a new connection, and one row afterwards.
+      Changing it is still one press away and says so.
+    -->
+    <Transition name="engine" mode="out-in">
+      <div v-if="chosen && !changingEngine" key="row" class="engine-row">
+        <span class="engine-row__mark" aria-hidden="true">
+          <EngineMark :engine="chosen.id" :size="16" />
+        </span>
+        <span class="engine-row__name">{{ chosen.name }}</span>
+        <PressButton size="sm" type="button" @click="changingEngine = true">
+          {{ $t('action.change') }}
+        </PressButton>
       </div>
 
+      <FormField v-else key="grid" :label="$t('connection.engineLabel')">
+        <EnginePicker v-model="draft.engine" @update:model-value="changingEngine = false" />
+      </FormField>
+    </Transition>
+
+    <!--
+      Groups, because a form is read by what the fields mean rather than by
+      where they landed in a grid. It used to run host, port, user, password,
+      database in one two-column flow, which put the password beside the
+      database name and split the credentials across two rows.
+    -->
+    <template v-if="descriptor">
+      <fieldset v-if="shows('file') || shows('host')" class="group">
+        <legend class="group__name">{{ $t('connection.groupServer') }}</legend>
+        <div class="pairs">
+          <FormField v-if="shows('file')" v-slot="{ id }" label="Database file" class="span-2">
+            <div class="row">
+              <TextInput
+                :id="id"
+                v-model="draft.filePath"
+                monospace
+                placeholder="/path/to/database.db"
+              />
+              <PressButton variant="glass" type="button" @click="pickFile">
+                Choose…
+              </PressButton>
+            </div>
+          </FormField>
+
+          <FormField v-if="shows('host')" v-slot="{ id }" label="Host" class="span-2">
+            <TextInput :id="id" v-model="draft.host" placeholder="localhost" />
+          </FormField>
+
+          <FormField v-if="descriptor.defaultPort" v-slot="{ id }" label="Port">
+            <TextInput
+              :id="id"
+              v-model="draft.port"
+              type="number"
+              :placeholder="String(descriptor.defaultPort)"
+            />
+          </FormField>
+
+          <FormField
+            v-if="shows('database')"
+            v-slot="{ id }"
+            :label="descriptor.databaseLabel ?? 'Database'"
+          >
+            <TextInput :id="id" v-model="draft.database" />
+          </FormField>
+        </div>
+      </fieldset>
+
+      <fieldset v-if="shows('username') || shows('password')" class="group">
+        <legend class="group__name">{{ $t('connection.groupCredentials') }}</legend>
+        <div class="pairs">
+          <FormField v-if="shows('username')" v-slot="{ id }" label="User">
+            <TextInput :id="id" v-model="draft.username" />
+          </FormField>
+
+          <FormField v-if="shows('password')" v-slot="{ id }" label="Password">
+            <!--
+              Masked until asked, but present: a field that hides what it holds
+              *and* declines to hold it is a field you cannot check against the
+              thing you are debugging.
+            -->
+            <div class="secret">
+              <TextInput
+                :id="id"
+                v-model="draft.password"
+                :type="revealed ? 'text' : 'password'"
+              />
+              <button
+                type="button"
+                class="secret__reveal"
+                :aria-pressed="revealed"
+                :aria-label="revealed ? 'Hide password' : 'Show password'"
+                :title="revealed ? 'Hide password' : 'Show password'"
+                @click="revealed = !revealed"
+              >
+                <AppIcon :name="revealed ? 'eyeOff' : 'eye'" :size="13" />
+              </button>
+            </div>
+          </FormField>
+
+          <!--
+            Whether the password is kept belongs with the password, not three
+            groups below it beside an unrelated switch about writes.
+
+            Nothing to keep for a file: SQLite and DuckDB are opened by path, so
+            a checkbox about the keyring on that form is a control that cannot
+            act on anything the reader has typed — which is why this sits in the
+            group that only exists when there are credentials at all.
+          -->
+          <CheckBox
+            v-if="draft.engine && !isFileEngine(draft.engine)"
+            v-model="draft.rememberSecrets"
+            class="span-2"
+            :label="$t('connection.savePassword')"
+            :disabled="!keyringAvailable"
+            :hint="
+              keyringAvailable
+                ? $t('connection.savePasswordHelp')
+                : $t('connection.noKeyringHelp')
+            "
+          />
+        </div>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend class="group__name">{{ $t('connection.groupOptions') }}</legend>
+        <div class="pairs">
+          <FormField
+            v-for="option in descriptor.options ?? []"
+            :key="option.key"
+            v-slot="{ id }"
+            :label="option.label"
+            :help="option.help"
+          >
+            <!--
+              The app's own list. These are a driver's own options — a Postgres
+              SSL mode, a DynamoDB region — and a native `<select>` here hands
+              the popup to the operating system to draw in the middle of a sheet
+              built from our own tokens.
+            -->
+            <SelectMenu
+              v-if="option.kind === 'select'"
+              :id="id"
+              v-model="draft.options[option.key]"
+              :options="option.choices ?? []"
+              :aria-label="option.label"
+            />
+            <TextInput
+              v-else
+              :id="id"
+              v-model="draft.options[option.key]"
+              :type="option.kind === 'password' ? 'password' : 'text'"
+            />
+          </FormField>
+
+          <CheckBox
+            v-model="draft.readOnly"
+            class="span-2"
+            label="Read-only"
+            hint="Refuses anything that writes, at the driver."
+          />
+        </div>
+      </fieldset>
+
+      <!--
+        Last, so that nothing sits below it that is not in it. Read-only and the
+        password checkbox used to come *after* Advanced without being part of
+        it, which reads as though they were.
+      -->
       <DisclosureGroup
         v-if="descriptor.supportsSsh || descriptor.supportsSsl"
         v-model="showAdvanced"
@@ -563,31 +650,6 @@ async function pickFile(): Promise<void> {
         </div>
       </DisclosureGroup>
 
-      <div class="options">
-        <CheckBox
-          v-model="draft.readOnly"
-          label="Read-only"
-          hint="Refuses anything that writes, at the driver."
-        />
-
-        <!--
-          Nothing to save for a file: SQLite and DuckDB are opened by path, so
-          a checkbox about the keychain on that form is a control that cannot
-          act on anything the reader has typed.
-        -->
-        <CheckBox
-          v-if="draft.engine && !isFileEngine(draft.engine)"
-          v-model="draft.rememberSecrets"
-          :label="$t('connection.savePassword')"
-          :disabled="!keyringAvailable"
-          :hint="
-            keyringAvailable
-              ? $t('connection.savePasswordHelp')
-              : $t('connection.noKeyringHelp')
-          "
-        />
-      </div>
-
       <FormField
         v-slot="{ id }"
         label="Name"
@@ -648,6 +710,89 @@ async function pickFile(): Promise<void> {
 .secret__reveal[aria-pressed='true'],
 .secret__reveal:hover {
   color: var(--color-base-content);
+}
+
+/*
+ * The engine, once it is settled.
+ *
+ * A row rather than a field: it has no label above it because the mark and the
+ * name say what it is, and a "Engine" label over one line reading "PostgreSQL"
+ * is a word spent on nothing.
+ */
+.engine-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  padding: var(--gap-tight) var(--gap-tight) var(--gap-tight) var(--gap);
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-field);
+  background: var(--surface-well);
+}
+
+.engine-row__mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.engine-row__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: 550;
+}
+
+/*
+ * A group is what the fields in it mean.
+ *
+ * `fieldset` and `legend` rather than a div and a span, because the grouping is
+ * the point and a screen reader gets it for free — every field inside is
+ * announced with the group's name in front of it. The browser's own border and
+ * padding go, since the separation here is a rule and a name rather than a box
+ * drawn around a form.
+ */
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.group__name {
+  padding: 0 0 var(--gap-tight);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
+}
+
+/*
+ * The engine swapping between a grid and a row.
+ *
+ * `mode="out-in"`, so the two never overlap: they are different heights and a
+ * crossfade between them would be one sliding through the other while the sheet
+ * animates its own height around both. Out then in is half the movement and all
+ * of the meaning.
+ *
+ * A transition rather than a keyframe, because this is reversible — Change,
+ * then think better of it — and a keyframe restarts from zero where a
+ * transition retargets from wherever it got to.
+ */
+.engine-enter-active,
+.engine-leave-active {
+  transition:
+    opacity var(--t-press) var(--ease-out),
+    transform var(--t-press) var(--ease-out);
+}
+
+.engine-enter-from,
+.engine-leave-to {
+  opacity: 0;
+  transform: translateY(-0.25rem);
 }
 
 .pairs {

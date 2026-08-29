@@ -38,7 +38,8 @@
     "showSuggestions": "显示建议",
     "disconnect": "断开连接",
     "yes": "是",
-    "no": "否"
+    "no": "否",
+    "change": "更改"
   },
   "time": {
     "justNow": "刚刚",
@@ -115,7 +116,10 @@
     "noKeyringHelp": "不可用：这台机器上没有系统钥匙串。",
     "sshKeyFile": "密钥文件",
     "sshPasswordMode": "密码",
-    "andMore": "还有 {{count}} 个…"
+    "andMore": "还有 {{count}} 个…",
+    "groupServer": "服务器",
+    "groupCredentials": "凭据",
+    "groupOptions": "选项"
   },
   "workspace": {
     "entities": "对象",

@@ -38,7 +38,8 @@
     "showSuggestions": "候補を表示",
     "disconnect": "切断",
     "yes": "はい",
-    "no": "いいえ"
+    "no": "いいえ",
+    "change": "変更"
   },
   "time": {
     "justNow": "たった今",
@@ -115,7 +116,10 @@
     "noKeyringHelp": "利用できません。このマシンにはシステムのキーチェーンがありません。",
     "sshKeyFile": "鍵ファイル",
     "sshPasswordMode": "パスワード",
-    "andMore": "他 {{count}} 件…"
+    "andMore": "他 {{count}} 件…",
+    "groupServer": "サーバー",
+    "groupCredentials": "認証情報",
+    "groupOptions": "オプション"
   },
   "workspace": {
     "entities": "オブジェクト",

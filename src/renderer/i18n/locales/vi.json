@@ -38,7 +38,8 @@
     "showSuggestions": "Hiện gợi ý",
     "disconnect": "Ngắt kết nối",
     "yes": "Có",
-    "no": "Không"
+    "no": "Không",
+    "change": "Đổi"
   },
   "time": {
     "justNow": "vừa xong",
@@ -115,7 +116,10 @@
     "noKeyringHelp": "Không khả dụng: máy này không có keychain hệ thống.",
     "sshKeyFile": "Tệp khóa",
     "sshPasswordMode": "Mật khẩu",
-    "andMore": "Thêm {{count}}…"
+    "andMore": "Thêm {{count}}…",
+    "groupServer": "Máy chủ",
+    "groupCredentials": "Thông tin đăng nhập",
+    "groupOptions": "Tuỳ chọn"
   },
   "workspace": {
     "entities": "Đối tượng",
