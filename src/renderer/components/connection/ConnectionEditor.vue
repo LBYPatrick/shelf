@@ -49,6 +49,20 @@ const problem = computed(() => {
   return form.value?.problem();
 });
 
+/**
+ * Whether there is anything to test yet.
+ *
+ * Hidden rather than disabled before an engine is chosen. A disabled control is
+ * a promise that it will become available, which is worth making when the
+ * reader can see what is missing — and on the first step of this sheet the only
+ * thing on screen is the engine grid, so a greyed "Test" beside it is a second
+ * thing to work out before the first one has been answered.
+ */
+const testable = computed(() => {
+  void tick.value;
+  return form.value?.hasEngine() ?? false;
+});
+
 // Cheap and bounded: the sheet is open for seconds, not minutes.
 const poll = setInterval(() => (tick.value += 1), 150);
 onBeforeUnmount(() => clearInterval(poll));
@@ -134,7 +148,12 @@ function close(): void {
       that commits.
     -->
     <template #footer>
-      <PressButton variant="glass" :disabled="!ready || testing" @click="runTest">
+      <PressButton
+        v-if="testable"
+        variant="glass"
+        :disabled="!ready || testing"
+        @click="runTest"
+      >
         {{ testing ? $t('connection.testing') : $t('action.test') }}
       </PressButton>
 

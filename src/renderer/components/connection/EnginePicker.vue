@@ -44,9 +44,21 @@ const model = defineModel<EngineId | null>({ required: true });
  * here, so it is the size of a field, and the marks still carry the colours
  * that make an engine recognisable before its name is read.
  */
+/*
+ * One grid, equal columns, rather than a row that wraps.
+ *
+ * Nine names of nine different lengths laid out at their natural widths make
+ * nine different boxes and two ragged rows — a shape the eye has to parse
+ * before it can read any of it. On a grid the cells are identical and the only
+ * thing that varies is the word inside, which is the thing being chosen.
+ *
+ * `auto-fill` rather than a fixed count, so the same rule holds in a narrow
+ * window and at a larger text size: the columns get fewer, never thinner than a
+ * name can sit in.
+ */
 .engines {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
   gap: var(--gap-tight);
 }
 

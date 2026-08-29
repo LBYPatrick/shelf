@@ -628,8 +628,17 @@ void props;
   mask-image: none;
 }
 
+/*
+ * `align-items: center`, because the row holds two kinds of thing.
+ *
+ * Without it a bare `<span>` of hint text stretches to the row's height and
+ * renders its text at the top of that box, while the buttons beside it sit at
+ * their own height — so the sentence rode visibly high against them. Every
+ * footer in the app has that shape, and none of them wants it.
+ */
 .panel__foot {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: var(--gap);
   padding: var(--gap-loose) var(--gap-section);

@@ -365,6 +365,8 @@ defineExpose({
   buildInput,
   isValid: () => valid.value,
   problem: () => problems.value[0],
+  /** Whether there is an engine yet, which is what the footer's check waits for. */
+  hasEngine: () => draft.engine !== null,
 });
 
 async function pickFile(): Promise<void> {
