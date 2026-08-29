@@ -1094,8 +1094,10 @@ label.row__label {
   transition: transform var(--t-press) var(--ease-out);
 }
 
-.accent:hover {
-  transform: scale(1.1);
+@media (hover: hover) and (pointer: fine) {
+  .accent:hover {
+    transform: scale(1.1);
+  }
 }
 
 .accent:active {

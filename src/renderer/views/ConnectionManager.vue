@@ -599,7 +599,16 @@ watch(
 .keyring,
 .fold {
   animation: lift-in var(--t-panel) var(--ease-out) backwards;
-  animation-delay: calc(var(--step) * 55ms);
+  /*
+   * Capped, the way the connection rows below already cap theirs.
+   *
+   * This is the first screen of every launch, and it used to finish arriving
+   * about two thirds of a second in — 420ms of travel with 55ms between each
+   * item, which compounds. The cascade is worth keeping and the wait is not, so
+   * the step is shorter and the whole sequence is bounded rather than growing
+   * with the number of things on screen.
+   */
+  animation-delay: min(calc(var(--step) * 40ms), 160ms);
 }
 
 @keyframes lift-in {

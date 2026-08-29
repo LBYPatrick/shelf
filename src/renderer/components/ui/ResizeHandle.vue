@@ -143,11 +143,25 @@ function nudge(delta: number): void {
   height: 3px;
 }
 
-.handle:hover .handle__line::after,
+/*
+ * Split from the hover, rather than the three sharing one selector.
+ *
+ * Focus and a live drag are states that exist on any input; hover is the one
+ * that a touch device invents on a tap and then leaves stuck. Gating all three
+ * together would have taken the grip away from the keyboard and from the drag
+ * itself on the very devices the gate is for.
+ */
 .handle:focus-visible .handle__line::after,
 .handle--dragging .handle__line::after {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .handle:hover .handle__line::after {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
 .handle--dragging .handle__line::after {

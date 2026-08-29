@@ -176,8 +176,10 @@ const percent = (share: number) =>
   opacity: 0.35;
 }
 
-.donut__arc:hover {
-  transform: scale(1.05);
+@media (hover: hover) and (pointer: fine) {
+  .donut__arc:hover {
+    transform: scale(1.05);
+  }
 }
 
 .donut__total {
