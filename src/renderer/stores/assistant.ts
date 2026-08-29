@@ -190,6 +190,26 @@ export const useAssistant = defineStore('assistant', () => {
     return window.shelf.db.prepareAiProvider(provider.id);
   }
 
+  /**
+   * A name for a statement, from whichever provider is in use.
+   *
+   * Here rather than in the query tab because the provider, the handle and the
+   * reader's language all live here — a caller that had to assemble those would
+   * be a second place that knows how a provider is reached.
+   *
+   * Throws when nothing is configured, which the caller reports. Silently doing
+   * nothing is the failure a reader cannot tell from the app being broken.
+   */
+  async function suggestName(sql: string): Promise<string> {
+    const token = await handle();
+    const { name } = await host.call('ai/name', {
+      handle: token,
+      sql,
+      locale: i18next.resolvedLanguage ?? 'en-US',
+    });
+    return name;
+  }
+
   async function probe(id: string): Promise<{ ok: true } | { ok: false; message: string }> {
     const token = await window.shelf.db.prepareAiProvider(id);
     return host.call('ai/probe', { handle: token });
@@ -465,6 +485,7 @@ export const useAssistant = defineStore('assistant', () => {
     save,
     remove,
     probe,
+    suggestName,
     conversation,
     forget,
     ask,

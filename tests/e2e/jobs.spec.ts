@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { typeQuery } from './helpers';
+import { dispatchQuery, typeQuery } from './helpers';
 
 /**
  * Finding one job among the hundred that are kept.
@@ -22,8 +22,7 @@ test('searches jobs by name, narrows them by status and length, and says so', as
     .first()
     .click();
   await typeQuery(page, 'select id, name from music.artist');
-  await page.getByRole('button', { name: 'What Run performs' }).click();
-  await page.getByRole('menuitem', { name: 'Dispatch' }).click();
+  await dispatchQuery(page);
 
   await page.getByRole('button', { name: 'Jobs' }).click();
   const cards = page.locator('.joblist .tile');

@@ -4,13 +4,14 @@ import { createAiAdapter } from '@ai/registry';
 import { gatherSchema } from '@ai/schema';
 import type { AiPhase, AiTurn } from '@shared/ai';
 import type { SchemaScope } from '@shared/schemaDoc';
+import { namePrompt, tidyGeneratedName } from '@shared/queryName';
 import type { Session } from './session';
 
 /**
  * The assistant's handlers, kept out of `handlers.ts`.
  *
  * Not a matter of file length. Everything in the handler registry is a line
- * that forwards a call to a driver; these two assemble a schema document, an
+ * that forwards a call to a driver; these assemble a schema document, an
  * adapter and an agent loop, and putting forty lines of that between
  * `data/count` and `query/run` would bury the shape of the registry itself.
  */
@@ -123,6 +124,42 @@ export async function turn(
     items: outcome.items,
     ...(outcome.usage ? { usage: outcome.usage } : {}),
   };
+}
+
+/**
+ * A name for a statement, asked of the model in one shot.
+ *
+ * No tools and no schema: it is given the SQL and the instruction, which is all
+ * naming needs. `maxTokens` is small on purpose — the budget is the last line
+ * of defence against a model that answers a request for six words with a
+ * paragraph, and a truncated paragraph is trimmed to its first line by
+ * `tidyGeneratedName` anyway.
+ *
+ * A failure is thrown rather than swallowed. The reader pressed a button and is
+ * watching the field: "nothing happened" is the one outcome that cannot be
+ * distinguished from the app being broken.
+ */
+export async function nameStatement(
+  session: Session,
+  payload: { handle: string; sql: string; locale?: string },
+  signal: AbortSignal
+): Promise<{ name: string }> {
+  const staged = session.consumeProvider(payload.handle);
+  const adapter = createAiAdapter(staged.provider, staged.apiKey);
+
+  const reply = await adapter.send(
+    {
+      model: staged.provider.model,
+      system: namePrompt(payload.locale),
+      messages: [{ role: 'user', text: payload.sql }],
+      tools: [],
+      maxTokens: 64,
+    },
+    { text: () => undefined, thinking: () => undefined },
+    signal
+  );
+
+  return { name: tidyGeneratedName(reply.text) };
 }
 
 /**

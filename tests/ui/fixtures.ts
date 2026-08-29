@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import {
   _electron as electron,
   test as base,
+  expect,
   type ElectronApplication,
   type Page,
 } from '@playwright/test';
@@ -156,4 +157,19 @@ export async function stabilize(page: Page): Promise<void> {
       { polling: 'raf', timeout: 5_000 }
     )
     .catch(() => undefined);
+}
+
+/**
+ * Sends the statement off as a job, answering the sheet that asks what to call
+ * it.
+ *
+ * The name is not typed: it opens holding the stamp the job would have had
+ * anyway, and taking that is the common path — a test that typed one would be
+ * asserting the field works rather than that a dispatch does.
+ */
+export async function dispatchQuery(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'What Run performs' }).click();
+  await page.getByRole('menuitem', { name: 'Dispatch' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Dispatch' }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
 }

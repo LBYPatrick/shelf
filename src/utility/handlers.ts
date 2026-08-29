@@ -2,7 +2,7 @@ import { createClient } from '@drivers/registry';
 import type { HostChannel, HostContract } from '@shared/contract';
 import { installedDrivers, signInState } from '@ai/installed';
 import { changesShape } from '@ai/schemaCache';
-import { probe, schemaFor, turn } from './assistant';
+import { nameStatement, probe, schemaFor, turn } from './assistant';
 import { runExport } from './export';
 import { cellToValue, readTable } from './import';
 import { discardSpool, readSpoolPage, spool, spoolCursor, spoolPath } from './spool';
@@ -277,6 +277,8 @@ export const handlers: Registry = {
   'ai/installed': async () => installedDrivers(),
 
   'ai/signedIn': (_session, { kind }) => signInState(kind),
+
+  'ai/name': (session, payload, signal) => nameStatement(session, payload, signal),
 
   'ai/probe': (session, { handle }, signal) => probe(session, handle, signal),
 

@@ -115,3 +115,18 @@ export async function typeQuery(page: Page, sql: string): Promise<void> {
   await page.keyboard.press('ControlOrMeta+a');
   await page.keyboard.type(sql);
 }
+
+/**
+ * Sends the statement off as a job, answering the sheet that asks what to call
+ * it.
+ *
+ * The name is not typed: it opens holding the stamp the job would have had
+ * anyway, and taking that is the common path — a test that typed one would be
+ * asserting the field works rather than that a dispatch does.
+ */
+export async function dispatchQuery(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'What Run performs' }).click();
+  await page.getByRole('menuitem', { name: 'Dispatch' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Dispatch' }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+}

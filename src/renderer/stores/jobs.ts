@@ -146,7 +146,13 @@ export const useJobs = defineStore('jobs', () => {
    * a caller wanting to raise a toast needs — but nothing has to await it, and
    * the tab that dispatched it does not.
    */
-  function dispatch(options: { connectionId: string; database: string; sql: string }): {
+  function dispatch(options: {
+    connectionId: string;
+    database: string;
+    sql: string;
+    /** What the reader called it. The stamp is the fallback, not the rule. */
+    name?: string;
+  }): {
     job: Job;
     finished: Promise<Job>;
   } {
@@ -155,7 +161,7 @@ export const useJobs = defineStore('jobs', () => {
 
     const job: Job = {
       id: `job-${startedAt}-${counter}`,
-      name: defaultJobName(options.database, new Date(startedAt)),
+      name: options.name?.trim() || defaultJobName(options.database, new Date(startedAt)),
       connectionId: options.connectionId,
       database: options.database,
       sql: options.sql,

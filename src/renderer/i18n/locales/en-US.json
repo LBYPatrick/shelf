@@ -645,7 +645,10 @@
     "explainOf": "Explain: {{name}}",
     "clearFilters": "Clear the filters",
     "showSql": "Show original",
-    "kindUpdated": "Updated"
+    "kindUpdated": "Updated",
+    "nameTitle": "Dispatch statement",
+    "nameLabel": "Job name",
+    "nameHelp": "How this run is listed under the jobs panel once it is away."
   },
   "value": {
     "asJson": "formatted as JSON",
@@ -774,5 +777,10 @@
     "partial": "Connected, but part of the catalogue did not answer",
     "unreachable": "The database did not answer",
     "readOnly": "Read-only"
+  },
+  "name": {
+    "generate": "Suggest a name",
+    "generateHint": "Let the assistant name this from what it does",
+    "generateFailed": "Could not suggest a name"
   }
 }

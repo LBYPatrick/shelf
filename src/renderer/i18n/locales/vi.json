@@ -645,7 +645,10 @@
     "explainOf": "Giải thích: {{name}}",
     "clearFilters": "Xóa bộ lọc",
     "showSql": "Xem bản gốc",
-    "kindUpdated": "Cập nhật"
+    "kindUpdated": "Cập nhật",
+    "nameTitle": "Gửi câu lệnh đi chạy",
+    "nameLabel": "Tên tác vụ",
+    "nameHelp": "Tên hiển thị trong danh sách tác vụ sau khi câu lệnh được gửi đi."
   },
   "value": {
     "asJson": "định dạng JSON",
@@ -774,5 +777,10 @@
     "partial": "Đã kết nối, nhưng một phần danh mục không phản hồi",
     "unreachable": "Cơ sở dữ liệu không phản hồi",
     "readOnly": "Chỉ đọc"
+  },
+  "name": {
+    "generate": "Gợi ý một tên",
+    "generateHint": "Để trợ lý đặt tên dựa trên việc câu lệnh làm gì",
+    "generateFailed": "Không thể gợi ý tên"
   }
 }

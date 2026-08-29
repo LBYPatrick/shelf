@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 import { test } from './fixtures';
-import { newQueryTab, openTable, typeQuery } from './helpers';
+import { dispatchQuery, newQueryTab, openTable, typeQuery } from './helpers';
 
 /** Developer tool. Run with `pnpm shots`. */
 const OUT = process.env['SHOT_DIR'] ?? 'test-results/shots';
@@ -150,8 +150,7 @@ test('capture the interface', async ({ app, page }) => {
   // The jobs rail: a card, and the questions it can be asked.
   await newQueryTab(page);
   await typeQuery(page, 'select id, name from music.artist');
-  await page.getByRole('button', { name: 'What Run performs' }).click();
-  await page.getByRole('menuitem', { name: 'Dispatch' }).click();
+  await dispatchQuery(page);
   await page.getByRole('button', { name: 'Jobs' }).click();
   await settle(1500);
   await shot('06-jobs');

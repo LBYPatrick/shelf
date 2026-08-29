@@ -645,7 +645,10 @@
     "explainOf": "설명: {{name}}",
     "clearFilters": "필터 지우기",
     "showSql": "원본 보기",
-    "kindUpdated": "수정됨"
+    "kindUpdated": "수정됨",
+    "nameTitle": "문 보내기",
+    "nameLabel": "작업 이름",
+    "nameHelp": "보낸 뒤 작업 목록에 표시될 이름입니다."
   },
   "value": {
     "asJson": "JSON으로 정렬됨",
@@ -774,5 +777,10 @@
     "partial": "연결되었지만 카탈로그 일부가 응답하지 않았습니다",
     "unreachable": "데이터베이스가 응답하지 않았습니다",
     "readOnly": "읽기 전용"
+  },
+  "name": {
+    "generate": "이름 제안",
+    "generateHint": "하는 일을 바탕으로 어시스턴트가 이름을 짓게 합니다",
+    "generateFailed": "이름을 제안하지 못했습니다"
   }
 }

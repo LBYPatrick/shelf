@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 import { _electron as electron, type ElectronApplication } from '@playwright/test';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { typeQuery } from './helpers';
+import { dispatchQuery, typeQuery } from './helpers';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -136,8 +136,7 @@ test('exports a dispatched job with its columns intact', async () => {
     await page.locator('.monaco-editor').first().click();
     await typeQuery(page, 'select id, name, country from music.artist');
 
-    await page.getByRole('button', { name: 'What Run performs' }).click();
-    await page.getByRole('menuitem', { name: 'Dispatch' }).click();
+    await dispatchQuery(page);
 
     // The job finishes in the sidebar, and opening it opens the spool.
     await page.getByRole('button', { name: 'Jobs' }).click();

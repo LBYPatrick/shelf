@@ -78,6 +78,10 @@ export const useTabs = defineStore('tabs', () => {
     activeId.value = id;
   }
 
+  function byId(id: string): Tab | undefined {
+    return tabs.value.find((tab) => tab.id === id);
+  }
+
   function find(kind: TabKind, entity?: EntityRef): Tab | undefined {
     return tabs.value.find((tab) => {
       if (tab.kind !== kind) return false;
@@ -342,6 +346,7 @@ export const useTabs = defineStore('tabs', () => {
     activeId,
     active,
     closed,
+    byId,
     focus,
     openEntity,
     openErd,

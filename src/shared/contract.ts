@@ -251,6 +251,24 @@ export interface HostContract {
    */
   'ai/signedIn': { payload: { kind: AiDriverKind }; result: AiSignInState };
 
+  /**
+   * A short name for a statement, from the model.
+   *
+   * One shot, no tools, no schema and no conversation — it is shown the SQL and
+   * nothing else. That is deliberately far less than the assistant gets: naming
+   * a statement is a reading task, and a channel that could look at the
+   * database to do it would be a second assistant with no transcript to show
+   * for itself.
+   *
+   * It is the reader's field that the answer lands in, never the saved name:
+   * the button fills a box that was already filled with something sensible, and
+   * what is stored is whatever the reader leaves in it.
+   */
+  'ai/name': {
+    payload: { handle: string; sql: string; locale?: string };
+    result: { name: string };
+  };
+
   /** Does this provider answer, with these credentials, for this model. */
   'ai/probe': {
     payload: { handle: string };

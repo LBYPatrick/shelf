@@ -645,7 +645,10 @@
     "explainOf": "説明: {{name}}",
     "clearFilters": "絞り込みを解除",
     "showSql": "元のクエリ",
-    "kindUpdated": "更新"
+    "kindUpdated": "更新",
+    "nameTitle": "ステートメントを実行に出す",
+    "nameLabel": "ジョブ名",
+    "nameHelp": "実行に出したあと、ジョブ一覧にこの名前で並びます。"
   },
   "value": {
     "asJson": "JSON として整形",
@@ -774,5 +777,10 @@
     "partial": "接続済みですが、カタログの一部が応答しませんでした",
     "unreachable": "データベースが応答しませんでした",
     "readOnly": "読み取り専用"
+  },
+  "name": {
+    "generate": "名前を提案",
+    "generateHint": "処理内容からアシスタントに名前を付けてもらう",
+    "generateFailed": "名前を提案できませんでした"
   }
 }

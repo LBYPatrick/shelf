@@ -6,7 +6,7 @@
  * differ" — these fail with the reason, which is the difference between a gate
  * that gets fixed and one that gets its snapshots regenerated.
  */
-import { newQueryTab, setAppearance, stabilize, test, expect } from './fixtures';
+import { dispatchQuery, expect, newQueryTab, setAppearance, stabilize, test } from './fixtures';
 import { openTable, revealTables, typeQuery } from '../e2e/helpers';
 import type { Page } from '@playwright/test';
 
@@ -2630,8 +2630,7 @@ test.describe('the jobs rail', () => {
   }) => {
     await newQueryTab(sample);
     await typeQuery(sample, 'select id, name from music.artist');
-    await sample.getByRole('button', { name: 'What Run performs' }).click();
-    await sample.getByRole('menuitem', { name: 'Dispatch' }).click();
+    await dispatchQuery(sample);
     await sample.getByRole('button', { name: 'Jobs' }).click();
 
     const card = sample.locator('.joblist .tile').first();
@@ -2723,8 +2722,7 @@ test.describe('the jobs rail', () => {
     // minutes raises, and they had nowhere to live.
     await newQueryTab(sample);
     await typeQuery(sample, 'select id, name from music.artist');
-    await sample.getByRole('button', { name: 'What Run performs' }).click();
-    await sample.getByRole('menuitem', { name: 'Dispatch' }).click();
+    await dispatchQuery(sample);
     await sample.getByRole('button', { name: 'Jobs' }).click();
 
     const card = sample.locator('.joblist .tile').first();

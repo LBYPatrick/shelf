@@ -108,6 +108,13 @@ const DEFAULTS: Answers = {
   // Signed out, because that is the only state the sign-in sheet is about.
   'ai/signedIn': () => 'out' as const,
 
+  /*
+   * A name, and a slow one. The whole point of the button is the wait between
+   * pressing it and the field changing — answering instantly would hide the one
+   * state the story is for.
+   */
+  'ai/name': () => ({ name: 'Albums per artist' }),
+
   'ai/schema': () => ({
     kind: 'shelf.schema' as const,
     version: 1,

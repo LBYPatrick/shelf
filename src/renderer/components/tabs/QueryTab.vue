@@ -22,7 +22,7 @@ import { useQueries } from '../../stores/queries';
 import { rowLimitOptions, useSettings } from '../../stores/settings';
 import { useActivity } from '../../stores/activity';
 import { useToasts } from '../../stores/toasts';
-import { useJobs } from '../../stores/jobs';
+import { defaultJobName, useJobs } from '../../stores/jobs';
 import { useTabs } from '../../stores/tabs';
 import { shortcutLabel } from '../../lib/keybindings';
 import DataGrid from '../grid/DataGrid.vue';
@@ -39,9 +39,7 @@ import AppIcon from '../ui/AppIcon.vue';
 import ContextMenu, { type MenuItem } from '../ui/ContextMenu.vue';
 import GridSkeleton from '../ui/GridSkeleton.vue';
 import PlanSheet from '../viz/PlanSheet.vue';
-import FormField from '../ui/FormField.vue';
-import Sheet from '../ui/Sheet.vue';
-import TextInput from '../ui/TextInput.vue';
+import NameSheet from '../ui/NameSheet.vue';
 import { elapsedLabel, useElapsed } from '../../composables/useElapsed';
 import { errorMessage } from '@shared/errors';
 
@@ -269,12 +267,37 @@ const primaryRun = computed(() =>
  * the only thing that has to reach you. That is the entire distinction from a
  * run — a run is something you wait for, a dispatch is something you start.
  */
+const dispatching = ref(false);
+const jobName = ref('');
+
+/**
+ * Dispatching asks for a name too, and for the same reason saving does.
+ *
+ * A job outlives the tab that started it — it is a row in a list that is still
+ * there tomorrow — and `<database>-20260828-214500` says only when it ran. The
+ * stamp is still the default, because it is a real name and never wrong, and
+ * the reader can take it by pressing return.
+ */
 function dispatch(): void {
+  const statement = (currentStatement.value?.text ?? text.value).trim();
+  if (!statement || !connections.active) return;
+
+  jobName.value = defaultJobName(
+    connections.active.database ?? connections.active.name ?? '',
+    new Date()
+  );
+  dispatching.value = true;
+}
+
+function confirmDispatch(): void {
+  dispatching.value = false;
+
   const statement = (currentStatement.value?.text ?? text.value).trim();
   const connectionId = connections.active?.id;
   if (!statement || !connectionId) return;
 
   const { job, finished } = jobs.dispatch({
+    name: jobName.value.trim(),
     connectionId,
     database: connections.active?.database ?? connections.active?.name ?? '',
     sql: statement,
@@ -432,6 +455,7 @@ function formatQuery(): void {
 
 const savedName = ref('');
 const saving = ref(false);
+const savedId = ref<string | undefined>(undefined);
 
 /** Saving asks for a name once, then updates that query from then on. */
 async function saveQuery(): Promise<void> {
@@ -439,14 +463,22 @@ async function saveQuery(): Promise<void> {
   if (!text_) return;
 
   if (!savedId.value) {
+    /*
+     * The tab's own name, which is the one the reader has already chosen.
+     *
+     * It opened as "Query 3" and may still say that, but it is renameable and a
+     * renamed tab is somebody having already answered this question — asking it
+     * again with an empty box throws that answer away. Where it has not been
+     * renamed the default is at worst harmless, and the button beside the field
+     * is there for exactly that case.
+     */
+    savedName.value = tabs.byId(props.tabId)?.title ?? '';
     saving.value = true;
     return;
   }
 
   await queries.save(savedName.value || 'Untitled', text_, savedId.value);
 }
-
-const savedId = ref<string | undefined>(undefined);
 
 async function confirmSave(): Promise<void> {
   const stored = await queries.save(savedName.value.trim() || 'Untitled', text.value.trim());
@@ -910,29 +942,27 @@ watch(
       <DataGrid v-else ref="grid" :fields="fields" :rows="rows" :loading="running" />
     </div>
 
-    <Sheet v-model="saving" :title="$t('query.saveTitle')">
-      <FormField
-        v-slot="{ id }"
-        :label="$t('connection.name')"
-        :help="$t('query.saveNameHelp')"
-      >
-        <TextInput
-          :id="id"
-          v-model="savedName"
-          placeholder="Monthly revenue"
-          @keydown.enter="confirmSave"
-        />
-      </FormField>
+    <NameSheet
+      v-model="saving"
+      v-model:name="savedName"
+      :title="$t('query.saveTitle')"
+      :label="$t('connection.name')"
+      :help="$t('query.saveNameHelp')"
+      :confirm="$t('action.save')"
+      :sql="text"
+      @confirm="confirmSave"
+    />
 
-      <template #footer>
-        <PressButton @click="saving = false">
-          {{ $t('action.cancel') }}
-        </PressButton>
-        <PressButton variant="primary" :disabled="!savedName.trim()" @click="confirmSave">
-          {{ $t('action.save') }}
-        </PressButton>
-      </template>
-    </Sheet>
+    <NameSheet
+      v-model="dispatching"
+      v-model:name="jobName"
+      :title="$t('jobs.nameTitle')"
+      :label="$t('jobs.nameLabel')"
+      :help="$t('jobs.nameHelp')"
+      :confirm="$t('action.dispatch')"
+      :sql="currentStatement?.text ?? text"
+      @confirm="confirmDispatch"
+    />
 
     <ContextMenu
       v-model="runMenuOpen"

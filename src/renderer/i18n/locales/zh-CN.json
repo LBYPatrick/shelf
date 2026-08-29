@@ -645,7 +645,10 @@
     "explainOf": "解释：{{name}}",
     "clearFilters": "清除筛选",
     "showSql": "查看原始查询",
-    "kindUpdated": "更新时间"
+    "kindUpdated": "更新时间",
+    "nameTitle": "派发语句",
+    "nameLabel": "任务名称",
+    "nameHelp": "派发之后，这次运行在任务列表中的名称。"
   },
   "value": {
     "asJson": "按 JSON 格式化",
@@ -774,5 +777,10 @@
     "partial": "已连接，但目录的一部分没有响应",
     "unreachable": "数据库没有响应",
     "readOnly": "只读"
+  },
+  "name": {
+    "generate": "建议一个名称",
+    "generateHint": "让助手根据这条语句的作用来命名",
+    "generateFailed": "无法生成名称"
   }
 }
