@@ -8,6 +8,12 @@ import CliSignInSheet from './CliSignInSheet.vue';
  * Hard to reach in the app on purpose — it needs a machine with the CLI
  * installed and nobody signed in to it — which is exactly the case the
  * storybook is for.
+ *
+ * One story per detected CLI, and they have to be listed one by one: the sheet
+ * takes a driver kind, so a provider added to the catalogue and not added here
+ * is a sheet nobody ever looks at. Grok Build was exactly that for a release —
+ * the probe, the command and the sheet all worked, and the only thing missing
+ * was anywhere to see it.
  */
 const meta = {
   title: 'Assistant/CliSignInSheet',
@@ -33,6 +39,18 @@ export const ClaudeCode: Story = {
 
 export const Codex: Story = {
   args: { kind: 'codex' },
+  render: (args) => ({
+    components: { CliSignInSheet },
+    setup: () => {
+      connected();
+      return { args };
+    },
+    template: `<CliSignInSheet v-bind="args" />`,
+  }),
+};
+
+export const GrokBuild: Story = {
+  args: { kind: 'grok' },
   render: (args) => ({
     components: { CliSignInSheet },
     setup: () => {
