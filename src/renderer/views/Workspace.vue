@@ -219,10 +219,28 @@ useHotkeys({
 let stopPersisting: (() => void) | undefined;
 
 onMounted(async () => {
-  void entities.refresh();
   // The provider list is read once per window: every chat tab and every Ask
   // sheet reads the same store rather than each asking main for the list.
-  void assistant.refresh();
+  const providers = assistant.refresh();
+
+  /*
+   * The tree first, then the assistant's read of the same database.
+   *
+   * Both walk the schema and both go down one connection, so starting them
+   * together would queue a couple of hundred speculative round trips in front
+   * of the list the reader is sitting and watching. Held until after, the panel
+   * fills at the speed it always did and the warm-up gets the connection while
+   * nobody is waiting on it.
+   *
+   * It waits on the provider list as well, and has to: the warm-up declines to
+   * run where no assistant is configured, and that list arrives from main a
+   * moment after this starts. Read too early it is always empty, and the
+   * warm-up would decline every time for a reason that was about to stop being
+   * true.
+   */
+  void Promise.all([entities.refresh(), providers])
+    .catch(() => undefined)
+    .then(() => assistant.warmSchema(connections.active?.id));
   void assistant.refreshChats(connections.active?.id ?? null);
   // The history of what has been dispatched outlives the window that started
   // it, so it is read back before anything can add to it.
@@ -237,6 +255,24 @@ onMounted(async () => {
   await tabs.restore(connectionId);
   stopPersisting = tabs.persistTo(connectionId);
 });
+
+/*
+ * A connection swapped under the workspace is a different database.
+ *
+ * The window is not rebuilt for one, so `onMounted` has already been and gone;
+ * without this the assistant would arrive at the new database cold, which is
+ * the case the warm-up exists for.
+ */
+watch(
+  () => connections.active?.id,
+  (id, before) => {
+    if (!id || id === before) return;
+    void entities
+      .refresh()
+      .catch(() => undefined)
+      .then(() => assistant.warmSchema(id));
+  }
+);
 
 onBeforeUnmount(() => stopPersisting?.());
 </script>

@@ -210,6 +210,65 @@ export const useAssistant = defineStore('assistant', () => {
     return name;
   }
 
+  /* --------------------------------------------------------------- warm-up */
+
+  /**
+   * Which connections have had their schema read ahead of being asked about.
+   *
+   * Per connection rather than a boolean, because switching back and forth
+   * between two databases must not warm one and count the other done.
+   */
+  const warmed = new Set<string>();
+  let warming: AbortController | undefined;
+
+  /**
+   * Reads the schema before anybody asks a question about it.
+   *
+   * The first turn of a conversation sat on "Reading the schema…" for as long
+   * as an N+1 walk of the database takes — `listEntities`, then columns,
+   * indexes and relations per entity, up to a couple of hundred round trips
+   * before a word reaches the model. Every turn after it was free, because the
+   * host already caches those reads per connection. Only the first one paid,
+   * and it paid at the exact moment somebody had just finished typing.
+   *
+   * So it is paid earlier, when the reader is looking at a tree rather than at
+   * a cursor. Nothing new is cached and no TTL is changed: this calls the same
+   * channel a turn calls and fills the same cache, which is what makes it safe
+   * — a warm-up that populated a store of its own would be a second answer that
+   * could disagree with the first.
+   *
+   * Three things it deliberately does not do. It does not run where no provider
+   * is configured, because then it is a couple of hundred queries for a feature
+   * that cannot be reached. It does not report failure: nobody asked for this,
+   * so a database that refuses it should cost a turn's wait later rather than
+   * an error now. And it does not race the interface — the caller holds it
+   * until the panel the reader is actually looking at has loaded.
+   */
+  async function warmSchema(connectionId: string | null | undefined): Promise<void> {
+    if (!connectionId || !configured.value || warmed.has(connectionId)) return;
+
+    warming?.abort();
+    const controller = new AbortController();
+    warming = controller;
+    warmed.add(connectionId);
+
+    try {
+      await host.call(
+        'ai/schema',
+        { connectionId, scope: { kind: 'connection' } },
+        controller.signal
+      );
+    } catch {
+      /*
+       * Forgotten rather than remembered as done. A connection that dropped
+       * mid-walk, or a warm-up abandoned because the reader switched away,
+       * should be warmed again next time rather than being written off — and
+       * the turn that needs it will read the schema itself either way.
+       */
+      warmed.delete(connectionId);
+    }
+  }
+
   async function probe(id: string): Promise<{ ok: true } | { ok: false; message: string }> {
     const token = await window.shelf.db.prepareAiProvider(id);
     return host.call('ai/probe', { handle: token });
@@ -486,6 +545,7 @@ export const useAssistant = defineStore('assistant', () => {
     remove,
     probe,
     suggestName,
+    warmSchema,
     conversation,
     forget,
     ask,

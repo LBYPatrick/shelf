@@ -1,6 +1,7 @@
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import {
   createConnection,
@@ -1036,4 +1037,86 @@ test('the window is compact for the start screen and full for a workspace', asyn
   await page.reload();
   await page.waitForLoadState('domcontentloaded');
   await expect.poll(size).toEqual(start);
+});
+
+/**
+ * Every channel the renderer has asked the host for, in order.
+ *
+ * The client talks over a `MessagePort`, so wrapping `postMessage` before the
+ * app boots records the traffic without the app knowing it is watched — and
+ * without a hook in production code that exists only for a test.
+ */
+async function recordHostCalls(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const seen: string[] = [];
+    (window as unknown as { __rpc: string[] }).__rpc = seen;
+
+    const send = MessagePort.prototype.postMessage;
+    MessagePort.prototype.postMessage = function (this: MessagePort, ...args: unknown[]) {
+      const channel = (args[0] as { channel?: unknown } | null)?.channel;
+      if (typeof channel === 'string') seen.push(channel);
+      return send.apply(this, args as Parameters<typeof send>);
+    };
+  });
+}
+
+const hostCalls = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __rpc: string[] }).__rpc ?? []);
+
+/**
+ * The schema is read before anybody asks a question about it.
+ *
+ * The first turn of a conversation used to sit on "Reading the schema…" for as
+ * long as an N+1 walk of the database takes, and every turn after it was free
+ * because the host caches those reads per connection. Only the first one paid,
+ * at the moment somebody had just finished typing — so it is paid on connect
+ * instead, while the reader is looking at a tree.
+ *
+ * Both halves are asserted here, and the second is the one that protects
+ * everybody else: a couple of hundred speculative round trips must not run on a
+ * machine where no assistant is configured and the feature cannot be reached.
+ */
+test('reads the schema ahead of the first question, and only when it could be asked', async ({
+  page,
+}) => {
+  await recordHostCalls(page);
+
+  await page.getByRole('button', { name: /Sample database/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('treeitem', { name: 'sample' })).toBeVisible();
+
+  // Long enough that a warm-up chained behind the tree would have gone out.
+  await page.waitForTimeout(1500);
+  expect(
+    await hostCalls(page),
+    'no provider is configured, so the walk is work nobody could use'
+  ).not.toContain('ai/schema');
+
+  /*
+   * Configure one the way the provider sheet does, then come into the workspace
+   * again — the warm-up runs when it mounts against a connection, and sample
+   * mode is not restored across a reload, so the way back in is the door.
+   *
+   * The recorder is reinstalled by the init script on navigation, so what is
+   * asserted below is traffic from this second visit alone.
+   */
+  await page.evaluate(() =>
+    window.shelf.db.saveAiProvider({
+      name: 'Test provider',
+      driver: 'openaiCompatible',
+      model: 'test-model',
+    })
+  );
+
+  await page.reload();
+  await page.getByRole('button', { name: /Sample database/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('treeitem', { name: 'sample' })).toBeVisible();
+
+  await expect
+    .poll(async () => await hostCalls(page), { timeout: 15_000 })
+    .toContain('ai/schema');
+
+  // And nobody opened a chat to cause it.
+  expect(await hostCalls(page)).not.toContain('ai/turn');
 });
