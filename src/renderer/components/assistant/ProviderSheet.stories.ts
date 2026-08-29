@@ -37,7 +37,7 @@ export const OneProvider: Story = {
     components: { ProviderSheet },
     setup: () => {
       connected();
-      withProvider();
+      void withProvider();
       return { args };
     },
     template: `<ProviderSheet v-bind="args" />`,

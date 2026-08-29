@@ -37,7 +37,7 @@ export const WithAssistant: Story = {
     components: { SettingsSheet },
     setup: () => {
       connected();
-      withProvider();
+      void withProvider();
       void useAssistant();
       return { args };
     },

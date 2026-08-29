@@ -41,7 +41,7 @@ export const Empty: Story = {
     components: { ChatTab },
     setup: () => {
       connected();
-      withProvider();
+      void withProvider();
       return { args };
     },
     template: frame,
@@ -54,7 +54,7 @@ export const WithAnswer: Story = {
     components: { ChatTab },
     setup: () => {
       connected();
-      withProvider();
+      void withProvider();
       const assistant = useAssistant();
       const chat = assistant.conversation('tab-1', { kind: 'connection' });
       chat.turns = [
@@ -95,7 +95,7 @@ export const Streaming: Story = {
     components: { ChatTab },
     setup: () => {
       connected();
-      withProvider();
+      void withProvider();
       const chat = useAssistant().conversation('tab-1', { kind: 'connection' });
       chat.turns = [
         {
@@ -117,7 +117,7 @@ export const RefusedAWrite: Story = {
     components: { ChatTab },
     setup: () => {
       connected();
-      withProvider();
+      void withProvider();
       const chat = useAssistant().conversation('tab-1', { kind: 'connection' });
       chat.turns = [
         {
@@ -154,7 +154,7 @@ export const Failed: Story = {
     components: { ChatTab },
     setup: () => {
       connected();
-      withProvider();
+      void withProvider();
       const chat = useAssistant().conversation('tab-1', { kind: 'connection' });
       chat.turns = [
         {

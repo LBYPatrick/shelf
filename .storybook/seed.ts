@@ -142,13 +142,27 @@ export function withChats(): void {
   ];
 }
 
-/** A provider on file, for the stories that are about a configured assistant. */
-export function withProvider(): void {
-  const assistant = useAssistant();
-  assistant.providers = [
-    { id: 'p1', name: 'Claude Code', driver: 'claudeCode', model: 'default', createdAt: 0 },
-  ];
-  assistant.preferredId = 'p1';
+/**
+ * A provider on file, for the stories that are about a configured assistant.
+ *
+ * Saved through the store rather than assigned onto it. `providers` is a
+ * *computed* — the detected CLIs followed by the saved ones — so the assignment
+ * this used to do wrote to a read-only property and silently did nothing, and
+ * every story that called it went on drawing the unconfigured state while
+ * claiming to show the other one. Going through `save` writes into the fake
+ * bridge, which remembers it, and the store reads it back the way it does in
+ * the app.
+ *
+ * It resolves on the mock's own latency, so a story that must be *rendered*
+ * configured awaits it; the ones that only need it settled before a click do
+ * not have to.
+ */
+export function withProvider(): Promise<unknown> {
+  return useAssistant().save({
+    name: 'Claude Code',
+    driver: 'claudeCode',
+    model: 'default',
+  });
 }
 
 /** Tabs, for the strip and the workspace. */

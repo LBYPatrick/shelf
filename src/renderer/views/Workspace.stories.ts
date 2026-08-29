@@ -64,7 +64,7 @@ export const WithAChat: Story = {
     components: { Workspace },
     setup: () => {
       withEntities({ expand: ['music'] });
-      withProvider();
+      void withProvider();
       useTabs().openChat();
       return {};
     },
