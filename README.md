@@ -75,8 +75,10 @@ capability is ever tied to a licence, because there is no licence.**
 
 - **Browse** — a schema tree that stays fast at tens of thousands of tables,
   with columns and types inline.
-- **Read** — a spreadsheet-grade grid with range selection, paged reads, raw
-  filtering, and a full-value inspector for anything wider than a cell.
+- **Read** — a spreadsheet-grade grid with range selection, paged reads, and a
+  full-value inspector for anything wider than a cell. Filter by building
+  conditions from columns and operators, or by writing the clause yourself —
+  the builder is a subset of what SQL can say, so both are offered.
 - **Write** — inline editing that accumulates in a pending-changes ledger,
   previews as SQL, and applies in one transaction. A locked cell always says
   *why* it is locked.
@@ -90,15 +92,16 @@ capability is ever tied to a licence, because there is no licence.**
 - **Inspect** — columns with their descriptions, indexes, relations, triggers
   and partitions, each shown only where the engine has them.
 - **Analyze** — for engines that keep statement statistics, the slowest queries
-  over the last hour, day, week or all time, with each statement's share of the
+  over the last hour, six hours, day, week, month or all time, with each
+  statement's share of the
   window; plus cache hit ratio, transaction rate, connections by state, the
   largest tables with their dead-row bloat, and indexes the planner has never
   chosen. No engine keeps a history, so the app records its own readings and
   says so when a window is wider than the history behind it.
-- **Ask** — describe what you want in plain language and get the SQL.
-  Right-click a table, a schema or a database and chat scoped to it: it reads
-  your schema, runs read-only queries to check its own answer, and draws the
-  rows it got back. Any statement can be lifted into a query tab.
+- **Chat** — right-click a table, a schema or a database and ask about it in
+  plain language. It reads your schema, runs read-only queries to check its own
+  answer, and draws the rows it got back. Any statement it writes can be lifted
+  into a query tab under the name it gave that query.
   **It never writes.** Anything that would change data or shape comes back as a
   statement for you to run yourself.
 - **Diagram** — a force-directed ERD with draggable, position-remembering nodes
@@ -112,28 +115,38 @@ capability is ever tied to a licence, because there is no licence.**
   name; export CSV, JSON, JSONL or SQL, streamed straight to disk so the size of
   the table does not matter.
 - **Keep** — saved queries, full history and saved conversations, per
-  connection, with failures recorded too.
-- **Find** — a command palette (`⌘K`) over tabs, tables and actions, with
-  subsequence matching.
+  connection, with failures recorded too. Saving a query or dispatching a job
+  asks what to call it, and the assistant will suggest a name from what the
+  statement does.
+- **Take it back** — everything the app keeps on this machine, listed by
+  category with what each is holding beside it, and a button that clears exactly
+  the ones you tick.
+- **Find** — a command palette (`⌘K`) over every table in the database and every
+  action in the app, matching on subsequences and patterns.
 - **Rebind** — every shortcut is changed by performing the chord, or edited as
   the JSON document it is stored as.
 - **Carry it between machines** — settings and saved connections can be written
   to a file and read back. A connection document carries its passwords, in
   plain text under `secrets`, so moving machines is one file rather than a file
-  and a round of remembering — the export says so, and importing puts them back
-  in the OS keyring.
+  and a round of remembering — the export says so, and importing encrypts them
+  back into Shelf's own store.
 - **Resume** — tabs and unfinished query text come back when you reopen a
   connection.
 
 ### The assistant
 
-Claude Code and Codex are **found, not configured**: if either is installed and
-signed in on this machine it appears in the picker with nothing to fill in.
-Anthropic, OpenAI and Gemini take an API key, as does anything speaking the
-OpenAI protocol — including Ollama or LM Studio on your own machine.
+Claude Code, Codex and Grok Build are **found, not configured**: if one is
+installed and signed in on this machine it appears in the picker with nothing to
+fill in. Anthropic, OpenAI and Gemini take an API key, as does anything speaking
+the OpenAI protocol — including Ollama or LM Studio on your own machine. Azure
+AI Foundry takes your resource's endpoint and the deployment you turned on, and
+AWS Bedrock takes no key at all: it signs with the AWS credentials this machine
+already has.
 
-Keys are kept in the OS keyring and never reach the part of the app that draws
-the window.
+Keys are encrypted with a key from the system keyring and kept in Shelf's own
+database — the keyring holds the key, not the secret. They are sent to the
+provider from the background process, and never reach the part of the app that
+draws the window.
 
 ---
 
@@ -144,7 +157,7 @@ the window.
     <td width="50%" valign="top">
       <img src="docs/assistant.png" alt="The assistant answering a question about the sample database" width="100%" />
       <br />
-      <sub><b>Ask.</b> It reads the schema, runs read-only queries to check itself, and shows the rows it got back. The statement is one click from a tab of its own.</sub>
+      <sub><b>Chat.</b> It reads the schema, runs read-only queries to check itself, and shows the rows it got back. The statement is one click from a tab of its own.</sub>
     </td>
     <td width="50%" valign="top">
       <img src="docs/diagram.png" alt="An entity-relationship diagram of the sample database" width="100%" />
