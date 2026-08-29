@@ -143,6 +143,34 @@ export const AI_DRIVERS: readonly AiDriverInfo[] = [
     credentialsNote: 'cli',
   },
   {
+    /*
+     * Grok Build, run as a subprocess. It signs itself in, like the other two.
+     *
+     * Two differences from them, both declared rather than discovered. It
+     * speaks the Agent Client Protocol instead of printing events, which is a
+     * fact about `drivers/grok.ts` and about nothing here. And `system: false`,
+     * for the same reason Codex has it: ACP has no system role at all — a
+     * prompt is content blocks from the user — so the composed instructions
+     * ride at the head of the message.
+     *
+     * One model, because the CLI has one. `grok-build` is what it runs, and
+     * offering a list of xAI's API model names here would be offering names
+     * this binary does not answer to.
+     */
+    kind: 'grok',
+    detected: true,
+    label: 'Grok Build',
+    defaultBaseUrl: '',
+    baseUrlEditable: false,
+    needsKey: false,
+    acceptsKey: false,
+    defaultModel: 'grok-build',
+    models: ['grok-build'],
+    capabilities: { streaming: true, tools: true, system: false },
+    signInCommand: 'grok login',
+    credentialsNote: 'cli',
+  },
+  {
     kind: 'anthropic',
     detected: false,
     label: 'Anthropic',

@@ -25,6 +25,7 @@ import type { SchemaScope } from './schemaDoc';
 export type AiDriverKind =
   | 'claudeCode'
   | 'codex'
+  | 'grok'
   | 'anthropic'
   | 'openai'
   | 'google'

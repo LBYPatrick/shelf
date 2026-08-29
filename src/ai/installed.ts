@@ -5,6 +5,7 @@ import { driverInfo } from '@shared/aiDrivers';
 import { findExecutable } from './cli';
 import * as claudeCode from './drivers/claudeCode';
 import * as codex from './drivers/codex';
+import * as grok from './drivers/grok';
 import { AiSignInError } from './types';
 
 /**
@@ -65,6 +66,29 @@ const CLI_DRIVERS: readonly {
     command: codex.COMMAND,
     where: codex.CANDIDATES,
     status: {
+      args: ['login', 'status'],
+      read: (code, stdout, stderr) => {
+        if (code === 0) return 'in';
+        return USAGE_ERROR.test(`${stdout}\n${stderr}`) ? 'unknown' : 'out';
+      },
+    },
+  },
+  {
+    kind: 'grok',
+    command: grok.COMMAND,
+    where: grok.CANDIDATES,
+    status: {
+      /*
+       * The same shape Codex answers in — an exit code and some prose — read
+       * the same way, and read no further than that.
+       *
+       * There is a richer answer available: the sibling project opens an ACP
+       * session and reads the agent's own auth state off the handshake, which
+       * is exact. It is also a whole session started before every turn, to
+       * answer a question the turn is about to answer for itself. A status
+       * command that costs one process is the right price for a pre-flight
+       * check; anything the code misses, `cliFailure` catches on the way back.
+       */
       args: ['login', 'status'],
       read: (code, stdout, stderr) => {
         if (code === 0) return 'in';

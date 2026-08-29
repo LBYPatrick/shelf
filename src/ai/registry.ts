@@ -2,6 +2,7 @@ import type { AiDriverKind, AiProvider } from '@shared/ai';
 import { AnthropicDriver, BedrockDriver } from './drivers/anthropic';
 import { ClaudeCodeDriver } from './drivers/claudeCode';
 import { CodexDriver } from './drivers/codex';
+import { GrokDriver } from './drivers/grok';
 import { GoogleDriver } from './drivers/google';
 import { AzureDriver, OpenAiCompatibleDriver, OpenAiDriver } from './drivers/openai';
 import { AiError, type AiAdapter, type AiDriver } from './types';
@@ -19,6 +20,7 @@ import { AiError, type AiAdapter, type AiDriver } from './types';
 const DRIVERS: readonly AiDriver[] = [
   ClaudeCodeDriver,
   CodexDriver,
+  GrokDriver,
   AnthropicDriver,
   OpenAiDriver,
   GoogleDriver,
