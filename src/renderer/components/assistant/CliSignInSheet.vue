@@ -11,6 +11,21 @@
  * to copy, and a way to come back and check without having to ask a question
  * again to find out. Before this, an unauthenticated CLI was an indefinite wait
  * with no message at all.
+ *
+ * **It is one instruction, not three steps.** It was a numbered list — open a
+ * terminal, run this, come back — and two of those three are not steps. They
+ * are what "run this in a terminal" already means, given numbers and circles
+ * and a column of their own, so the one line anybody came here for was the
+ * middle third of a procedure. The command is the whole content now: it is the
+ * largest thing on the sheet, it is selectable as well as copyable, and the
+ * sentence under it says where to put it.
+ *
+ * The list also wore `.steps` and `.step`, which are daisyUI's — so the
+ * framework drew its own numbered circles down the other side of the sheet and
+ * centred every line between the two sets. The gate has a rule about taking a
+ * framework's class name and could not see this one, because it looks at what
+ * is on screen and this sheet only opens for a CLI nobody is signed in to.
+ * `tests/unit/classNames.test.ts` reads the templates instead.
  */
 import { computed, ref, watch } from 'vue';
 import { useTranslation } from 'i18next-vue';
@@ -20,7 +35,6 @@ import { host } from '../../lib/host';
 import AppIcon from '../ui/AppIcon.vue';
 import PressButton from '../ui/PressButton.vue';
 import Sheet from '../ui/Sheet.vue';
-import ProviderMark from './ProviderMark.vue';
 
 const props = defineProps<{ kind: AiDriverKind | null }>();
 const open = defineModel<boolean>({ required: true });
@@ -74,20 +88,6 @@ const verdict = computed(() => {
   if (checked.value === null) return null;
   return { tone: 'unsure', text: t('assistant.signInUnknown') };
 });
-
-/*
- * The steps, as one list rather than three blocks.
- *
- * The middle one carries the command, so it is the only one that is not just a
- * line of prose — which is why the command sits inside the step and not above
- * the list. A code block floating over a numbered list is a second thing to
- * work out the order of.
- */
-const steps = computed(() => [
-  t('assistant.signInStep1'),
-  t('assistant.signInStep2'),
-  t('assistant.signInStep3'),
-]);
 </script>
 
 <template>
@@ -98,37 +98,43 @@ const steps = computed(() => [
     icon="terminal"
   >
     <div v-if="info" class="signin">
-      <p class="signin__why">
-        <ProviderMark class="signin__mark" :driver="info.kind" :size="18" />
-        <span>{{ $t('assistant.signInWhy', { name: info.label }) }}</span>
+      <p class="signin__why selectable">
+        {{ $t('assistant.signInWhy', { name: info.label }) }}
       </p>
 
-      <ol class="steps">
-        <li v-for="(step, index) in steps" :key="step" class="step">
-          <span class="step__number" aria-hidden="true">{{ index + 1 }}</span>
-          <span class="step__body">
-            <span class="step__text">{{ step }}</span>
+      <!--
+        The command is the content, so it is drawn like content rather than like
+        a field: bigger than the prose around it, in the one place the eye lands
+        after the paragraph, with the sentence that places it directly beneath.
+        Proximity is what ties the two together — a caption a gap away from what
+        it captions is a second paragraph.
 
-            <!--
-              The command belongs to its step, not to the sheet. Copy is beside
-              it because the next thing anybody does with a command they cannot
-              run here is take it somewhere they can.
-            -->
-            <span v-if="index === 1 && command" class="command">
-              <code class="command__text">{{ command }}</code>
-              <button
-                type="button"
-                class="command__copy focus-fill"
-                :aria-label="$t('action.copy')"
-                @click="copy"
-              >
-                <AppIcon :name="copied ? 'check' : 'copy'" :size="13" />
-              </button>
-            </span>
-          </span>
-        </li>
-      </ol>
+        Selectable as well as copyable. The root of this app turns selection off,
+        which is right for chrome and wrong for the one string on screen that
+        somebody may want to take a word out of.
+      -->
+      <div class="command">
+        <code class="command__text selectable">{{ command }}</code>
+        <button
+          type="button"
+          class="command__copy focus-fill"
+          :class="{ 'command__copy--done': copied }"
+          :aria-label="copied ? $t('action.copied') : $t('action.copy')"
+          @click="copy"
+        >
+          <AppIcon :name="copied ? 'check' : 'copy'" :size="13" />
+        </button>
+      </div>
 
+      <p class="signin__where">
+        {{ $t('assistant.signInRun') }}
+      </p>
+
+      <!--
+        The check and what it said, on one row: a control belongs beside the
+        thing it changes, and the verdict is the whole of what pressing it
+        produces. Its colour agrees with its words rather than being a constant.
+      -->
       <div class="check">
         <PressButton size="sm" :disabled="checking" @click="check">
           <AppIcon name="refresh" :size="13" />
@@ -151,81 +157,61 @@ const steps = computed(() => [
   gap: var(--gap-loose);
 }
 
+/*
+ * The paragraph, and then the caption under the command.
+ *
+ * Two sizes, and the difference between them is the hierarchy: the reason this
+ * sheet exists is read once, and the line placing the command is read at a
+ * glance beside the thing it places. Leading is looser on the longer one, which
+ * is the way round it goes — tight on large and short, comfortable on small and
+ * long.
+ */
 .signin__why {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--gap);
   margin: 0;
-  color: var(--color-base-content);
+  color: color-mix(in oklab, var(--color-base-content) 86%, transparent);
   font-size: 0.8125rem;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
-.signin__mark {
-  flex: none;
-  margin-block-start: 0.1rem;
+.signin__where {
+  margin: calc(var(--gap-loose) * -1 + var(--gap-tight)) 0 0;
+  color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+  font-size: 0.75rem;
+  line-height: 1.4;
 }
 
-.steps {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.step {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--gap);
-}
-
-/* A drawn number rather than a marker, so it keeps its own column when the
-   text beside it wraps to three lines. */
-.step__number {
-  display: grid;
-  flex: none;
-  place-items: center;
-  inline-size: 1.25rem;
-  block-size: 1.25rem;
-  border-radius: 50%;
-  background: var(--fill-2);
-  color: var(--color-base-content);
-  font-size: 0.6875rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.step__body {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--gap-tight);
-  min-inline-size: 0;
-}
-
-.step__text {
-  color: var(--color-base-content);
-  font-size: 0.8125rem;
-  line-height: 1.35;
-}
-
+/*
+ * The one thing on this sheet worth taking away, drawn as such.
+ *
+ * Sunk into the pane rather than raised off it, because it is a quotation of
+ * something that lives somewhere else — and `--surface-well` is what a sunk
+ * surface is called here rather than a fill spelled at the call site.
+ */
 .command {
   display: flex;
   align-items: center;
   gap: var(--gap-tight);
-  padding: var(--gap-tight) var(--gap);
-  border: 1px solid var(--fill-2);
+  padding: var(--gap) var(--gap-tight) var(--gap) var(--gap-loose);
+  border: 1px solid var(--separator);
   border-radius: var(--radius-field);
   background: var(--surface-well);
 }
 
+/*
+ * Bigger than the prose around it, and tracked out very slightly.
+ *
+ * A monospace face at a small size in a sheet of proportional text reads
+ * cramped; a hair of positive tracking is what small text wants, and a command
+ * is read character by character rather than by word shape.
+ */
 .command__text {
   flex: 1;
+  min-inline-size: 0;
   overflow-x: auto;
   color: var(--color-base-content);
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
@@ -238,20 +224,46 @@ const steps = computed(() => [
   border: 0;
   border-radius: var(--radius-selector);
   background: none;
-  color: var(--color-base-content);
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
   cursor: pointer;
-  opacity: 0.7;
+  transition:
+    color var(--t-hover) var(--ease-out),
+    background-color var(--t-hover) var(--ease-out),
+    transform var(--t-press) var(--ease-out);
 }
 
-.command__copy:hover {
-  opacity: 1;
+/* The press, not the release: a control that waits for the click to acknowledge
+   a press has already felt slow by the time it does. */
+.command__copy:active {
+  transform: scale(0.92);
 }
 
+/* It went green on copy and back to grey a second and a half later, which is a
+   colour change nobody asked about — the glyph becoming a tick is the whole
+   message, and it says it without a second signal. */
+.command__copy--done {
+  color: var(--color-success);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .command__copy:hover {
+    background: var(--fill-4);
+    color: var(--color-base-content);
+  }
+}
+
+/*
+ * Separated from the instruction above it by a rule, because it is a different
+ * kind of thing: everything above is what to go and do, and this is what to do
+ * once it is done.
+ */
 .check {
   display: flex;
   align-items: center;
   gap: var(--gap);
   flex-wrap: wrap;
+  padding-block-start: var(--gap-loose);
+  border-block-start: 1px solid var(--separator);
 }
 
 .verdict {
