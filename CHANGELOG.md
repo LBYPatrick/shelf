@@ -6,6 +6,57 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-08-29
+
+### Added
+
+- **Grok Build** as an assistant provider, alongside Claude Code and Codex. Like
+  them it signs itself in, so there is no key to copy in and nothing to fill
+  out; it is offered as soon as the `grok` command is on this machine.
+- **Saving a query opens on the tab's own name**, rather than on an empty box
+  that ignored the name you had already chosen.
+- **Dispatching a statement asks what to call the job.** A job is a row in a
+  list that is still there tomorrow, and it used to be named after the database
+  and the second it started, so two dispatches on one afternoon were told apart
+  by their timestamps. The stamp is still the default, so the old behaviour is a
+  press of return away.
+- **The assistant can suggest a name for either**, from what the statement does,
+  where a provider is configured. It fills the box you are typing in — what gets
+  saved is whatever you leave there.
+
+### Changed
+
+- **Notices go back to the way 1.0.0 drew them**: a sentence on a plain surface
+  with one coloured mark, in a column where all of them can be read. The wash of
+  colour, the bar down the edge, the countdown bar and the pile that stayed shut
+  until you pointed at it are gone. Throwing one away with a swipe stays, and a
+  quick flick now works — it used to slide back under your hand unless you
+  dragged most of the way across.
+- **The command palette opens instantly.** It had a quarter-second animation, on
+  a window you reach for from the keyboard dozens of times a day.
+- **A sidebar button always opens its panel.** Pressing the one already showing
+  used to collapse the sidebar, so aiming at the panel you were on shut the
+  column instead — and from a collapsed sidebar, a press reopened whichever
+  panel happened to be last rather than the one you aimed at. The switch at the
+  foot of the rail still collapses it.
+- **Run, Format, Save, every tab and every card in the sidebar answer a press.**
+  They were the most-pressed controls in the window and the only ones that gave
+  no sign of having been pressed.
+- **The sign-in sheet for Claude Code and Codex is one instruction**, not three
+  numbered steps around it — and the command is now selectable as well as
+  copyable.
+- The start screen finishes arriving about a third of a second sooner.
+
+### Fixed
+
+- **The first question you ask about a database no longer waits for its schema
+  to be read.** That reading now happens when you connect, while you are looking
+  at the table list, and only where an assistant is actually configured.
+- **The sign-in sheet drew two sets of step numbers**, one down each side, with
+  every line centred between them.
+- A notice thrown away with a swipe could stay in the list forever, invisible,
+  for anybody using the system's reduced-motion setting.
+
 ## [1.1.0] - 2026-08-28
 
 ### Added
