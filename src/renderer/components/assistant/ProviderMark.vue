@@ -14,12 +14,29 @@
  * is which company they are about to send their question to.
  *
  * Paths from `@lobehub/icons-static-svg` (MIT), inlined rather than depended on:
- * six paths against a package, and the set is drawn here for everything else
- * anyway. They carry `fill="currentColor"` on a 24-unit box, so they take the
- * theme's colour and neither light nor dark needs a value of its own — a mark
- * in its brand colour would be the one thing in the window that could not
- * answer `prefers-contrast`. Trademarks belong to their owners; they are used
- * here to name the provider a reader is choosing.
+ * a handful of paths against a package, and the set is drawn here for
+ * everything else anyway. Trademarks belong to their owners; they are used here
+ * to name the provider a reader is choosing.
+ *
+ * **In the brand's own colour**, taken from that package's colour variants
+ * rather than guessed. They were all drawn in `currentColor`, which made a list
+ * of providers a column of identically-tinted glyphs — the mark was doing the
+ * work of saying "assistant" in a list where every row is one, and none of the
+ * work of saying *which company*. Colour is the fastest thing to recognise a
+ * brand by, and the engine tiles next door had been branded for a release
+ * already.
+ *
+ * Three of them have no entry, and that is not an omission: OpenAI, Codex and
+ * Grok are black-or-white marks, so ink *is* their brand. They take
+ * `--color-base-content` rather than `currentColor` — inheriting would have
+ * given them whatever the row happened to be tinted, which in the picker is the
+ * accent, and drawing a monochrome brand in the reader's accent is the thing
+ * this change exists to stop.
+ *
+ * `prefers-contrast: more` puts every one of them back to `currentColor`. A
+ * brand colour is a fixed value and cannot answer that query; the reader who
+ * asked for more contrast gets the shape, which is the half that still
+ * identifies the provider.
  */
 import { computed } from 'vue';
 import type { AiDriverKind } from '@shared/ai';
@@ -43,6 +60,28 @@ const props = withDefaults(defineProps<{ driver: AiDriverKind; size?: number }>(
  * the mark, not decoration, and flattening it to one path would draw a blob.
  * So every entry is a list, and the eight that have one element say so.
  */
+/**
+ * Each brand's own colour, from the package's `-color` variants.
+ *
+ * One value per mark rather than the whole multi-stop original: several of
+ * these are gradients, and a gradient at twelve pixels is a smudge with two
+ * ends. The first stop is the one the brand leads with.
+ *
+ * Absent means monochrome — see the note above.
+ */
+const BRAND: Partial<Record<AiDriverKind, string>> = {
+  claudeCode: '#D97757',
+  anthropic: '#D97757',
+  google: '#3186FF',
+  bedrock: '#6350FB',
+  azure: '#0078D4',
+  deepseek: '#4D6BFE',
+  kimi: '#1783FF',
+  qwen: '#6336E7',
+  glm: '#3859FF',
+  minimax: '#E2167E',
+};
+
 interface Part {
   readonly d: string;
   /** Below full, where the mark is drawn in more than one weight. */
@@ -149,16 +188,25 @@ const MARKS: Partial<Record<AiDriverKind, readonly Part[]>> = {
 };
 
 const parts = computed(() => MARKS[props.driver]);
+
+/**
+ * The colour to draw in, as a custom property the stylesheet can override.
+ *
+ * A property rather than a `fill` attribute, so `prefers-contrast: more` can
+ * take it back to `currentColor` in CSS. Set inline it would be a style
+ * attribute, and nothing in a stylesheet outranks one of those.
+ */
+const brand = computed(() => BRAND[props.driver] ?? 'var(--color-base-content)');
 </script>
 
 <template>
   <svg
     v-if="parts"
     class="mark"
+    :style="{ '--brand': brand }"
     :width="size"
     :height="size"
     viewBox="0 0 24 24"
-    fill="currentColor"
     fill-rule="evenodd"
     clip-rule="evenodd"
     aria-hidden="true"
@@ -177,9 +225,22 @@ const parts = computed(() => MARKS[props.driver]);
 <style scoped>
 .mark {
   flex: none;
+  fill: var(--brand, var(--color-base-content));
   /* The marks differ in how much of their box they fill — Anthropic's is a
      solid wordless A and OpenAI's is an open knot — so they are set slightly
      back from the stroked glyphs beside them rather than matched box to box. */
   opacity: 0.9;
+}
+
+/*
+ * A brand colour is a fixed value, so it cannot answer this. The reader who
+ * asked for more contrast gets the shape in the text colour, which is the half
+ * of the mark that still identifies the provider — and is by definition the
+ * most contrasting thing available on that surface.
+ */
+@media (prefers-contrast: more) {
+  .mark {
+    fill: var(--color-base-content);
+  }
 }
 </style>
