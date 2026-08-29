@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Where toasts live, and how several of them get out of each other's way.
+ * Where toasts live.
  *
  * The class is `notice`, not `toast`: daisyUI ships a `.toast` component that
  * is `position: fixed` and stacks its children in a column, so a component of
@@ -10,26 +10,17 @@
  *
  * Bottom-right, above the status bar: the corner furthest from the sidebar and
  * the tab strip, so a message never lands on top of the thing you were about to
- * click. Newest at the front, nearest the eye.
+ * click. Newest at the bottom, nearest the eye.
  *
- * **They stack, and they open when you look at them.** A plain column was fine
- * for one notice and wrong for four: an export finishing behind a failed query
- * behind two settings confirmations is a wall of cards up the side of the
- * window, each with a close button, each demanding to be read. Collapsed they
- * are a pile — the newest fully drawn, the two behind it peeking out by a few
- * pixels and shrinking — and the pile opens into the full column under the
- * pointer, which is when somebody has decided to read them.
- *
- * The geometry is measured rather than assumed, because a notice is as tall as
- * its message: an offset of "one card height" would leave gaps under the short
- * ones and overlaps under the long ones. Each slot is anchored to the bottom
- * edge and translated up by the heights of the ones in front of it.
+ * A column, not a pile. Several notices at once are several sentences, and a
+ * reader who can see all of them has to decide about none of them — where a
+ * pile that opens under the pointer makes reading the third one a gesture.
  *
  * Each notice counts down its own expiry rather than the store doing it, because
- * the countdown has to pause while the pointer is on it — and while the pile is
- * open, for every card in it, or reading the third one costs you the first two.
+ * the countdown has to pause while the pointer is on it — a message that leaves
+ * while you are reaching for its action button is a message you cannot act on.
  */
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed } from 'vue';
 import { useConnections } from '../../stores/connections';
 import { useToasts } from '../../stores/toasts';
 import ToastItem from './ToastItem.vue';
@@ -47,116 +38,6 @@ const connections = useConnections();
  * reads as having come loose from it.
  */
 const centred = computed(() => connections.active === null);
-
-/* ------------------------------------------------------------------ pile */
-
-/** How far each card behind the front one peeks out, in pixels. */
-const PEEK = 9;
-
-/** How much smaller each card behind the front one is drawn. */
-const SHRINK = 0.045;
-
-/** Cards drawn in a collapsed pile. Past this they are behind the pile. */
-const VISIBLE = 3;
-
-/** The column's gap when the pile is open. Matches `--gap-tight` closely enough. */
-const GAP = 8;
-
-const expanded = ref(false);
-
-/**
- * Each slot's height, measured.
- *
- * One observer for the lot rather than one per card: the cards come and go
- * constantly and an observer per card is a subscription per notice, created and
- * torn down on a timer.
- */
-const heights = ref(new Map<string, number>());
-
-const sizes = new ResizeObserver((entries) => {
-  const next = new Map(heights.value);
-  for (const entry of entries) {
-    const id = (entry.target as HTMLElement).dataset['noticeId'];
-    if (id) next.set(id, entry.borderBoxSize[0]?.blockSize ?? entry.target.clientHeight);
-  }
-  heights.value = next;
-});
-
-onBeforeUnmount(() => sizes.disconnect());
-
-/**
- * Watching a slot, and forgetting one that has gone.
- *
- * Vue calls this with the element on mount and with `null` on unmount, which is
- * the only signal that a leaving card has actually left — a height kept for a
- * notice that no longer exists would go on making room for it.
- */
-function bind(id: string, element: unknown): void {
-  if (element instanceof HTMLElement) {
-    element.dataset['noticeId'] = id;
-    sizes.observe(element);
-    return;
-  }
-
-  const next = new Map(heights.value);
-  next.delete(id);
-  heights.value = next;
-}
-
-const list = computed(() => toasts.toasts);
-
-/** A card's own height, or a reasonable one until it has been measured. */
-function heightOf(id: string): number {
-  return heights.value.get(id) ?? 56;
-}
-
-/**
- * How far up from the bottom edge this card sits.
- *
- * Open, that is everything in front of it plus the gaps. Collapsed, it is a few
- * pixels per card of depth — enough to say "there are more" and not enough to
- * be a second thing to read.
- */
-function offsetOf(index: number): number {
-  const depth = list.value.length - 1 - index;
-  if (!expanded.value) return PEEK * Math.min(depth, VISIBLE - 1);
-
-  let offset = 0;
-  for (let after = index + 1; after < list.value.length; after += 1) {
-    offset += heightOf(list.value[after]!.id) + GAP;
-  }
-  return offset;
-}
-
-function styleOf(index: number): Record<string, string> {
-  const depth = list.value.length - 1 - index;
-  const scale = expanded.value ? 1 : Math.max(0.8, 1 - SHRINK * Math.min(depth, VISIBLE - 1));
-
-  return {
-    '--y': `${-offsetOf(index)}px`,
-    '--s': String(scale),
-    // Behind the pile: still there, still counting down, not drawn. Cheaper
-    // and steadier than unmounting it, which would restart its expiry the
-    // moment the pile opened.
-    '--o': !expanded.value && depth >= VISIBLE ? '0' : '1',
-    zIndex: String(index + 1),
-  };
-}
-
-/** The region's own height, so it is exactly the hover target the pile is. */
-const height = computed(() => {
-  if (list.value.length === 0) return 0;
-
-  if (!expanded.value) {
-    const front = list.value[list.value.length - 1]!;
-    return heightOf(front.id) + PEEK * Math.min(list.value.length - 1, VISIBLE - 1);
-  }
-
-  return list.value.reduce(
-    (total, notice, index) => total + heightOf(notice.id) + (index === 0 ? 0 : GAP),
-    0
-  );
-});
 </script>
 
 <template>
@@ -169,44 +50,28 @@ const height = computed(() => {
     -->
     <div
       class="notices"
-      :class="{ 'notices--centre': centred, 'notices--open': expanded }"
-      :style="{ blockSize: `${height}px` }"
+      :class="{ 'notices--centre': centred }"
       role="region"
       aria-live="polite"
       aria-label="Notifications"
-      @pointerenter="expanded = true"
-      @pointerleave="expanded = false"
-      @focusin="expanded = true"
-      @focusout="expanded = false"
     >
       <!--
-        The durations are declared rather than sniffed.
-        ─────────────────────────────────────────────
-        Vue works out how long to keep a leaving element by reading the
-        transition on the element it is managing — and the animation here is on
-        a child, because the parent's transform is the pile's own geometry. So
-        the numbers are given: they are the two keyframe durations below, and a
-        card removed before its animation finished would vanish mid-flight.
+        `appear`, because a notice that is already in the list when this mounts
+        is still arriving as far as the reader is concerned. It cannot happen in
+        the app — the stack is mounted empty and outlives every notice in it —
+        but it is the whole of what the stories show, and motion that only runs
+        where nobody can look at it is motion nobody checks.
       -->
-      <TransitionGroup name="notice" :duration="{ enter: 620, leave: 520 }">
-        <div
-          v-for="(notice, index) in list"
-          :key="notice.id"
-          :ref="(element) => bind(notice.id, element)"
-          class="slot"
-          :style="styleOf(index)"
-        >
-          <!--
-            Three layers, one transform each, and that is the whole reason for
-            the extra element. The slot owns *where in the pile* this is, the
-            wrapper owns *arriving and leaving*, and the notice itself owns
-            *being dragged*. Put on one node they would overwrite each other:
-            a bounce keyframe replaces the pile's offset, and a card would drop
-            to the bottom of the stack the instant it started to animate in.
-          -->
-          <div class="slot__in">
-            <ToastItem :notice="notice" :held="expanded" @dismiss="toasts.dismiss(notice.id)" />
-          </div>
+      <TransitionGroup name="notice" appear>
+        <!--
+          The wrapper is what arrives and leaves, and that is its whole reason
+          for being. The notice itself carries the transform of the hand
+          dragging it, and `notice-leave-to` sets a transform of its own — put
+          on one element the second would overwrite the first, and a card thrown
+          off the trailing edge would jump back to sixteen pixels out to fade.
+        -->
+        <div v-for="notice in toasts.toasts" :key="notice.id" class="notice-slot">
+          <ToastItem :notice="notice" @dismiss="toasts.dismiss(notice.id)" />
         </div>
       </TransitionGroup>
     </div>
@@ -219,194 +84,67 @@ const height = computed(() => {
   inset-block-end: calc(var(--statusbar-h) + var(--gap-loose));
   inset-inline-end: var(--gap-loose);
   z-index: 300;
-  inline-size: min(24rem, calc(100vw - 2rem));
-  /* The stack must not swallow clicks aimed at the window behind it; the
-     notices themselves take pointer events back. */
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-tight);
   pointer-events: none;
-  transition: block-size var(--t-pop) var(--ease-out);
 }
 
 .notices--centre {
   inset-inline: 0;
   inset-block-end: var(--gap-section);
-  margin-inline: auto;
+  align-items: center;
 }
 
-/*
- * Anchored to the bottom and lifted, rather than laid out in a column.
- *
- * A column cannot overlap itself, and overlapping is the whole of what a pile
- * is. The origin is the bottom edge so a card shrinking behind the front one
- * pulls up and away rather than sliding down out of the corner.
- */
-.slot {
-  position: absolute;
-  inset-inline: 0;
-  inset-block-end: 0;
+/* The region must not swallow clicks aimed at the window behind it, so the
+   cards take pointer events back one at a time. */
+.notice-slot {
   pointer-events: auto;
-  opacity: var(--o, 1);
-  transform: translateY(var(--y, 0)) scale(var(--s, 1));
-  transform-origin: bottom center;
-  transition:
-    transform var(--t-pop) var(--ease-out),
-    opacity var(--t-pop) var(--ease-out);
-}
-
-/* A card behind the front one is scenery until the pile opens: its close
-   button is under another card, and a click that lands on it is a mistake. */
-.notices:not(.notices--open) .slot:not(:last-child) {
-  pointer-events: none;
 }
 
 /*
- * Bounce, which is react-toastify's own default transition.
+ * In from the edge it is anchored to, and out by the same edge.
  *
- * Their `bounceInRight` and `bounceOutRight`, keyframe for keyframe: in from
- * well off the trailing edge, overshooting past the resting point and settling
- * back through two smaller corrections; out with a small wind-up the other way
- * before it goes. Copied rather than approximated because the overshoot *is*
- * the character — an ease-out slide with the same duration reads as a panel
- * appearing, and this reads as something being thrown onto the pile.
+ * A transition rather than a keyframe, which is the whole difference: keyframes
+ * restart from zero, and a notice is the thing most likely to be interrupted —
+ * one arrives while another is leaving, or the reader throws it away before it
+ * has finished coming in. A transition retargets from wherever the card
+ * actually is.
  *
- * It runs on the wrapper, never on the slot, so the pile's own offset and this
- * animation are two transforms on two elements instead of one overwriting the
- * other.
+ * `--t-pop` and `--ease-out`, like every other thing in this app that appears
+ * and goes: entering and exiting is what an ease-out is for, and a notice that
+ * announced itself on a curve of its own would read as a different app's.
  */
-.slot__in {
-  animation: notice-in 620ms both;
+.notice-enter-active,
+.notice-leave-active {
+  transition:
+    opacity var(--t-pop) var(--ease-out),
+    transform var(--t-pop) var(--ease-out);
 }
 
-.notice-leave-active .slot__in {
-  animation: notice-out 520ms both;
-}
-
-.notices--centre .slot__in {
-  animation-name: notice-in-up;
-}
-
-.notices--centre .notice-leave-active .slot__in {
-  animation-name: notice-out-down;
-}
-
-@keyframes notice-in {
-  from,
-  60%,
-  75%,
-  90%,
-  to {
-    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
-  }
-  from {
-    opacity: 0;
-    transform: translate3d(3000px, 0, 0);
-  }
-  60% {
-    opacity: 1;
-    transform: translate3d(-25px, 0, 0);
-  }
-  75% {
-    transform: translate3d(10px, 0, 0);
-  }
-  90% {
-    transform: translate3d(-5px, 0, 0);
-  }
-  to {
-    transform: none;
-  }
-}
-
-@keyframes notice-out {
-  20% {
-    opacity: 1;
-    transform: translate3d(-20px, 0, 0);
-  }
-  to {
-    opacity: 0;
-    transform: translate3d(2000px, 0, 0);
-  }
+.notice-enter-from,
+.notice-leave-to {
+  opacity: 0;
+  transform: translateX(1rem);
 }
 
 /* The centred stack has no edge to come from, so it comes up off the floor. */
-@keyframes notice-in-up {
-  from,
-  60%,
-  75%,
-  90%,
-  to {
-    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
-  }
-  from {
-    opacity: 0;
-    transform: translate3d(0, 3000px, 0);
-  }
-  60% {
-    opacity: 1;
-    transform: translate3d(0, -20px, 0);
-  }
-  75% {
-    transform: translate3d(0, 10px, 0);
-  }
-  90% {
-    transform: translate3d(0, -5px, 0);
-  }
-  to {
-    transform: none;
-  }
+.notices--centre .notice-enter-from,
+.notices--centre .notice-leave-to {
+  transform: translateY(0.75rem);
 }
 
-@keyframes notice-out-down {
-  20% {
-    opacity: 1;
-    transform: translate3d(0, -20px, 0);
-  }
-  to {
-    opacity: 0;
-    transform: translate3d(0, 2000px, 0);
-  }
+/* The ones below a dismissed notice close the gap rather than jumping. */
+.notice-move {
+  transition: transform var(--t-pop) var(--ease-out);
 }
 
 /*
- * What react-toastify calls `collapseToast` falls out of the arrangement.
+ * Reduced motion is answered in `base.css`, not here.
  *
- * There, a dismissed toast's box has to be animated shut or the ones below it
- * jump up the instant it unmounts. Here every card is absolutely positioned
- * against the container's bottom edge, so a removed card takes its height out
- * of the offsets the moment it leaves the list and the cards above it slide
- * down on the slot's own transform transition — the same one that opens the
- * pile. Nothing jumps, and there is no second animation to keep in step.
+ * Its global rule takes `transform` out of `transition-property` and every
+ * duration down to 150ms, which leaves exactly the fade — the movement gone,
+ * the change in state still shown. A block of our own would only restate it,
+ * and would be the thing that fell out of step the day that one changed.
  */
-
-@media (prefers-reduced-motion: reduce) {
-  .notices {
-    transition: none;
-  }
-
-  /* No throw and no overshoot: it fades, in place, and that is the whole
-     animation. The pile still rearranges, because that is layout rather than
-     flourish, but it rearranges at once. */
-  .slot__in,
-  .notices--centre .slot__in {
-    animation: notice-fade-in 120ms both;
-  }
-
-  .notice-leave-active .slot__in,
-  .notices--centre .notice-leave-active .slot__in {
-    animation: notice-fade-out 120ms both;
-  }
-}
-
-@keyframes notice-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes notice-fade-out {
-  to {
-    opacity: 0;
-  }
-}
 </style>

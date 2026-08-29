@@ -32,8 +32,9 @@ export const One: Story = {
 };
 
 /**
- * Three at once, which is the pile: the newest fully drawn at the front and the
- * two behind it peeking out. Hovering it opens the column.
+ * Three at once, one tone each. Every one of them is drawn and readable: the
+ * column is the point, because a message nobody can read is a message that was
+ * not raised.
  */
 export const Several: Story = {
   render: () =>
@@ -49,11 +50,11 @@ export const Several: Story = {
 };
 
 /**
- * More than the pile draws.
+ * More than fits comfortably, which is how the corner behaves under load.
  *
- * Past the third card the rest are held but not shown — they are still counting
- * down and still there when the pile opens, and drawing eight overlapping cards
- * in a corner says nothing the third one has not already said.
+ * Six notices wrapping onto two lines each is most of the height of a small
+ * window, and it is worth being able to look at: they expire on their own
+ * timers, so the column empties from wherever each one happens to be.
  */
 export const Many: Story = {
   render: () =>
