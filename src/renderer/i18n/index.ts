@@ -58,23 +58,6 @@ export function resolveLocale(preference: LanguagePreference, systemLocale: stri
   return 'en-US';
 }
 
-/**
- * Translates an engine's own word for something.
- *
- * Drivers report their nouns in English — "collection", "keyspace", "item" —
- * because that is what the engine calls them. Interpolating those straight into
- * a Japanese sentence reads badly, so they are looked up, and anything not
- * recognised falls through unchanged rather than disappearing.
- *
- * Not reactive: inside a component use the `t` from `useTranslation()`, or the
- * result will keep whichever language it was first evaluated in.
- */
-export function translateNoun(noun: string): string {
-  const key = `noun.${noun}`;
-  const translated = i18next.t(key);
-  return translated === key ? noun : translated;
-}
-
 export async function setupI18n(app: App, initial: LocaleId): Promise<void> {
   await i18next.init({
     lng: initial,

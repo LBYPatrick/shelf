@@ -15,7 +15,7 @@ import { RpcCancelled, RpcError, type RpcInbound } from '@shared/rpc';
  * as a real message: abandoning the promise would leave the database still
  * running the query.
  */
-export class HostClient {
+class HostClient {
   private port: MessagePort | null = null;
   private nextId = 1;
 

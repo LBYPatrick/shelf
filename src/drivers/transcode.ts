@@ -19,7 +19,7 @@ export { displayValue, isTagged } from '../shared/values';
 const BINARY_PREVIEW_LIMIT = 1024 * 64;
 
 /** Convert a driver-native value into something safe to send. */
-export function encodeValue(value: unknown): CellValue {
+function encodeValue(value: unknown): CellValue {
   if (value === null || value === undefined) return null;
 
   switch (typeof value) {
@@ -62,24 +62,7 @@ export function encodeValue(value: unknown): CellValue {
   }
 }
 
-/** Rebuild a value the renderer received, for display or for sending back. */
-export function decodeValue(value: CellValue): unknown {
-  if (!isTagged(value)) return value;
-
-  switch (value.$) {
-    case 'bigint':
-      return BigInt(value.data);
-    case 'date':
-      return new Date(value.data);
-    case 'binary':
-      return Buffer.from(value.data, 'base64');
-    case 'objectid':
-    case 'json':
-      return value.data;
-  }
-}
-
-export function encodeRow(row: Record<string, unknown>): Row {
+function encodeRow(row: Record<string, unknown>): Row {
   const encoded: Record<string, CellValue> = {};
   for (const [key, value] of Object.entries(row)) {
     encoded[key] = encodeValue(value);
