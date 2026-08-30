@@ -6,6 +6,55 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-29
+
+### Added
+
+- **Five more assistant providers**: DeepSeek, Kimi, Qwen, GLM and MiniMax. Each
+  is picked by name with its address and models already filled in, rather than
+  choosing “OpenAI-compatible” and going to look up a base URL. The defaults are
+  the international endpoints; the mainland ones are a field edit away.
+- **Files and images go with a question.** Attach a CSV sample, a schema dump or
+  the error you are staring at — by paperclip, by dropping it anywhere on the
+  conversation, or by pasting, which is how a screenshot arrives. Text files
+  work with every provider. Images need one that reads them, and the ones that
+  cannot say so instead of failing after you have chosen the file.
+- **A connection can be copied to the clipboard**, not only saved to a file —
+  which is the likelier of the two when you are sharing one rather than backing
+  it up. It carries passwords like the file does, and says so more sharply,
+  because the clipboard is readable by everything else on the machine.
+- **Command-line assistants you have not installed are listed anyway**, greyed
+  and unselectable. A list that leaves them out cannot tell you whether Codex is
+  missing or was never supported.
+
+### Changed
+
+- **The connection sheet is grouped by what its fields mean** — server,
+  credentials, options — instead of flowing through a two-column grid that put
+  the password beside the database name. The engine is chosen once and then it
+  is a single row, so the nine marks stop taking the top of every visit; they
+  sit on one grid of equal columns rather than two ragged rows. Test moved out
+  of the row of things that finish, and only appears once there is something to
+  test.
+- **Each provider is drawn in its own brand colour** instead of every one of
+  them taking your accent.
+- **Secondary text is readable.** Labels, hints, counts and timestamps were
+  drawn between 38% and 62% of the text colour, which measures as low as 3.04:1
+  where 4.5:1 is the requirement. All of it now uses one value that clears the
+  line, on every accent, in both appearances.
+- The accent is stored by name — `"blue"` — rather than as three numbers.
+  Settings files written by older versions still work.
+
+### Fixed
+
+- **The engine chips answered a hover with nothing**, and scaled their mark to
+  exactly the size the *selected* chip uses, so pointing at one made it look
+  chosen.
+- The sign-in sheet's hint sat higher than the buttons beside it, in every sheet
+  in the app.
+- Redis reads a key's type and its expiry together now, rather than one after
+  the other for every row in the keyspace view.
+
 ## [1.1.1] - 2026-08-29
 
 ### Added
