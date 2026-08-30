@@ -130,21 +130,38 @@ const model = defineModel<EngineId | null>({ required: true });
   transition: color var(--t-hover) var(--ease-out);
 }
 
+/*
+ * Hover changes the surface; being chosen changes the mark and the name.
+ *
+ * Both used to scale the mark to exactly 1.08, so pointing at an unselected
+ * chip made it look selected — nine chips where the one under the pointer and
+ * the one actually chosen were drawn identically. And the surface did not
+ * change at all: `.engine` already sits on `--fill-4`, so a hover rule setting
+ * `--fill-4` was a rule that computed to the value it was replacing. Measured,
+ * the background was the same colour before and after.
+ *
+ * One signal each now. `--fill-3` is the next step up the ramp rather than a
+ * hand-mixed tint, so the chip lifts by the same amount every other hoverable
+ * surface in the app lifts by.
+ */
 @media (hover: hover) and (pointer: fine) {
   .engine:hover:not(.engine--on) {
-    background: var(--fill-4);
-  }
-
-  .engine:hover .engine__mark {
-    transform: scale(1.08);
+    background-color: var(--fill-3);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .engine__mark,
-  .engine:active {
-    transform: none;
-    transition-duration: var(--t-press);
-  }
-}
+/*
+ * No reduced-motion block, and that is deliberate.
+ *
+ * `base.css` already takes `transform` out of `transition-property` there, so
+ * nothing *moves*: the press and the chosen mark still take their size, they
+ * just take it at once. That is what reduced motion asks for — fewer and
+ * gentler, not none — and a press that stops answering is the interface going
+ * quiet on the one gesture that most needs an answer.
+ *
+ * The block that used to be here tried to remove both and managed neither:
+ * `transform: none` on `.engine__mark` lost to `.engine--on .engine__mark` on
+ * specificity, and its `transition-duration` lost to the `!important` in
+ * `base.css`. Two rules that read as care and did nothing.
+ */
 </style>

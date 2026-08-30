@@ -148,14 +148,23 @@ function close(): void {
       that commits.
     -->
     <template #footer>
-      <PressButton
-        v-if="testable"
-        variant="glass"
-        :disabled="!ready || testing"
-        @click="runTest"
-      >
-        {{ testing ? $t('connection.testing') : $t('action.test') }}
-      </PressButton>
+      <!--
+        It arrives rather than appearing. Choosing an engine turns the whole
+        sheet from one grid into a form, and a control blinking into the footer
+        on the same beat is the one movement in that change that has no reason
+        the reader can see — so it takes the same short fade the rest of the
+        sheet's own changes take.
+      -->
+      <Transition name="check">
+        <PressButton
+          v-if="testable"
+          variant="glass"
+          :disabled="!ready || testing"
+          @click="runTest"
+        >
+          {{ testing ? $t('connection.testing') : $t('action.test') }}
+        </PressButton>
+      </Transition>
 
       <span v-if="problem" class="problem">{{ problem }}</span>
 
@@ -187,6 +196,23 @@ function close(): void {
  */
 .footer__decisions {
   margin-inline-start: auto;
+}
+
+/*
+ * A transition, not a keyframe: the engine can be changed again a moment later,
+ * and this has to be able to turn round from wherever it got to.
+ */
+.check-enter-active,
+.check-leave-active {
+  transition:
+    opacity var(--t-press) var(--ease-out),
+    transform var(--t-press) var(--ease-out);
+}
+
+.check-enter-from,
+.check-leave-to {
+  opacity: 0;
+  transform: scale(0.94);
 }
 
 .problem {
