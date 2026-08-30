@@ -586,10 +586,15 @@ component's props or a mock's shape has changed.
   up to re-read something must not be undone by the next token. Jumped, never
   smooth-scrolled — a smooth scroll re-requested every few milliseconds never
   arrives anywhere.
-- **A conversation is not persisted.** It would be a copy of whatever rows the
-  assistant read on the way to an answer, sitting in the application database
-  beside the connection list. What is worth keeping out of a chat is a query,
-  and a query has a query tab.
+- **A conversation is kept, and the trade is made explicit rather than hidden.**
+  It was deliberately not kept at first, on the argument that a transcript holds
+  whatever rows the assistant read on the way to an answer, and filing those
+  beside the connection list is a promise about someone's data this feature had
+  not earned. That argument lost to the obvious one: a chat you cannot get back
+  is a chat you have to have again, and the app already keeps every statement
+  anyone runs in `history`. So conversations are stored per connection and
+  capped, a saved one includes the rows it looked at, and deleting it deletes
+  them — which is why `remove` is on the card. See `main/appdb/chats.ts`.
 
 ## The storybook
 

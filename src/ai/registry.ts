@@ -19,8 +19,10 @@ import { AiError, type AiAdapter, type AiDriver } from './types';
  * *offer*, this one is what the host can *build*. They are separate because
  * they are read in separate processes and one of them must never reach the
  * renderer — but they name the same set, and a mismatch is a menu item that
- * fails when chosen, so the registry checks itself against the catalogue at
- * startup rather than at first use.
+ * fails when chosen — so `tests/unit/registryParity.test.ts` holds the two to
+ * the same set. A test rather than a startup check, which is what this note
+ * used to claim and what nothing ever did: a mismatch is a mistake made while
+ * editing, so the moment to hear about it is then, not on somebody's launch.
  */
 const DRIVERS: readonly AiDriver[] = [
   ClaudeCodeDriver,

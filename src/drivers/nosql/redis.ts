@@ -239,8 +239,14 @@ export class RedisClient implements DatabaseClient {
   /** Everything the keyspace view shows about one key. */
   private async describeKey(key: string): Promise<Record<string, unknown>> {
     const client = this.require();
-    const type = await client.type(key);
-    const ttl = await client.ttl(key);
+
+    /*
+     * Together: neither answer depends on the other, and this runs once per key
+     * on a page of them. Sequentially it was two round trips deep per key on
+     * top of the type-specific read below, which on a remote Redis is the
+     * difference between one wait and two for every row in the view.
+     */
+    const [type, ttl] = await Promise.all([client.type(key), client.ttl(key)]);
 
     let size: number | null = null;
     // Every branch of the switch below sets this, including the default.
