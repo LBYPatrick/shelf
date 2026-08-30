@@ -29,8 +29,8 @@ gate: ## Everything that has to pass, in about forty seconds (default)
 	@$(MAKE) --no-print-directory lint
 	@$(MAKE) --no-print-directory test
 	@$(MAKE) --no-print-directory build
-	@$(MAKE) --no-print-directory ui
-	@$(MAKE) --no-print-directory test-e2e
+	@$(MAKE) --no-print-directory ui BUILT=1
+	@$(MAKE) --no-print-directory test-e2e BUILT=1
 	@echo "gate: clean"
 
 gate-full: gate ## The gate, plus the storybook sweep (two minutes; the build is the cost)
@@ -112,13 +112,24 @@ storybook-build: ## Build the static storybook into out/storybook
 storybook-check: storybook-build ## Open every story and fail on any that throws or draws nothing
 	@pnpm storybook:check
 
-ui: ## Run the UI quality gate (visual, accessibility, design invariants)
+# Everything below drives the *built* app out of `out/`, so each one builds
+# first. It did not, and the failure is the worst kind: `make ui` after a source
+# change ran the whole suite against the previous bundle and reported it green.
+# A contrast fix touching a hundred and forty files "passed" that way without
+# any of it having been compiled.
+#
+# `BUILT=1` is how `gate` says it has already done it — the steps there are
+# separate sub-makes, so a plain prerequisite would build twice and the gate's
+# forty seconds is the reason the gate gets run.
+FRESH = $(if $(BUILT),,build)
+
+ui: $(FRESH) ## Run the UI quality gate (visual, accessibility, design invariants)
 	@pnpm exec playwright test -c playwright.ui.config.ts
 
-ui-accept: ## Regenerate the visual snapshots — read the diff first
+ui-accept: $(FRESH) ## Regenerate the visual snapshots — read the diff first
 	@pnpm exec playwright test -c playwright.ui.config.ts --update-snapshots
 
-test-e2e: ## Run end-to-end tests against the built app
+test-e2e: $(FRESH) ## Run end-to-end tests against the built app
 	@pnpm test:e2e
 
 format: ## Format and lint-fix the codebase

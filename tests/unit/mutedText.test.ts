@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { oklchToSrgb, relativeLuminance, type Oklch, type Rgb } from '@shared/color';
 import { ACCENT_PRESETS, buildPalette, type Appearance } from '@renderer/styles/theme';
@@ -42,14 +43,32 @@ function ratioOver(text: Oklch, alpha: number, surface: Oklch): number {
 }
 
 /**
- * The alpha `--text-soft` uses. Keep it in step with `base.css`; this test is
- * what stops the two drifting apart.
+ * The alpha `--text-soft` actually ships with, read out of the stylesheet.
  *
- * The worst case across every accent and both appearances needs 63.5%, so 68%
- * is the shipped value with a little headroom — enough that a palette tweak
- * does not silently drop the whole app's secondary text below the line.
+ * Read rather than repeated, and that distinction is the whole value of this
+ * test. It was written as `const SOFT = 0.68`, which proves that *sixty-eight
+ * per cent* clears the line and says nothing about what the app uses — so when
+ * the token was changed to 20% by hand, every check in the repository stayed
+ * green while the entire interface went unreadable. A test that restates a
+ * constant tests the constant.
+ *
+ * The worst case across every accent and both appearances needs 63.5%; 68% is
+ * the shipped value, with enough headroom that a palette tweak cannot silently
+ * drop the whole app's secondary text below the line.
  */
-const SOFT = 0.68;
+const SOFT = readTokenAlpha('--text-soft');
+
+function readTokenAlpha(token: string): number {
+  const css = readFileSync(
+    new URL('../../src/renderer/styles/base.css', import.meta.url),
+    'utf8'
+  );
+  const found = new RegExp(
+    `${token}: *color-mix\\(in oklab, var\\(--color-base-content\\) (\\d+)%`
+  ).exec(css);
+  if (!found) throw new Error(`${token} is not declared the way this test reads it.`);
+  return Number(found[1]) / 100;
+}
 
 describe('secondary text', () => {
   for (const appearance of APPEARANCES) {
