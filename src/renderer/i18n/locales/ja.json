@@ -78,7 +78,12 @@
     "neverOpened": "未使用",
     "connectTo": "{{name}} に接続",
     "edit": "{{name}} を編集",
-    "remove": "{{name}} を削除"
+    "remove": "{{name}} を削除",
+    "exportToFile": "ファイルに保存…",
+    "exportToClipboard": "クリップボードにコピー",
+    "copied": "接続をクリップボードにコピーしました。",
+    "copiedWithSecrets": "パスワードも一緒にコピーしました",
+    "copiedWithSecretsNote": "クリップボードにこの接続のパスワードが平文で入っています。目的の場所に貼り付けたら、別のものをコピーしてください。"
   },
   "connection": {
     "new": "新しい接続",

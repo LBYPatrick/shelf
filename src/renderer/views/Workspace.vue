@@ -42,7 +42,7 @@ import { useHotkeys } from '../composables/useHotkeys';
 import { vTip } from '../lib/hoverTip';
 import { engineDescriptor } from '@shared/engines';
 import type { AiDriverKind } from '@shared/ai';
-import type { SavedConnection } from '@shared/types';
+import type { SavedConnection } from '@shared/connections';
 import { shortcutLabel } from '../lib/keybindings';
 import { useTranslation } from 'i18next-vue';
 

@@ -78,7 +78,12 @@
     "neverOpened": "从未打开",
     "connectTo": "连接到 {{name}}",
     "edit": "编辑 {{name}}",
-    "remove": "删除 {{name}}"
+    "remove": "删除 {{name}}",
+    "exportToFile": "保存为文件…",
+    "exportToClipboard": "复制到剪贴板",
+    "copied": "已将连接复制到剪贴板。",
+    "copiedWithSecrets": "已复制，包含密码",
+    "copiedWithSecretsNote": "剪贴板中现在有该连接的明文密码。请粘贴到目标位置后，再复制点别的东西。"
   },
   "connection": {
     "new": "新建连接",

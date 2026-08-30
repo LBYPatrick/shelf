@@ -26,7 +26,9 @@ import type { SavedConnection } from '@shared/connections';
 import { looksLikeUrl, parseConnectionUrl, type ParsedConnection } from '@shared/connectionUrl';
 import { parseConnections, serializeConnections } from '@shared/connectionFile';
 import { documentFileName } from '@shared/fileNames';
+import { errorMessage } from '@shared/errors';
 import { engineDescriptor } from '@shared/engines';
+import ContextMenu, { type MenuItem } from '../components/ui/ContextMenu.vue';
 import ConnectionEditor from '../components/connection/ConnectionEditor.vue';
 import LineupRow from '../components/connection/LineupRow.vue';
 import AppIcon from '../components/ui/AppIcon.vue';
@@ -189,9 +191,51 @@ function lastUsed(connection: SavedConnection): string {
  * because a file that quietly contains a password is the one people attach to
  * a ticket.
  */
-async function exportConnection(connection: SavedConnection): Promise<void> {
+/**
+ * Two ways out, on one control.
+ *
+ * A file is the way to move a connection to another machine; the clipboard is
+ * the way to put one in a message to a colleague, and it was the more likely of
+ * the two every time somebody wanted to *share* rather than to back up. A menu
+ * rather than a second icon in the row, because they are one idea — take this
+ * connection away with you — asked in two shapes.
+ */
+const exportMenu = ref(false);
+const exportAt = ref<{ x: number; y: number }>({ x: 0, y: 0 });
+const exportTrigger = ref<HTMLElement>();
+const exporting = ref<SavedConnection | null>(null);
+
+const exportItems = computed<MenuItem[]>(() => [
+  { id: 'file', label: t('start.exportToFile'), icon: 'download' },
+  { id: 'clipboard', label: t('start.exportToClipboard'), icon: 'copy' },
+]);
+
+function openExport(connection: SavedConnection, event: MouseEvent): void {
+  exporting.value = connection;
+  exportTrigger.value = event.currentTarget as HTMLElement;
+  exportAt.value = { x: event.clientX, y: event.clientY };
+  exportMenu.value = true;
+}
+
+function chooseExport(id: string): void {
+  const connection = exporting.value;
+  if (!connection) return;
+  void (id === 'clipboard' ? copyConnection(connection) : exportConnection(connection));
+}
+
+/** The document, and whether it carries anything worth warning about. */
+async function connectionDocument(
+  connection: SavedConnection
+): Promise<{ text: string; carried: boolean }> {
   const secrets = await window.shelf.db.revealSecrets(connection.id).catch(() => ({}));
-  const carried = Object.keys(secrets).length > 0;
+  return {
+    text: serializeConnections([connection], { [connection.id]: secrets }),
+    carried: Object.keys(secrets).length > 0,
+  };
+}
+
+async function exportConnection(connection: SavedConnection): Promise<void> {
+  const { text, carried } = await connectionDocument(connection);
 
   const path = await window.shelf.dialogs.writeTextFile(
     {
@@ -199,7 +243,7 @@ async function exportConnection(connection: SavedConnection): Promise<void> {
       defaultPath: documentFileName(connection.name, 'connection'),
       extensions: ['json'],
     },
-    serializeConnections([connection], { [connection.id]: secrets })
+    text
   );
   if (!path) return;
 
@@ -208,6 +252,32 @@ async function exportConnection(connection: SavedConnection): Promise<void> {
     tone: carried ? 'warning' : 'success',
     ...(carried ? { title: t('start.exportedWithSecrets') } : {}),
     message: carried ? t('start.exportedWithSecretsNote') : t('start.exported'),
+  });
+}
+
+/**
+ * The same document, on the clipboard.
+ *
+ * Warned about more loudly than the file, and that is the point rather than an
+ * oversight: a file goes where you put it, and the clipboard is readable by
+ * everything else running on this machine and is one absent-minded paste from
+ * a chat window. Same document, same `secrets` key, a sharper sentence.
+ */
+async function copyConnection(connection: SavedConnection): Promise<void> {
+  const { text, carried } = await connectionDocument(connection);
+
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (caught) {
+    toasts.show({ tone: 'error', message: errorMessage(caught) });
+    return;
+  }
+
+  toasts.show({
+    id: 'connection-export',
+    tone: carried ? 'warning' : 'success',
+    ...(carried ? { title: t('start.copiedWithSecrets') } : {}),
+    message: carried ? t('start.copiedWithSecretsNote') : t('start.copied'),
   });
 }
 
@@ -413,7 +483,7 @@ watch(
                   type="button"
                   class="rowaction"
                   :aria-label="$t('start.export', { name: connection.name })"
-                  @click="exportConnection(connection)"
+                  @click="openExport(connection, $event)"
                 >
                   <AppIcon name="download" :size="16" />
                 </button>
@@ -484,6 +554,14 @@ watch(
     <ShortcutSheet v-model="shortcutsOpen" />
     <ProviderSheet v-model="providersOpen" />
     <StorageSheet v-model="storageOpen" />
+
+    <ContextMenu
+      v-model="exportMenu"
+      :items="exportItems"
+      :at="exportAt"
+      :trigger="exportTrigger"
+      @choose="chooseExport"
+    />
 
     <ConnectionEditor
       v-if="editing !== undefined"

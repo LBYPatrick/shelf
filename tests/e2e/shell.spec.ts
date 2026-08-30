@@ -2,7 +2,7 @@ import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from './fixtures';
-import { createConnection } from './helpers';
+import { createConnection, withClipboard } from './helpers';
 
 test('the window opens on a calm, single-purpose start screen', async ({ page }) => {
   await expect(page.locator('#app')).toBeVisible();
@@ -309,6 +309,8 @@ test('a connection can be written to a file and read back', async ({ app, page }
   await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
 
   await page.getByRole('button', { name: 'Export Portable' }).click();
+  // Two ways out now — a file, or the clipboard. This test is about the file.
+  await page.getByRole('menuitem', { name: 'Save to a file…' }).click();
 
   await expect
     .poll(async () => readFile(target, 'utf8').catch(() => ''), { timeout: 15_000 })
@@ -341,6 +343,34 @@ test('a connection can be written to a file and read back', async ({ app, page }
  * password goes in the file, and this is the assertion that it does — and that
  * it comes back, rather than being written and then dropped on the way in.
  */
+/**
+ * The other way out of the same document.
+ *
+ * A file is how a connection moves to another machine; the clipboard is how it
+ * gets into a message to a colleague, which is the more likely of the two when
+ * somebody wants to *share* rather than to back up.
+ */
+test('a connection can be copied to the clipboard', async ({ page }) => {
+  await createConnection(page, {
+    engine: 'SQLite',
+    file: join(await mkdtemp(join(tmpdir(), 'shelf-copy-')), 'copy.db'),
+    name: 'Copyable',
+    connect: false,
+  });
+  await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
+
+  const document = await withClipboard(async () => {
+    await page.getByRole('button', { name: 'Export Copyable' }).click();
+    await page.getByRole('menuitem', { name: 'Copy to clipboard' }).click();
+    await expect(page.locator('.notices [role="status"]')).toContainText('clipboard');
+    return page.evaluate(() => navigator.clipboard.readText());
+  });
+
+  // The same document the file gets, not a summary of it.
+  const parsed = JSON.parse(document) as { connections: { name: string }[] };
+  expect(parsed.connections.map((one) => one.name)).toContain('Copyable');
+});
+
 test('a connection carries its password through the file', async ({ app, page }) => {
   const directory = await mkdtemp(join(tmpdir(), 'shelf-secret-'));
   const target = join(directory, 'preset.json');
@@ -361,6 +391,8 @@ test('a connection carries its password through the file', async ({ app, page })
   await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
 
   await page.getByRole('button', { name: 'Export WithSecret' }).click();
+  // Two ways out now — a file, or the clipboard. This test is about the file.
+  await page.getByRole('menuitem', { name: 'Save to a file…' }).click();
 
   await expect
     .poll(async () => readFile(target, 'utf8').catch(() => ''), { timeout: 15_000 })

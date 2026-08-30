@@ -78,7 +78,12 @@
     "neverOpened": "never opened",
     "connectTo": "Connect to {{name}}",
     "edit": "Edit {{name}}",
-    "remove": "Delete {{name}}"
+    "remove": "Delete {{name}}",
+    "exportToFile": "Save to a file…",
+    "exportToClipboard": "Copy to clipboard",
+    "copied": "Connection copied to the clipboard.",
+    "copiedWithSecrets": "Copied, with its passwords",
+    "copiedWithSecretsNote": "The clipboard now holds this connection’s passwords in plain text. Paste it where you mean to and copy something else after."
   },
   "connection": {
     "new": "New connection",

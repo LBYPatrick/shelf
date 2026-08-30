@@ -1,4 +1,4 @@
-.PHONY: help gate gate-full install uninstall clean dev preview build test test-assistant test-e2e typecheck lint format tidy commit package publish icon storybook storybook-build storybook-check
+.PHONY: help gate gate-full install uninstall clean dev preview build test test-assistant test-e2e typecheck typecheck-renderer lint format tidy commit package publish icon storybook storybook-build storybook-check
 
 SHELL := /bin/bash
 # The one place the number lives is `package.json`, because that is the copy
@@ -34,6 +34,7 @@ gate: ## Everything that has to pass, in about forty seconds (default)
 	@echo "gate: clean"
 
 gate-full: gate ## The gate, plus the storybook sweep (two minutes; the build is the cost)
+	@$(MAKE) --no-print-directory typecheck-renderer
 	@$(MAKE) --no-print-directory storybook-check
 
 help: ## Show this help message
@@ -92,6 +93,9 @@ publish: ## Gate, bump, push and tag a release (V=1.2.0 NOTES=notes.json)
 
 typecheck: ## Type-check without emitting
 	@pnpm typecheck
+
+typecheck-renderer: ## Fail on names the renderer cannot resolve (see the script)
+	@bash scripts/typecheck-renderer.sh
 
 test: ## Run unit tests
 	@pnpm test

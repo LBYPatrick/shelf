@@ -78,7 +78,12 @@
     "neverOpened": "열어본 적 없음",
     "connectTo": "{{name}}에 연결",
     "edit": "{{name}} 편집",
-    "remove": "{{name}} 삭제"
+    "remove": "{{name}} 삭제",
+    "exportToFile": "파일로 저장…",
+    "exportToClipboard": "클립보드에 복사",
+    "copied": "연결을 클립보드에 복사했습니다.",
+    "copiedWithSecrets": "비밀번호와 함께 복사됨",
+    "copiedWithSecretsNote": "클립보드에 이 연결의 비밀번호가 평문으로 들어 있습니다. 원하는 곳에 붙여넣은 뒤 다른 것을 복사하세요."
   },
   "connection": {
     "new": "새 연결",

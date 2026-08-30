@@ -78,7 +78,12 @@
     "neverOpened": "chưa mở lần nào",
     "connectTo": "Kết nối tới {{name}}",
     "edit": "Sửa {{name}}",
-    "remove": "Xoá {{name}}"
+    "remove": "Xoá {{name}}",
+    "exportToFile": "Lưu vào tệp…",
+    "exportToClipboard": "Sao chép vào clipboard",
+    "copied": "Đã sao chép kết nối vào clipboard.",
+    "copiedWithSecrets": "Đã sao chép, kèm mật khẩu",
+    "copiedWithSecretsNote": "Clipboard đang giữ mật khẩu của kết nối này ở dạng văn bản thuần. Hãy dán vào nơi bạn định dán, rồi sao chép thứ khác."
   },
   "connection": {
     "new": "Kết nối mới",
