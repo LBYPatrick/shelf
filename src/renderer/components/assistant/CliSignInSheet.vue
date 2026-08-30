@@ -175,7 +175,7 @@ const verdict = computed(() => {
 
 .signin__where {
   margin: calc(var(--gap-loose) * -1 + var(--gap-tight)) 0 0;
-  color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+  color: var(--text-soft);
   font-size: 0.75rem;
   line-height: 1.4;
 }
@@ -224,7 +224,7 @@ const verdict = computed(() => {
   border: 0;
   border-radius: var(--radius-selector);
   background: none;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
   cursor: pointer;
   transition:
     color var(--t-hover) var(--ease-out),

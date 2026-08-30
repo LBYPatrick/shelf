@@ -314,12 +314,12 @@ async function run(): Promise<void> {
 }
 
 .section__title {
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
   text-transform: uppercase;
 }
 
 .hint {
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 
 .hint--error {

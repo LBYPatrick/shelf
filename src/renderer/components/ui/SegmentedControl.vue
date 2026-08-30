@@ -161,7 +161,7 @@ onBeforeUnmount(() => {
   font-weight: 500;
   letter-spacing: -0.003em;
   white-space: nowrap;
-  color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+  color: var(--text-soft);
   transition: color var(--t-hover) var(--ease-out);
 }
 

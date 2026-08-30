@@ -163,7 +163,7 @@ onMounted(load);
   place-content: center;
   height: 100%;
   font-size: 0.75rem;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
 }
 
 .erd-tab__note--error {

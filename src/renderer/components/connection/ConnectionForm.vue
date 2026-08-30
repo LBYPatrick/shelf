@@ -705,7 +705,7 @@ async function pickFile(): Promise<void> {
   place-items: center;
   width: var(--hit-min);
   border-radius: var(--radius-field);
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
   transition: color var(--t-hover) var(--ease-out);
 }
 
@@ -769,7 +769,7 @@ async function pickFile(): Promise<void> {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
+  color: var(--text-soft);
 }
 
 /*

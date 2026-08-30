@@ -541,7 +541,7 @@ function startedAt(job: Job): string {
   justify-content: space-between;
   gap: var(--gap-tight);
   padding: 0 var(--gap) var(--gap-tight) var(--gap);
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
   font-variant-numeric: tabular-nums;
 }
 
@@ -565,7 +565,7 @@ function startedAt(job: Job): string {
   font-size: 0.75rem;
   line-height: 1.5;
   text-align: center;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
 }
 
 /*
@@ -724,7 +724,7 @@ function startedAt(job: Job): string {
 .job__meta {
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
   white-space: nowrap;
 }
 

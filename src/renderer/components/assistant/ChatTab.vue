@@ -829,7 +829,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
   margin: 0;
   font-size: 0.8125rem;
   line-height: 1.6;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  color: var(--text-soft);
 }
 
 .opening__cta {
@@ -961,7 +961,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
 }
 
 .composer__field::placeholder {
-  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+  color: var(--text-soft);
 }
 
 .composer__floor {
@@ -1020,7 +1020,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
   width: 1.125rem;
   height: 1.125rem;
   border-radius: var(--radius-selector);
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-soft);
   transition:
     color var(--t-hover) var(--ease-out),
     background-color var(--t-hover) var(--ease-out),
@@ -1056,7 +1056,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
   width: var(--hit-min);
   height: var(--hit-min);
   border-radius: var(--control-radius);
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
   transition:
     color var(--t-hover) var(--ease-out),
     background-color var(--t-hover) var(--ease-out),
@@ -1120,7 +1120,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
 
 .composer__go:disabled {
   background: var(--fill-3);
-  color: color-mix(in oklab, var(--color-base-content) 35%, transparent);
+  color: var(--text-soft);
 }
 
 .composer__go--stop {

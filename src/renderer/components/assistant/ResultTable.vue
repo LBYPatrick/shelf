@@ -134,7 +134,7 @@ function isNull(row: Row, field: Field): boolean {
   font-weight: 600;
   font-size: 0.6875rem;
   letter-spacing: 0.01em;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  color: var(--text-soft);
 }
 
 .rows__table td {

@@ -323,7 +323,7 @@ defineExpose({ focus });
 .filterbar__lead {
   flex: 0 0 auto;
   width: 4rem;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-soft);
 }
 
 span.filterbar__lead {
@@ -370,7 +370,7 @@ span.filterbar__lead {
   height: var(--field-h);
   padding-inline: var(--gap);
   border-radius: var(--control-radius);
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-soft);
   font-size: 0.6875rem;
   transition:
     background-color var(--t-hover) var(--ease-out),
@@ -397,7 +397,7 @@ span.filterbar__lead {
   padding-inline: var(--gap);
   border-radius: var(--control-radius);
   font-size: 0.6875rem;
-  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  color: var(--text-soft);
 }
 
 .filterbar__raw {

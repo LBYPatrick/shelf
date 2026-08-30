@@ -388,7 +388,7 @@ const verdict = computed<{ tone: Tone; text: string }>(() => {
 
 .verdict--quiet {
   background: var(--fill-4);
-  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  color: var(--text-soft);
 }
 
 .verdict__text {
@@ -422,13 +422,13 @@ const verdict = computed<{ tone: Tone; text: string }>(() => {
   font-weight: 650;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-soft);
 }
 
 .block__note {
   margin-inline-start: auto;
   font-size: 0.6875rem;
-  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+  color: var(--text-soft);
 }
 
 .figures,
@@ -454,7 +454,7 @@ const verdict = computed<{ tone: Tone; text: string }>(() => {
 .figure dt,
 .fact dt {
   font-size: 0.6875rem;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
 }
 
 .figure dd,
@@ -520,18 +520,18 @@ const verdict = computed<{ tone: Tone; text: string }>(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.75rem;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-soft);
 }
 
 .check__ms {
   flex: 0 0 auto;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 
 .check--pending {
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
 }
 
 .diagnose__foot {

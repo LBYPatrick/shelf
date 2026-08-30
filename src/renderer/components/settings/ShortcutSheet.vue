@@ -320,7 +320,7 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
   max-width: 56ch;
   font-size: 0.75rem;
   line-height: 1.5;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 
 .rows {
@@ -379,7 +379,7 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
+  color: var(--text-soft);
 }
 
 .row--header {
@@ -428,7 +428,7 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
 .keys__none {
   font-size: 0.6875rem;
   font-weight: 400;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
 }
 
 /*
@@ -444,7 +444,7 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
   width: var(--hit-min);
   height: var(--hit-min);
   border-radius: var(--radius-field);
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
   opacity: 0;
   /* Invisible means gone, including to the pointer: it was still catching a
      hover and drawing its own label over the row beside it. */
@@ -481,7 +481,7 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
 .record__slot--empty {
   border-style: dashed;
   font-weight: 400;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 
 .record__verb {
@@ -541,7 +541,7 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
 }
 
 .json__state--ok {
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-soft);
 }
 
 .json__gap {

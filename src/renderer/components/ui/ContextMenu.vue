@@ -262,7 +262,7 @@ onBeforeUnmount(() => {
   font-family: inherit;
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
+  color: var(--text-soft);
 }
 
 .popmenu__rule {

@@ -248,7 +248,7 @@ const STATE_ICON: Record<string, string> = {
   border-radius: var(--radius-field);
   font-size: 0.6875rem;
   text-align: start;
-  color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+  color: var(--text-soft);
 }
 
 .aside__head:not(:disabled):hover {
@@ -402,7 +402,7 @@ const STATE_ICON: Record<string, string> = {
   padding-inline: var(--gap-tight);
   border-radius: var(--radius-field);
   font-size: 0.6875rem;
-  color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
+  color: var(--text-soft);
 }
 
 .aside__inner-head:hover {

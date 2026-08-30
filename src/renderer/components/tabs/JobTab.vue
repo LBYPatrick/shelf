@@ -189,7 +189,7 @@ async function writeResultsToFile(
 .jobtab__summary {
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+  color: var(--text-soft);
 }
 
 /* One chevron glyph, pointed both ways: two icons for one idea is two things

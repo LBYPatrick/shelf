@@ -107,7 +107,7 @@
    * name and its values are both identifiers; they belong on one glyph grid.
    * Weight and colour carry the difference instead.
    */
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  color: var(--text-soft);
   font-family: var(--font-mono);
   font-size: var(--grid-font);
   font-weight: 500;
@@ -227,7 +227,7 @@
   background-color: var(--color-base-100);
   background-image: linear-gradient(var(--fill-4), var(--fill-4));
   border-inline-end: 1px solid var(--separator);
-  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+  color: var(--text-soft);
   font-variant-numeric: tabular-nums;
   user-select: none;
 }
@@ -325,14 +325,14 @@
 .cell-empty {
   font-style: italic;
   font-size: 0.6875rem;
-  color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
+  color: var(--text-soft);
 }
 
 .tabulator .tabulator-placeholder {
   display: grid;
   place-items: center;
   height: 100%;
-  color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  color: var(--text-soft);
   font-size: 0.75rem;
 }
 

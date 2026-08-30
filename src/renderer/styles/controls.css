@@ -209,7 +209,7 @@
 }
 
 .textfield::placeholder {
-  color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
+  color: var(--text-soft);
 }
 
 .textfield:focus {
@@ -481,7 +481,7 @@
 .tabstatus__item {
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  color: var(--text-soft);
 }
 
 /* A count of something still to be dealt with: unsaved edits, and nothing else. */
@@ -574,7 +574,7 @@
   padding: var(--gap-tight) var(--gap-loose);
   font-size: 0.6875rem;
   line-height: 1.45;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-soft);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -728,7 +728,7 @@
   white-space: nowrap;
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
 }
 
 .tile__dot {
@@ -786,7 +786,7 @@
   width: var(--hit-min);
   height: var(--hit-min);
   border-radius: var(--control-radius);
-  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  color: var(--text-soft);
   transform: translateX(6px);
   transition:
     background-color var(--t-hover) var(--ease-out),

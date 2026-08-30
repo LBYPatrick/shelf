@@ -243,12 +243,12 @@ watch(open, (isOpen) => {
 .count {
   padding-block: var(--gap);
   font-size: 0.75rem;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 
 .import__label {
   padding-block: var(--gap-tight);
-  color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+  color: var(--text-soft);
 }
 
 .preview {
@@ -299,7 +299,7 @@ watch(open, (isOpen) => {
   margin-inline-start: var(--gap-tight);
   font-family: var(--font-mono);
   font-size: 0.625rem;
-  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+  color: var(--text-soft);
 }
 
 .map__select {

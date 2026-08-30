@@ -89,7 +89,7 @@ withDefaults(
  */
 .press:disabled {
   cursor: not-allowed;
-  color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
+  color: var(--text-soft);
 }
 
 .press--primary:disabled,

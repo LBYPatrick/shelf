@@ -82,7 +82,7 @@ function leave(element: Element): void {
   gap: var(--gap-tight);
   width: 100%;
   padding: var(--gap-tight) 0;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  color: var(--text-soft);
   transition: color var(--t-hover) var(--ease-out);
 }
 
@@ -91,7 +91,7 @@ function leave(element: Element): void {
   margin-inline-start: auto;
   font-size: 0.85em;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
 }
 
 .disclosure__chevron {

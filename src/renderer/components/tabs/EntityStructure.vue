@@ -895,7 +895,7 @@ watch(() => props.entity, load);
   padding-inline: var(--gap);
   border-radius: var(--control-radius);
   background: var(--fill-3);
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
 }
 
 .structure__find:focus-within {
@@ -935,7 +935,7 @@ watch(() => props.entity, load);
   padding: var(--gap-section);
   text-align: center;
   font-size: 0.75rem;
-  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+  color: var(--text-soft);
 }
 
 /*
@@ -967,7 +967,7 @@ watch(() => props.entity, load);
   font-weight: 500;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
   /* Opaque, because it is a header that scrolling content passes under. A
      translucent one over moving rows is unreadable exactly when it matters. */
   background: var(--color-base-200);
@@ -1073,7 +1073,7 @@ watch(() => props.entity, load);
   white-space: nowrap;
   font-size: 0.6875rem;
   line-height: 1.3;
-  color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+  color: var(--text-soft);
 }
 
 .rows__code {
@@ -1083,7 +1083,7 @@ watch(() => props.entity, load);
 }
 
 .rows__muted {
-  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  color: var(--text-soft);
 }
 
 .rows__actions {
@@ -1094,7 +1094,7 @@ watch(() => props.entity, load);
   padding: 3px;
   border-radius: 0.3rem;
   opacity: 0;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
   transition:
     opacity var(--t-press) var(--ease-out),
     background-color var(--t-press) var(--ease-out),

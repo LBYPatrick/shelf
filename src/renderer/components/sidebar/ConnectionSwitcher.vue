@@ -372,7 +372,7 @@ function onChoose(id: string): void {
   gap: var(--gap-hair);
   min-width: 0;
   font-size: 0.625rem;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
 }
 
 .switcher__detail {
@@ -422,7 +422,7 @@ function onChoose(id: string): void {
 
 .switcher__chevron {
   flex: 0 0 auto;
-  color: color-mix(in oklab, var(--color-base-content) 32%, transparent);
+  color: var(--text-soft);
   transform: rotate(90deg);
   transition: transform var(--t-pop) var(--ease-sheet);
 }

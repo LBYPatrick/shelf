@@ -247,7 +247,7 @@ const hue = computed(() => (props.engine ? engineDescriptor(props.engine).hue : 
   flex: 0 0 auto;
   font-size: 0.75em;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
   white-space: nowrap;
 }
 
@@ -269,7 +269,7 @@ const hue = computed(() => (props.engine ? engineDescriptor(props.engine).hue : 
   min-width: 0;
   font-size: 0.8em;
   line-height: 1.35;
-  color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+  color: var(--text-soft);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -288,7 +288,7 @@ const hue = computed(() => (props.engine ? engineDescriptor(props.engine).hue : 
   flex: 0 0 auto;
   width: 1em;
   height: 1em;
-  color: color-mix(in oklab, var(--color-base-content) 30%, transparent);
+  color: var(--text-soft);
   transition:
     transform var(--t-hover) var(--ease-out),
     opacity var(--t-hover) var(--ease-out),
@@ -343,7 +343,7 @@ const hue = computed(() => (props.engine ? engineDescriptor(props.engine).hue : 
 
   .row:hover .row__chevron {
     transform: translateX(2px);
-    color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+    color: var(--text-soft);
   }
 
   /*

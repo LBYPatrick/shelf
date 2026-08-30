@@ -113,7 +113,7 @@ function choose(id: string): void {
   padding-inline: var(--gap-tight);
   border-radius: var(--radius-field);
   font-size: 0.75rem;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  color: var(--text-soft);
   transition:
     background-color var(--t-hover) var(--ease-out),
     color var(--t-hover) var(--ease-out);

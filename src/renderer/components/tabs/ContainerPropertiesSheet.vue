@@ -309,7 +309,7 @@ watch(
   padding: var(--gap-section);
   text-align: center;
   font-size: 0.75rem;
-  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+  color: var(--text-soft);
 }
 
 .note--error {
@@ -335,7 +335,7 @@ watch(
 
 .facts dt {
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 
 .facts dd {
@@ -351,6 +351,6 @@ watch(
 .largest__title {
   margin: 0 0 var(--gap-tight);
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 </style>

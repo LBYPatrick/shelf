@@ -644,7 +644,7 @@ const KIND_ICON: Record<string, string> = {
 
 .tree__note {
   padding: var(--gap) var(--gap-loose);
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
 }
 
 .tree__note--error {
@@ -738,7 +738,7 @@ const KIND_ICON: Record<string, string> = {
 }
 
 .row__twisty {
-  color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
+  color: var(--text-soft);
   transition: transform var(--t-pop) var(--ease-out);
 }
 
@@ -747,7 +747,7 @@ const KIND_ICON: Record<string, string> = {
 }
 
 .row__mark {
-  color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  color: var(--text-soft);
   transition: color var(--t-hover) var(--ease-out);
 }
 
@@ -786,7 +786,7 @@ const KIND_ICON: Record<string, string> = {
 .row__label--muted {
   padding-inline-start: 1.5rem;
   font-size: 0.6875rem;
-  color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  color: var(--text-soft);
 }
 
 /*
@@ -803,7 +803,7 @@ const KIND_ICON: Record<string, string> = {
   padding-inline: var(--gap-tight);
   font-size: 0.6875rem;
   opacity: 0;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
   transition:
     opacity var(--t-press) var(--ease-out),
     color var(--t-press) var(--ease-out);
@@ -825,7 +825,7 @@ const KIND_ICON: Record<string, string> = {
   margin-inline-start: auto;
   font-size: 0.625rem;
   font-family: var(--font-mono);
-  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+  color: var(--text-soft);
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 45%;

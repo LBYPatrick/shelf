@@ -891,7 +891,7 @@ onBeforeUnmount(() => stopPersisting?.());
   width: var(--rail-item);
   height: var(--rail-item);
   border-radius: 0.6rem;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
   transition:
     color var(--t-hover) var(--ease-out),
     transform var(--t-press) var(--ease-out);
@@ -1027,7 +1027,7 @@ onBeforeUnmount(() => stopPersisting?.());
   padding-inline: var(--gap) var(--gap-tight);
   border-radius: var(--control-radius);
   background-color: var(--fill-4);
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
   font-size: 0.8125rem;
   transition: background-color var(--t-hover) var(--ease-out);
 }
@@ -1096,7 +1096,7 @@ onBeforeUnmount(() => stopPersisting?.());
   padding-inline: var(--gap);
   border-radius: var(--control-radius);
   background: var(--fill-4);
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
   transition:
     background-color var(--t-hover) var(--ease-out),
     color var(--t-hover) var(--ease-out),
@@ -1136,7 +1136,7 @@ onBeforeUnmount(() => stopPersisting?.());
 }
 
 .sidebar__find-input::placeholder {
-  color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  color: var(--text-soft);
 }
 
 .sidebar__find-input:focus {
@@ -1164,7 +1164,7 @@ onBeforeUnmount(() => stopPersisting?.());
   height: var(--sidebar-row-h);
   gap: var(--gap);
   padding: 0 var(--gap);
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
 }
 
 .sidebar__collapse {
@@ -1183,7 +1183,7 @@ onBeforeUnmount(() => stopPersisting?.());
 
 .sidebar__todo {
   padding: var(--gap-loose);
-  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+  color: var(--text-soft);
 }
 
 /*
@@ -1399,7 +1399,7 @@ onBeforeUnmount(() => stopPersisting?.());
   margin: 0 0 var(--gap-section);
   font-size: 0.875rem;
   line-height: 1.5;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-soft);
   animation-delay: 80ms;
 }
 
@@ -1467,7 +1467,7 @@ onBeforeUnmount(() => stopPersisting?.());
   font-family: inherit;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+  color: var(--text-soft);
 }
 
 @keyframes opening-in {
@@ -1494,7 +1494,7 @@ onBeforeUnmount(() => stopPersisting?.());
   gap: var(--gap-tight);
   height: 100%;
   text-align: center;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
 }
 
 .content__actions {

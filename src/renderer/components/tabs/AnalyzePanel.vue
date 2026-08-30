@@ -704,7 +704,7 @@ onBeforeUnmount(stopSampling);
 .analyze__span {
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-soft);
 }
 
 .analyze__caveat {
@@ -766,7 +766,7 @@ onBeforeUnmount(stopSampling);
   text-align: center;
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
 }
 
 /*
@@ -777,7 +777,7 @@ onBeforeUnmount(stopSampling);
 .analyze__totals {
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 
 .analyze__empty {
@@ -793,7 +793,7 @@ onBeforeUnmount(stopSampling);
   margin: var(--gap-tight) 0 0;
   max-width: 34rem;
   font-size: 0.75rem;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-soft);
 }
 
 /*
@@ -816,7 +816,7 @@ onBeforeUnmount(stopSampling);
   height: var(--hit-min);
   border-radius: var(--control-radius);
   background: var(--fill-3);
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  color: var(--text-soft);
   transition:
     background-color var(--t-hover) var(--ease-out),
     color var(--t-hover) var(--ease-out);
@@ -872,7 +872,7 @@ onBeforeUnmount(stopSampling);
 .panel__title {
   margin: 0 0 var(--gap);
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 
 .panel__head .panel__title {
@@ -910,7 +910,7 @@ onBeforeUnmount(stopSampling);
   text-overflow: ellipsis;
   white-space: nowrap;
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 
 .gauges__value {
@@ -939,7 +939,7 @@ onBeforeUnmount(stopSampling);
   font-weight: 500;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
   background: var(--color-base-200);
   border-bottom: 1px solid var(--separator);
 }
@@ -1033,6 +1033,6 @@ onBeforeUnmount(stopSampling);
 .unused__size {
   flex: 0 0 auto;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 </style>

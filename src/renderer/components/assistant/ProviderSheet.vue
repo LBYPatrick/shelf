@@ -391,7 +391,7 @@ async function remove(): Promise<void> {
   margin: 0 0 var(--gap-loose);
   font-size: 0.8125rem;
   line-height: 1.6;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  color: var(--text-soft);
 }
 
 .intro--empty {
@@ -410,7 +410,7 @@ async function remove(): Promise<void> {
 
 .absent__label {
   margin: var(--gap) 0 0;
-  color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
+  color: var(--text-soft);
 }
 
 .row--absent {
@@ -510,7 +510,7 @@ async function remove(): Promise<void> {
   margin: var(--gap-tight) 0 var(--gap-loose);
   font-size: 0.75rem;
   line-height: 1.4;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  color: var(--text-soft);
 }
 
 .working {

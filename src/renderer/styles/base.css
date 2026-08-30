@@ -228,6 +228,27 @@ textarea,
   --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
 
   /*
+   * Secondary text, at the one alpha that is still readable.
+   *
+   * `color-mix(… N%, transparent)` is not a lighter colour: it is the text
+   * colour at N% alpha, composited over whatever surface it lands on. A
+   * hundred and forty-four declarations did that with values from 38% to 62%,
+   * and measured against the palette the worst case needs **63.5%** to clear
+   * WCAG's 4.5:1 — so every one of them failed, on every accent, in both
+   * appearances. The sidebar's counts came out at 3.04:1.
+   *
+   * One value, with headroom, and hierarchy carried by size and weight
+   * instead. That is the right way round anyway: a ramp of six alphas made
+   * six levels of "less important" by fading text toward the background, which
+   * is the one axis that trades legibility for emphasis.
+   *
+   * `--text-dim` is for text WCAG exempts — a disabled control, and nothing
+   * else. It is deliberately not offered as a third level of emphasis.
+   */
+  --text-soft: color-mix(in oklab, var(--color-base-content) 68%, transparent);
+  --text-dim: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+
+  /*
    * Durations. Anything a user triggers repeatedly stays under 200ms.
    *
    * Five steps, and the scale is only worth having if every call site is on

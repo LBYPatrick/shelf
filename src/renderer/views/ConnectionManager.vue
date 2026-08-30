@@ -766,7 +766,7 @@ watch(
   width: 1em;
   height: 1em;
   margin-inline-start: 0.75em;
-  color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  color: var(--text-soft);
 }
 
 .finder__input {
@@ -787,7 +787,7 @@ watch(
 }
 
 .finder__input::placeholder {
-  color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  color: var(--text-soft);
 }
 
 .finder__clear {
@@ -797,7 +797,7 @@ watch(
   height: max(var(--hit-min), 1.8em);
   margin-inline-end: 0.35em;
   border-radius: 999px;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-soft);
   transition: background-color var(--t-press) var(--ease-out);
 }
 
@@ -912,7 +912,7 @@ watch(
   width: max(var(--hit-min), 2.4em);
   height: max(var(--hit-min), 2.4em);
   border-radius: 0.55em;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
   transition:
     background-color var(--t-press) var(--ease-out),
     color var(--t-press) var(--ease-out);
@@ -937,7 +937,7 @@ watch(
   padding: 1.5em 0;
   text-align: center;
   font-size: 0.85em;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-soft);
 }
 
 .keyring {

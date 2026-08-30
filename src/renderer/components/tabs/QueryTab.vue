@@ -1248,7 +1248,7 @@ watch(
 
 .results__clock {
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  color: var(--text-soft);
 }
 
 /*
@@ -1298,7 +1298,7 @@ watch(
 .results__summary {
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+  color: var(--text-soft);
 }
 
 .results__error {
@@ -1326,7 +1326,7 @@ watch(
   gap: var(--gap-tight);
   height: 100%;
   font-size: 0.75rem;
-  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+  color: var(--text-soft);
 }
 
 /*
@@ -1416,7 +1416,7 @@ watch(
 
 .results__clock {
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  color: var(--text-soft);
 }
 
 .key {

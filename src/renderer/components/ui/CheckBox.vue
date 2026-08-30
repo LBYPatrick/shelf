@@ -136,7 +136,7 @@ const model = defineModel<boolean>({ required: true });
 
 .check__hint {
   font-size: 0.6875rem;
-  color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+  color: var(--text-soft);
 }
 
 @media (hover: hover) and (pointer: fine) {

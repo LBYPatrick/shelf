@@ -115,7 +115,7 @@ async function copy(): Promise<void> {
 }
 
 .changelabel {
-  color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+  color: var(--text-soft);
   margin-bottom: var(--gap-tight);
 }
 

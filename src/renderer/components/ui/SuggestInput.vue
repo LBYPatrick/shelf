@@ -241,7 +241,7 @@ function onInput(): void {
   place-items: center;
   width: var(--hit-min);
   border-radius: var(--control-radius);
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
 }
 
 .suggest__open:hover {

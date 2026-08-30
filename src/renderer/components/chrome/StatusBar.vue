@@ -177,7 +177,7 @@ const activity = useActivity();
      lot to say; the tab's own status is more useful moment to moment. */
   flex: 0 1 auto;
   min-width: 0;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

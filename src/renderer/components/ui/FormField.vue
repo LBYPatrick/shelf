@@ -43,13 +43,13 @@ const describedBy = `${id}-note`;
 }
 
 .field__label {
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  color: var(--text-soft);
 }
 
 .field__note {
   font-size: 0.6875rem;
   line-height: 1.35;
-  color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+  color: var(--text-soft);
 }
 
 .field__note--error {

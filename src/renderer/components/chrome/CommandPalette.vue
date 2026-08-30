@@ -637,7 +637,7 @@ function commit(): void {
 
 .palette__glyph {
   flex: 0 0 auto;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
   transition: color var(--t-hover) var(--ease-out);
 }
 
@@ -661,7 +661,7 @@ function commit(): void {
 }
 
 .palette__input::placeholder {
-  color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
+  color: var(--text-soft);
 }
 
 .palette__clear {
@@ -670,7 +670,7 @@ function commit(): void {
   width: var(--hit-min);
   height: var(--hit-min);
   border-radius: 999px;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
 }
 
 .palette__key {
@@ -679,7 +679,7 @@ function commit(): void {
   background: var(--fill-4);
   font-family: var(--font-ui);
   font-size: 0.625rem;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 
 /*
@@ -709,7 +709,7 @@ function commit(): void {
 
 .palette__section {
   padding: var(--gap) var(--gap) var(--gap-hair);
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
   text-transform: uppercase;
 }
 
@@ -766,7 +766,7 @@ function commit(): void {
 
 .palette__aside {
   margin-block-start: var(--gap-tight);
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
 }
 
 .palette__paths {
@@ -793,7 +793,7 @@ function commit(): void {
   padding: var(--gap-section);
   text-align: center;
   font-size: 0.75rem;
-  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+  color: var(--text-soft);
   border-top: 1px solid var(--separator);
 }
 
@@ -809,7 +809,7 @@ function commit(): void {
   padding: var(--gap-tight) var(--gap-loose);
   border-top: 1px solid var(--separator);
   background: var(--fill-4);
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-soft);
 }
 
 .palette__hint {

@@ -297,7 +297,7 @@ const any = computed(() => filter.value.criteria.length > 0);
   border: 1px dashed var(--separator);
   border-radius: 999px;
   font-size: 0.6875rem;
-  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  color: var(--text-soft);
   transition:
     background-color var(--t-hover) var(--ease-out),
     color var(--t-hover) var(--ease-out);

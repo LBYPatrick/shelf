@@ -115,7 +115,7 @@ const STEP = 1.4;
   text-align: center;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-soft);
 }
 
 @media (hover: hover) and (pointer: fine) {

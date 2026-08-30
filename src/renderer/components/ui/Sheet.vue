@@ -487,7 +487,7 @@ void props;
   font-size: 0.6875rem;
   font-weight: 500;
   letter-spacing: 0.02em;
-  color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
+  color: var(--text-soft);
 }
 
 .panel__titles .type-title {
@@ -500,7 +500,7 @@ void props;
    options, so a long title truncates before the controls do. */
 .panel__icon {
   flex: 0 0 auto;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 
 /* Beside the name and no further: it qualifies the title rather than acting. */
@@ -536,7 +536,7 @@ void props;
   height: var(--hit-min);
   border-radius: 999px;
   font-size: 0.75rem;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 
 .panel__close:hover {

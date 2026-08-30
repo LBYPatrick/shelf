@@ -101,7 +101,7 @@ const properties = ref<EntityProperties>({});
 }
 
 .facts dt {
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
   text-transform: uppercase;
 }
 

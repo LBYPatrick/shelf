@@ -89,6 +89,38 @@ test('the command palette is accessible', async ({ sample }) => {
   expect(await audit(sample, '[role=dialog]')).toEqual([]);
 });
 
+/*
+ * The sheets, which is where most of this app's forms live.
+ *
+ * Five screens were audited and none of them was a sheet — so the connection
+ * form, the provider list and the assistant were checked only by whatever they
+ * happened to inherit. That is the wrong half to skip: a screen is mostly
+ * reading, and a sheet is where somebody is filling something in with a
+ * keyboard.
+ */
+test('the connection sheet is accessible, before and after an engine', async ({ page }) => {
+  await page
+    .getByRole('button', { name: /New connection/ })
+    .first()
+    .click();
+  await page.getByRole('dialog').waitFor();
+  await stabilize(page);
+  // The first step is the engine grid on its own, which is a radiogroup and is
+  // the whole content — worth auditing separately from the form it becomes.
+  expect(await audit(page, '[role=dialog]')).toEqual([]);
+
+  await page.getByRole('radio', { name: 'PostgreSQL', exact: true }).click();
+  await stabilize(page);
+  expect(await audit(page, '[role=dialog]')).toEqual([]);
+});
+
+test('the assistant is accessible', async ({ sample }) => {
+  await sample.keyboard.press('Meta+Shift+a');
+  await sample.locator('.chattab').waitFor();
+  await stabilize(sample);
+  expect(await audit(sample, '.chattab')).toEqual([]);
+});
+
 test('the workspace is accessible in dark mode', async ({ page }) => {
   await setAppearance(page, 'dark');
   await page

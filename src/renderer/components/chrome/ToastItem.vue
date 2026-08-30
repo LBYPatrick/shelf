@@ -317,7 +317,7 @@ function act(): void {
   width: var(--hit-min);
   height: var(--hit-min);
   border-radius: var(--control-radius);
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-soft);
 }
 
 @media (hover: hover) and (pointer: fine) {

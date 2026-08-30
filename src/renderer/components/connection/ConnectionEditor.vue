@@ -217,6 +217,6 @@ function close(): void {
 
 .problem {
   font-size: 0.6875rem;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 </style>

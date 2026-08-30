@@ -243,7 +243,7 @@ export default defineComponent({
 .md :deep(.md__table th) {
   font-weight: 600;
   font-size: 0.6875rem;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  color: var(--text-soft);
 }
 
 .md :deep(.md__table tr:last-child td) {

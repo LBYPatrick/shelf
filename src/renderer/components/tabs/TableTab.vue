@@ -661,7 +661,7 @@ watch(
 .tabstatus__page {
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  color: var(--text-soft);
 }
 
 .tabstatus__pager,

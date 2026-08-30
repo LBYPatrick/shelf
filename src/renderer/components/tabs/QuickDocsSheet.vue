@@ -145,7 +145,7 @@ watch(
   flex-wrap: wrap;
   gap: var(--gap-tight);
   padding-block: var(--gap) var(--gap-loose);
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 
 .comment {
@@ -160,7 +160,7 @@ watch(
   padding: var(--gap-section);
   text-align: center;
   font-size: 0.75rem;
-  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+  color: var(--text-soft);
 }
 
 .note--error {
@@ -217,10 +217,10 @@ watch(
   flex: 0 0 auto;
   font-size: 0.75rem;
   font-family: var(--font-mono);
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 
 .columns__req {
-  color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  color: var(--text-soft);
 }
 </style>

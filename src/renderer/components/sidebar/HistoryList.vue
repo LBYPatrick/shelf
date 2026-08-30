@@ -118,7 +118,7 @@ function ago(at: number): string {
   align-items: center;
   padding: 0 var(--gap) var(--gap-tight);
   font-size: 0.625rem;
-  color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
+  color: var(--text-soft);
 }
 
 .entries__toggle {

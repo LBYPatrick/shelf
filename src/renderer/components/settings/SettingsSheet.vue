@@ -940,7 +940,7 @@ const languageOptions = computed(() => [
 .about__version {
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-soft);
 }
 
 .panel-section {
@@ -958,7 +958,7 @@ const languageOptions = computed(() => [
 .panel-section__desc {
   font-size: 0.75rem;
   line-height: 1.5;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 
 /*
@@ -1023,7 +1023,7 @@ label.row__label {
   font-size: 0.6875rem;
   font-weight: 400;
   line-height: 1.45;
-  color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+  color: var(--text-soft);
 }
 
 .row__label--group {
@@ -1031,7 +1031,7 @@ label.row__label {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
+  color: var(--text-soft);
 }
 
 .row--header {
@@ -1203,7 +1203,7 @@ label.row__label {
    describes it — and the reason the left of the bar is no longer four words. */
 .json__count {
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+  color: var(--text-soft);
 }
 
 .json__action {
@@ -1261,7 +1261,7 @@ label.row__label {
  * takes the whole phrase, because that one does have to be read.
  */
 .json__state--ok {
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-soft);
 }
 
 .json__state--ok .icon {

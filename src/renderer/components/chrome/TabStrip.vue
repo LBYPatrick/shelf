@@ -1026,7 +1026,7 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   padding-inline: var(--gap) var(--gap-tight);
   border-radius: var(--control-radius);
   font-size: 0.75rem;
-  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  color: var(--text-soft);
   touch-action: none;
   /*
    * The width is animated on the same curve and duration as the marker that
@@ -1211,7 +1211,7 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   width: var(--hit-min);
   height: calc(var(--tab-h) - var(--gap));
   border-radius: var(--control-radius);
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-soft);
   transition:
     background-color var(--t-hover) var(--ease-out),
     color var(--t-hover) var(--ease-out),
