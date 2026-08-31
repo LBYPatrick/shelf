@@ -40,7 +40,8 @@
     "disconnect": "연결 끊기",
     "yes": "예",
     "no": "아니요",
-    "change": "변경"
+    "change": "변경",
+    "expandAll": "모두 펼치기"
   },
   "time": {
     "justNow": "방금",
@@ -160,7 +161,11 @@
     "jobs": "작업",
     "newQueryTab": "새 쿼리 탭",
     "query": "쿼리",
-    "newTab": "새 탭"
+    "newTab": "새 탭",
+    "builtIns": "내장 객체",
+    "builtInsHelp": "데이터베이스가 자체적으로 제공하는 테이블과 함수를 표시",
+    "builtInsShow": "내장 테이블과 함수 표시",
+    "builtInsHide": "내장 테이블과 함수 숨기기"
   },
   "table": {
     "filterPlaceholder": "필터 — 예: name like 'A%'",

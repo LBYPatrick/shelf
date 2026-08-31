@@ -16,6 +16,7 @@ import type {
   FieldEditability,
   Filters,
   Index,
+  ListEntitiesOptions,
   Page,
   Partition,
   QueryOptions,
@@ -49,6 +50,7 @@ const SQLITE_CAPABILITIES = capabilities({
   // enough to offer on every page, unlike a network round trip to a huge table.
   cheapCount: true,
   sshTunnel: false,
+  builtInEntities: true,
 });
 
 interface SqliteTableInfo {
@@ -127,18 +129,27 @@ export class SqliteClient implements DatabaseClient {
     return [];
   }
 
-  async listEntities(): Promise<readonly Entity[]> {
+  async listEntities(
+    _schema?: string,
+    options?: ListEntitiesOptions
+  ): Promise<readonly Entity[]> {
+    /*
+     * `sqlite_sequence` and the `sqlite_stat*` tables. Few enough that fetching
+     * them costs nothing, and useful often enough to be worth a switch: the
+     * sequence table is where an AUTOINCREMENT's next value actually lives.
+     */
     const rows = this.require()
       .prepare(
         `SELECT name, type FROM sqlite_master
-         WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite_%'
+         WHERE type IN ('table', 'view') AND (? OR name NOT LIKE 'sqlite_%')
          ORDER BY name`
       )
-      .all() as { name: string; type: string }[];
+      .all(options?.builtIns === true ? 1 : 0) as { name: string; type: string }[];
 
     return rows.map((row) => ({
       name: row.name,
       kind: row.type === 'view' ? ('view' as const) : ('table' as const),
+      ...(row.name.startsWith('sqlite_') ? { builtIn: true } : {}),
     }));
   }
 

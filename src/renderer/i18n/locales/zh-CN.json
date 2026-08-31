@@ -40,7 +40,8 @@
     "disconnect": "断开连接",
     "yes": "是",
     "no": "否",
-    "change": "更改"
+    "change": "更改",
+    "expandAll": "全部展开"
   },
   "time": {
     "justNow": "刚刚",
@@ -160,7 +161,11 @@
     "jobs": "任务",
     "newQueryTab": "新建查询标签页",
     "query": "查询",
-    "newTab": "新建标签页"
+    "newTab": "新建标签页",
+    "builtIns": "内置对象",
+    "builtInsHelp": "显示数据库自带的表和函数",
+    "builtInsShow": "显示内置的表和函数",
+    "builtInsHide": "隐藏内置的表和函数"
   },
   "table": {
     "filterPlaceholder": "筛选 — 例如 name like 'A%'",

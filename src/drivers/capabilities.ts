@@ -39,6 +39,9 @@ export const SQL_BASELINE: Capabilities = {
   /* Off by default: per-statement timings need machinery most engines do not
      have, and an Analyze tab with nothing in it is worse than no tab. */
   statistics: false,
+  /* Off by default for the same reason: a switch that reveals nothing is worse
+     than no switch, because it is tried once and remembered as broken. */
+  builtInEntities: false,
   nouns: RELATIONAL_NOUNS,
 };
 

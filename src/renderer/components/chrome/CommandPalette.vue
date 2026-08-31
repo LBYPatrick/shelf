@@ -151,12 +151,43 @@ const navigation = computed<Command[]>(() => [
   {
     id: 'nav.collapse',
     section: 'navigation',
-    icon: 'tables',
+    icon: 'arrowsIn',
     title: t('action.collapseAll'),
     slash: '/collapse',
     keywords: 'sidebar tree folders',
     run: () => entities.collapseAll(),
   },
+  {
+    id: 'nav.expand',
+    section: 'navigation',
+    icon: 'arrowsOut',
+    title: t('action.expandAll'),
+    slash: '/expand',
+    keywords: 'sidebar tree folders open',
+    run: () => entities.expandAll(),
+  },
+  /*
+   * The switch in the sidebar is drawn only for engines that have built-ins;
+   * this row is offered on the same terms, because a command that runs and
+   * changes nothing is worse than one that is not there.
+   */
+  ...(connections.active?.capabilities.builtInEntities
+    ? [
+        {
+          id: 'nav.builtIns',
+          section: 'navigation' as const,
+          icon: 'tables',
+          title: entities.showBuiltIns
+            ? t('workspace.builtInsHide')
+            : t('workspace.builtInsShow'),
+          slash: '/built-ins',
+          keywords: 'catalogue extension system functions tables sidebar',
+          run: () => {
+            entities.showBuiltIns = !entities.showBuiltIns;
+          },
+        },
+      ]
+    : []),
   {
     id: 'nav.disconnect',
     section: 'navigation',

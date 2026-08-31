@@ -17,6 +17,7 @@ import type {
   FieldEditability,
   Filters,
   Index,
+  ListEntitiesOptions,
   Page,
   Partition,
   QueryOptions,
@@ -48,11 +49,15 @@ const DUCKDB_DIALECT: Dialect = {
  * fast scan over compressed columns rather than a trip to a server, so the
  * pager can offer a last page. It has no triggers and no server to tunnel to.
  */
+/** The schemas DuckDB carries for Postgres compatibility, not for the reader. */
+const BUILT_IN_SCHEMAS = new Set(['information_schema', 'pg_catalog']);
+
 const DUCKDB_CAPABILITIES = capabilities({
   triggers: false,
   cheapCount: true,
   sshTunnel: false,
   multipleDatabases: false,
+  builtInEntities: true,
 });
 
 /**
@@ -135,22 +140,32 @@ export class DuckdbClient implements DatabaseClient {
     return rows.map((row) => String(row['schema_name']));
   }
 
-  async listEntities(schema?: string): Promise<readonly Entity[]> {
+  async listEntities(
+    schema?: string,
+    options?: ListEntitiesOptions
+  ): Promise<readonly Entity[]> {
+    // The two catalogue schemas DuckDB carries for compatibility. Excluded in
+    // the query rather than in the mapping, so what is not shown is also not
+    // fetched.
     const { rows } = await this.run(
       `SELECT table_schema AS table_schema, table_name AS table_name,
               table_type AS table_type
          FROM information_schema.tables
-        WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
+        WHERE ($2 OR table_schema NOT IN ('information_schema', 'pg_catalog'))
           AND ($1 IS NULL OR table_schema = $1)
         ORDER BY table_schema, table_name`,
-      [schema ?? null]
+      [schema ?? null, options?.builtIns === true]
     );
 
-    return rows.map((row) => ({
-      name: String(row['table_name']),
-      schema: String(row['table_schema']),
-      kind: String(row['table_type']) === 'VIEW' ? ('view' as const) : ('table' as const),
-    }));
+    return rows.map((row) => {
+      const inSchema = String(row['table_schema']);
+      return {
+        name: String(row['table_name']),
+        schema: inSchema,
+        kind: String(row['table_type']) === 'VIEW' ? ('view' as const) : ('table' as const),
+        ...(BUILT_IN_SCHEMAS.has(inSchema) ? { builtIn: true } : {}),
+      };
+    });
   }
 
   async listColumns(entity: EntityRef): Promise<readonly Column[]> {

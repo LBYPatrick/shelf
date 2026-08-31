@@ -40,7 +40,8 @@
     "disconnect": "Disconnect",
     "yes": "Yes",
     "no": "No",
-    "change": "Change"
+    "change": "Change",
+    "expandAll": "Expand all"
   },
   "time": {
     "justNow": "just now",
@@ -160,7 +161,11 @@
     "jobs": "Jobs",
     "newQueryTab": "New query tab",
     "query": "Query",
-    "newTab": "New tab"
+    "newTab": "New tab",
+    "builtIns": "Built-ins",
+    "builtInsHelp": "Show tables and functions the database provides itself",
+    "builtInsShow": "Show built-in tables and functions",
+    "builtInsHide": "Hide built-in tables and functions"
   },
   "table": {
     "filterPlaceholder": "Filter — e.g. name like 'A%'",

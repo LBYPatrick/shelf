@@ -18,6 +18,7 @@ import type {
   FieldEditability,
   Filters,
   Index,
+  ListEntitiesOptions,
   Page,
   Partition,
   QueryOptions,
@@ -52,6 +53,7 @@ const PG_DIALECT: Dialect = {
 const PG_CAPABILITIES = capabilities({
   partitions: true,
   statistics: true,
+  builtInEntities: true,
   // A COUNT(*) on a large Postgres table is a sequential scan over the heap,
   // which is far too slow to run on every page of the grid.
   cheapCount: false,
@@ -191,25 +193,56 @@ export class PostgresClient implements DatabaseClient {
     return result.rows.map((row) => row.nspname);
   }
 
-  async listEntities(schema?: string): Promise<readonly Entity[]> {
+  async listEntities(
+    schema?: string,
+    options?: ListEntitiesOptions
+  ): Promise<readonly Entity[]> {
+    /*
+     * Two things are the engine's rather than the reader's, and they are not the
+     * same thing.
+     *
+     * The catalogue — `pg_catalog` and `information_schema` — is the obvious
+     * one, and it is the expensive one: a stock server answers with three
+     * thousand functions in it. The other is anything an extension brought,
+     * which lives in `public` beside the reader's own tables and so cannot be
+     * told apart by schema at all. `pg_depend` with `deptype = 'e'` is the
+     * server's own record of "this came with an extension", which is the only
+     * thing that knows the difference between `gen_random_uuid` and a function
+     * somebody wrote this morning.
+     *
+     * Off, neither is fetched: the filtering is in the WHERE clause rather than
+     * in the mapping below it, because rows dropped here have still crossed the
+     * network. On, both come back and are marked, so the tree can show what they
+     * are instead of merging them into the schema.
+     */
+    const builtIns = options?.builtIns === true;
+
     const result = await this.run<{
       schema: string;
       name: string;
       kind: string;
       comment: string | null;
+      built_in: boolean;
     }>(
       `SELECT n.nspname AS schema,
               c.relname AS name,
               c.relkind AS kind,
-              obj_description(c.oid) AS comment
+              obj_description(c.oid) AS comment,
+              (n.nspname LIKE 'pg\\_%' OR n.nspname = 'information_schema' OR e.objid IS NOT NULL)
+                AS built_in
          FROM pg_class c
          JOIN pg_namespace n ON n.oid = c.relnamespace
+         LEFT JOIN pg_depend e
+                ON e.classid = 'pg_class'::regclass
+               AND e.objid = c.oid
+               AND e.deptype = 'e'
         WHERE c.relkind IN ('r', 'p', 'v', 'm')
-          AND n.nspname NOT LIKE 'pg\\_%'
-          AND n.nspname <> 'information_schema'
+          AND ($2 OR (n.nspname NOT LIKE 'pg\\_%'
+                      AND n.nspname <> 'information_schema'
+                      AND e.objid IS NULL))
           AND ($1::text IS NULL OR n.nspname = $1)
         ORDER BY n.nspname, c.relname`,
-      [schema ?? null]
+      [schema ?? null, builtIns]
     );
 
     const entities: Entity[] = result.rows.map((row) => ({
@@ -222,18 +255,31 @@ export class PostgresClient implements DatabaseClient {
             ? ('materialized-view' as const)
             : ('table' as const),
       ...(row.comment ? { comment: row.comment } : {}),
+      ...(row.built_in ? { builtIn: true } : {}),
     }));
 
-    const routines = await this.run<{ schema: string; name: string; kind: string }>(
+    const routines = await this.run<{
+      schema: string;
+      name: string;
+      kind: string;
+      built_in: boolean;
+    }>(
       `SELECT n.nspname AS schema, p.proname AS name,
-              CASE p.prokind WHEN 'p' THEN 'procedure' ELSE 'function' END AS kind
+              CASE p.prokind WHEN 'p' THEN 'procedure' ELSE 'function' END AS kind,
+              (n.nspname LIKE 'pg\\_%' OR n.nspname = 'information_schema' OR e.objid IS NOT NULL)
+                AS built_in
          FROM pg_proc p
          JOIN pg_namespace n ON n.oid = p.pronamespace
-        WHERE n.nspname NOT LIKE 'pg\\_%'
-          AND n.nspname <> 'information_schema'
+         LEFT JOIN pg_depend e
+                ON e.classid = 'pg_proc'::regclass
+               AND e.objid = p.oid
+               AND e.deptype = 'e'
+        WHERE ($2 OR (n.nspname NOT LIKE 'pg\\_%'
+                      AND n.nspname <> 'information_schema'
+                      AND e.objid IS NULL))
           AND ($1::text IS NULL OR n.nspname = $1)
         ORDER BY n.nspname, p.proname`,
-      [schema ?? null]
+      [schema ?? null, builtIns]
     );
 
     for (const row of routines.rows) {
@@ -242,6 +288,7 @@ export class PostgresClient implements DatabaseClient {
         schema: row.schema,
         kind: 'routine',
         routineType: row.kind as 'function' | 'procedure',
+        ...(row.built_in ? { builtIn: true } : {}),
       });
     }
 

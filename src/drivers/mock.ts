@@ -15,6 +15,7 @@ import type {
   FieldEditability,
   Filters,
   Index,
+  ListEntitiesOptions,
   Page,
   Partition,
   QueryOptions,
@@ -50,6 +51,7 @@ const MOCK_CAPABILITIES = capabilities({
   // The sample database exists so the interface can be explored, reviewed and
   // photographed with nothing installed — which includes the Analyze tab.
   statistics: true,
+  builtInEntities: true,
 });
 
 /**
@@ -521,6 +523,28 @@ const ROUTINES: readonly Entity[] = [
   })),
 ];
 
+/**
+ * What the sample database pretends the engine brought with it.
+ *
+ * The switch that hides these is the only part of the tree whose behaviour
+ * cannot be seen without a server that has an extension installed on it, so the
+ * sample carries a few — and carries them in the shape that makes the switch
+ * worth having: in a schema the reader already has their own tables in, sorted
+ * among them, rather than in a corner that could have been collapsed instead.
+ */
+const BUILT_INS: readonly Entity[] = [
+  {
+    name: 'gen_random_uuid',
+    schema: 'music',
+    kind: 'routine',
+    routineType: 'function',
+    builtIn: true,
+  },
+  { name: 'crypt', schema: 'music', kind: 'routine', routineType: 'function', builtIn: true },
+  { name: 'digest', schema: 'music', kind: 'routine', routineType: 'function', builtIn: true },
+  { name: 'pg_stat_statements', schema: 'music', kind: 'view', builtIn: true },
+];
+
 export class MockClient implements DatabaseClient {
   readonly engine = 'mock' as const;
   readonly capabilities = MOCK_CAPABILITIES;
@@ -559,12 +583,27 @@ export class MockClient implements DatabaseClient {
     return [...new Set(this.tables.map((table) => table.schema))].sort();
   }
 
-  async listEntities(schema?: string): Promise<readonly Entity[]> {
+  async listEntities(
+    schema?: string,
+    options?: ListEntitiesOptions
+  ): Promise<readonly Entity[]> {
+    const wanted = <T extends Entity>(list: readonly T[]): T[] =>
+      list.filter(
+        (entity) =>
+          (!schema || entity.schema === schema) &&
+          (options?.builtIns === true || entity.builtIn !== true)
+      );
+
     return [
-      ...this.tables
-        .filter((table) => !schema || table.schema === schema)
-        .map((table) => ({ name: table.name, schema: table.schema, kind: table.kind })),
-      ...ROUTINES.filter((routine) => !schema || routine.schema === schema),
+      ...wanted(
+        this.tables.map((table) => ({
+          name: table.name,
+          schema: table.schema,
+          kind: table.kind,
+        }))
+      ),
+      ...wanted(ROUTINES),
+      ...wanted(BUILT_INS),
     ];
   }
 

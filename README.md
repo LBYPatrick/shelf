@@ -74,7 +74,9 @@ capability is ever tied to a licence, because there is no licence.**
 ## What it does
 
 - **Browse** — a schema tree that stays fast at tens of thousands of tables,
-  with columns and types inline.
+  with columns and types inline. What the engine brought with it — a catalogue
+  table, an extension's functions — is hidden until you ask for it, and asking
+  is one switch.
 - **Read** — a spreadsheet-grade grid with range selection, paged reads, and a
   full-value inspector for anything wider than a cell. Filter by building
   conditions from columns and operators, or by writing the clause yourself —

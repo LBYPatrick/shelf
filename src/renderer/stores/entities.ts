@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { Column, Entity, EntityKind, EntityRef } from '@drivers/types';
 import { host } from '../lib/host';
 import { useConnections } from './connections';
@@ -91,6 +91,17 @@ export const useEntities = defineStore('entities', () => {
   const showViews = ref(true);
   const showRoutines = ref(true);
 
+  /**
+   * Whether to ask for what the engine brought with it.
+   *
+   * Off, and the *server* is asked not to send them — a Postgres with PostGIS
+   * on it answers `listEntities` with a thousand `st_*` functions, and the
+   * three tables somebody actually wrote are somewhere in the middle of that.
+   * Which is why this is not a filter over `entities`: turning it on is a
+   * refresh, because turning it on is asking a different question.
+   */
+  const showBuiltIns = ref(false);
+
   async function refresh(): Promise<void> {
     if (!connections.active) return;
 
@@ -103,7 +114,7 @@ export const useEntities = defineStore('entities', () => {
         connections.active.capabilities.schemas
           ? host.call('schema/schemas', { connectionId: id })
           : Promise.resolve([] as readonly string[]),
-        host.call('schema/entities', { connectionId: id }),
+        host.call('schema/entities', { connectionId: id, builtIns: showBuiltIns.value }),
       ]);
 
       schemas.value = [...schemaList];
@@ -115,6 +126,14 @@ export const useEntities = defineStore('entities', () => {
       loading.value = false;
     }
   }
+
+  /*
+   * The switch is a question for the server, not a filter over an answer it
+   * already gave. So flipping it re-asks — here rather than at the control, so
+   * that the palette's row and the sidebar's switch cannot disagree about
+   * whether asking is part of setting it.
+   */
+  watch(showBuiltIns, () => void refresh());
 
   async function loadColumns(entity: Entity): Promise<void> {
     const key = idOf(entity);
@@ -325,6 +344,52 @@ export const useEntities = defineStore('entities', () => {
     return result;
   });
 
+  /**
+   * Opens every folder the tree is currently drawing, and no further.
+   *
+   * Not every folder there could be: opening a table loads its columns, so
+   * "expand all" over five thousand tables would be five thousand round trips
+   * fired at once. The folders here are the schemas and the database — the ones
+   * that cost nothing to open, and the ones `collapseAll` shut.
+   */
+  function expandAll(): void {
+    const schemasInUse = new Set(visibleEntities.value.map((entity) => entity.schema ?? ''));
+
+    /*
+     * A lone schema is not drawn as a folder at all — see `rows` — so there is
+     * nothing there to mark open. Marking it anyway leaves `expanded` holding a
+     * key for a row that does not exist, which is `allCollapsed` reading false
+     * and Collapse offering to shut a tree that is already shut.
+     */
+    expanded.value =
+      schemasInUse.size > 1 ? new Set([...schemasInUse].map(schemaKey)) : new Set();
+    collapsedDatabases.value = new Set();
+  }
+
+  /**
+   * Whether either end has already been reached.
+   *
+   * It is what disables each control at its own extreme, which is what makes
+   * the pair read as a state — both live means the tree is part open — rather
+   * than as two buttons that happen to sit together. Which means each end has
+   * to be defined by what its button *does*, not by a symmetry the pair does
+   * not have.
+   *
+   * `collapseAll` empties `expanded`, which is every schema folder and every
+   * opened table, and leaves the database open — so "already collapsed" is that
+   * set being empty, and the database's own state is no part of it. Defining it
+   * as "every folder shut" instead disables the control never, because the
+   * database is a folder that is open by design.
+   *
+   * `expandAll` opens the schemas and the database and stops there, so "already
+   * expanded" is exactly the folders the tree is currently drawing.
+   */
+  const allCollapsed = computed(() => expanded.value.size === 0);
+
+  const allExpanded = computed(() =>
+    rows.value.every((row) => !row.groupKey || row.expanded === true)
+  );
+
   function reset(): void {
     schemas.value = [];
     entities.value = [];
@@ -344,13 +409,17 @@ export const useEntities = defineStore('entities', () => {
     showTables,
     showViews,
     showRoutines,
+    showBuiltIns,
     visibleEntities,
     rows,
+    allCollapsed,
+    allExpanded,
     refresh,
     loadColumns,
     toggle,
     toggleGroup,
     collapseAll,
+    expandAll,
     reset,
   };
 });

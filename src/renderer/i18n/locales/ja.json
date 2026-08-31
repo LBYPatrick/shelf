@@ -40,7 +40,8 @@
     "disconnect": "切断",
     "yes": "はい",
     "no": "いいえ",
-    "change": "変更"
+    "change": "変更",
+    "expandAll": "すべて展開"
   },
   "time": {
     "justNow": "たった今",
@@ -160,7 +161,11 @@
     "jobs": "ジョブ",
     "newQueryTab": "新しいクエリタブ",
     "query": "クエリ",
-    "newTab": "新しいタブ"
+    "newTab": "新しいタブ",
+    "builtIns": "組み込みオブジェクト",
+    "builtInsHelp": "データベース自身が備えるテーブルと関数を表示する",
+    "builtInsShow": "組み込みのテーブルと関数を表示",
+    "builtInsHide": "組み込みのテーブルと関数を隠す"
   },
   "table": {
     "filterPlaceholder": "絞り込み — 例: name like 'A%'",

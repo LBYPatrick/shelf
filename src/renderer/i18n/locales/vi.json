@@ -40,7 +40,8 @@
     "disconnect": "Ngắt kết nối",
     "yes": "Có",
     "no": "Không",
-    "change": "Đổi"
+    "change": "Đổi",
+    "expandAll": "Mở rộng tất cả"
   },
   "time": {
     "justNow": "vừa xong",
@@ -160,7 +161,11 @@
     "jobs": "Tác vụ",
     "newQueryTab": "Thẻ truy vấn mới",
     "query": "Truy vấn",
-    "newTab": "Tab mới"
+    "newTab": "Tab mới",
+    "builtIns": "Đối tượng có sẵn",
+    "builtInsHelp": "Hiện các bảng và hàm do chính cơ sở dữ liệu cung cấp",
+    "builtInsShow": "Hiện bảng và hàm có sẵn",
+    "builtInsHide": "Ẩn bảng và hàm có sẵn"
   },
   "table": {
     "filterPlaceholder": "Lọc — ví dụ name like 'A%'",

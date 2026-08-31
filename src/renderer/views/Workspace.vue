@@ -30,6 +30,7 @@ import ShortcutSheet from '../components/settings/ShortcutSheet.vue';
 import DiagnoseSheet from '../components/sidebar/DiagnoseSheet.vue';
 import ConnectionEditor from '../components/connection/ConnectionEditor.vue';
 import AppIcon from '../components/ui/AppIcon.vue';
+import ToggleSwitch from '../components/ui/ToggleSwitch.vue';
 import PressButton from '../components/ui/PressButton.vue';
 import ResizeHandle from '../components/ui/ResizeHandle.vue';
 import { useAssistant } from '../stores/assistant';
@@ -526,12 +527,68 @@ onBeforeUnmount(() => stopPersisting?.());
               </PressButton>
             </div>
 
+            <!--
+            What the tree is showing, and the two ends of it.
+            ────────────────────────────────────────────────
+            "Collapse all" was a word here, and a word is the wrong shape for
+            it: it sat in a row of status text reading as a label until it was
+            hovered, and it was one end of a pair with the other end missing —
+            a tree that can be shut has to be openable again by the control that
+            shut it, or the way back is clicking twenty chevrons.
+
+            So the pair, as icons, each disabled at its own extreme. Both live
+            means the tree is part open; one dimmed means you are already at
+            that end. Dimmed rather than hidden, because a control that vanishes
+            changes the width of the row as you use it.
+          -->
             <div v-if="rail === 'entities'" class="sidebar__counts type-label">
-              <span>{{ $t('workspace.shown', { count: entities.entities.length }) }}</span>
-              <button class="sidebar__collapse" @click="entities.collapseAll()">
-                {{ $t('action.collapseAll') }}
-              </button>
+              <span>{{
+                $t('workspace.shown', { count: entities.visibleEntities.length })
+              }}</span>
+              <div class="sidebar__folds">
+                <button
+                  v-tip="$t('action.collapseAll')"
+                  type="button"
+                  class="sidebar__fold sidebar__fold--in"
+                  :disabled="entities.allCollapsed"
+                  :aria-label="$t('action.collapseAll')"
+                  @click="entities.collapseAll()"
+                >
+                  <AppIcon name="arrowsIn" :size="14" />
+                </button>
+                <button
+                  v-tip="$t('action.expandAll')"
+                  type="button"
+                  class="sidebar__fold sidebar__fold--out"
+                  :disabled="entities.allExpanded"
+                  :aria-label="$t('action.expandAll')"
+                  @click="entities.expandAll()"
+                >
+                  <AppIcon name="arrowsOut" :size="14" />
+                </button>
+              </div>
             </div>
+
+            <!--
+            A row of its own, because the three of them do not fit in one.
+            ─────────────────────────────────────────────────────────────
+            The sidebar goes down to 180px, and a count, a labelled switch and
+            two buttons want about 210. A settings row — label at the leading
+            edge, switch at the trailing one — is the shape this control has
+            anyway, and it is drawn only for the engines that have something to
+            reveal: a switch that turns nothing on is tried once and remembered
+            as broken.
+          -->
+            <label
+              v-if="rail === 'entities' && connections.active?.capabilities.builtInEntities"
+              class="sidebar__option type-label"
+            >
+              <span>{{ $t('workspace.builtIns') }}</span>
+              <ToggleSwitch
+                v-model="entities.showBuiltIns"
+                :aria-label="$t('workspace.builtInsHelp')"
+              />
+            </label>
 
             <EntityTree v-if="rail === 'entities'" />
             <ChatList v-else-if="rail === 'chats'" />
@@ -1167,18 +1224,63 @@ onBeforeUnmount(() => stopPersisting?.());
   color: var(--text-soft);
 }
 
-.sidebar__collapse {
+.sidebar__folds {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   margin-inline-start: auto;
-  /* The row is only as tall as the text; the target fills it. */
-  height: 100%;
-  padding-inline: var(--gap-tight);
-  color: inherit;
 }
 
-.sidebar__collapse:hover {
-  color: var(--color-primary-text, var(--color-primary));
+.sidebar__fold {
+  display: grid;
+  place-items: center;
+  width: var(--hit-min);
+  height: var(--hit-min);
+  border-radius: var(--radius-field);
+  color: inherit;
+  transition:
+    background-color var(--t-hover) var(--ease-out),
+    color var(--t-hover) var(--ease-out),
+    opacity var(--t-hover) var(--ease-out);
+}
+
+.sidebar__fold:hover:not(:disabled) {
+  background: var(--fill-2);
+  color: var(--color-base-content);
+}
+
+/*
+ * The arrows preview the gesture a moment before the click lands: pulled
+ * together for the one that closes, drawn apart for the one that opens. It is
+ * the whole of what makes an icon pair legible without a word beside it.
+ */
+.sidebar__fold :deep(.icon) {
+  transition: transform var(--t-hover) var(--ease-out);
+}
+
+.sidebar__fold--in:hover:not(:disabled) :deep(.icon) {
+  transform: scaleY(0.78);
+}
+
+.sidebar__fold--out:hover:not(:disabled) :deep(.icon) {
+  transform: scaleY(1.22);
+}
+
+/* Dimmed, never hidden: a control that vanishes at its extreme moves the one
+   beside it under the pointer that is reaching for it. */
+.sidebar__fold:disabled {
+  opacity: 0.3;
+}
+
+.sidebar__option {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  min-height: var(--sidebar-row-h);
+  padding: 0 var(--gap);
+  color: var(--text-soft);
 }
 
 .sidebar__todo {

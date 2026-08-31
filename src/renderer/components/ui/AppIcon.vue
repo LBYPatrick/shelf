@@ -101,6 +101,29 @@ const PATHS: Record<string, string> = {
   // A bin with a lid and a handle. Three lines, no hatching: the shape is
   // recognisable at 12px and the detail is not.
   trash: 'M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.6 8.5h4.8l.6-8.5',
+  /*
+   * Two arrows and the line they close onto, or open away from.
+   *
+   * A pair, because the two ends of an outline are two actions rather than one
+   * button that quietly changes meaning — and one drawing mirrored is a shape
+   * the eye reads as a pair without being told.
+   *
+   * Two chevrons and nothing else, held well apart.
+   *
+   * Both of the obvious extra parts were tried at the size this is actually
+   * drawn — 14px — and both cost more than they gave. A shaft behind each head
+   * makes five strokes that resolve into a smudge. The line they close onto has
+   * to sit within two units of the tips, which is under a pixel of clearance and
+   * reads as one mark rather than three.
+   *
+   * The gap is the part that had to be measured rather than guessed: at three
+   * units the two heads of `arrowsIn` all but touch and the icon reads as a
+   * cross, which beside a list means clear or close — the one meaning it must
+   * not have. Five units leaves three pixels of daylight, which is enough for
+   * two marks to stay two. Converging is closing; apart is opening.
+   */
+  arrowsIn: 'M4.3 2.5L8 5.5l3.7-3M4.3 13.5L8 10.5l3.7 3',
+  arrowsOut: 'M4.3 5.5L8 2.5l3.7 3M4.3 10.5L8 13.5l3.7-3',
 };
 
 withDefaults(

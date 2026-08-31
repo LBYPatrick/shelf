@@ -2,7 +2,7 @@ import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from './fixtures';
-import { createConnection, withClipboard } from './helpers';
+import { createConnection, revealTables, withClipboard } from './helpers';
 
 test('the window opens on a calm, single-purpose start screen', async ({ page }) => {
   await expect(page.locator('#app')).toBeVisible();
@@ -554,4 +554,66 @@ test('a menu opened from a button is closed by that button', async ({ page }) =>
   await expect(menu).toBeVisible();
   await plus.click();
   await expect(menu).toBeHidden();
+});
+
+test('the tree opens and shuts from one pair, and each end stops there', async ({ page }) => {
+  await page.getByRole('button', { name: /Sample database/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+
+  const collapse = page.getByRole('button', { name: 'Collapse all', exact: true });
+  const expand = page.getByRole('button', { name: 'Expand all', exact: true });
+
+  // A tree that has never been opened is already collapsed, and says so.
+  await expect(collapse).toBeDisabled();
+
+  await revealTables(page);
+  await expect(page.getByRole('treeitem', { name: 'album', exact: true })).toBeVisible();
+  await expect(collapse).toBeEnabled();
+
+  await collapse.click();
+  // The database itself stays open: "all" means the folders you were looking
+  // through, not the container you were looking in.
+  await expect(page.locator('.row--schema')).toHaveCount(2);
+  await expect(page.getByRole('treeitem', { name: 'album', exact: true })).toHaveCount(0);
+
+  /*
+   * Shut is an extreme, and a control at its own extreme goes dim rather than
+   * away — this is the half that was missing entirely, since "Collapse all" was
+   * one word with no way back but twenty chevrons.
+   */
+  await expect(collapse).toBeDisabled();
+  await expect(expand).toBeEnabled();
+
+  await expand.click();
+  await expect(page.getByRole('treeitem', { name: 'album', exact: true })).toBeVisible();
+  await expect(expand).toBeDisabled();
+  await expect(collapse).toBeEnabled();
+});
+
+test('what the engine brought with it is hidden until it is asked for', async ({ page }) => {
+  await page.getByRole('button', { name: /Sample database/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+  await revealTables(page);
+
+  const builtIn = page.getByRole('treeitem', { name: 'gen_random_uuid', exact: true });
+  const own = page.getByRole('treeitem', { name: 'album', exact: true });
+
+  await expect(own).toBeVisible();
+  await expect(builtIn).toHaveCount(0);
+
+  /*
+   * The switch is a question for the server rather than a filter over an answer
+   * it already gave, so flipping it re-asks — which is why this waits for the
+   * row rather than expecting it on the next frame.
+   */
+  const shown = page.getByRole('switch', {
+    name: /tables and functions the database provides/i,
+  });
+  await shown.click();
+
+  await expect(builtIn).toBeVisible({ timeout: 20_000 });
+  await expect(own).toBeVisible();
+
+  await shown.click();
+  await expect(builtIn).toHaveCount(0, { timeout: 20_000 });
 });

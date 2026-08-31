@@ -73,6 +73,17 @@ export interface Capabilities {
    * particular server is a separate question the driver answers at run time.
    */
   readonly statistics: boolean;
+  /**
+   * The engine has objects of its own to show — a catalogue, an extension's
+   * functions — so asking for them is a question worth putting on screen.
+   *
+   * Declared rather than discovered, like everything else here: an engine with
+   * nothing to reveal must not draw a switch that reveals nothing. MySQL is the
+   * one that reads as an oversight and is not — its built-in functions are
+   * native and appear in no catalogue table, and the schemas that would qualify
+   * are other databases rather than part of this one.
+   */
+  readonly builtInEntities: boolean;
   /** What this engine calls its top-level container, for UI labels. */
   readonly nouns: EngineNouns;
 }
@@ -176,6 +187,30 @@ export interface Entity extends EntityRef {
   /** Routine subtype, where it matters. */
   readonly routineType?: 'function' | 'procedure';
   readonly comment?: string;
+  /**
+   * The engine put this here, not the person using it.
+   *
+   * A catalogue table, and anything an installed extension brought with it:
+   * pgcrypto's `crypt`, PostGIS's thousand `st_*` functions, SQLite's
+   * `sqlite_sequence`. They are worth being able to look at and are not worth
+   * being shown a hundred of while looking for your own three tables, which is
+   * why they are marked rather than merged in.
+   */
+  readonly builtIn?: boolean;
+}
+
+/** What `listEntities` is being asked for, beyond which schema. */
+export interface ListEntitiesOptions {
+  /**
+   * Ask for what the engine provides itself as well.
+   *
+   * Off by default because it is expensive in exactly the place it is least
+   * wanted: a stock Postgres answers with three thousand catalogue functions,
+   * which is a round trip and a list nobody scrolls. Off, the engine is asked
+   * not to send them at all rather than sent and filtered here — a filter at
+   * this end pays for the rows twice and still has to draw none of them.
+   */
+  readonly builtIns?: boolean;
 }
 
 export interface Column {
@@ -568,7 +603,7 @@ export interface DatabaseClient {
 
   listDatabases(): Promise<readonly string[]>;
   listSchemas(): Promise<readonly string[]>;
-  listEntities(schema?: string): Promise<readonly Entity[]>;
+  listEntities(schema?: string, options?: ListEntitiesOptions): Promise<readonly Entity[]>;
   listColumns(entity: EntityRef): Promise<readonly Column[]>;
   listIndexes(entity: EntityRef): Promise<readonly Index[]>;
   listRelations(entity: EntityRef): Promise<readonly Relation[]>;

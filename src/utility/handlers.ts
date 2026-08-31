@@ -87,8 +87,8 @@ export const handlers: Registry = {
   'schema/databases': (session, { connectionId }) =>
     session.require(connectionId).listDatabases(),
   'schema/schemas': (session, { connectionId }) => session.require(connectionId).listSchemas(),
-  'schema/entities': (session, { connectionId, schema }) =>
-    session.require(connectionId).listEntities(schema),
+  'schema/entities': (session, { connectionId, schema, builtIns }) =>
+    session.require(connectionId).listEntities(schema, { builtIns: builtIns === true }),
   'schema/columns': (session, { connectionId, entity }) =>
     session.require(connectionId).listColumns(entity),
   'schema/indexes': (session, { connectionId, entity }) =>

@@ -63,7 +63,7 @@ export interface HostContract {
   'schema/databases': { payload: { connectionId: string }; result: readonly string[] };
   'schema/schemas': { payload: { connectionId: string }; result: readonly string[] };
   'schema/entities': {
-    payload: { connectionId: string; schema?: string };
+    payload: { connectionId: string; schema?: string; builtIns?: boolean };
     result: readonly Entity[];
   };
   'schema/columns': {
