@@ -66,8 +66,23 @@ export const useConnections = defineStore('connections', () => {
     keyringAvailable.value = keyring;
   }
 
+  /**
+   * The one door a connection is written through, and where it stops being
+   * reactive.
+   *
+   * Nothing reactive crosses a bridge: the context bridge structured-clones
+   * what it carries and a Vue proxy is rejected outright, asynchronously and
+   * with nothing but "An object could not be cloned" in a console nobody has
+   * open. Every caller so far assembles a plain object out of a form, so this
+   * has held by luck — the first one to hand over a `config` read straight off
+   * this store's own reactive list will not. Serialising here is the same
+   * answer `lib/host.ts` and `lib/settings.ts` give: at the boundary, so no
+   * call site has to remember.
+   */
   async function save(input: SaveConnectionInput): Promise<SavedConnection> {
-    const result = await window.shelf.db.saveConnection(input);
+    const result = await window.shelf.db.saveConnection(
+      JSON.parse(JSON.stringify(input)) as SaveConnectionInput
+    );
     await refresh();
     return result;
   }
