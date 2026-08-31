@@ -56,6 +56,38 @@ export function defaultJobName(database: string, at: Date): string {
   return `${database || 'query'}-${stamp}`;
 }
 
+/**
+ * `<saved query>-a3f9`, when the statement came from one.
+ *
+ * A dispatched query is nearly always a saved query — it is the long-running
+ * one you have written down — and `sample-20260831-161104` says only when it
+ * ran, which is the fact the started-at line already carries. The name is what
+ * the reader called the statement, so it is the name the job should arrive
+ * under.
+ *
+ * The four characters are what stop the fifth run of one query being the fifth
+ * row called the same thing. Not a counter: jobs are kept per launch and a
+ * count would restart, so two runs a week apart would collide.
+ */
+export function savedJobName(saved: string, suffix: string): string {
+  return `${saved.trim() || 'query'}-${suffix}`;
+}
+
+/**
+ * Four characters of base 36, which is about 1.7 million names.
+ *
+ * Enough that a collision inside a list capped at a hundred is not a thing
+ * anyone will see, and short enough that the name still reads as the query's
+ * name with something after it rather than as an identifier.
+ */
+export function randomSuffix(random: () => number = Math.random): string {
+  let suffix = '';
+  for (let index = 0; index < 4; index += 1) {
+    suffix += Math.floor(random() * 36).toString(36);
+  }
+  return suffix;
+}
+
 /** What is kept between launches. The spool may not survive; the record does. */
 const STORAGE_KEY = 'jobs';
 

@@ -1166,51 +1166,6 @@ test('a saved query is updated in place, and says when it has drifted', async ({
   expect(rows.find((row) => row.name === 'Listener growth')?.text).toBe('select 2');
 });
 
-test('a saved query is updated in place, and says when it has drifted', async ({ page }) => {
-  await page.getByRole('button', { name: /Sample database/ }).click();
-  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
-
-  await page
-    .getByRole('button', { name: /new query/i })
-    .first()
-    .click();
-  await page.locator('.monaco-editor').waitFor();
-  await typeQuery(page, 'select 1');
-
-  /*
-   * ⌘S rather than the button. It is the whole of the first change: the chord
-   * was declared, listed in Settings and printed in the README, and a query tab
-   * did not answer it.
-   */
-  await page.keyboard.press('ControlOrMeta+s');
-  await page.getByRole('textbox', { name: /^Name$/ }).fill('Listener growth');
-  await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
-
-  // The tab takes the query's name, and the button becomes an update.
-  await expect(page.locator('.striptab--on')).toContainText('Listener growth');
-  await expect(page.getByRole('button', { name: /Update Query/ })).toBeVisible();
-  await expect(page.locator('.striptab--on .striptab__dot')).toHaveCount(0);
-
-  // Changed, and the tab says so.
-  await typeQuery(page, 'select 2');
-  await expect(page.locator('.striptab--on .striptab__dot')).toHaveCount(1);
-
-  // Updated in place: one saved query, not two, and it holds the new text.
-  await page.keyboard.press('ControlOrMeta+s');
-  await expect(page.locator('.striptab--on .striptab__dot')).toHaveCount(0);
-
-  const saved = await page.evaluate(() =>
-    (
-      window as unknown as {
-        shelf: { db: { listSavedQueries: (id: null) => Promise<unknown> } };
-      }
-    ).shelf.db.listSavedQueries(null)
-  );
-  const rows = saved as { name: string; text: string }[];
-  expect(rows.filter((row) => row.name === 'Listener growth')).toHaveLength(1);
-  expect(rows.find((row) => row.name === 'Listener growth')?.text).toBe('select 2');
-});
-
 test('a saved query can be duplicated, and the copy is named for the original', async ({
   page,
 }) => {
@@ -1243,4 +1198,33 @@ test('a saved query can be duplicated, and the copy is named for the original', 
     .first()
     .click();
   await expect(page.getByRole('button', { name: 'Albums copy 2', exact: true })).toBeVisible();
+});
+
+test('a dispatched saved query is named for the query, not for the clock', async ({ page }) => {
+  await page.getByRole('button', { name: /Sample database/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+
+  await page
+    .getByRole('button', { name: /new query/i })
+    .first()
+    .click();
+  await page.locator('.monaco-editor').waitFor();
+  await typeQuery(page, 'select 1');
+
+  await page.keyboard.press('ControlOrMeta+s');
+  await page.getByRole('textbox', { name: /^Name$/ }).fill('Listener growth');
+  await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('button', { name: /Update Query/ })).toBeVisible();
+
+  await page.getByRole('button', { name: /What Run performs/i }).click();
+  await page.getByRole('menuitem', { name: /Dispatch/i }).click();
+
+  /*
+   * `<saved query>-a3f9`. The stamp says only when it ran, which the card's
+   * started-at line already says; the four characters are what stop the fifth
+   * run of one query being the fifth row called the same thing.
+   */
+  await expect(page.getByRole('textbox', { name: 'Job name' })).toHaveValue(
+    /^Listener growth-[0-9a-z]{4}$/
+  );
 });

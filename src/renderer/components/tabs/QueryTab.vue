@@ -23,7 +23,7 @@ import { useQueries } from '../../stores/queries';
 import { rowLimitOptions, useSettings } from '../../stores/settings';
 import { useActivity } from '../../stores/activity';
 import { useToasts } from '../../stores/toasts';
-import { defaultJobName, useJobs } from '../../stores/jobs';
+import { defaultJobName, randomSuffix, savedJobName, useJobs } from '../../stores/jobs';
 import { useTabs } from '../../stores/tabs';
 import { shortcutLabel } from '../../lib/keybindings';
 import DataGrid from '../grid/DataGrid.vue';
@@ -293,10 +293,14 @@ function dispatch(): void {
   const statement = (currentStatement.value?.text ?? text.value).trim();
   if (!statement || !connections.active) return;
 
-  jobName.value = defaultJobName(
-    connections.active.database ?? connections.active.name ?? '',
-    new Date()
-  );
+  /*
+   * A dispatched query is usually a saved one — it is the long-running one you
+   * have written down — and the name it was saved under is a better answer than
+   * the moment it ran, which the card's started-at line already gives.
+   */
+  jobName.value = savedQuery.value
+    ? savedJobName(savedQuery.value.name, randomSuffix())
+    : defaultJobName(connections.active.database ?? connections.active.name ?? '', new Date());
   dispatching.value = true;
 }
 

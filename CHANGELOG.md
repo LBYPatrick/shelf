@@ -42,6 +42,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   "<name> copy", then "copy 2", and duplicating a copy counts rather than
   stacking the word. A duplicated connection carries its stored password, so it
   can connect.
+- **A dispatched saved query is named for the query** — `Listener growth-a3f9`
+  rather than `sample-20260831-161104`. The stamp says only when it ran, which
+  the card's started-at line already says; the four characters are what tell two
+  runs of one query apart.
 
 ### Changed
 

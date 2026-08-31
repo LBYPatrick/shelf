@@ -3,8 +3,33 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Cursor, Field, Row } from '@drivers/types';
-import { defaultJobName } from '@renderer/stores/jobs';
+import { defaultJobName, randomSuffix, savedJobName } from '@renderer/stores/jobs';
 import { readSpoolPage, spool } from '@utility/spool';
+
+describe('naming a dispatched job from the query it ran', () => {
+  it('is the name the reader gave the query, plus something to tell runs apart', () => {
+    // The stamp says only when it ran, which the started-at line already says.
+    expect(savedJobName('Listener growth', 'a3f9')).toBe('Listener growth-a3f9');
+  });
+
+  it('falls back rather than producing a name that is only a suffix', () => {
+    expect(savedJobName('   ', 'a3f9')).toBe('query-a3f9');
+  });
+
+  it('draws four characters of base 36', () => {
+    // Injected, because a function that reads `Math.random` can only be tested
+    // by running it enough times to be convincing.
+    expect(randomSuffix(() => 0)).toBe('0000');
+    expect(randomSuffix(() => 0.9999)).toBe('zzzz');
+    expect(randomSuffix()).toMatch(/^[0-9a-z]{4}$/);
+  });
+
+  it('is not a counter, because a counter restarts with the app', () => {
+    // Jobs are kept per launch; two runs a week apart would collide on "2".
+    const drawn = new Set(Array.from({ length: 200 }, () => randomSuffix()));
+    expect(drawn.size).toBeGreaterThan(150);
+  });
+});
 
 describe('naming a dispatched job', () => {
   it('is the database and the moment, largest field first', () => {
