@@ -12,7 +12,9 @@
  * and the schema and preferences coming in.
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { sqlWords, type SqlWordKind } from '@shared/sqlKeywords';
 import { statementAt, type Statement } from '@shared/sqlText';
+import type { EngineId } from '@drivers/types';
 import { EDITOR_THEMES, defineEditorTheme, monaco } from '../../lib/monaco';
 import { useSettings } from '../../stores/settings';
 import { useTheme } from '../../composables/useTheme';
@@ -22,6 +24,8 @@ export type SchemaMap = Record<string, readonly string[]>;
 
 const props = defineProps<{
   schema?: SchemaMap;
+  /** Which dialect's own words to offer; without one, only the schema is. */
+  engine?: EngineId;
   readOnly?: boolean;
 }>();
 
@@ -48,8 +52,31 @@ let applyingExternal = false;
 
 /* ------------------------------------------------------------ completions */
 
+const WORD_KINDS: Record<SqlWordKind, monaco.languages.CompletionItemKind> = {
+  keyword: monaco.languages.CompletionItemKind.Keyword,
+  function: monaco.languages.CompletionItemKind.Function,
+  type: monaco.languages.CompletionItemKind.TypeParameter,
+};
+
 /**
- * Table and column names, offered from the schema the sidebar already loaded.
+ * The reader's own schema first, then the dialect's words.
+ *
+ * Monaco sorts by how well an item matches what was typed and breaks ties on
+ * `sortText`, so this only decides the ties — and a tie between a table called
+ * `users` and the word `USING` should go to the table. A column belongs above a
+ * keyword for the same reason and below its own table, which is the more
+ * specific thing to have asked for.
+ */
+const ORDER = { table: '1', column: '2', keyword: '3', function: '4', type: '5' };
+
+/**
+ * Table and column names from the schema the sidebar already loaded, and the
+ * words the engine itself understands.
+ *
+ * The dialect's words are the half that was missing: a completer that knew
+ * `albums` but not `SELECT` finished the easy half of every statement. They are
+ * declared per engine in `shared/sqlKeywords.ts` rather than guessed, so a
+ * MySQL editor does not offer `jsonb`.
  *
  * Registered per editor instance and disposed with it, because a provider
  * registered globally would outlive the tab and start answering for a
@@ -83,6 +110,7 @@ function registerCompletions(): void {
            * truth than the real number, it is a false one.
            */
           ...(columns.length > 0 ? { detail: `${columns.length} columns` } : {}),
+          sortText: `${ORDER.table}${table}`,
           range,
         });
 
@@ -92,9 +120,20 @@ function registerCompletions(): void {
             kind: monaco.languages.CompletionItemKind.Field,
             insertText: column,
             detail: table,
+            sortText: `${ORDER.column}${column}`,
             range,
           });
         }
+      }
+
+      for (const dialect of sqlWords(props.engine)) {
+        suggestions.push({
+          label: dialect.text,
+          kind: WORD_KINDS[dialect.kind],
+          insertText: dialect.text,
+          sortText: `${ORDER[dialect.kind]}${dialect.text}`,
+          range,
+        });
       }
 
       return { suggestions };
@@ -275,7 +314,7 @@ watch(model, (value) => {
   lineCount.value = editor.getModel()?.getLineCount() ?? 1;
 });
 
-watch(() => props.schema, registerCompletions);
+watch([() => props.schema, () => props.engine], registerCompletions);
 
 watch(
   () => theme.appearance,

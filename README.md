@@ -82,9 +82,10 @@ capability is ever tied to a licence, because there is no licence.**
 - **Write** — inline editing that accumulates in a pending-changes ledger,
   previews as SQL, and applies in one transaction. A locked cell always says
   *why* it is locked.
-- **Query** — a Monaco editor with schema-aware completion, the statement under
-  the cursor highlighted, run-all or run-current, cancellation that reaches the
-  server, multiple result sets, and manual transactions.
+- **Query** — a Monaco editor that completes your own tables and columns as well
+  as the words the engine itself understands, the statement under the cursor
+  highlighted, run-all or run-current, cancellation that reaches the server,
+  multiple result sets, and manual transactions.
 - **Dispatch** — send a statement off to run on its own: it releases the tab at
   once, keeps its whole answer on this machine, and says so when it is done. The
   hundred most recent are kept, searchable by name and narrowable by status,

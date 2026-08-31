@@ -616,6 +616,7 @@ watch(
         ref="editor"
         v-model="text"
         :schema="schema"
+        :engine="connections.active?.engine"
         @run="runAll"
         @run-current="runCurrent"
         @statement-change="currentStatement = $event"
@@ -627,7 +628,7 @@ watch(
       orientation="horizontal"
       :min="80"
       :max="maxEditorHeight"
-      aria-label="Resize editor"
+      :aria-label="$t('query.resizeEditor')"
     />
 
     <!--
