@@ -1662,6 +1662,54 @@ test.describe('controls', () => {
     expect(small).toEqual([]);
   });
 
+  test('the entities row fits the column at its narrowest', async ({ sample }) => {
+    /*
+     * A count and three controls, one of which carries a word. At the column's
+     * 180px minimum they want about 210, so the count is dropped below 220 —
+     * and that threshold is a constant in a view, exactly the kind of number
+     * that goes stale when a label is translated or a control is added beside
+     * it.
+     *
+     * What is measured is the *count*, not the row. The row cannot overflow: it
+     * is a flex line and the count shrinks, so the failure this guards is the
+     * quiet one — "57 shown" served as "57 sh…", which is not a number and is
+     * worse than no number at all. A count that is drawn is a count you can
+     * read, or it is not drawn.
+     */
+    await revealTables(sample);
+
+    /*
+     * Narrowed from the keyboard rather than by dragging. A drag hands its
+     * release velocity to a spring, and a spring is still settling when the
+     * next line runs — measured mid-flight the column is narrower than it will
+     * be and the row reports an overflow it does not have. The arrow key is the
+     * same clamp with no motion after it.
+     */
+    const handle = sample.locator('.handle--vertical').first();
+    await handle.focus();
+    for (let press = 0; press < 10; press += 1) await handle.press('ArrowLeft');
+
+    await expect
+      .poll(async () =>
+        sample.evaluate(() => document.querySelector('.sidebar')!.getBoundingClientRect().width)
+      )
+      .toBe(180);
+
+    const fit = await sample.evaluate(() => {
+      const count = document.querySelector<HTMLElement>('.sidebar__count');
+      const row = document.querySelector<HTMLElement>('.sidebar__counts')!;
+      return {
+        clipped: count ? count.scrollWidth - count.clientWidth : 0,
+        // The controls do not shrink, so with the count gone the row is the
+        // thing that overflows if they no longer fit.
+        overflow: row.scrollWidth - row.clientWidth,
+      };
+    });
+
+    expect(fit.clipped).toBeLessThanOrEqual(0);
+    expect(fit.overflow).toBeLessThanOrEqual(0);
+  });
+
   test('a control that is on stays on under the pointer', async ({ sample }) => {
     /*
      * A mode wears a tonal accent surface for as long as it is in force, and

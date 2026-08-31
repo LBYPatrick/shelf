@@ -101,6 +101,17 @@ const rail = ref<RailItem>('entities');
  */
 const SIDEBAR_W = 248;
 
+/*
+ * Below this the entities row drops its count.
+ *
+ * The row is a count and three controls, and at the column's 180px minimum
+ * those want about 210. Measured against `sidebarWidth` rather than through a
+ * container query, because `container-type: inline-size` would have to go on
+ * the sidebar — which holds a virtualised list that computes its own scroll
+ * height — and the width is already a number this view owns.
+ */
+const COUNT_MIN_W = 220;
+
 const sidebarWidth = ref(SIDEBAR_W);
 const sidebarCollapsed = ref(false);
 
@@ -557,15 +568,22 @@ onBeforeUnmount(() => stopPersisting?.());
             A count, a label, a switch and two buttons also want about 210px in
             a column that goes down to 180.
 
-            So the mode joins the two actions as a control of the same size and
-            shape, and *loudness* carries the difference — the rule the tab
-            toolbars already follow. Quiet is off, a tonal surface is on. The
-            eye is the same verb it is on the password field: reveal what is
-            hidden — the glyph is the subject and the surface is the state,
-            which is why it does not also swap to `eyeOff`. That was tried: an
-            eye with a slash through it is five strokes at 13px and resolves
-            into a scribble, and it says the same thing the quiet tile already
-            says.
+            So the mode joins the two actions in the row, and *loudness* carries
+            the difference — the rule the tab toolbars already follow. Quiet is
+            off, a tonal accent surface is on.
+
+            It says its name. As an icon alone it was not obvious enough: an eye
+            is a legible verb once you know what it acts on, and nothing in a
+            28px tile says what that is. The eye stays beside the word, because a
+            quiet chip of text with no mark on it is what "Collapse all" used to
+            be here — a label until you hover it. It does not swap to `eyeOff`
+            when off; that was tried, and an eye with a slash through it is five
+            strokes at 13px that resolve into a scribble.
+
+            The count is what yields when the column is dragged narrow. It is the
+            row's least important part — the database's own row repeats it — and
+            the three controls are what have to stay reachable, so it goes rather
+            than the row wrapping or a chip losing its word.
 
             Each fold is disabled at its own extreme, so the pair also says how
             far open the tree is: both live means part open. Dimmed rather than
@@ -573,7 +591,7 @@ onBeforeUnmount(() => stopPersisting?.());
             as you use it.
           -->
             <div v-if="rail === 'entities'" class="sidebar__counts type-label">
-              <span class="sidebar__count">{{
+              <span v-if="sidebarWidth >= COUNT_MIN_W" class="sidebar__count">{{
                 $t('workspace.shown', { count: entities.visibleEntities.length })
               }}</span>
               <div class="sidebar__tools">
@@ -581,7 +599,7 @@ onBeforeUnmount(() => stopPersisting?.());
                   v-if="connections.active?.capabilities.builtInEntities"
                   v-tip="$t('workspace.builtInsHelp')"
                   type="button"
-                  class="sidebar__tool sidebar__tool--mode"
+                  class="sidebar__tool sidebar__tool--named sidebar__tool--mode"
                   :class="{ 'sidebar__tool--on': entities.showBuiltIns }"
                   role="switch"
                   :aria-checked="entities.showBuiltIns"
@@ -589,6 +607,7 @@ onBeforeUnmount(() => stopPersisting?.());
                   @click="entities.showBuiltIns = !entities.showBuiltIns"
                 >
                   <AppIcon name="eye" :size="13" />
+                  <span>{{ $t('workspace.builtIns') }}</span>
                 </button>
                 <button
                   v-tip="$t('action.collapseAll')"
@@ -1328,8 +1347,22 @@ onBeforeUnmount(() => stopPersisting?.());
 }
 
 /*
+ * Same height, same shape, as wide as its word. `width` rather than `min-width`
+ * is what the square tiles are given, so a named one has to say so — and it
+ * lays out as a flex row rather than a centring grid, or the icon and the label
+ * stack on top of each other.
+ */
+.sidebar__tool--named {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-tight);
+  width: auto;
+  padding-inline: var(--gap);
+}
+
+/*
  * A mode and two actions are two groups, and proximity is what says so — the
- * hair gap alone made three tiles read as one set of three unrelated things.
+ * hair gap alone made them read as one set of three unrelated things.
  */
 .sidebar__tool--mode {
   margin-inline-end: var(--gap-tight);

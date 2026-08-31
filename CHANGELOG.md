@@ -22,7 +22,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Expand all**, beside Collapse all. A tree that can be shut had no way back
   but clicking every chevron. The two are an icon pair now, each dimmed at its
   own end, so the row also says how far open the tree is — and they share one
-  compact row with the built-ins toggle rather than taking two.
+  compact row with the built-ins toggle, which says its name, rather than taking
+  two rows between them.
 - **The sidebar goes back to its default width** — double-click the divider, or
   run it from the palette. Double-clicking used to collapse the sidebar, which
   hid the divider that did it and left the keyboard as the only way back.
