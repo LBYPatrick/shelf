@@ -576,9 +576,11 @@ onBeforeUnmount(() => stopPersisting?.());
             is a legible verb once you know what it acts on, and nothing in a
             28px tile says what that is. The eye stays beside the word, because a
             quiet chip of text with no mark on it is what "Collapse all" used to
-            be here — a label until you hover it. It does not swap to `eyeOff`
-            when off; that was tried, and an eye with a slash through it is five
-            strokes at 13px that resolve into a scribble.
+            be here — a label until you hover it. And it is struck through while
+            the built-ins are hidden, so the state is readable from the mark as
+            well as from the surface. That needed `eyeOff` redrawn: the
+            broken-eye form every icon set ships is five subpaths and is a
+            scribble at 13px.
 
             The count is what yields when the column is dragged narrow. It is the
             row's least important part — the database's own row repeats it — and
@@ -606,7 +608,7 @@ onBeforeUnmount(() => stopPersisting?.());
                   :aria-label="$t('workspace.builtInsHelp')"
                   @click="entities.showBuiltIns = !entities.showBuiltIns"
                 >
-                  <AppIcon name="eye" :size="13" />
+                  <AppIcon :name="entities.showBuiltIns ? 'eye' : 'eyeOff'" :size="13" />
                   <span>{{ $t('workspace.builtIns') }}</span>
                 </button>
                 <button
