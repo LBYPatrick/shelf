@@ -127,6 +127,58 @@ nothing to download.
 | `NOTES=notes.json` | `{"title": "…", "body": "…"}` for the release page |
 | `YES=1` | Skip the confirmation — for an agent, not for a person |
 
+### Signing the macOS build
+
+Signing is opt-in, and a repository with none of the secrets below builds
+exactly as it did before: unsigned, and macOS says so on first launch. Set all
+six and the release workflow signs, hardens and notarises the app instead.
+
+An Apple Developer Program membership is what these come from. Do this once:
+
+1. **Make a Developer ID Application certificate.** In Xcode, Settings ›
+   Accounts › Manage Certificates › + › Developer ID Application. It is the
+   only kind Gatekeeper accepts for an app downloaded from a web page — an
+   Apple Distribution certificate is for the App Store and is rejected here.
+2. **Export it as a `.p12`.** In Keychain Access, find the certificate, expand
+   it so the private key is selected with it, right-click › Export, and give it
+   a password. Both halves have to be in the file; a certificate exported
+   without its key signs nothing.
+3. **Make an App Store Connect API key** at App Store Connect › Users and
+   Access › Integrations › Keys, with the Developer role. Download the `.p8` —
+   Apple lets you download it once. This is what notarises the build, and it is
+   used instead of an Apple ID and an app-specific password because it belongs
+   to the team rather than to a person, it carries no second factor, and it can
+   be revoked on its own.
+
+Then turn the two files into text, since a GitHub secret holds no bytes:
+
+```bash
+base64 -i Certificates.p12 | tr -d '\n' | pbcopy            # APPLE_CERTIFICATE_P12
+base64 -i AuthKey_XXXXXXXXXX.p8 | tr -d '\n' | pbcopy       # APPLE_API_KEY_P8
+```
+
+Add these under Settings › Secrets and variables › Actions:
+
+| Secret | What it is | Where it comes from |
+| --- | --- | --- |
+| `APPLE_CERTIFICATE_P12` | The certificate and its private key, base64 | Step 2 |
+| `APPLE_CERTIFICATE_PASSWORD` | The password given when exporting it | Step 2 |
+| `APPLE_TEAM_ID` | Ten characters, e.g. `A1B2C3D4E5` | developer.apple.com › Membership |
+| `APPLE_API_KEY_P8` | The notarisation key, base64 | Step 3 |
+| `APPLE_API_KEY_ID` | The key's ID, ten characters | Beside the key in the Keys table |
+| `APPLE_API_ISSUER` | A UUID, one per team | Above the Keys table |
+
+`scripts/ci-signing.sh` reads them and writes what electron-builder wants.
+Missing the whole set means an unsigned build; missing half of one is an error
+before the build starts rather than forty minutes into it. The certificate
+without the API key is a middle state that works and is worth knowing about:
+the app is signed but not notarised, so macOS warns about it on first launch
+rather than refusing it as damaged.
+
+`make package SIGN=1` is the local equivalent, and asks which certificate to use
+rather than being given one. The Windows installer is still unsigned; that needs
+a certificate of its own.
+
 ## Commits
 
 Conventional Commits: `type(scope): summary`, where the type is one of `feat`,

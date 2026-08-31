@@ -15,6 +15,32 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   rather than SQL on Scylla — so the list never suggests a word the server
   would reject.
 
+- **The macOS build can be signed and notarised by CI.** Six repository secrets
+  and nothing else; without them the build is unsigned exactly as before. See
+  CONTRIBUTING.
+
+### Changed
+
+- **The row count and the time a query took can be selected and copied.** The
+  root turns selection off, which is right for chrome and wrong for the one
+  string in a toolbar that is a measurement.
+
+### Fixed
+
+- **The connection form was half translated.** Read-only, Advanced, the SSH and
+  proxy fields and the password reveal were all still in English whatever the
+  interface language was, and so were the column and index editors in the
+  structure view.
+
+### Added
+
+- **The query editor completes the words the engine understands**, not only your
+  own tables and columns. `SELECT` had to be typed in full while the table after
+  it completed from three letters. Each dialect gets its own set — `jsonb` and
+  `ON CONFLICT` on Postgres, `AUTO_INCREMENT` on MySQL, `QUALIFY` on DuckDB, CQL
+  rather than SQL on Scylla — so the list never suggests a word the server
+  would reject.
+
 ### Changed
 
 - **The row count and the time a query took can be selected and copied.** The

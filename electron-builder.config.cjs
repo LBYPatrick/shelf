@@ -107,16 +107,34 @@ module.exports = {
      * So signing is asked for by name: `APPLE_IDENTITY` is the certificate to
      * use, and `APPLE_TEAM_ID` — which also turns on hardening and notarisation
      * — says whose account it belongs to. Neither set, nothing is signed.
+     *
+     * A CI runner has no name to give, and needs none: the certificate arrives
+     * as `CSC_LINK` and electron-builder imports it into a keychain it made
+     * itself, which holds that one certificate and nothing else. So a run with
+     * `APPLE_TEAM_ID` and no `APPLE_IDENTITY` leaves discovery on, and there
+     * discovery has nothing else to find. See `scripts/ci-signing.sh`.
      */
     identity: process.env.APPLE_IDENTITY ?? (process.env.APPLE_TEAM_ID ? undefined : null),
     hardenedRuntime: Boolean(process.env.APPLE_TEAM_ID),
     /*
-     * Notarisation needs credentials, not just a team: `notarytool` keeps them
-     * in the keychain under a profile name, and the packager reads that from
-     * `APPLE_KEYCHAIN_PROFILE`. Asking for it without them fails at the very end
-     * of a long build, so it is on only when both are present.
+     * Notarisation needs credentials, not just a team, and there are two ways
+     * to hold them. On a laptop `notarytool` keeps them in the keychain under a
+     * profile name and `APPLE_KEYCHAIN_PROFILE` says which — but a CI runner has
+     * no keychain anybody has stored anything in, so it is handed an App Store
+     * Connect API key instead: `APPLE_API_KEY` is a path to the .p8 and the
+     * other two identify it. Either set is enough; neither means the build is
+     * signed and not notarised, which is a real state and not a broken one.
+     *
+     * Asking for notarisation without credentials fails at the very end of a
+     * long build, which is why this is a condition rather than a `true`.
      */
-    notarize: Boolean(process.env.APPLE_TEAM_ID && process.env.APPLE_KEYCHAIN_PROFILE),
+    notarize: Boolean(
+      process.env.APPLE_TEAM_ID &&
+        (process.env.APPLE_KEYCHAIN_PROFILE ||
+          (process.env.APPLE_API_KEY &&
+            process.env.APPLE_API_KEY_ID &&
+            process.env.APPLE_API_ISSUER))
+    ),
     entitlements: 'build/entitlements.mac.plist',
     entitlementsInherit: 'build/entitlements.mac.plist',
   },

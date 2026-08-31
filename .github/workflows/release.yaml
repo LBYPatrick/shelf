@@ -116,10 +116,27 @@ jobs:
       - name: Build
         run: bash scripts/build.sh
 
-      # Signing is opt-in and asked for by name, and nothing here asks: the mac
-      # build is unsigned and the Windows installer is unsigned. Adding a
-      # certificate means adding the secrets electron-builder reads for it, not
-      # editing this line.
+      # The certificate and the notarisation key, when this repository has been
+      # given them. Every one of these secrets is an empty string in a fork, and
+      # the script reads that as "build unsigned" rather than as a failure — so
+      # this step is safe to run on every mac build and does nothing on most of
+      # them. What it writes is `$GITHUB_ENV`, which the Package step reads.
+      - name: Prepare macOS signing
+        if: runner.os == 'macOS'
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: bash scripts/ci-signing.sh
+
+      # No `SIGN=1` here: that starts the interactive conversation about which
+      # certificate to use, and a runner has nobody to ask. The step above has
+      # already put the answer in the environment, which is the other way
+      # `scripts/package.sh` accepts it. The Windows installer is still
+      # unsigned — that needs a certificate of its own.
       - name: Package
         run: bash scripts/package.sh ${{ matrix.platform }}
 
