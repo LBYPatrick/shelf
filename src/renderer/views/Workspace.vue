@@ -30,7 +30,6 @@ import ShortcutSheet from '../components/settings/ShortcutSheet.vue';
 import DiagnoseSheet from '../components/sidebar/DiagnoseSheet.vue';
 import ConnectionEditor from '../components/connection/ConnectionEditor.vue';
 import AppIcon from '../components/ui/AppIcon.vue';
-import ToggleSwitch from '../components/ui/ToggleSwitch.vue';
 import PressButton from '../components/ui/PressButton.vue';
 import ResizeHandle from '../components/ui/ResizeHandle.vue';
 import { useAssistant } from '../stores/assistant';
@@ -528,28 +527,55 @@ onBeforeUnmount(() => stopPersisting?.());
             </div>
 
             <!--
-            What the tree is showing, and the two ends of it.
-            ────────────────────────────────────────────────
-            "Collapse all" was a word here, and a word is the wrong shape for
-            it: it sat in a row of status text reading as a label until it was
-            hovered, and it was one end of a pair with the other end missing —
-            a tree that can be shut has to be openable again by the control that
-            shut it, or the way back is clicking twenty chevrons.
+            What the tree is showing, and the three things you can do about it.
+            ──────────────────────────────────────────────────────────────────
+            One row, and the controls in it are one shape.
 
-            So the pair, as icons, each disabled at its own extreme. Both live
-            means the tree is part open; one dimmed means you are already at
-            that end. Dimmed rather than hidden, because a control that vanishes
-            changes the width of the row as you use it.
+            It was two rows: this one, and a settings row under it holding the
+            word "Built-ins" and a switch. Two rows of chrome above a tree is a
+            lot of chrome, and the switch was the wrong control for the place —
+            a labelled switch is what a settings sheet is made of, and putting
+            one in a status strip made the strip read as a fragment of a form.
+            A count, a label, a switch and two buttons also want about 210px in
+            a column that goes down to 180.
+
+            So the mode joins the two actions as a control of the same size and
+            shape, and *loudness* carries the difference — the rule the tab
+            toolbars already follow. Quiet is off, a tonal surface is on. The
+            eye is the same verb it is on the password field: reveal what is
+            hidden — the glyph is the subject and the surface is the state,
+            which is why it does not also swap to `eyeOff`. That was tried: an
+            eye with a slash through it is five strokes at 13px and resolves
+            into a scribble, and it says the same thing the quiet tile already
+            says.
+
+            Each fold is disabled at its own extreme, so the pair also says how
+            far open the tree is: both live means part open. Dimmed rather than
+            hidden, because a control that vanishes changes the width of the row
+            as you use it.
           -->
             <div v-if="rail === 'entities'" class="sidebar__counts type-label">
-              <span>{{
+              <span class="sidebar__count">{{
                 $t('workspace.shown', { count: entities.visibleEntities.length })
               }}</span>
-              <div class="sidebar__folds">
+              <div class="sidebar__tools">
+                <button
+                  v-if="connections.active?.capabilities.builtInEntities"
+                  v-tip="$t('workspace.builtInsHelp')"
+                  type="button"
+                  class="sidebar__tool sidebar__tool--mode"
+                  :class="{ 'sidebar__tool--on': entities.showBuiltIns }"
+                  role="switch"
+                  :aria-checked="entities.showBuiltIns"
+                  :aria-label="$t('workspace.builtInsHelp')"
+                  @click="entities.showBuiltIns = !entities.showBuiltIns"
+                >
+                  <AppIcon name="eye" :size="13" />
+                </button>
                 <button
                   v-tip="$t('action.collapseAll')"
                   type="button"
-                  class="sidebar__fold sidebar__fold--in"
+                  class="sidebar__tool sidebar__tool--in"
                   :disabled="entities.allCollapsed"
                   :aria-label="$t('action.collapseAll')"
                   @click="entities.collapseAll()"
@@ -559,7 +585,7 @@ onBeforeUnmount(() => stopPersisting?.());
                 <button
                   v-tip="$t('action.expandAll')"
                   type="button"
-                  class="sidebar__fold sidebar__fold--out"
+                  class="sidebar__tool sidebar__tool--out"
                   :disabled="entities.allExpanded"
                   :aria-label="$t('action.expandAll')"
                   @click="entities.expandAll()"
@@ -568,27 +594,6 @@ onBeforeUnmount(() => stopPersisting?.());
                 </button>
               </div>
             </div>
-
-            <!--
-            A row of its own, because the three of them do not fit in one.
-            ─────────────────────────────────────────────────────────────
-            The sidebar goes down to 180px, and a count, a labelled switch and
-            two buttons want about 210. A settings row — label at the leading
-            edge, switch at the trailing one — is the shape this control has
-            anyway, and it is drawn only for the engines that have something to
-            reveal: a switch that turns nothing on is tried once and remembered
-            as broken.
-          -->
-            <label
-              v-if="rail === 'entities' && connections.active?.capabilities.builtInEntities"
-              class="sidebar__option type-label"
-            >
-              <span>{{ $t('workspace.builtIns') }}</span>
-              <ToggleSwitch
-                v-model="entities.showBuiltIns"
-                :aria-label="$t('workspace.builtInsHelp')"
-              />
-            </label>
 
             <EntityTree v-if="rail === 'entities'" />
             <ChatList v-else-if="rail === 'chats'" />
@@ -1224,14 +1229,29 @@ onBeforeUnmount(() => stopPersisting?.());
   color: var(--text-soft);
 }
 
-.sidebar__folds {
+/*
+ * The count yields before the controls do.
+ *
+ * At 180px — the narrowest the column goes — the row is the count and three
+ * targets, and the targets are the part that has to stay reachable. So the text
+ * is the flexible one and truncates, rather than the tools wrapping to a second
+ * row or being pushed out of the box.
+ */
+.sidebar__count {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar__tools {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
+  gap: var(--gap-hair);
   margin-inline-start: auto;
 }
 
-.sidebar__fold {
+.sidebar__tool {
   display: grid;
   place-items: center;
   width: var(--hit-min);
@@ -1241,12 +1261,34 @@ onBeforeUnmount(() => stopPersisting?.());
   transition:
     background-color var(--t-hover) var(--ease-out),
     color var(--t-hover) var(--ease-out),
-    opacity var(--t-hover) var(--ease-out);
+    opacity var(--t-hover) var(--ease-out),
+    transform var(--t-press) var(--ease-out);
 }
 
-.sidebar__fold:hover:not(:disabled) {
+/* The same press the rest of the app's buttons answer with. */
+.sidebar__tool:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.sidebar__tool:hover:not(:disabled) {
   background: var(--fill-2);
   color: var(--color-base-content);
+}
+
+/*
+ * On, not pressed: a mode wears its surface for as long as it is in force,
+ * which is the tab toolbars' rule and the rail's.
+ *
+ * The hovered form is spelled out with the same three parts as the hover rule
+ * above it rather than as a bare `--on:hover`. Coming later in the file is not
+ * enough — `.sidebar__tool:hover:not(:disabled)` is a class and two
+ * pseudo-classes and outranks two classes, so the neutral fill won and a lit
+ * tile went grey under the pointer that had just lit it.
+ */
+.sidebar__tool--on,
+.sidebar__tool--on:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--color-primary) 14%, transparent);
+  color: var(--color-primary-text, var(--color-primary));
 }
 
 /*
@@ -1254,33 +1296,50 @@ onBeforeUnmount(() => stopPersisting?.());
  * together for the one that closes, drawn apart for the one that opens. It is
  * the whole of what makes an icon pair legible without a word beside it.
  */
-.sidebar__fold :deep(.icon) {
+.sidebar__tool :deep(.icon) {
   transition: transform var(--t-hover) var(--ease-out);
 }
 
-.sidebar__fold--in:hover:not(:disabled) :deep(.icon) {
+.sidebar__tool--in:hover:not(:disabled) :deep(.icon) {
   transform: scaleY(0.78);
 }
 
-.sidebar__fold--out:hover:not(:disabled) :deep(.icon) {
+.sidebar__tool--out:hover:not(:disabled) :deep(.icon) {
   transform: scaleY(1.22);
+}
+
+/*
+ * A mode and two actions are two groups, and proximity is what says so — the
+ * hair gap alone made three tiles read as one set of three unrelated things.
+ */
+.sidebar__tool--mode {
+  margin-inline-end: var(--gap-tight);
 }
 
 /* Dimmed, never hidden: a control that vanishes at its extreme moves the one
    beside it under the pointer that is reaching for it. */
-.sidebar__fold:disabled {
+.sidebar__tool:disabled {
   opacity: 0.3;
 }
 
-.sidebar__option {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--gap);
-  min-height: var(--sidebar-row-h);
-  padding: 0 var(--gap);
-  color: var(--text-soft);
+/*
+ * Reduced motion keeps the colour and drops the movement: the tonal surface and
+ * the hover fill still say what they said, and the arrows simply stop
+ * rehearsing the gesture.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar__tool,
+  .sidebar__tool :deep(.icon) {
+    transition:
+      background-color var(--t-hover) var(--ease-out),
+      color var(--t-hover) var(--ease-out);
+  }
+
+  .sidebar__tool:active:not(:disabled),
+  .sidebar__tool--in:hover:not(:disabled) :deep(.icon),
+  .sidebar__tool--out:hover:not(:disabled) :deep(.icon) {
+    transform: none;
+  }
 }
 
 .sidebar__todo {

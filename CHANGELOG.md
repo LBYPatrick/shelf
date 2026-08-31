@@ -16,12 +16,13 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   would reject.
 - **What the engine brought with it is hidden until you ask for it.** A
   catalogue table, an extension's thousand `st_*` functions: they used to sit in
-  the tree beside your own three tables. There is a switch at the head of the
+  the tree beside your own three tables. There is a toggle at the head of the
   panel now, off by default, and turning it on asks the server for them rather
   than filtering an answer it already sent.
 - **Expand all**, beside Collapse all. A tree that can be shut had no way back
   but clicking every chevron. The two are an icon pair now, each dimmed at its
-  own end, so the row also says how far open the tree is.
+  own end, so the row also says how far open the tree is — and they share one
+  compact row with the built-ins toggle rather than taking two.
 - **The macOS build can be signed and notarised by CI.** Six repository secrets
   and nothing else; without them the build is unsigned exactly as before. See
   CONTRIBUTING.

@@ -1662,6 +1662,38 @@ test.describe('controls', () => {
     expect(small).toEqual([]);
   });
 
+  test('a control that is on stays on under the pointer', async ({ sample }) => {
+    /*
+     * A mode wears a tonal accent surface for as long as it is in force, and
+     * hover paints a neutral fill. Both are single-class selectors by eye, so
+     * "the on rule comes later in the file" looks like enough — and is not:
+     * `.tool:hover:not(:disabled)` is a class and two pseudo-classes, which
+     * outranks `.tool--on:hover`. The sidebar's built-ins toggle went grey
+     * under the pointer that had just lit it, which is the one moment somebody
+     * is looking at it.
+     *
+     * Measured as chroma rather than as a colour: the neutral fill is a tint of
+     * grey and the accent is not, and no theme changes that.
+     */
+    const chroma = async (hovering: boolean) => {
+      const tool = sample.locator('.sidebar__tool--on');
+      if (hovering) await tool.hover();
+      else await sample.mouse.move(0, 0);
+      return tool.evaluate((el) => {
+        const parsed = getComputedStyle(el).backgroundColor.match(/-?[\d.]+/g) ?? [];
+        // oklab(L a b / alpha): a and b are zero for anything neutral.
+        return Math.hypot(Number(parsed[1] ?? 0), Number(parsed[2] ?? 0));
+      });
+    };
+
+    await revealTables(sample);
+    await sample.getByRole('switch', { name: /database provides/i }).click();
+    await sample.getByRole('treeitem', { name: 'gen_random_uuid', exact: true }).waitFor();
+
+    expect(await chroma(false)).toBeGreaterThan(0.02);
+    expect(await chroma(true)).toBeGreaterThan(0.02);
+  });
+
   test('buttons respond to being pressed', async ({ sample }) => {
     // Feedback on pointer-down is the foundation the rest of the motion sits
     // on; a button that does not move on press reads as broken regardless of
