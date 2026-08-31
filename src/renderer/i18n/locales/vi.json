@@ -789,7 +789,7 @@
     "started": "bắt đầu {{when}}"
   },
   "saved": {
-    "empty": "Chưa lưu gì cả. Hãy viết một truy vấn rồi nhấn ⌘S.",
+    "empty": "Chưa lưu gì cả. Hãy viết một truy vấn rồi nhấn {{keys}}.",
     "discard": "Xoá câu truy vấn này",
     "rename": "Đổi tên câu truy vấn này",
     "duplicate": "Nhân bản truy vấn này"

@@ -520,9 +520,14 @@ async function saveQuery(): Promise<void> {
   /*
    * Its own name, not the tab's. They start the same and drift the moment
    * either is renamed, and the one this is updating is the saved query.
+   *
+   * `||` rather than `??`, because the fallbacks here are for the empty string
+   * as much as for the absent value: a tab whose saved query has been deleted
+   * out from under it still holds the id, and `??` would have walked past a
+   * blank name and filed the query under nothing at all.
    */
   await queries.save(
-    savedQuery.value?.name ?? savedName.value ?? 'Untitled',
+    savedQuery.value?.name || savedName.value || 'Untitled',
     text_,
     savedId.value
   );

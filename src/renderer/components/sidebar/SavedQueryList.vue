@@ -14,6 +14,7 @@ import { useTranslation } from 'i18next-vue';
 import type { SavedQuery } from '@shared/appdb';
 import { useQueries } from '../../stores/queries';
 import { useTabs } from '../../stores/tabs';
+import { shortcutLabel } from '../../lib/keybindings';
 import AppIcon from '../ui/AppIcon.vue';
 import { vTip } from '../../lib/hoverTip';
 
@@ -92,12 +93,15 @@ function commit(): void {
   <div class="entries">
     <p v-if="queries.visibleSaved.length === 0" class="tilelist__note">
       <!--
-        It says ⌘S again, and now that is true. It said it once when nothing was
-        bound to it, was corrected to name the button instead, and the chord has
-        since been made real — which is the better answer, because a shortcut is
-        what an empty state is for teaching.
+        It names the chord again, and now that is true. It said "press ⌘S" once
+        when nothing was bound to it, was corrected to name the button instead,
+        and the chord has since been made real — which is the better answer,
+        because a shortcut is what an empty state is for teaching.
+
+        Through `shortcutLabel` rather than written into the string: the chord is
+        rebindable, and ⌘ is not what the key is called off macOS.
       -->
-      {{ $t('saved.empty') }}
+      {{ $t('saved.empty', { keys: shortcutLabel('tab.save') }) }}
     </p>
 
     <ul v-else class="tilelist">

@@ -789,7 +789,7 @@
     "started": "started {{when}}"
   },
   "saved": {
-    "empty": "Nothing saved yet. Write a query and press ⌘S.",
+    "empty": "Nothing saved yet. Write a query and press {{keys}}.",
     "discard": "Delete this query",
     "rename": "Rename this query",
     "duplicate": "Duplicate this query"
