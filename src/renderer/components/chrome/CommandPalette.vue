@@ -194,7 +194,7 @@ const navigation = computed<Command[]>(() => [
     section: 'navigation',
     icon: 'sidebar',
     title: t('workspace.resetSidebar'),
-    slash: '/sidebar-width',
+    slash: '/sidebar-reset',
     keywords: 'sidebar width reset default size column',
     run: () => emit('resetSidebar'),
   },
