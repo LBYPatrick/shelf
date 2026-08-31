@@ -165,7 +165,8 @@
     "builtIns": "Built-ins",
     "builtInsHelp": "Show tables and functions the database provides itself",
     "builtInsShow": "Show built-in tables and functions",
-    "builtInsHide": "Hide built-in tables and functions"
+    "builtInsHide": "Hide built-in tables and functions",
+    "resetSidebar": "Reset sidebar width"
   },
   "table": {
     "filterPlaceholder": "Filter — e.g. name like 'A%'",

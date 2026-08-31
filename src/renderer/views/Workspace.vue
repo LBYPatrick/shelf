@@ -92,8 +92,26 @@ const { t } = useTranslation();
 type RailItem = 'entities' | 'queries' | 'history' | 'jobs' | 'chats';
 
 const rail = ref<RailItem>('entities');
-const sidebarWidth = ref(248);
+/**
+ * The width the sidebar is put back to.
+ *
+ * Named because three things now say it: the initial value, the double click on
+ * the divider, and the palette's row. A number typed three times is a number
+ * that gets changed twice.
+ */
+const SIDEBAR_W = 248;
+
+const sidebarWidth = ref(SIDEBAR_W);
 const sidebarCollapsed = ref(false);
+
+/*
+ * Put back, and shown while it is at it: a reset that happens behind a
+ * collapsed sidebar is a command that appears to have done nothing.
+ */
+function resetSidebarWidth(): void {
+  sidebarWidth.value = SIDEBAR_W;
+  sidebarCollapsed.value = false;
+}
 const paletteOpen = ref(false);
 const settingsOpen = ref(false);
 const providersOpen = ref(false);
@@ -610,7 +628,7 @@ onBeforeUnmount(() => stopPersisting?.());
         :min="180"
         :max="520"
         :aria-label="$t('workspace.entities')"
-        @collapse-toggle="sidebarCollapsed = true"
+        @reset="resetSidebarWidth"
       />
 
       <!--
@@ -735,6 +753,7 @@ onBeforeUnmount(() => stopPersisting?.());
       @open-storage="storageOpen = true"
       @diagnose="diagnoseOpen = true"
       @new-connection="editingConnection = null"
+      @reset-sidebar="resetSidebarWidth"
     />
     <SettingsSheet
       v-model="settingsOpen"

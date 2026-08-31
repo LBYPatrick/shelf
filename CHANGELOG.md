@@ -23,6 +23,9 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   but clicking every chevron. The two are an icon pair now, each dimmed at its
   own end, so the row also says how far open the tree is — and they share one
   compact row with the built-ins toggle rather than taking two.
+- **The sidebar goes back to its default width** — double-click the divider, or
+  run it from the palette. Double-clicking used to collapse the sidebar, which
+  hid the divider that did it and left the keyboard as the only way back.
 - **The macOS build can be signed and notarised by CI.** Six repository secrets
   and nothing else; without them the build is unsigned exactly as before. See
   CONTRIBUTING.

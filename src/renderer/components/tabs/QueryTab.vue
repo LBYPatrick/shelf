@@ -101,12 +101,21 @@ const editorHeight = ref(240);
 /* Always leaves room for the toolbar and a row or two of results. */
 const maxEditorHeight = ref(700);
 
-onMounted(() => {
+/**
+ * The share of the pane the editor takes when nobody has said otherwise.
+ *
+ * Also what a double click on the divider goes back to — which is why it is a
+ * function rather than the body of `onMounted`. A default that only exists at
+ * mount is a default there is no way back to.
+ */
+function fitEditor(): void {
   const height = split.value?.clientHeight ?? 0;
   if (height <= 0) return;
   maxEditorHeight.value = Math.max(120, height - 160);
   editorHeight.value = Math.min(maxEditorHeight.value, Math.round(height * EDITOR_SHARE));
-});
+}
+
+onMounted(fitEditor);
 const running = ref(false);
 const error = ref<string | null>(null);
 const results = ref<ResultSet[]>([]);
@@ -629,6 +638,7 @@ watch(
       :min="80"
       :max="maxEditorHeight"
       :aria-label="$t('query.resizeEditor')"
+      @reset="fitEditor"
     />
 
     <!--

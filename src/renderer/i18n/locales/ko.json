@@ -165,7 +165,8 @@
     "builtIns": "내장 객체",
     "builtInsHelp": "데이터베이스가 자체적으로 제공하는 테이블과 함수를 표시",
     "builtInsShow": "내장 테이블과 함수 표시",
-    "builtInsHide": "내장 테이블과 함수 숨기기"
+    "builtInsHide": "내장 테이블과 함수 숨기기",
+    "resetSidebar": "사이드바 너비 초기화"
   },
   "table": {
     "filterPlaceholder": "필터 — 예: name like 'A%'",

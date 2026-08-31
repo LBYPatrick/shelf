@@ -165,7 +165,8 @@
     "builtIns": "内置对象",
     "builtInsHelp": "显示数据库自带的表和函数",
     "builtInsShow": "显示内置的表和函数",
-    "builtInsHide": "隐藏内置的表和函数"
+    "builtInsHide": "隐藏内置的表和函数",
+    "resetSidebar": "重置侧边栏宽度"
   },
   "table": {
     "filterPlaceholder": "筛选 — 例如 name like 'A%'",

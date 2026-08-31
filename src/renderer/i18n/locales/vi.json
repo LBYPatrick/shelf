@@ -165,7 +165,8 @@
     "builtIns": "Đối tượng có sẵn",
     "builtInsHelp": "Hiện các bảng và hàm do chính cơ sở dữ liệu cung cấp",
     "builtInsShow": "Hiện bảng và hàm có sẵn",
-    "builtInsHide": "Ẩn bảng và hàm có sẵn"
+    "builtInsHide": "Ẩn bảng và hàm có sẵn",
+    "resetSidebar": "Đặt lại chiều rộng thanh bên"
   },
   "table": {
     "filterPlaceholder": "Lọc — ví dụ name like 'A%'",

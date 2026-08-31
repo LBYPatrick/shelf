@@ -41,6 +41,7 @@ const emit = defineEmits<{
   openStorage: [];
   newConnection: [];
   diagnose: [];
+  resetSidebar: [];
 }>();
 
 const connections = useConnections();
@@ -188,6 +189,15 @@ const navigation = computed<Command[]>(() => [
         },
       ]
     : []),
+  {
+    id: 'nav.resetSidebar',
+    section: 'navigation',
+    icon: 'sidebar',
+    title: t('workspace.resetSidebar'),
+    slash: '/sidebar-width',
+    keywords: 'sidebar width reset default size column',
+    run: () => emit('resetSidebar'),
+  },
   {
     id: 'nav.disconnect',
     section: 'navigation',

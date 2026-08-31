@@ -165,7 +165,8 @@
     "builtIns": "組み込みオブジェクト",
     "builtInsHelp": "データベース自身が備えるテーブルと関数を表示する",
     "builtInsShow": "組み込みのテーブルと関数を表示",
-    "builtInsHide": "組み込みのテーブルと関数を隠す"
+    "builtInsHide": "組み込みのテーブルと関数を隠す",
+    "resetSidebar": "サイドバーの幅を既定に戻す"
   },
   "table": {
     "filterPlaceholder": "絞り込み — 例: name like 'A%'",

@@ -25,7 +25,20 @@ const props = withDefaults(
   { orientation: 'vertical', invert: false }
 );
 
-const emit = defineEmits<{ 'update:size': [number]; 'collapse-toggle': [] }>();
+/**
+ * `reset`, rather than the size being reset here.
+ *
+ * A double click on a divider means "put it back" everywhere it means anything,
+ * and the handle cannot know what back is: the sidebar's default is a number
+ * and the query editor's is a share of the pane it is in. So it reports the
+ * gesture and the owner answers it.
+ *
+ * It used to emit `collapse-toggle`, which the sidebar answered by collapsing —
+ * a one-way door, since a collapsed sidebar hides the handle that shut it and
+ * the only way back was the keyboard. A toggle that only ever goes one way is
+ * not a toggle.
+ */
+const emit = defineEmits<{ 'update:size': [number]; reset: [] }>();
 
 const axis = computed(() => (props.orientation === 'vertical' ? 'x' : 'y'));
 
@@ -59,7 +72,7 @@ function nudge(delta: number): void {
     :aria-valuemin="min"
     :aria-valuemax="max"
     @pointerdown="start"
-    @dblclick="emit('collapse-toggle')"
+    @dblclick="emit('reset')"
     @keydown.left.prevent="nudge(orientation === 'vertical' ? -16 : 0)"
     @keydown.right.prevent="nudge(orientation === 'vertical' ? 16 : 0)"
     @keydown.up.prevent="nudge(orientation === 'horizontal' ? -16 : 0)"
