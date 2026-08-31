@@ -38,6 +38,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   query rather than filing a second copy under the same name, the button says
   Update, the tab takes the query's own name, and the tab carries a dot while
   its text differs from what is saved.
+- **Saved queries and connections can be duplicated.** The copy is named
+  "<name> copy", then "copy 2", and duplicating a copy counts rather than
+  stacking the word. A duplicated connection carries its stored password, so it
+  can connect.
 
 ### Changed
 

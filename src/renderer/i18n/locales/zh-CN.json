@@ -42,7 +42,8 @@
     "no": "否",
     "change": "更改",
     "expandAll": "全部展开",
-    "updateQuery": "更新查询"
+    "updateQuery": "更新查询",
+    "duplicate": "创建副本"
   },
   "time": {
     "justNow": "刚刚",
@@ -86,7 +87,8 @@
     "exportToClipboard": "复制到剪贴板",
     "copied": "已将连接复制到剪贴板。",
     "copiedWithSecrets": "已复制，包含密码",
-    "copiedWithSecretsNote": "剪贴板中现在有该连接的明文密码。请粘贴到目标位置后，再复制点别的东西。"
+    "copiedWithSecretsNote": "剪贴板中现在有该连接的明文密码。请粘贴到目标位置后，再复制点别的东西。",
+    "duplicate": "为 {{name}} 创建副本"
   },
   "connection": {
     "new": "新建连接",
@@ -431,7 +433,8 @@
     "attribute": "属性",
     "database": "数据库",
     "keyspace": "键空间",
-    "region": "区域"
+    "region": "区域",
+    "copy": "副本"
   },
   "history": {
     "allConnections": "所有连接",
@@ -788,7 +791,8 @@
   "saved": {
     "empty": "还没有保存任何查询。写一条查询然后按 ⌘S。",
     "discard": "删除此查询",
-    "rename": "重命名此查询"
+    "rename": "重命名此查询",
+    "duplicate": "为这条查询创建副本"
   },
   "diagnose": {
     "action": "诊断连接…",

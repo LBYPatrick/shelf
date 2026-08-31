@@ -617,3 +617,36 @@ test('what the engine brought with it is hidden until it is asked for', async ({
   await shown.click();
   await expect(builtIn).toHaveCount(0, { timeout: 20_000 });
 });
+
+test('a connection can be duplicated, credentials and all', async ({ page }) => {
+  const directory = await mkdtemp(join(tmpdir(), 'shelf-dup-'));
+  await createConnection(page, {
+    engine: 'SQLite',
+    file: join(directory, 'first.db'),
+    name: 'Reporting',
+    connect: false,
+  });
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('button', { name: /Connect to Reporting/ })).toBeVisible();
+
+  await page.getByRole('button', { name: /Duplicate Reporting/ }).click();
+  await expect(page.getByRole('button', { name: /Connect to Reporting copy/ })).toBeVisible();
+
+  // The copy carries the original's settings rather than an empty form's.
+  const rows = (await page.evaluate(() =>
+    (
+      window as unknown as {
+        shelf: { db: { listConnections: () => Promise<unknown> } };
+      }
+    ).shelf.db.listConnections()
+  )) as { name: string; engine: string; config: { filePath?: string } }[];
+
+  const original = rows.find((row) => row.name === 'Reporting')!;
+  const copy = rows.find((row) => row.name === 'Reporting copy')!;
+  expect(copy.engine).toBe(original.engine);
+  expect(copy.config.filePath).toBe(original.config.filePath);
+
+  // And a copy of a copy counts rather than stacking the word.
+  await page.getByRole('button', { name: /Duplicate Reporting copy/ }).click();
+  await expect(page.getByRole('button', { name: /Connect to Reporting copy 2/ })).toBeVisible();
+});

@@ -490,6 +490,14 @@ watch(
                 <button
                   type="button"
                   class="rowaction"
+                  :aria-label="$t('start.duplicate', { name: connection.name })"
+                  @click="connections.duplicate(connection, t('noun.copy'))"
+                >
+                  <AppIcon name="copy" :size="16" />
+                </button>
+                <button
+                  type="button"
+                  class="rowaction"
                   :aria-label="$t('start.edit', { name: connection.name })"
                   @click="
                     seed = undefined;

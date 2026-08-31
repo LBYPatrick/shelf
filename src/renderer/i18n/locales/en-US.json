@@ -42,7 +42,8 @@
     "no": "No",
     "change": "Change",
     "expandAll": "Expand all",
-    "updateQuery": "Update Query"
+    "updateQuery": "Update Query",
+    "duplicate": "Duplicate"
   },
   "time": {
     "justNow": "just now",
@@ -86,7 +87,8 @@
     "exportToClipboard": "Copy to clipboard",
     "copied": "Connection copied to the clipboard.",
     "copiedWithSecrets": "Copied, with its passwords",
-    "copiedWithSecretsNote": "The clipboard now holds this connection’s passwords in plain text. Paste it where you mean to and copy something else after."
+    "copiedWithSecretsNote": "The clipboard now holds this connection’s passwords in plain text. Paste it where you mean to and copy something else after.",
+    "duplicate": "Duplicate {{name}}"
   },
   "connection": {
     "new": "New connection",
@@ -431,7 +433,8 @@
     "attribute": "attribute",
     "database": "database",
     "keyspace": "keyspace",
-    "region": "region"
+    "region": "region",
+    "copy": "copy"
   },
   "history": {
     "allConnections": "All connections",
@@ -788,7 +791,8 @@
   "saved": {
     "empty": "Nothing saved yet. Write a query and press ⌘S.",
     "discard": "Delete this query",
-    "rename": "Rename this query"
+    "rename": "Rename this query",
+    "duplicate": "Duplicate this query"
   },
   "diagnose": {
     "action": "Diagnose connection…",

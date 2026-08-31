@@ -10,6 +10,7 @@
  * a second editor.
  */
 import { nextTick, ref } from 'vue';
+import { useTranslation } from 'i18next-vue';
 import type { SavedQuery } from '@shared/appdb';
 import { useQueries } from '../../stores/queries';
 import { useTabs } from '../../stores/tabs';
@@ -18,6 +19,7 @@ import { vTip } from '../../lib/hoverTip';
 
 const queries = useQueries();
 const tabs = useTabs();
+const { t } = useTranslation();
 
 function excerpt(text: string): string {
   const flat = text.replace(/\s+/g, ' ').trim();
@@ -134,6 +136,15 @@ function commit(): void {
           </div>
 
           <span class="tile__tools">
+            <button
+              v-tip="$t('saved.duplicate')"
+              type="button"
+              class="tile__tool focus-fill"
+              :aria-label="$t('saved.duplicate')"
+              @click="queries.duplicate(query, t('noun.copy'))"
+            >
+              <AppIcon name="copy" :size="12" />
+            </button>
             <button
               v-tip="$t('saved.discard')"
               type="button"

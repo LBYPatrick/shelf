@@ -8,6 +8,7 @@ import type {
   SavedConnection,
 } from '@shared/connections';
 import { host } from '../lib/host';
+import { copyName } from '@shared/copyName';
 import { errorMessage } from '@shared/errors';
 
 export interface LiveConnection {
@@ -73,11 +74,11 @@ export const useConnections = defineStore('connections', () => {
    * Nothing reactive crosses a bridge: the context bridge structured-clones
    * what it carries and a Vue proxy is rejected outright, asynchronously and
    * with nothing but "An object could not be cloned" in a console nobody has
-   * open. Every caller so far assembles a plain object out of a form, so this
-   * has held by luck — the first one to hand over a `config` read straight off
-   * this store's own reactive list will not. Serialising here is the same
-   * answer `lib/host.ts` and `lib/settings.ts` give: at the boundary, so no
-   * call site has to remember.
+   * open. Every caller until now assembled a plain object from a form, so this
+   * held by luck; `duplicate` reads a `config` straight off this store's own
+   * reactive list and would not have. Serialising here is the same answer
+   * `lib/host.ts` and `lib/settings.ts` give — at the boundary, so no call site
+   * has to remember.
    */
   async function save(input: SaveConnectionInput): Promise<SavedConnection> {
     const result = await window.shelf.db.saveConnection(
@@ -85,6 +86,42 @@ export const useConnections = defineStore('connections', () => {
     );
     await refresh();
     return result;
+  }
+
+  /**
+   * A second connection with the same details, under a name that is free.
+   *
+   * The reason to want one is a neighbour — the same server with a different
+   * database, staging beside production — so it is filed rather than opened in
+   * the editor: the copy exists, nothing was lost if you change your mind, and
+   * the pencil is in the row beside it.
+   *
+   * The secrets go with it. A duplicate that cannot connect is not a duplicate,
+   * and this is the same machine, the same keyring and the same reader — the
+   * bytes never leave, unlike the export, which is the one artefact that does
+   * and says so in three places. A connection with nothing stored copies
+   * nothing, and one whose keyring is unreadable copies as much as it can
+   * rather than failing: the password field is the thing you were going to open
+   * it to change.
+   */
+  async function duplicate(
+    connection: SavedConnection,
+    word: string
+  ): Promise<SavedConnection> {
+    const secrets = await window.shelf.db.revealSecrets(connection.id).catch(() => ({}));
+    const taken = saved.value.map((entry) => entry.name);
+
+    return save({
+      name: copyName(connection.name, taken, word),
+      engine: connection.engine,
+      folderId: connection.folderId,
+      labelColor: connection.labelColor,
+      pinned: connection.pinned,
+      readOnly: connection.readOnly,
+      rememberSecrets: connection.rememberSecrets,
+      config: connection.config,
+      ...(Object.keys(secrets).length > 0 ? { secrets } : {}),
+    });
   }
 
   async function remove(id: string): Promise<void> {
@@ -233,6 +270,7 @@ export const useConnections = defineStore('connections', () => {
     keyringAvailable,
     refresh,
     save,
+    duplicate,
     remove,
     test,
     connect,

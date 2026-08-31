@@ -42,7 +42,8 @@
     "no": "Không",
     "change": "Đổi",
     "expandAll": "Mở rộng tất cả",
-    "updateQuery": "Cập nhật truy vấn"
+    "updateQuery": "Cập nhật truy vấn",
+    "duplicate": "Nhân bản"
   },
   "time": {
     "justNow": "vừa xong",
@@ -86,7 +87,8 @@
     "exportToClipboard": "Sao chép vào clipboard",
     "copied": "Đã sao chép kết nối vào clipboard.",
     "copiedWithSecrets": "Đã sao chép, kèm mật khẩu",
-    "copiedWithSecretsNote": "Clipboard đang giữ mật khẩu của kết nối này ở dạng văn bản thuần. Hãy dán vào nơi bạn định dán, rồi sao chép thứ khác."
+    "copiedWithSecretsNote": "Clipboard đang giữ mật khẩu của kết nối này ở dạng văn bản thuần. Hãy dán vào nơi bạn định dán, rồi sao chép thứ khác.",
+    "duplicate": "Nhân bản {{name}}"
   },
   "connection": {
     "new": "Kết nối mới",
@@ -431,7 +433,8 @@
     "attribute": "thuộc tính",
     "database": "cơ sở dữ liệu",
     "keyspace": "keyspace",
-    "region": "vùng"
+    "region": "vùng",
+    "copy": "bản sao"
   },
   "history": {
     "allConnections": "Tất cả kết nối",
@@ -788,7 +791,8 @@
   "saved": {
     "empty": "Chưa lưu gì cả. Hãy viết một truy vấn rồi nhấn ⌘S.",
     "discard": "Xoá câu truy vấn này",
-    "rename": "Đổi tên câu truy vấn này"
+    "rename": "Đổi tên câu truy vấn này",
+    "duplicate": "Nhân bản truy vấn này"
   },
   "diagnose": {
     "action": "Chẩn đoán kết nối…",

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import type { HistoryEntry, SavedQuery } from '@shared/appdb';
+import { copyName } from '@shared/copyName';
 import { useConnections } from './connections';
 
 /**
@@ -56,6 +57,22 @@ export const useQueries = defineStore('queries', () => {
     return result;
   }
 
+  /**
+   * A second copy of one, under a name that is not already taken.
+   *
+   * The reason to want one is nearly always a variant — the same statement with
+   * a different date range — so it is filed rather than opened: you get it, the
+   * original is untouched, and the list is where you rename it.
+   *
+   * `word` comes from the caller because it is shown to the reader and this app
+   * is translated; everything else about the naming is in `shared/copyName.ts`,
+   * shared with the connection list so the two cannot disagree.
+   */
+  async function duplicate(query: SavedQuery, word: string): Promise<SavedQuery> {
+    const taken = saved.value.map((entry) => entry.name);
+    return save(copyName(query.name, taken, word), query.text);
+  }
+
   async function remove(id: string): Promise<void> {
     await window.shelf.db.removeSavedQuery(id);
     await refresh();
@@ -87,6 +104,7 @@ export const useQueries = defineStore('queries', () => {
     refresh,
     record,
     save,
+    duplicate,
     remove,
     clearHistory,
   };

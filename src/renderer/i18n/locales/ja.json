@@ -42,7 +42,8 @@
     "no": "いいえ",
     "change": "変更",
     "expandAll": "すべて展開",
-    "updateQuery": "クエリを更新"
+    "updateQuery": "クエリを更新",
+    "duplicate": "複製"
   },
   "time": {
     "justNow": "たった今",
@@ -86,7 +87,8 @@
     "exportToClipboard": "クリップボードにコピー",
     "copied": "接続をクリップボードにコピーしました。",
     "copiedWithSecrets": "パスワードも一緒にコピーしました",
-    "copiedWithSecretsNote": "クリップボードにこの接続のパスワードが平文で入っています。目的の場所に貼り付けたら、別のものをコピーしてください。"
+    "copiedWithSecretsNote": "クリップボードにこの接続のパスワードが平文で入っています。目的の場所に貼り付けたら、別のものをコピーしてください。",
+    "duplicate": "{{name}} を複製"
   },
   "connection": {
     "new": "新しい接続",
@@ -431,7 +433,8 @@
     "attribute": "属性",
     "database": "データベース",
     "keyspace": "キースペース",
-    "region": "リージョン"
+    "region": "リージョン",
+    "copy": "コピー"
   },
   "history": {
     "allConnections": "すべての接続",
@@ -788,7 +791,8 @@
   "saved": {
     "empty": "まだ保存されていません。クエリを書いて ⌘S を押してください。",
     "discard": "このクエリを削除",
-    "rename": "このクエリの名前を変更"
+    "rename": "このクエリの名前を変更",
+    "duplicate": "このクエリを複製"
   },
   "diagnose": {
     "action": "接続を診断…",

@@ -42,7 +42,8 @@
     "no": "아니요",
     "change": "변경",
     "expandAll": "모두 펼치기",
-    "updateQuery": "쿼리 업데이트"
+    "updateQuery": "쿼리 업데이트",
+    "duplicate": "복제"
   },
   "time": {
     "justNow": "방금",
@@ -86,7 +87,8 @@
     "exportToClipboard": "클립보드에 복사",
     "copied": "연결을 클립보드에 복사했습니다.",
     "copiedWithSecrets": "비밀번호와 함께 복사됨",
-    "copiedWithSecretsNote": "클립보드에 이 연결의 비밀번호가 평문으로 들어 있습니다. 원하는 곳에 붙여넣은 뒤 다른 것을 복사하세요."
+    "copiedWithSecretsNote": "클립보드에 이 연결의 비밀번호가 평문으로 들어 있습니다. 원하는 곳에 붙여넣은 뒤 다른 것을 복사하세요.",
+    "duplicate": "{{name}} 복제"
   },
   "connection": {
     "new": "새 연결",
@@ -431,7 +433,8 @@
     "attribute": "속성",
     "database": "데이터베이스",
     "keyspace": "키스페이스",
-    "region": "리전"
+    "region": "리전",
+    "copy": "사본"
   },
   "history": {
     "allConnections": "모든 연결",
@@ -788,7 +791,8 @@
   "saved": {
     "empty": "아직 저장된 것이 없습니다. 쿼리를 쓰고 ⌘S를 누르세요.",
     "discard": "이 쿼리 삭제",
-    "rename": "이 쿼리 이름 바꾸기"
+    "rename": "이 쿼리 이름 바꾸기",
+    "duplicate": "이 쿼리 복제"
   },
   "diagnose": {
     "action": "연결 진단…",
