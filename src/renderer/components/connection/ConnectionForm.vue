@@ -420,7 +420,12 @@ async function pickFile(): Promise<void> {
       <fieldset v-if="shows('file') || shows('host')" class="group">
         <legend class="group__name">{{ $t('connection.groupServer') }}</legend>
         <div class="pairs">
-          <FormField v-if="shows('file')" v-slot="{ id }" label="Database file" class="span-2">
+          <FormField
+            v-if="shows('file')"
+            v-slot="{ id }"
+            :label="$t('connection.file')"
+            class="span-2"
+          >
             <div class="row">
               <TextInput
                 :id="id"
@@ -429,16 +434,25 @@ async function pickFile(): Promise<void> {
                 placeholder="/path/to/database.db"
               />
               <PressButton variant="glass" type="button" @click="pickFile">
-                Choose…
+                {{ $t('action.choose') }}
               </PressButton>
             </div>
           </FormField>
 
-          <FormField v-if="shows('host')" v-slot="{ id }" label="Host" class="span-2">
+          <FormField
+            v-if="shows('host')"
+            v-slot="{ id }"
+            :label="$t('connection.host')"
+            class="span-2"
+          >
             <TextInput :id="id" v-model="draft.host" placeholder="localhost" />
           </FormField>
 
-          <FormField v-if="descriptor.defaultPort" v-slot="{ id }" label="Port">
+          <FormField
+            v-if="descriptor.defaultPort"
+            v-slot="{ id }"
+            :label="$t('connection.port')"
+          >
             <TextInput
               :id="id"
               v-model="draft.port"
@@ -450,7 +464,7 @@ async function pickFile(): Promise<void> {
           <FormField
             v-if="shows('database')"
             v-slot="{ id }"
-            :label="descriptor.databaseLabel ?? 'Database'"
+            :label="descriptor.databaseLabel ?? $t('connection.database')"
           >
             <TextInput :id="id" v-model="draft.database" />
           </FormField>
@@ -460,11 +474,15 @@ async function pickFile(): Promise<void> {
       <fieldset v-if="shows('username') || shows('password')" class="group">
         <legend class="group__name">{{ $t('connection.groupCredentials') }}</legend>
         <div class="pairs">
-          <FormField v-if="shows('username')" v-slot="{ id }" label="User">
+          <FormField v-if="shows('username')" v-slot="{ id }" :label="$t('connection.user')">
             <TextInput :id="id" v-model="draft.username" />
           </FormField>
 
-          <FormField v-if="shows('password')" v-slot="{ id }" label="Password">
+          <FormField
+            v-if="shows('password')"
+            v-slot="{ id }"
+            :label="$t('connection.password')"
+          >
             <!--
               Masked until asked, but present: a field that hides what it holds
               *and* declines to hold it is a field you cannot check against the
@@ -480,8 +498,12 @@ async function pickFile(): Promise<void> {
                 type="button"
                 class="secret__reveal"
                 :aria-pressed="revealed"
-                :aria-label="revealed ? 'Hide password' : 'Show password'"
-                :title="revealed ? 'Hide password' : 'Show password'"
+                :aria-label="
+                  revealed ? $t('connection.hidePassword') : $t('connection.showPassword')
+                "
+                :title="
+                  revealed ? $t('connection.hidePassword') : $t('connection.showPassword')
+                "
                 @click="revealed = !revealed"
               >
                 <AppIcon :name="revealed ? 'eyeOff' : 'eye'" :size="13" />
@@ -547,8 +569,8 @@ async function pickFile(): Promise<void> {
           <CheckBox
             v-model="draft.readOnly"
             class="span-2"
-            label="Read-only"
-            hint="Refuses anything that writes, at the driver."
+            :label="$t('connection.readOnly')"
+            :hint="$t('connection.readOnlyHelp')"
           />
         </div>
       </fieldset>
@@ -561,7 +583,7 @@ async function pickFile(): Promise<void> {
       <DisclosureGroup
         v-if="descriptor.supportsSsh || descriptor.supportsSsl"
         v-model="showAdvanced"
-        label="Advanced"
+        :label="$t('connection.advanced')"
       >
         <div class="advanced__body">
           <CheckBox
@@ -577,13 +599,13 @@ async function pickFile(): Promise<void> {
           />
 
           <div v-if="draft.sshEnabled" class="pairs">
-            <FormField v-slot="{ id }" label="SSH host" class="span-2">
+            <FormField v-slot="{ id }" :label="$t('connection.sshHost')" class="span-2">
               <TextInput :id="id" v-model="draft.sshHost" />
             </FormField>
-            <FormField v-slot="{ id }" label="SSH port">
+            <FormField v-slot="{ id }" :label="$t('connection.sshPort')">
               <TextInput :id="id" v-model="draft.sshPort" type="number" />
             </FormField>
-            <FormField v-slot="{ id }" label="SSH user">
+            <FormField v-slot="{ id }" :label="$t('connection.sshUser')">
               <TextInput :id="id" v-model="draft.sshUsername" />
             </FormField>
             <FormField v-slot="{ id }" :label="$t('connection.sshAuth')">
@@ -594,17 +616,25 @@ async function pickFile(): Promise<void> {
                 :aria-label="$t('connection.sshAuth')"
               />
             </FormField>
-            <FormField v-if="draft.sshMode === 'keyfile'" v-slot="{ id }" label="Key file">
+            <FormField
+              v-if="draft.sshMode === 'keyfile'"
+              v-slot="{ id }"
+              :label="$t('connection.sshKeyfile')"
+            >
               <TextInput :id="id" v-model="draft.sshKeyfile" monospace />
             </FormField>
-            <FormField v-if="draft.sshMode === 'password'" v-slot="{ id }" label="SSH password">
+            <FormField
+              v-if="draft.sshMode === 'password'"
+              v-slot="{ id }"
+              :label="$t('connection.sshPassword')"
+            >
               <TextInput :id="id" v-model="draft.sshPassword" type="password" />
             </FormField>
             <FormField
               v-if="draft.sshMode === 'keyfile'"
               v-slot="{ id }"
-              label="Key passphrase"
-              help="Only if the key file is encrypted."
+              :label="$t('connection.sshPassphrase')"
+              :help="$t('connection.sshPassphraseHelp')"
             >
               <TextInput :id="id" v-model="draft.sshPassphrase" type="password" />
             </FormField>
@@ -618,34 +648,34 @@ async function pickFile(): Promise<void> {
           <CheckBox
             v-if="descriptor.supportsSsh && !draft.sshEnabled"
             v-model="draft.proxyEnabled"
-            label="Connect through a proxy"
+            :label="$t('connection.useProxy')"
           />
 
           <div
             v-if="descriptor.supportsSsh && draft.proxyEnabled && !draft.sshEnabled"
             class="pairs"
           >
-            <FormField label="Proxy type">
+            <FormField :label="$t('connection.proxyType')">
               <SegmentedControl
                 v-model="draft.proxyKind"
                 :options="proxyKinds"
-                aria-label="Proxy type"
+                :aria-label="$t('connection.proxyType')"
               />
             </FormField>
-            <FormField v-slot="{ id }" label="Proxy host">
+            <FormField v-slot="{ id }" :label="$t('connection.proxyHost')">
               <TextInput :id="id" v-model="draft.proxyHost" placeholder="127.0.0.1" />
             </FormField>
-            <FormField v-slot="{ id }" label="Proxy port">
+            <FormField v-slot="{ id }" :label="$t('connection.proxyPort')">
               <TextInput :id="id" v-model="draft.proxyPort" inputmode="numeric" />
             </FormField>
             <FormField
               v-slot="{ id }"
-              label="Proxy username"
-              help="Leave blank for a proxy that needs no credentials."
+              :label="$t('connection.proxyUser')"
+              :help="$t('connection.proxyUserHelp')"
             >
               <TextInput :id="id" v-model="draft.proxyUsername" autocomplete="off" />
             </FormField>
-            <FormField v-slot="{ id }" label="Proxy password">
+            <FormField v-slot="{ id }" :label="$t('connection.proxyPassword')">
               <TextInput :id="id" v-model="draft.proxyPassword" type="password" />
             </FormField>
           </div>
@@ -654,7 +684,7 @@ async function pickFile(): Promise<void> {
 
       <FormField
         v-slot="{ id }"
-        label="Name"
+        :label="$t('connection.name')"
         :help="$t('connection.nameHelp', { suggested: suggestedName })"
       >
         <TextInput :id="id" v-model="draft.name" :placeholder="suggestedName" />

@@ -355,7 +355,7 @@ defineExpose({ fit });
 
 <template>
   <div ref="frame" class="erd">
-    <svg ref="svg" class="erd__svg" role="img" aria-label="Entity relationship diagram">
+    <svg ref="svg" class="erd__svg" role="img" :aria-label="$t('erd.diagram')">
       <g :transform="`translate(${transform.x},${transform.y}) scale(${transform.k})`">
         <!-- Grouped so the whole set transforms together with the canvas. -->
         <g>

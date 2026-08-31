@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "Shelf"
+    "name": "Shelf",
+    "notifications": "通知"
   },
   "action": {
     "cancel": "取消",
@@ -124,7 +125,18 @@
     "andMore": "还有 {{count}} 个…",
     "groupServer": "服务器",
     "groupCredentials": "凭据",
-    "groupOptions": "选项"
+    "groupOptions": "选项",
+    "showPassword": "显示密码",
+    "hidePassword": "隐藏密码",
+    "sshPassphrase": "密钥口令",
+    "sshPassphraseHelp": "仅当密钥文件已加密时才需要填写。",
+    "useProxy": "通过代理服务器连接",
+    "proxyType": "代理类型",
+    "proxyHost": "代理主机",
+    "proxyPort": "代理端口",
+    "proxyUser": "代理用户名",
+    "proxyUserHelp": "代理不需要凭据时留空。",
+    "proxyPassword": "代理密码"
   },
   "workspace": {
     "entities": "对象",
@@ -204,7 +216,8 @@
     "summaryRow": "{{rows}} 行",
     "summaryFirstOne": "前 {{rows}} 行",
     "resultRows": "结果 {{index}}：{{count}} 行",
-    "planUnreadable": "该引擎返回的执行计划 Shelf 无法解析。"
+    "planUnreadable": "该引擎返回的执行计划 Shelf 无法解析。",
+    "resizeEditor": "调整编辑器高度"
   },
   "structure": {
     "columns": "列",
@@ -249,7 +262,13 @@
     "wrapHint": "完整显示内容，需要几行就用几行",
     "wrapOn": "已开启自动换行。",
     "wrapOff": "已关闭自动换行。",
-    "copySql": "复制 SQL"
+    "copySql": "复制 SQL",
+    "typeHelp": "原样写入，因此这个引擎接受的任何类型都可以用。",
+    "defaultHelp": "可选。填写的是表达式而不是值 —— 字符串请自行加引号。",
+    "allowNull": "允许 NULL",
+    "allowNullHint": "已有数据的表通常必须允许。",
+    "columnsHelp": "用逗号分隔，按索引使用它们的顺序填写。",
+    "uniqueHint": "拒绝这些列上的重复值。"
   },
   "settings": {
     "title": "设置",
@@ -668,7 +687,8 @@
     "zoomOut": "缩小",
     "fit": "适应",
     "reading": "正在读取结构…",
-    "nothing": "暂时没有可绘制的内容。"
+    "nothing": "暂时没有可绘制的内容。",
+    "diagram": "实体关系图"
   },
   "assistant": {
     "title": "助手",

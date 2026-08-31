@@ -6,6 +6,13 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The connection form was half translated.** Read-only, Advanced, the SSH and
+  proxy fields and the password reveal were all still in English whatever the
+  interface language was, and so were the column and index editors in the
+  structure view.
+
 ## [1.2.0] - 2026-08-29
 
 ### Added

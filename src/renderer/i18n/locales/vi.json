@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "Shelf"
+    "name": "Shelf",
+    "notifications": "Thông báo"
   },
   "action": {
     "cancel": "Huỷ",
@@ -124,7 +125,18 @@
     "andMore": "Thêm {{count}}…",
     "groupServer": "Máy chủ",
     "groupCredentials": "Thông tin đăng nhập",
-    "groupOptions": "Tuỳ chọn"
+    "groupOptions": "Tuỳ chọn",
+    "showPassword": "Hiện mật khẩu",
+    "hidePassword": "Ẩn mật khẩu",
+    "sshPassphrase": "Cụm mật khẩu của khoá",
+    "sshPassphraseHelp": "Chỉ cần khi tệp khoá được mã hoá.",
+    "useProxy": "Kết nối qua proxy",
+    "proxyType": "Loại proxy",
+    "proxyHost": "Máy chủ proxy",
+    "proxyPort": "Cổng proxy",
+    "proxyUser": "Tên người dùng proxy",
+    "proxyUserHelp": "Để trống nếu proxy không cần thông tin đăng nhập.",
+    "proxyPassword": "Mật khẩu proxy"
   },
   "workspace": {
     "entities": "Đối tượng",
@@ -204,7 +216,8 @@
     "summaryRow": "{{rows}} hàng",
     "summaryFirstOne": "{{rows}} hàng đầu",
     "resultRows": "Kết quả {{index}}: {{count}} hàng",
-    "planUnreadable": "Shelf không đọc được kế hoạch mà engine này trả về."
+    "planUnreadable": "Shelf không đọc được kế hoạch mà engine này trả về.",
+    "resizeEditor": "Đổi kích thước trình soạn thảo"
   },
   "structure": {
     "columns": "Cột",
@@ -249,7 +262,13 @@
     "wrapHint": "Hiện toàn bộ giá trị trên số dòng cần thiết",
     "wrapOn": "Đã bật xuống dòng.",
     "wrapOff": "Đã tắt xuống dòng.",
-    "copySql": "Sao chép SQL"
+    "copySql": "Sao chép SQL",
+    "typeHelp": "Được ghi nguyên văn, nên mọi kiểu mà engine này chấp nhận đều dùng được.",
+    "defaultHelp": "Tuỳ chọn. Đây là một biểu thức chứ không phải một giá trị — hãy tự đặt dấu nháy cho chuỗi.",
+    "allowNull": "Cho phép NULL",
+    "allowNullHint": "Bảng đã có sẵn dữ liệu thường buộc phải cho phép.",
+    "columnsHelp": "Phân tách bằng dấu phẩy, theo đúng thứ tự chỉ mục sẽ dùng.",
+    "uniqueHint": "Từ chối các giá trị trùng nhau trên những cột này."
   },
   "settings": {
     "title": "Cài đặt",
@@ -668,7 +687,8 @@
     "zoomOut": "Thu nhỏ",
     "fit": "Vừa khung",
     "reading": "Đang đọc lược đồ…",
-    "nothing": "Chưa có gì để vẽ sơ đồ."
+    "nothing": "Chưa có gì để vẽ sơ đồ.",
+    "diagram": "Sơ đồ quan hệ thực thể"
   },
   "assistant": {
     "title": "Trợ lý",

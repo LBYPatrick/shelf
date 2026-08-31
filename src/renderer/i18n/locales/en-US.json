@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "Shelf"
+    "name": "Shelf",
+    "notifications": "Notifications"
   },
   "action": {
     "cancel": "Cancel",
@@ -124,7 +125,18 @@
     "andMore": "{{count}} more…",
     "groupServer": "Server",
     "groupCredentials": "Credentials",
-    "groupOptions": "Options"
+    "groupOptions": "Options",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "sshPassphrase": "Key passphrase",
+    "sshPassphraseHelp": "Only if the key file is encrypted.",
+    "useProxy": "Connect through a proxy",
+    "proxyType": "Proxy type",
+    "proxyHost": "Proxy host",
+    "proxyPort": "Proxy port",
+    "proxyUser": "Proxy username",
+    "proxyUserHelp": "Leave blank for a proxy that needs no credentials.",
+    "proxyPassword": "Proxy password"
   },
   "workspace": {
     "entities": "Entities",
@@ -204,7 +216,8 @@
     "summaryRow": "{{rows}} row",
     "summaryFirstOne": "first {{rows}} row",
     "resultRows": "Result {{index}}: {{count}} rows",
-    "planUnreadable": "This engine returned a plan Shelf could not read."
+    "planUnreadable": "This engine returned a plan Shelf could not read.",
+    "resizeEditor": "Resize editor"
   },
   "structure": {
     "columns": "Columns",
@@ -249,7 +262,13 @@
     "wrapHint": "Show the whole value on as many lines as it needs",
     "wrapOn": "Line wrapping on.",
     "wrapOff": "Line wrapping off.",
-    "copySql": "Copy SQL"
+    "copySql": "Copy SQL",
+    "typeHelp": "Written through as-is, so any type this engine accepts works.",
+    "defaultHelp": "Optional. An expression, not a value — quote strings yourself.",
+    "allowNull": "Allow NULL",
+    "allowNullHint": "An existing table with rows in it usually has to.",
+    "columnsHelp": "Comma separated, in the order the index should use them.",
+    "uniqueHint": "Refuses duplicate values across these columns."
   },
   "settings": {
     "title": "Settings",
@@ -668,7 +687,8 @@
     "zoomOut": "Zoom out",
     "fit": "Fit",
     "reading": "Reading the schema…",
-    "nothing": "There is nothing to diagram yet."
+    "nothing": "There is nothing to diagram yet.",
+    "diagram": "Entity relationship diagram"
   },
   "assistant": {
     "title": "Assistant",

@@ -53,7 +53,7 @@ const centred = computed(() => connections.active === null);
       :class="{ 'notices--centre': centred }"
       role="region"
       aria-live="polite"
-      aria-label="Notifications"
+      :aria-label="$t('app.notifications')"
     >
       <!--
         `appear`, because a notice that is already in the list when this mounts

@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "Shelf"
+    "name": "Shelf",
+    "notifications": "알림"
   },
   "action": {
     "cancel": "취소",
@@ -124,7 +125,18 @@
     "andMore": "{{count}}개 더…",
     "groupServer": "서버",
     "groupCredentials": "자격 증명",
-    "groupOptions": "옵션"
+    "groupOptions": "옵션",
+    "showPassword": "비밀번호 표시",
+    "hidePassword": "비밀번호 숨기기",
+    "sshPassphrase": "키 암호구",
+    "sshPassphraseHelp": "키 파일이 암호화된 경우에만 필요합니다.",
+    "useProxy": "프록시를 거쳐 연결",
+    "proxyType": "프록시 종류",
+    "proxyHost": "프록시 호스트",
+    "proxyPort": "프록시 포트",
+    "proxyUser": "프록시 사용자 이름",
+    "proxyUserHelp": "자격 증명이 필요 없는 프록시라면 비워 둡니다.",
+    "proxyPassword": "프록시 비밀번호"
   },
   "workspace": {
     "entities": "객체",
@@ -204,7 +216,8 @@
     "summaryRow": "{{rows}}행",
     "summaryFirstOne": "처음 {{rows}}행",
     "resultRows": "결과 {{index}}: {{count}}행",
-    "planUnreadable": "이 엔진이 반환한 실행 계획은 Shelf가 읽지 못했습니다."
+    "planUnreadable": "이 엔진이 반환한 실행 계획은 Shelf가 읽지 못했습니다.",
+    "resizeEditor": "편집기 높이 조절"
   },
   "structure": {
     "columns": "열",
@@ -249,7 +262,13 @@
     "wrapHint": "값 전체를 필요한 만큼의 줄로 표시",
     "wrapOn": "줄 바꿈을 켰습니다.",
     "wrapOff": "줄 바꿈을 껐습니다.",
-    "copySql": "SQL 복사"
+    "copySql": "SQL 복사",
+    "typeHelp": "입력한 그대로 전달되므로 이 엔진이 받아들이는 타입이면 무엇이든 쓸 수 있습니다.",
+    "defaultHelp": "선택 사항입니다. 값이 아니라 식이므로 문자열에는 직접 따옴표를 붙이세요.",
+    "allowNull": "NULL 허용",
+    "allowNullHint": "행이 있는 기존 테이블은 보통 허용해야 합니다.",
+    "columnsHelp": "쉼표로 구분하고, 인덱스가 사용할 순서대로 적습니다.",
+    "uniqueHint": "이 열들에 걸쳐 중복된 값을 거부합니다."
   },
   "settings": {
     "title": "설정",
@@ -668,7 +687,8 @@
     "zoomOut": "축소",
     "fit": "전체 보기",
     "reading": "스키마를 읽는 중…",
-    "nothing": "아직 다이어그램으로 그릴 것이 없습니다."
+    "nothing": "아직 다이어그램으로 그릴 것이 없습니다.",
+    "diagram": "개체 관계도"
   },
   "assistant": {
     "title": "어시스턴트",

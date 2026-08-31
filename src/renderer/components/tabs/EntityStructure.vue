@@ -749,22 +749,22 @@ watch(() => props.entity, load);
 
     <Sheet v-model="adding" :title="$t('structure.addColumn')">
       <div class="fields">
-        <FormField v-slot="{ id }" label="Name">
+        <FormField v-slot="{ id }" :label="$t('structure.name')">
           <TextInput :id="id" v-model="newColumn.name" placeholder="note" />
         </FormField>
 
         <FormField
           v-slot="{ id }"
-          label="Type"
-          help="Written through as-is, so any type this engine accepts works."
+          :label="$t('structure.type')"
+          :help="$t('structure.typeHelp')"
         >
           <TextInput :id="id" v-model="newColumn.dataType" monospace placeholder="text" />
         </FormField>
 
         <FormField
           v-slot="{ id }"
-          label="Default"
-          help="Optional. An expression, not a value — quote strings yourself."
+          :label="$t('structure.default')"
+          :help="$t('structure.defaultHelp')"
         >
           <TextInput
             :id="id"
@@ -776,8 +776,8 @@ watch(() => props.entity, load);
 
         <CheckBox
           v-model="newColumn.nullable"
-          label="Allow NULL"
-          hint="An existing table with rows in it usually has to."
+          :label="$t('structure.allowNull')"
+          :hint="$t('structure.allowNullHint')"
         />
       </div>
 
@@ -797,14 +797,14 @@ watch(() => props.entity, load);
 
     <Sheet v-model="addingIndex" :title="$t('structure.addIndex')">
       <div class="fields">
-        <FormField v-slot="{ id }" label="Name">
+        <FormField v-slot="{ id }" :label="$t('structure.name')">
           <TextInput :id="id" v-model="newIndex.name" :placeholder="`${entity.name}_idx`" />
         </FormField>
 
         <FormField
           v-slot="{ id }"
-          label="Columns"
-          help="Comma separated, in the order the index should use them."
+          :label="$t('structure.columns')"
+          :help="$t('structure.columnsHelp')"
         >
           <TextInput
             :id="id"
@@ -816,8 +816,8 @@ watch(() => props.entity, load);
 
         <CheckBox
           v-model="newIndex.unique"
-          label="Unique"
-          hint="Refuses duplicate values across these columns."
+          :label="$t('structure.unique')"
+          :hint="$t('structure.uniqueHint')"
         />
       </div>
 

@@ -374,7 +374,12 @@ void props;
               <slot name="header" />
             </div>
 
-            <button type="button" class="panel__close" aria-label="Close" @click="open = false">
+            <button
+              type="button"
+              class="panel__close"
+              :aria-label="$t('action.close')"
+              @click="open = false"
+            >
               ✕
             </button>
           </header>

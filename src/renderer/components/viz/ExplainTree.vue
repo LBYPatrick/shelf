@@ -326,7 +326,7 @@ defineExpose({ toSvg, toPng });
       :viewBox="viewBox"
       preserveAspectRatio="xMidYMid meet"
       role="img"
-      aria-label="Query plan"
+      :aria-label="$t('plan.title')"
     >
       <!--
         Everything the reader can move sits under one group, so panning is one

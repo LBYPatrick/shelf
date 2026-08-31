@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "Shelf"
+    "name": "Shelf",
+    "notifications": "通知"
   },
   "action": {
     "cancel": "キャンセル",
@@ -124,7 +125,18 @@
     "andMore": "他 {{count}} 件…",
     "groupServer": "サーバー",
     "groupCredentials": "認証情報",
-    "groupOptions": "オプション"
+    "groupOptions": "オプション",
+    "showPassword": "パスワードを表示",
+    "hidePassword": "パスワードを隠す",
+    "sshPassphrase": "鍵のパスフレーズ",
+    "sshPassphraseHelp": "鍵ファイルが暗号化されている場合のみ必要です。",
+    "useProxy": "プロキシ経由で接続",
+    "proxyType": "プロキシの種類",
+    "proxyHost": "プロキシホスト",
+    "proxyPort": "プロキシポート",
+    "proxyUser": "プロキシのユーザー名",
+    "proxyUserHelp": "認証情報が不要なプロキシでは空のままにします。",
+    "proxyPassword": "プロキシのパスワード"
   },
   "workspace": {
     "entities": "オブジェクト",
@@ -204,7 +216,8 @@
     "summaryRow": "{{rows}} 行",
     "summaryFirstOne": "先頭 {{rows}} 行",
     "resultRows": "結果 {{index}}: {{count}} 行",
-    "planUnreadable": "このエンジンが返した実行計画は Shelf では読み取れませんでした。"
+    "planUnreadable": "このエンジンが返した実行計画は Shelf では読み取れませんでした。",
+    "resizeEditor": "エディタの高さを変更"
   },
   "structure": {
     "columns": "列",
@@ -249,7 +262,13 @@
     "wrapHint": "値の全体を必要な行数で表示する",
     "wrapOn": "折り返しを有効にしました。",
     "wrapOff": "折り返しを無効にしました。",
-    "copySql": "SQL をコピー"
+    "copySql": "SQL をコピー",
+    "typeHelp": "そのまま書き込まれるため、このエンジンが受け付ける型ならどれでも使えます。",
+    "defaultHelp": "任意です。値ではなく式なので、文字列は自分で引用符を付けてください。",
+    "allowNull": "NULL を許可",
+    "allowNullHint": "行のある既存のテーブルでは通常これが必要です。",
+    "columnsHelp": "カンマ区切りで、インデックスが使う順に並べます。",
+    "uniqueHint": "これらの列にまたがる重複した値を拒否します。"
   },
   "settings": {
     "title": "設定",
@@ -668,7 +687,8 @@
     "zoomOut": "縮小",
     "fit": "全体表示",
     "reading": "スキーマを読み込み中…",
-    "nothing": "まだ図にできるものがありません。"
+    "nothing": "まだ図にできるものがありません。",
+    "diagram": "エンティティ関連図"
   },
   "assistant": {
     "title": "アシスタント",
