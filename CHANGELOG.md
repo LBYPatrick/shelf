@@ -32,6 +32,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **A query's duration is shown in the unit that suits it**, the way `df -h`
+  picks one for a size. It was always whole milliseconds, so a query that took
+  four tenths of one reported "0 ms" and a three-minute one reported "180000
+  ms" — neither of which is a number anybody reads.
 - **The row count and the time a query took can be selected and copied.** The
   root turns selection off, which is right for chrome and wrong for the one
   string in a toolbar that is a measurement.

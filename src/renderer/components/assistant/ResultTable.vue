@@ -16,6 +16,7 @@
  */
 import { computed } from 'vue';
 import type { Field, Row } from '@drivers/types';
+import { formatDuration } from '@shared/duration';
 import { displayValue } from '@shared/values';
 import { useSettings } from '../../stores/settings';
 
@@ -34,7 +35,7 @@ const CEILING = 50;
 const shown = computed(() => props.rows.slice(0, CEILING));
 
 const summary = computed(() => {
-  const parts = [`${props.rows.length}`, `${Math.round(props.durationMs)} ms`];
+  const parts = [`${props.rows.length}`, formatDuration(props.durationMs)];
   return parts;
 });
 

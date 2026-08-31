@@ -218,7 +218,6 @@
     "summaryRows": "{{rows}} 行",
     "summaryFirst": "先頭 {{rows}} 行",
     "summaryAffected": "{{rows}} 件に影響",
-    "summaryMs": "{{ms}} ミリ秒",
     "summaryRow": "{{rows}} 行",
     "summaryFirstOne": "先頭 {{rows}} 行",
     "resultRows": "結果 {{index}}: {{count}} 行",

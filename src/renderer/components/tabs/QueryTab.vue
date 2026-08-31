@@ -10,6 +10,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { format } from 'sql-formatter';
 import { useTranslation } from 'i18next-vue';
 import type { CellValue, Field, ResultSet, Row } from '@drivers/types';
+import { formatDuration } from '@shared/duration';
 import { UNLIMITED } from '@shared/rowLimit';
 import { formatterDialect, type Statement } from '@shared/sqlText';
 import { explainStatement, parsePlan, type PlanNode } from '@shared/explain';
@@ -602,7 +603,11 @@ const summary = computed(() => {
   if (set.affectedRows !== undefined) {
     parts.push(t('query.summaryAffected', { rows: set.affectedRows.toLocaleString() }));
   }
-  parts.push(t('query.summaryMs', { ms: Math.round(set.durationMs) }));
+  /*
+   * No key: the other parts of the summary carry words that have to be
+   * translated, and a duration carries only its unit. See `shared/duration.ts`.
+   */
+  parts.push(formatDuration(set.durationMs));
   return parts.join(' · ');
 });
 

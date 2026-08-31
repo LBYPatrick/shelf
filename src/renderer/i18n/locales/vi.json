@@ -218,7 +218,6 @@
     "summaryRows": "{{rows}} hàng",
     "summaryFirst": "{{rows}} hàng đầu",
     "summaryAffected": "ảnh hưởng {{rows}} hàng",
-    "summaryMs": "{{ms}} ms",
     "summaryRow": "{{rows}} hàng",
     "summaryFirstOne": "{{rows}} hàng đầu",
     "resultRows": "Kết quả {{index}}: {{count}} hàng",

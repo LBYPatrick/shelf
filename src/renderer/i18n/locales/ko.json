@@ -218,7 +218,6 @@
     "summaryRows": "{{rows}}행",
     "summaryFirst": "처음 {{rows}}행",
     "summaryAffected": "{{rows}}행 영향",
-    "summaryMs": "{{ms}} ms",
     "summaryRow": "{{rows}}행",
     "summaryFirstOne": "처음 {{rows}}행",
     "resultRows": "결과 {{index}}: {{count}}행",

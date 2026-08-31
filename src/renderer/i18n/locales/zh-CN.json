@@ -218,7 +218,6 @@
     "summaryRows": "{{rows}} 行",
     "summaryFirst": "前 {{rows}} 行",
     "summaryAffected": "影响 {{rows}} 行",
-    "summaryMs": "{{ms}} 毫秒",
     "summaryRow": "{{rows}} 行",
     "summaryFirstOne": "前 {{rows}} 行",
     "resultRows": "结果 {{index}}：{{count}} 行",

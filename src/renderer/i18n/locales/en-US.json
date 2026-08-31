@@ -218,7 +218,6 @@
     "summaryRows": "{{rows}} rows",
     "summaryFirst": "first {{rows}} rows",
     "summaryAffected": "{{rows}} affected",
-    "summaryMs": "{{ms}} ms",
     "summaryRow": "{{rows}} row",
     "summaryFirstOne": "first {{rows}} row",
     "resultRows": "Result {{index}}: {{count}} rows",

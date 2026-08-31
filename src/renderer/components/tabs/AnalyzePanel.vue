@@ -25,6 +25,7 @@ import { computed, onBeforeUnmount, onMounted, shallowRef, ref, watch } from 'vu
 import { useTranslation } from 'i18next-vue';
 import type { ServerMetrics, StatementSample } from '@drivers/types';
 import { formatBytes } from '@shared/bytes';
+import { formatDuration } from '@shared/duration';
 import { errorMessage } from '@shared/errors';
 import {
   WINDOWS,
@@ -226,14 +227,6 @@ async function copy(text: string): Promise<void> {
 /** The statement text as one line, so a bar label is a bar label. */
 function oneLine(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1) return `${ms.toFixed(2)} ms`;
-  if (ms < 1000) return `${ms.toFixed(1)} ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(2)} s`;
-  if (ms < 3_600_000) return `${(ms / 60_000).toFixed(1)} min`;
-  return `${(ms / 3_600_000).toFixed(1)} h`;
 }
 
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact' });
