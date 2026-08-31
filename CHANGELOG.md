@@ -6,6 +6,19 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **The row count and the time a query took can be selected and copied.** The
+  root turns selection off, which is right for chrome and wrong for the one
+  string in a toolbar that is a measurement.
+
+### Fixed
+
+- **The connection form was half translated.** Read-only, Advanced, the SSH and
+  proxy fields and the password reveal were all still in English whatever the
+  interface language was, and so were the column and index editors in the
+  structure view.
+
 ### Fixed
 
 - **The connection form was half translated.** Read-only, Advanced, the SSH and

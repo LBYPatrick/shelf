@@ -885,7 +885,12 @@ watch(
               <span class="toolbar__count">{{ set.rowCount }}</span>
             </button>
           </template>
-          <span v-else-if="summary" class="results__summary">{{ summary }}</span>
+          <!--
+            Selectable, because the time is a number somebody writes down. The
+            root turns selection off for the chrome, which is right for a
+            toolbar and wrong for the one string in it that is a measurement.
+          -->
+          <span v-else-if="summary" class="results__summary selectable">{{ summary }}</span>
         </div>
 
         <span class="toolbar__spacer" />
@@ -935,7 +940,7 @@ watch(
         <kbd class="key">⌘↩</kbd>
       </div>
 
-      <p v-else-if="fields.length === 0" class="results__note">
+      <p v-else-if="fields.length === 0" class="results__note selectable">
         {{ summary || $t('query.completed') }}
       </p>
 
@@ -1017,7 +1022,7 @@ watch(
           :options="resultOptions"
           :aria-label="$t('query.result', { index: selectedResult + 1 })"
         />
-        <span v-if="summary" class="tabstatus__item">{{ summary }}</span>
+        <span v-if="summary" class="tabstatus__item selectable">{{ summary }}</span>
         <span v-if="transactionOpen" class="tabstatus__txn">{{
           $t('query.transactionOpen')
         }}</span>
