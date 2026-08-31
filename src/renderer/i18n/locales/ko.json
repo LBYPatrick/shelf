@@ -41,7 +41,8 @@
     "yes": "예",
     "no": "아니요",
     "change": "변경",
-    "expandAll": "모두 펼치기"
+    "expandAll": "모두 펼치기",
+    "updateQuery": "쿼리 업데이트"
   },
   "time": {
     "justNow": "방금",
@@ -222,7 +223,8 @@
     "summaryFirstOne": "처음 {{rows}}행",
     "resultRows": "결과 {{index}}: {{count}}행",
     "planUnreadable": "이 엔진이 반환한 실행 계획은 Shelf가 읽지 못했습니다.",
-    "resizeEditor": "편집기 높이 조절"
+    "resizeEditor": "편집기 높이 조절",
+    "updateHint": "가져온 저장된 쿼리에 다시 씁니다"
   },
   "structure": {
     "columns": "열",
@@ -784,7 +786,7 @@
     "started": "{{when}} 시작"
   },
   "saved": {
-    "empty": "아직 저장된 항목이 없습니다. 쿼리를 작성하고 「쿼리 저장」을 누르세요.",
+    "empty": "아직 저장된 것이 없습니다. 쿼리를 쓰고 ⌘S를 누르세요.",
     "discard": "이 쿼리 삭제",
     "rename": "이 쿼리 이름 바꾸기"
   },

@@ -30,6 +30,14 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **The macOS build can be signed and notarised by CI.** Six repository secrets
   and nothing else; without them the build is unsigned exactly as before. See
   CONTRIBUTING.
+- **⌘S saves the query you are looking at.** The chord was declared, listed in
+  Settings and printed in the README, and a query tab did not answer it — the
+  only way to keep a query was to find the button. It is one binding now, and
+  each tab decides what it saves: a query's text, or a table's pending changes.
+- **A tab opened from a saved query is bound to it.** Save writes back to that
+  query rather than filing a second copy under the same name, the button says
+  Update, the tab takes the query's own name, and the tab carries a dot while
+  its text differs from what is saved.
 
 ### Changed
 

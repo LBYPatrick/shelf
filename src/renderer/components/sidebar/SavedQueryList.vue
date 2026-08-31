@@ -41,8 +41,17 @@ const field = ref<HTMLInputElement>();
 const DOUBLE_MS = 250;
 let pending: ReturnType<typeof setTimeout> | undefined;
 
+/*
+ * Opened *as* the saved query, not as a copy of its text.
+ *
+ * The tab carries the id, so Save updates this query rather than filing a
+ * second one under the same name, and the dot on the tab means "differs from
+ * what is saved" rather than nothing at all. It also takes the name: a tab is
+ * named for what is in it, and "Query 4" is the one thing the reader already
+ * knows.
+ */
 function open(query: SavedQuery): void {
-  tabs.openQuery(query.text);
+  tabs.openQuery(query.text, { savedQueryId: query.id, title: query.name });
 }
 
 function onNameClick(query: SavedQuery): void {
@@ -81,8 +90,10 @@ function commit(): void {
   <div class="entries">
     <p v-if="queries.visibleSaved.length === 0" class="tilelist__note">
       <!--
-        It used to say "press ⌘S", which is a key nothing is bound to: saving a
-        query is the button on the query tab's toolbar and always has been.
+        It says ⌘S again, and now that is true. It said it once when nothing was
+        bound to it, was corrected to name the button instead, and the chord has
+        since been made real — which is the better answer, because a shortcut is
+        what an empty state is for teaching.
       -->
       {{ $t('saved.empty') }}
     </p>

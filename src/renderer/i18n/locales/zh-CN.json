@@ -41,7 +41,8 @@
     "yes": "是",
     "no": "否",
     "change": "更改",
-    "expandAll": "全部展开"
+    "expandAll": "全部展开",
+    "updateQuery": "更新查询"
   },
   "time": {
     "justNow": "刚刚",
@@ -222,7 +223,8 @@
     "summaryFirstOne": "前 {{rows}} 行",
     "resultRows": "结果 {{index}}：{{count}} 行",
     "planUnreadable": "该引擎返回的执行计划 Shelf 无法解析。",
-    "resizeEditor": "调整编辑器高度"
+    "resizeEditor": "调整编辑器高度",
+    "updateHint": "写回它来自的那条已保存查询"
   },
   "structure": {
     "columns": "列",
@@ -784,7 +786,7 @@
     "started": "开始于 {{when}}"
   },
   "saved": {
-    "empty": "尚未保存任何内容。写一条查询后点击“保存查询”。",
+    "empty": "还没有保存任何查询。写一条查询然后按 ⌘S。",
     "discard": "删除此查询",
     "rename": "重命名此查询"
   },

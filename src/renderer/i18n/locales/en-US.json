@@ -41,7 +41,8 @@
     "yes": "Yes",
     "no": "No",
     "change": "Change",
-    "expandAll": "Expand all"
+    "expandAll": "Expand all",
+    "updateQuery": "Update Query"
   },
   "time": {
     "justNow": "just now",
@@ -222,7 +223,8 @@
     "summaryFirstOne": "first {{rows}} row",
     "resultRows": "Result {{index}}: {{count}} rows",
     "planUnreadable": "This engine returned a plan Shelf could not read.",
-    "resizeEditor": "Resize editor"
+    "resizeEditor": "Resize editor",
+    "updateHint": "Write this back to the saved query it came from"
   },
   "structure": {
     "columns": "Columns",
@@ -784,7 +786,7 @@
     "started": "started {{when}}"
   },
   "saved": {
-    "empty": "Nothing saved yet. Write a query and press Save Query.",
+    "empty": "Nothing saved yet. Write a query and press ⌘S.",
     "discard": "Delete this query",
     "rename": "Rename this query"
   },

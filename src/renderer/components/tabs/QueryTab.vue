@@ -42,6 +42,7 @@ import GridSkeleton from '../ui/GridSkeleton.vue';
 import PlanSheet from '../viz/PlanSheet.vue';
 import NameSheet from '../ui/NameSheet.vue';
 import { elapsedLabel, useElapsed } from '../../composables/useElapsed';
+import { useHotkeys } from '../../composables/useHotkeys';
 import { errorMessage } from '@shared/errors';
 
 const props = defineProps<{ tabId: string; active: boolean }>();
@@ -463,9 +464,34 @@ function formatQuery(): void {
   }
 }
 
+/**
+ * The saved query this tab is showing, if it is showing one.
+ *
+ * Read from the tab rather than kept only here, because the binding has to
+ * survive being switched away from and back — and because the tab strip draws
+ * the modified mark from it.
+ */
+const savedId = computed(() => tabs.byId(props.tabId)?.savedQueryId);
+const savedQuery = computed(() =>
+  savedId.value ? queries.saved.find((entry) => entry.id === savedId.value) : undefined
+);
+
 const savedName = ref('');
 const saving = ref(false);
-const savedId = ref<string | undefined>(undefined);
+
+/**
+ * Out of step with what was saved, and only then.
+ *
+ * A tab with no saved query behind it has nothing to be out of sync with, so it
+ * never carries the mark: every unsaved scratch tab wearing a dot would make
+ * the dot mean "this is a query tab". Compared on the trimmed text, because
+ * a trailing newline is not a change anybody made on purpose.
+ */
+const modified = computed(
+  () => savedQuery.value !== undefined && text.value.trim() !== savedQuery.value.text.trim()
+);
+
+watch(modified, (dirty) => tabs.setUnsaved(props.tabId, dirty), { immediate: true });
 
 /** Saving asks for a name once, then updates that query from then on. */
 async function saveQuery(): Promise<void> {
@@ -487,12 +513,26 @@ async function saveQuery(): Promise<void> {
     return;
   }
 
-  await queries.save(savedName.value || 'Untitled', text_, savedId.value);
+  /*
+   * Its own name, not the tab's. They start the same and drift the moment
+   * either is renamed, and the one this is updating is the saved query.
+   */
+  await queries.save(
+    savedQuery.value?.name ?? savedName.value ?? 'Untitled',
+    text_,
+    savedId.value
+  );
 }
 
 async function confirmSave(): Promise<void> {
-  const stored = await queries.save(savedName.value.trim() || 'Untitled', text.value.trim());
-  savedId.value = stored.id;
+  const name = savedName.value.trim() || 'Untitled';
+  const stored = await queries.save(name, text.value.trim());
+  /*
+   * The tab is bound to it from here on, and takes its name — which is what
+   * makes the next ⌘S an update rather than a second copy, and what puts the
+   * name somebody just chose on the tab they chose it in.
+   */
+  tabs.bindSavedQuery(props.tabId, stored.id, name);
   saving.value = false;
 }
 
@@ -609,6 +649,19 @@ const summary = computed(() => {
    */
   parts.push(formatDuration(set.durationMs));
   return parts.join(' · ');
+});
+
+/*
+ * ⌘S, and the guard is what makes one chord serve two tabs: every open tab
+ * stays mounted, so without it a table tab three along would apply its pending
+ * changes when the query tab in front of you was saved. See the note beside
+ * `tab.save` in the bindings table.
+ */
+useHotkeys({
+  'tab.save': () => {
+    if (!props.active) return;
+    void saveQuery();
+  },
 });
 
 onMounted(() => {
@@ -802,15 +855,26 @@ watch(
             {{ explaining ? $t('query.planning') : $t('action.explain') }}
           </button>
 
+          <!--
+            Save, or update — the word is the state.
+
+            A tab opened from a saved query is bound to it, so this writes back
+            to the one it came from rather than filing a second copy under the
+            same name. Whether it has anything to write is the dot on the tab,
+            which is where an unsaved document's mark lives in this app already
+            and everywhere else.
+          -->
           <button
-            v-tip="$t('query.saveHint')"
+            v-tip="
+              `${savedId ? t('query.updateHint') : t('query.saveHint')} — ${shortcutLabel('tab.save')}`
+            "
             type="button"
             class="toolbar__action focus-fill"
             :disabled="!text.trim()"
             @click="saveQuery"
           >
             <AppIcon name="star" :size="12" />
-            {{ savedId ? $t('action.update') : $t('action.saveQuery') }}
+            {{ savedId ? $t('action.updateQuery') : $t('action.saveQuery') }}
           </button>
         </div>
       </div>

@@ -89,7 +89,24 @@ export const DEFAULT_BINDINGS: readonly Binding[] = [
   },
 
   { id: 'data.filter', label: 'Focus filter', group: 'Data', keys: ['mod+f'] },
-  { id: 'data.apply', label: 'Apply pending changes', group: 'Data', keys: ['mod+s'] },
+
+  /*
+   * One ⌘S, and each tab decides what it saves.
+   *
+   * It was `data.apply`, in the Data group, and it applied a table's pending
+   * changes. A query tab had no ⌘S at all — the only way to keep a query was to
+   * find the button — and adding `query.save` beside it would have shipped a
+   * default the shortcut editor flags as a clash. That warning exists for
+   * chords a *reader* has doubled up, and one on an untouched keymap teaches
+   * people to ignore it.
+   *
+   * They are the same idea anyway. ⌘S means "keep what is in front of me", and
+   * what that is depends on what is in front of you: a table's pending changes,
+   * a query's text. Two tabs handle it and both guard on being the active one,
+   * which is the case the conflict note already calls honest — bindings that
+   * are never live at once.
+   */
+  { id: 'tab.save', label: 'Save', group: 'Tabs', keys: ['mod+s'] },
 ];
 
 /**

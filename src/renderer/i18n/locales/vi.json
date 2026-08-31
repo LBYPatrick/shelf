@@ -41,7 +41,8 @@
     "yes": "Có",
     "no": "Không",
     "change": "Đổi",
-    "expandAll": "Mở rộng tất cả"
+    "expandAll": "Mở rộng tất cả",
+    "updateQuery": "Cập nhật truy vấn"
   },
   "time": {
     "justNow": "vừa xong",
@@ -222,7 +223,8 @@
     "summaryFirstOne": "{{rows}} hàng đầu",
     "resultRows": "Kết quả {{index}}: {{count}} hàng",
     "planUnreadable": "Shelf không đọc được kế hoạch mà engine này trả về.",
-    "resizeEditor": "Đổi kích thước trình soạn thảo"
+    "resizeEditor": "Đổi kích thước trình soạn thảo",
+    "updateHint": "Ghi ngược lại vào truy vấn đã lưu mà nó đến từ đó"
   },
   "structure": {
     "columns": "Cột",
@@ -784,7 +786,7 @@
     "started": "bắt đầu {{when}}"
   },
   "saved": {
-    "empty": "Chưa lưu gì. Viết một câu truy vấn rồi nhấn Lưu truy vấn.",
+    "empty": "Chưa lưu gì cả. Hãy viết một truy vấn rồi nhấn ⌘S.",
     "discard": "Xoá câu truy vấn này",
     "rename": "Đổi tên câu truy vấn này"
   },

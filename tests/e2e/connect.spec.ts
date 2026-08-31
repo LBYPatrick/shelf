@@ -1120,3 +1120,48 @@ test('reads the schema ahead of the first question, and only when it could be as
   // And nobody opened a chat to cause it.
   expect(await hostCalls(page)).not.toContain('ai/turn');
 });
+
+test('a saved query is updated in place, and says when it has drifted', async ({ page }) => {
+  await page.getByRole('button', { name: /Sample database/ }).click();
+  await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+
+  await page
+    .getByRole('button', { name: /new query/i })
+    .first()
+    .click();
+  await page.locator('.monaco-editor').waitFor();
+  await typeQuery(page, 'select 1');
+
+  /*
+   * ⌘S rather than the button. It is the whole of the first change: the chord
+   * was declared, listed in Settings and printed in the README, and a query tab
+   * did not answer it.
+   */
+  await page.keyboard.press('ControlOrMeta+s');
+  await page.getByRole('textbox', { name: /^Name$/ }).fill('Listener growth');
+  await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
+
+  // The tab takes the query's name, and the button becomes an update.
+  await expect(page.locator('.striptab--on')).toContainText('Listener growth');
+  await expect(page.getByRole('button', { name: /Update Query/ })).toBeVisible();
+  await expect(page.locator('.striptab--on .striptab__dot')).toHaveCount(0);
+
+  // Changed, and the tab says so.
+  await typeQuery(page, 'select 2');
+  await expect(page.locator('.striptab--on .striptab__dot')).toHaveCount(1);
+
+  // Updated in place: one saved query, not two, and it holds the new text.
+  await page.keyboard.press('ControlOrMeta+s');
+  await expect(page.locator('.striptab--on .striptab__dot')).toHaveCount(0);
+
+  const saved = await page.evaluate(() =>
+    (
+      window as unknown as {
+        shelf: { db: { listSavedQueries: (id: null) => Promise<unknown> } };
+      }
+    ).shelf.db.listSavedQueries(null)
+  );
+  const rows = saved as { name: string; text: string }[];
+  expect(rows.filter((row) => row.name === 'Listener growth')).toHaveLength(1);
+  expect(rows.find((row) => row.name === 'Listener growth')?.text).toBe('select 2');
+});

@@ -40,6 +40,15 @@ export interface Tab {
    */
   /** The saved conversation this tab is showing, once it has been written. */
   chatId?: string;
+  /**
+   * The saved query this tab was opened from, if it was.
+   *
+   * It is what makes Save mean *update* rather than "save a second copy under
+   * the same name", and what `unsaved` is measured against — a query tab with
+   * no saved query behind it has nothing to be out of sync with, so it never
+   * carries the mark.
+   */
+  savedQueryId?: string;
   ask?:
     | { readonly kind: 'connection' }
     | { readonly kind: 'database'; readonly name: string }
@@ -153,19 +162,61 @@ export const useTabs = defineStore('tabs', () => {
     );
   }
 
-  function openQuery(text = ''): Tab {
+  /**
+   * A query tab, and the saved query behind it when there is one.
+   *
+   * Opening the same saved query twice focuses the tab that is already showing
+   * it, the way opening the same table does — two tabs on one query is two
+   * places to edit it and one of them is about to lose. A blank tab is always a
+   * new one, because that is the whole request.
+   */
+  function openQuery(text = '', from?: { savedQueryId: string; title: string }): Tab {
+    if (from) {
+      const existing = tabs.value.find(
+        (tab) => tab.kind === 'query' && tab.savedQueryId === from.savedQueryId
+      );
+      if (existing) {
+        focus(existing.id);
+        return existing;
+      }
+    }
+
     const count = tabs.value.filter((tab) => tab.kind === 'query').length;
     const tab: Tab = {
       id: nextId(),
       kind: 'query',
-      title: count === 0 ? 'Query' : `Query ${count + 1}`,
+      // Named for what is in it: a saved query's tab wears the saved query's name.
+      title: from?.title ?? (count === 0 ? 'Query' : `Query ${count + 1}`),
       text,
+      ...(from ? { savedQueryId: from.savedQueryId } : {}),
       unsaved: false,
     };
 
     tabs.value = [...tabs.value, tab];
     focus(tab.id);
     return tab;
+  }
+
+  /**
+   * What the tab is now bound to, once it has been saved from inside it.
+   *
+   * Set from the query tab rather than by `openQuery`, because a tab can
+   * acquire a saved query long after it was opened — that is what the first
+   * Save does.
+   */
+  function bindSavedQuery(id: string, savedQueryId: string, title: string): void {
+    tabs.value = tabs.value.map((tab) =>
+      tab.id === id ? { ...tab, savedQueryId, title, unsaved: false } : tab
+    );
+  }
+
+  /** Whether this tab has changes its saved copy does not. */
+  function setUnsaved(id: string, unsaved: boolean): void {
+    const tab = byId(id);
+    if (!tab || tab.unsaved === unsaved) return;
+    tabs.value = tabs.value.map((candidate) =>
+      candidate.id === id ? { ...candidate, unsaved } : candidate
+    );
   }
 
   /**
@@ -351,6 +402,8 @@ export const useTabs = defineStore('tabs', () => {
     openEntity,
     openErd,
     openQuery,
+    bindSavedQuery,
+    setUnsaved,
     openChat,
     rename,
     openJob,

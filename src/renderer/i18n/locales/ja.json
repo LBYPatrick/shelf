@@ -41,7 +41,8 @@
     "yes": "はい",
     "no": "いいえ",
     "change": "変更",
-    "expandAll": "すべて展開"
+    "expandAll": "すべて展開",
+    "updateQuery": "クエリを更新"
   },
   "time": {
     "justNow": "たった今",
@@ -222,7 +223,8 @@
     "summaryFirstOne": "先頭 {{rows}} 行",
     "resultRows": "結果 {{index}}: {{count}} 行",
     "planUnreadable": "このエンジンが返した実行計画は Shelf では読み取れませんでした。",
-    "resizeEditor": "エディタの高さを変更"
+    "resizeEditor": "エディタの高さを変更",
+    "updateHint": "元の保存済みクエリに書き戻す"
   },
   "structure": {
     "columns": "列",
@@ -784,7 +786,7 @@
     "started": "開始 {{when}}"
   },
   "saved": {
-    "empty": "まだ保存されていません。クエリを書いて「クエリを保存」を押してください。",
+    "empty": "まだ保存されていません。クエリを書いて ⌘S を押してください。",
     "discard": "このクエリを削除",
     "rename": "このクエリの名前を変更"
   },

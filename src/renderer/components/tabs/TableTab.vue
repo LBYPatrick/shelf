@@ -335,11 +335,13 @@ function discard(): void {
 }
 
 /*
- * `data.filter` and `data.apply` were declared in the bindings table, listed in
- * Settings and printed in the README, and nothing anywhere handled either of
- * them. They belong to this tab rather than to the workspace, so they are
- * registered here — and guarded on `active`, because every open tab stays
- * mounted and would otherwise all answer the same keystroke.
+ * `data.filter` and the chord that is now `tab.save` were declared in the
+ * bindings table, listed in Settings and printed in the README, and nothing
+ * anywhere handled either of them. They belong to this tab rather than to the
+ * workspace, so they are registered here — and guarded on `active`, because
+ * every open tab stays mounted and would otherwise all answer the same
+ * keystroke. That guard is also what lets the query tab claim ⌘S for saving a
+ * query: only one tab is active, so only one of them answers.
  */
 useHotkeys({
   'data.filter': () => {
@@ -347,7 +349,7 @@ useHotkeys({
     filterOpen.value = true;
     filterBar.value?.focus();
   },
-  'data.apply': () => {
+  'tab.save': () => {
     if (!props.active || pendingCount.value === 0) return;
     void applyChanges();
   },

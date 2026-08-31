@@ -203,7 +203,7 @@ system locale or set explicitly. `prefers-reduced-motion`,
 | `⌃⇥` / `⌃⇧⇥` | Next / previous tab |
 | `⌘B` | Toggle sidebar |
 | `⌘F` | Focus filter |
-| `⌘S` | Apply pending changes |
+| `⌘S` | Save — a query, or a table's pending changes |
 | `⌘,` | Settings |
 | `F5` | Refresh schema |
 
