@@ -28,13 +28,13 @@ ICON_ASSET := src/renderer/assets/icon.svg
 gate: ## Everything that has to pass, in about forty seconds (default)
 	@$(MAKE) --no-print-directory lint
 	@$(MAKE) --no-print-directory test
+	@$(MAKE) --no-print-directory typecheck-renderer
 	@$(MAKE) --no-print-directory build
 	@$(MAKE) --no-print-directory ui BUILT=1
 	@$(MAKE) --no-print-directory test-e2e BUILT=1
 	@echo "gate: clean"
 
 gate-full: gate ## The gate, plus the storybook sweep (two minutes; the build is the cost)
-	@$(MAKE) --no-print-directory typecheck-renderer
 	@$(MAKE) --no-print-directory storybook-check
 
 help: ## Show this help message

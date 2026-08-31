@@ -16,8 +16,16 @@
 # turns into a crash rather than a wrong type. Tighten it by deleting codes from
 # the list once the rest is clean.
 #
-# Outside `make gate` on purpose. It takes about half a minute, and the gate's
-# forty seconds is the reason the gate gets run.
+# In `make gate`, and it was not. It was left out on the grounds that it took
+# about half a minute and the gate's forty seconds is the reason the gate gets
+# run — but measured rather than remembered it is three seconds cold and under
+# two warm, which buys the whole class for nothing.
+#
+# It was left out and the class came straight back: `formatDuration` was used in
+# `QueryTab.vue` with no import, and lint, the unit suite, `tsc`, the build, the
+# UI gate and the end-to-end suite were every one of them green. It surfaced as
+# a `ReferenceError` in a browser console, which is precisely the report this
+# exists to replace.
 set -euo pipefail
 
 CODES='TS2304|TS2552|TS2307'   # cannot find name / did you mean / cannot find module

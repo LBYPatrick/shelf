@@ -42,6 +42,12 @@ Only the storybook sweep is outside the gate, and only because building the
 static storybook is two minutes on its own. Run `make gate-full` when a
 component's props or a mock's shape has changed.
 
+`typecheck-renderer` used to be out there beside it, on a memory of it taking
+half a minute; measured, it is three seconds cold. It is the only check that
+sees a name a `.vue` script block uses and nobody imported — `tsc` covers the
+node side and `electron-vite` transpiles the renderer without checking it — and
+in the time it spent outside, exactly that shipped twice.
+
 ## Architecture rules
 
 - **The renderer never imports a driver.** Drivers use Node APIs and native
