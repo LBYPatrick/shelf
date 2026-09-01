@@ -275,8 +275,28 @@ function resize(): void {
   const box = getComputedStyle(body);
   const padding = parseFloat(box.paddingTop) + parseFloat(box.paddingBottom);
   const chrome = (head.value?.offsetHeight ?? 0) + (foot.value?.offsetHeight ?? 0);
-  const natural =
-    chrome + Math.ceil(measure.value!.getBoundingClientRect().height + padding) + 1;
+  let natural = chrome + Math.ceil(measure.value!.getBoundingClientRect().height + padding) + 1;
+
+  /*
+   * And never shorter than what the body says it is holding.
+   *
+   * The wrapper is the right thing to measure — everything above says why — but
+   * it is measured in fractional pixels and `scrollHeight` is a rounded
+   * integer, and the two disagree by a pixel or two depending on where the text
+   * landed. The spare pixel added above covers that in one direction and not in
+   * the other, so on a machine whose rasteriser rounds the other way a sheet
+   * settles two pixels short of its content: a clipped last line, `overflowing`
+   * false, and so no scrollbar to reach it with. Small enough to look like
+   * nothing and to survive three rounds of chasing it.
+   *
+   * So the browser's own account of what it cannot show is taken as a floor.
+   * It converges rather than oscillating: growing by the shortfall makes the
+   * shortfall zero, and height does not change what the text wraps to.
+   */
+  const shortfall = body.scrollHeight - body.clientHeight;
+  if (shortfall > 0 && height.value !== null && !overflowing.value) {
+    natural = Math.max(natural, height.value + shortfall);
+  }
 
   const view = window.innerHeight;
   const ceiling = Math.min(view * (1 - SCRIM * 2), Math.max(view * CEILING, FLOOR));
