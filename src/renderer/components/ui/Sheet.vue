@@ -179,15 +179,64 @@ const SETTLE_FRAMES = 4;
  * — which is the same question the observer was being asked, put to the layout
  * directly rather than to a notification queue that is allowed to drop it.
  */
+/**
+ * And how many it may keep *correcting* for.
+ *
+ * Agreeing with the last answer is not the same as being right. A measurement
+ * taken while the content was still arriving agrees with itself perfectly, and
+ * the sheet then sits at a height that clips what it holds — with `overflowing`
+ * false, so no scrollbar to reach it with and no fade to admit it is there.
+ *
+ * Everything that used to correct that is something outside this loop: an
+ * observer notification Chromium is allowed to drop, or `onSettled` firing at
+ * the end of the height transition. Neither is dependable. The transition is
+ * the worse of the two — `prefers-reduced-motion` takes `height` out of
+ * `transition-property` entirely, so for a reader who has asked for less motion
+ * the fallback never fires at all, and the sheet stays short for good.
+ *
+ * So the loop asks the layout instead: while the body is showing less than it
+ * holds, it has not settled, whatever two consecutive measurements agree about.
+ * A second of frames is far more than the three steps this takes and is a
+ * ceiling rather than a duration — it exits as soon as the answer is consistent,
+ * which is normally the second frame.
+ */
+const CORRECT_FRAMES = 60;
+
+/**
+ * Content the body is neither showing nor scrolling for.
+ *
+ * A pixel is rounding, not a clip: `natural` is computed with a `Math.ceil` and
+ * a spare pixel already, so chasing one would be chasing our own arithmetic.
+ */
+function clipped(): boolean {
+  const body = measure.value?.parentElement;
+  if (!body || overflowing.value) return false;
+  return body.scrollHeight - body.clientHeight > 1;
+}
+
 function measureSoon(): void {
   let left = SETTLE_FRAMES;
+  let budget = CORRECT_FRAMES;
 
   const pump = (): void => {
     queued = requestAnimationFrame(() => {
+      if (--budget <= 0) return;
+
       const before = height.value;
       resize();
-      // Agreed with the last answer, or out of frames: it has settled.
-      if (height.value !== before && --left > 0) pump();
+
+      // Still moving: let it, for as long as it keeps moving.
+      if (height.value !== before) {
+        if (--left > 0) pump();
+        return;
+      }
+
+      // Stopped, but on a height that hides content. That is the stale
+      // measurement rather than a settled one, so it is still moving really.
+      if (clipped()) {
+        left = SETTLE_FRAMES;
+        pump();
+      }
     });
   };
 
