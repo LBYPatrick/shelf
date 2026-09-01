@@ -446,12 +446,31 @@ const primaryIcon = computed(() => {
  * their own and scroll inside it. The sheet's body is the scroller of last
  * resort — a release with forty lines of notes would otherwise carry the
  * heading and the buttons off the top and bottom of it.
+ *
+ * **And the cap has to know how much room there is, or both of them scroll.**
+ * At 18rem flat the card kept its 288px whether the panel could afford it or
+ * not, so on a short window the popup overflowed *as well* — measured at 77px
+ * over on a 560px viewport and 45px over at 640 — and the reader got a
+ * scrollbar inside a scrollbar.
+ *
+ * A share of the window, because that is the thing that varies. The floor it
+ * has to survive is the smallest window this app will open: `COMPACT_SIZE` in
+ * `main/window.ts` is 580px tall, where the sheet's own ceiling works out at
+ * 480px and the tallest state that has notes — ready to install, which also
+ * carries a hint — needs 270px for everything that is not the card. That
+ * leaves 210px, or 36vh; 34vh is that with room for a heading to wrap in a
+ * language whose words are longer.
+ *
+ * The 18rem is still there and still does the work on any ordinary window: it
+ * is the smaller of the two from about 850px of height upwards, so nothing
+ * changes on a screen anybody is really using. The share only bites where the
+ * flat number could not fit.
  */
 .notes {
   display: flex;
   flex-direction: column;
   gap: var(--gap-tight);
-  max-height: 18rem;
+  max-height: min(18rem, 34vh);
   overflow-y: auto;
   padding: var(--gap-loose);
   border-radius: var(--control-radius);
