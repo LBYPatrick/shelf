@@ -7,6 +7,7 @@ import {
   test as base,
   expect,
   type ElectronApplication,
+  type Locator,
   type Page,
 } from '@playwright/test';
 
@@ -118,6 +119,71 @@ export async function setAppearance(page: Page, mode: 'light' | 'dark'): Promise
 }
 
 /** Freezes anything that would make a screenshot differ between identical runs. */
+export interface SheetFit {
+  /** The panel's height, once it has stopped moving. */
+  readonly height: number;
+  /** Whether the sheet decided its body has to scroll. */
+  readonly scrolls: boolean;
+  /** How much content the body cannot show. */
+  readonly overflow: number;
+}
+
+/**
+ * A sheet's size and fit, once it has finished arriving at them.
+ *
+ * A sheet is the size of what is in it, and some of what is in it arrives late
+ * — the stored-data numbers come from the host — so it reaches its final size
+ * in two or three steps over about half a second. Waiting a fixed interval for
+ * that is a guess about how fast the machine is, and it is the guess that
+ * failed: 900ms was plenty on a laptop and short on a loaded runner, where the
+ * assertion then judged a sheet caught mid-growth and reported an 11px overflow
+ * that is gone once it settles. The gate failed on `main` for exactly that.
+ *
+ * Waiting for the *height* to hold still is not enough either, and that was the
+ * second attempt. The sheet settles on `requestAnimationFrame`, so a machine
+ * that is starving frames can leave it at an intermediate height for longer
+ * than any sampling window you would want to wait, and a fixed number of
+ * agreeing samples calls that settled.
+ *
+ * So the signal is consistency rather than duration. While a sheet is still
+ * growing into content that arrived late it reports `scrolls: false` with
+ * content still overflowing — the one combination it is never in at rest,
+ * because at rest it either fits or it has decided to scroll. Waiting for that
+ * to clear is waiting for the component itself to finish.
+ *
+ * It does not assume the answer. A sheet that settles as *scrolling* ends the
+ * wait just as much, and the caller's own premise check is what fails then —
+ * with the same message it would have given anyway.
+ */
+export async function settledSheet(page: Page, dialog: Locator): Promise<SheetFit> {
+  const read = async (): Promise<SheetFit> => {
+    const box = await dialog.boundingBox();
+    const inner = await page.evaluate(() => {
+      const body = [...document.querySelectorAll('.panel__body')].pop();
+      if (!body) return { scrolls: false, overflow: 0 };
+      return {
+        scrolls: body.classList.contains('panel__body--scrolls'),
+        overflow: body.scrollHeight - body.clientHeight,
+      };
+    });
+    return { height: box ? Math.round(box.height) : -1, ...inner };
+  };
+
+  let previous = await read();
+
+  // Eight seconds, sampled every 100ms. Long enough for a runner three times
+  // slower than the machine this was written on; it normally returns second.
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const now = await read();
+    const midFlight = !now.scrolls && now.overflow > 0;
+    if (!midFlight && now.height === previous.height) return now;
+    previous = now;
+    await page.waitForTimeout(100);
+  }
+
+  return previous;
+}
+
 export async function stabilize(page: Page): Promise<void> {
   await page.addStyleTag({
     content: `*, *::before, *::after {

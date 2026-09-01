@@ -6,7 +6,15 @@
  * differ" — these fail with the reason, which is the difference between a gate
  * that gets fixed and one that gets its snapshots regenerated.
  */
-import { dispatchQuery, expect, newQueryTab, setAppearance, stabilize, test } from './fixtures';
+import {
+  dispatchQuery,
+  expect,
+  newQueryTab,
+  setAppearance,
+  settledSheet,
+  stabilize,
+  test,
+} from './fixtures';
 import { FRAMEWORK_COMPONENTS, FRAMEWORK_UTILITIES } from '../frameworkClasses';
 import { openTable, revealTables, typeQuery } from '../e2e/helpers';
 import type { Page } from '@playwright/test';
@@ -633,11 +641,13 @@ test.describe('layout', () => {
 
     const dialog = sample.getByRole('dialog', { name: 'Stored data' });
     await expect(dialog).toBeVisible();
-    // Past the enter transition and the resize that follows the first
-    // measurement; a box read mid-flight is neither size.
-    await sample.waitForTimeout(800);
-
-    const before = Math.round((await dialog.boundingBox())!.height);
+    /*
+     * Past the enter transition and the resize that follows the first
+     * measurement; a box read mid-flight is neither size. Waited out rather
+     * than slept through, for the reason given on `settledHeight` — a baseline
+     * taken early makes the growth below look larger than it was.
+     */
+    const before = (await settledSheet(sample, dialog)).height;
 
     /*
      * Grown from the outside, over three frames, well after everything has
@@ -713,16 +723,18 @@ test.describe('layout', () => {
 
     const stored = sample.getByRole('dialog', { name: 'Stored data' });
     await expect(stored).toBeVisible();
-    await sample.waitForTimeout(900);
-
-    const edge = await sample.evaluate(() => {
-      const body = [...document.querySelectorAll('.panel__body')].pop()!;
-      return {
-        scrolls: body.classList.contains('panel__body--scrolls'),
-        overflow: body.scrollHeight - body.clientHeight,
-        mask: getComputedStyle(body).maskImage,
-      };
-    });
+    /*
+     * Waited out rather than slept through. This read a fixed 900ms, which is
+     * plenty on a laptop and short on a loaded runner — where it measured a
+     * sheet still growing into its content and reported an 11px overflow that
+     * is gone by the time the sheet settles. The gate failed on main for it.
+     */
+    const edge = {
+      ...(await settledSheet(sample, stored)),
+      mask: await sample.evaluate(
+        () => getComputedStyle([...document.querySelectorAll('.panel__body')].pop()!).maskImage
+      ),
+    };
 
     // The premise: this sheet fits. If it ever stops fitting the assertion
     // below stops meaning anything, so it is checked rather than assumed.
