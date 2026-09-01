@@ -1,5 +1,5 @@
 import { BrowserWindow, app, net, shell } from 'electron';
-import type { AppUpdater, UpdateInfo } from 'electron-updater';
+import type { AppUpdater } from 'electron-updater';
 import {
   UPDATE_CHANNELS,
   isNewerVersion,
@@ -83,6 +83,21 @@ export class Updater {
       // state instead — a failed check is a sentence in the sheet, not a line
       // in a log nobody has open.
       autoUpdater.logger = null;
+
+      /*
+       * Anything that goes wrong outside a call we are awaiting.
+       *
+       * Without this the failure most worth reporting is the one nobody hears:
+       * `quitAndInstall` returns immediately and reports through this event, so
+       * a swap that macOS refuses — the downloaded build is signed by somebody
+       * else than the running one, which is exactly what happens to a locally
+       * built copy — pressed the button and did nothing at all. Worse than
+       * nothing, in fact: an `error` event with no listener is thrown by the
+       * emitter rather than ignored, so the main process took it.
+       */
+      autoUpdater.on('error', (error) => {
+        this.set({ phase: 'error', message: messageOf(error) });
+      });
 
       autoUpdater.on('download-progress', (progress) => {
         this.set({
@@ -215,16 +230,40 @@ export class Updater {
     this.set({ phase: 'idle' });
   }
 
+  /**
+   * Asks the updater what is out there, and the API what it says.
+   *
+   * The version has to come from the updater: it is the thing that will do the
+   * downloading, and it will only download a release it has seen in the feed
+   * itself. The *prose* must not, and that was a bug shipped in 1.4.0 — the
+   * feed's notes are GitHub's rendered HTML, because the provider reads them
+   * out of `releases.atom` where the content is `type="html"`, so a panel that
+   * renders markdown showed the reader `<p>`, `<h3>` and a whole `<table>` as
+   * text. The renderer was right to: it never emits markup, which is the one
+   * rule about text that arrives from a server.
+   *
+   * So the notes come from the same REST call the other delivery makes, where
+   * `body` is the markdown somebody actually wrote. One shape on both paths,
+   * and one place to be wrong about it.
+   *
+   * Only when the two agree on the version. The feed and "the latest release"
+   * are different questions and can answer differently for a moment; showing
+   * one release's notes above another release's number is worse than showing
+   * no notes at all.
+   */
   private async askUpdater(): Promise<UpdateRelease | undefined> {
     const updater = await this.updater();
     const result = await withTimeout(updater.checkForUpdates(), CHECK_TIMEOUT_MS);
     if (!result) return undefined;
 
     const { updateInfo } = result;
+    const published = await this.askGitHub().catch(() => undefined);
+    const same = published?.version === updateInfo.version;
+
     return {
       version: updateInfo.version,
-      notes: releaseNotes(updateInfo.releaseNotes),
-      url: releasePageUrl(REPOSITORY, updateInfo.version),
+      notes: same ? published!.notes : '',
+      url: same ? published!.url : releasePageUrl(REPOSITORY, updateInfo.version),
       ...(updateInfo.releaseDate ? { publishedAt: updateInfo.releaseDate } : {}),
     };
   }
@@ -277,25 +316,6 @@ function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
     timer.unref?.();
     work.then(resolve, reject).finally(() => clearTimeout(timer));
   });
-}
-
-/**
- * The notes, whichever shape the feed carried them in.
- *
- * A GitHub release hands back its body as one string; a feed that has
- * accumulated several versions since this one hands back a list of them, and
- * the reader is entitled to all of it — they are skipping more than one
- * release, which is exactly when the notes matter most.
- */
-function releaseNotes(notes: UpdateInfo['releaseNotes']): string {
-  if (typeof notes === 'string') return notes.trim();
-  if (!Array.isArray(notes)) return '';
-
-  return notes
-    .map((entry) => (entry.note ? `## ${entry.version}\n\n${entry.note.trim()}` : ''))
-    .filter(Boolean)
-    .join('\n\n')
-    .trim();
 }
 
 function messageOf(caught: unknown): string {

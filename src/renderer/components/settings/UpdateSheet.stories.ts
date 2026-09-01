@@ -21,11 +21,25 @@ const RELEASE = {
   version: '1.4.0',
   url: 'https://github.com/LBYPatrick/shelf/releases/tag/v1.4.0',
   publishedAt: '2026-09-01T09:00:00Z',
+  /*
+   * Deliberately the shape a real release body takes, table included.
+   *
+   * 1.4.0's own notes carried one, and the panel was showing it as `<table>`
+   * `<thead>` `<tr>` in plain text — the feed's notes are GitHub's rendered
+   * HTML, and the panel renders markdown. Nothing here would have caught it,
+   * because the fixture was four bullets. It has a table now so the widest
+   * thing release notes actually contain is on screen in a 34rem popup.
+   */
   notes: [
     '### Added',
     '',
     '- The structure view now draws foreign keys between schemas.',
     '- `EXPLAIN` output can be opened as a diagram.',
+    '',
+    '| Install | What happens |',
+    '| --- | --- |',
+    '| macOS, the Windows installer, the Linux AppImage | Downloaded and installed |',
+    '| `.deb`, `.rpm`, the portable build | The release page opens |',
     '',
     '### Fixed',
     '',
