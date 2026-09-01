@@ -557,9 +557,14 @@ test.describe('layout', () => {
     const measure = async (label: string, open: () => Promise<void>) => {
       await open();
       await expect(dialog).toBeVisible();
-      // Past the enter transition and the resize that follows the first
-      // measurement; a box read mid-flight is neither size.
-      await sample.waitForTimeout(700);
+      /*
+       * Past the enter transition and the resize that follows the first
+       * measurement; a box read mid-flight is neither size. Waited out rather
+       * than slept through — see `settledSheet`. A fixed 700ms here is what
+       * reported the database popup as 251px shorter than its content on a
+       * runner, where it was simply still growing.
+       */
+      const fit = await settledSheet(sample, dialog);
 
       const box = (await dialog.boundingBox())!;
       heights[label] = Math.round(box.height);
@@ -572,11 +577,7 @@ test.describe('layout', () => {
        * to spare — which is how both halves of the measurement went wrong, and
        * neither showed up as a height that was obviously silly.
        */
-      const short = await sample.evaluate(() => {
-        const body = document.querySelector('.panel__body')!;
-        return body.scrollHeight - body.clientHeight;
-      });
-      expect(short, `${label} is shorter than its content`).toBeLessThanOrEqual(0);
+      expect(fit.overflow, `${label} is shorter than its content`).toBeLessThanOrEqual(0);
       expect(
         Math.abs(box.y + box.height / 2 - viewport / 2),
         `${label} is not centred`
@@ -1598,25 +1599,66 @@ test.describe('controls', () => {
     await expect(tip).toHaveCount(0);
 
     /*
-     * The two waits, compared to each other rather than to a stopwatch.
+     * The two waits, timed inside the page and compared to each other.
      *
-     * This used to assert the second one took under 250ms, which is a fact
-     * about the machine as much as about the code: on a CI runner sharing
-     * three cores with another Electron app it measured 435ms and failed, on
-     * an app whose behaviour was correct. What the rule actually says is that
-     * the second label does not wait *again* — a comparison, and one that
-     * holds however slow the box is.
+     * This has been narrowed twice. It began as "the second one is under
+     * 250ms", which is a fact about the machine as much as about the code — a
+     * runner sharing three cores with another Electron app measured 435ms on
+     * behaviour that was correct. Comparing the two to each other fixed that
+     * and broke differently: both were measured with `Date.now()` around
+     * Playwright calls, so both carried the round trip and the assertion's own
+     * polling interval. On a badly starved runner that overhead swamped the
+     * delay being measured — 976ms then 1031ms — and a ratio between two
+     * numbers that are mostly overhead says nothing about either.
+     *
+     * So the clock is in the page, between the `pointerover` the app acts on
+     * and the mutation that puts a word on screen. That is the latency the rule
+     * is about, and nothing outside the renderer is in it.
      */
-    const firstAt = Date.now();
-    await sample.locator('.rail__item').nth(1).hover();
-    await expect(tip).toBeVisible({ timeout: 3000 });
-    await expect(tip).not.toBeEmpty();
-    const first = Date.now() - firstAt;
+    await sample.evaluate(() => {
+      const marks = { hoverAt: 0, shownAt: 0 };
+      (window as unknown as { __tip: typeof marks }).__tip = marks;
 
-    const secondAt = Date.now();
+      addEventListener(
+        'pointerover',
+        (event) => {
+          if ((event.target as Element | null)?.closest('.rail__item')) {
+            marks.hoverAt = performance.now();
+            marks.shownAt = 0;
+          }
+        },
+        true
+      );
+
+      new MutationObserver(() => {
+        if (marks.shownAt) return;
+        const bubble = document.querySelector('.hovertip');
+        if (bubble?.textContent?.trim()) marks.shownAt = performance.now();
+      }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    });
+
+    const latency = async (): Promise<number> => {
+      await expect
+        .poll(
+          () =>
+            sample.evaluate(
+              () => (window as unknown as { __tip: { shownAt: number } }).__tip.shownAt
+            ),
+          { timeout: 15_000 }
+        )
+        .toBeGreaterThan(0);
+      return sample.evaluate(() => {
+        const t = (window as unknown as { __tip: { hoverAt: number; shownAt: number } }).__tip;
+        return Math.round(t.shownAt - t.hoverAt);
+      });
+    };
+
+    await sample.locator('.rail__item').nth(1).hover();
+    const first = await latency();
+    await expect(tip).not.toBeEmpty();
+
     await sample.locator('.rail__item').nth(2).hover();
-    await expect(tip).toContainText(/\w/, { timeout: 1500 });
-    const second = Date.now() - secondAt;
+    const second = await latency();
 
     expect(second, `the second label waited again (${first}ms then ${second}ms)`).toBeLessThan(
       first / 2

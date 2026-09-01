@@ -171,9 +171,16 @@ export async function settledSheet(page: Page, dialog: Locator): Promise<SheetFi
 
   let previous = await read();
 
-  // Eight seconds, sampled every 100ms. Long enough for a runner three times
-  // slower than the machine this was written on; it normally returns second.
-  for (let attempt = 0; attempt < 80; attempt += 1) {
+  /*
+   * Twenty seconds, sampled every 100ms, against a 90-second test timeout.
+   *
+   * Generous on purpose: this is called right after the sheet opens, and on a
+   * cold start — every run on a runner is a cold start — the app itself is
+   * still coming up, so a tighter budget is spent on startup rather than on the
+   * thing being waited for. It costs nothing when the machine is warm, because
+   * it returns on the second read.
+   */
+  for (let attempt = 0; attempt < 200; attempt += 1) {
     const now = await read();
     const midFlight = !now.scrolls && now.overflow > 0;
     if (!midFlight && now.height === previous.height) return now;
