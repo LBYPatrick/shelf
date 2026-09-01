@@ -391,6 +391,28 @@
     "row": "このアプリがこのマシンに保存しているもの",
     "open": "管理…"
   },
+  "update": {
+    "title": "ソフトウェアアップデート",
+    "section": "アップデート",
+    "sectionDesc": "新しいバージョンの入手元と、Shelf が更新を確認するタイミング。",
+    "startupRow": "起動時に確認する",
+    "checkRow": "今すぐ新しいバージョンを探す",
+    "checkNow": "アップデートを確認",
+    "checking": "新しいバージョンを探しています…",
+    "current": "Shelf は最新です。",
+    "available": "Shelf {{version}} が利用できます。",
+    "downloading": "Shelf {{version}} をダウンロードしています…",
+    "ready": "Shelf {{version}} をインストールできます。",
+    "failed": "確認を完了できませんでした。",
+    "installed": "現在のバージョンは {{version}} です。",
+    "notes": "変更点",
+    "download": "ダウンロード",
+    "restart": "今すぐ再起動",
+    "openPage": "リリースページを開く",
+    "transferred": "{{total}} 中 {{done}}",
+    "manualHint": "この Shelf はパッケージマネージャーなど別の方法でインストールされているため、新しいバージョンはリリースページから取得します。",
+    "readyHint": "再起動には少し時間がかかります。そのままにした場合は、次に終了したときに適用されます。"
+  },
   "palette": {
     "placeholder": "テーブル・タブ・操作を検索…",
     "label": "コマンドパレット",
@@ -528,7 +550,9 @@
     "nothing": "一致するものがありません。",
     "hintPath": "music.album のようなパス、または ^a.*t$ のようなパターン",
     "someOf": "{{total}} 件中 {{shown}} 件",
-    "tryPath": "別のパスの下に見つかりました:"
+    "tryPath": "別のパスの下に見つかりました:",
+    "startupUpdatesOn": "起動時にアップデートを確認する",
+    "startupUpdatesOff": "起動時にアップデートを確認しない"
   },
   "container": {
     "size": "サイズ",

@@ -7,10 +7,22 @@ import { closeAppDatabase, openAppDatabase } from './appdb/database';
 import { ConnectionHost } from './host';
 import { registerAppDbHandlers } from './ipc/appdb';
 import { registerDialogHandlers } from './ipc/dialogs';
+import { registerUpdateHandlers } from './ipc/updates';
 import { createSecretStore } from './secrets';
+import { Updater } from './updates';
 import { createMainWindow, setCompactMode } from './window';
 
 const connectionHost = new ConnectionHost();
+
+/*
+ * One updater for the app, not one per window.
+ *
+ * The thing being updated is the app itself, so a second window looking at a
+ * second copy of "is there a new version" would be two answers to a question
+ * that has one. Built here rather than inside `whenReady` for the same reason
+ * the host is: it holds no resources until something asks it to.
+ */
+const updater = new Updater();
 
 /** One session per window, so windows never share a connection or transaction. */
 const sessionIds = new WeakMap<BrowserWindow, string>();
@@ -151,6 +163,7 @@ app.whenReady().then(() => {
   registerHostHandlers();
   registerAppDbHandlers(db, connections, secrets, connectionHost, sessionIdFor);
   registerDialogHandlers();
+  registerUpdateHandlers(updater);
 
   connectionHost.start();
   createMainWindow();

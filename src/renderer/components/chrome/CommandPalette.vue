@@ -30,6 +30,7 @@ import { buildCommands, matchSlash, type Command } from '../../lib/commands';
 import { useConnections } from '../../stores/connections';
 import { useEntities } from '../../stores/entities';
 import { useSettings } from '../../stores/settings';
+import { useUpdates } from '../../stores/updates';
 import { useTabs } from '../../stores/tabs';
 import { useTheme } from '../../composables/useTheme';
 import AppIcon from '../ui/AppIcon.vue';
@@ -47,6 +48,7 @@ const emit = defineEmits<{
 const connections = useConnections();
 const entities = useEntities();
 const settings = useSettings();
+const updates = useUpdates();
 const tabs = useTabs();
 const theme = useTheme();
 const { t } = useTranslation();
@@ -121,6 +123,23 @@ const navigation = computed<Command[]>(() => [
     slash: '/shortcuts',
     keywords: 'keys keyboard bindings keymap accelerator',
     run: () => emit('openShortcuts'),
+  },
+  {
+    /*
+     * A check, not a place — so it runs rather than emitting.
+     *
+     * The other rows here hand a sheet to the view that owns it. Nothing owns
+     * this one: the update prompt is mounted beside the toasts, above both
+     * views, because what it has to say outlives which screen you are on. So
+     * the row calls the flow directly, exactly as the settings button does.
+     */
+    id: 'nav.updates',
+    section: 'navigation',
+    icon: 'download',
+    title: t('update.checkNow'),
+    slash: '/update',
+    keywords: 'version release upgrade newer build download',
+    run: () => void updates.check(),
   },
   {
     id: 'nav.storage',

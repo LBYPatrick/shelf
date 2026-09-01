@@ -391,6 +391,28 @@
     "row": "本应用在这台电脑上保存的内容",
     "open": "管理…"
   },
+  "update": {
+    "title": "软件更新",
+    "section": "更新",
+    "sectionDesc": "新版本从哪里来，以及 Shelf 何时去查找。",
+    "startupRow": "启动时检查",
+    "checkRow": "立即查找新版本",
+    "checkNow": "检查更新",
+    "checking": "正在查找新版本…",
+    "current": "Shelf 已是最新版本。",
+    "available": "Shelf {{version}} 已发布。",
+    "downloading": "正在下载 Shelf {{version}}…",
+    "ready": "Shelf {{version}} 已可安装。",
+    "failed": "检查未能完成。",
+    "installed": "当前版本为 {{version}}。",
+    "notes": "更新内容",
+    "download": "下载",
+    "restart": "立即重启",
+    "openPage": "打开发布页面",
+    "transferred": "{{done}} / {{total}}",
+    "manualHint": "这份 Shelf 是通过其他方式安装的——包管理器，或手动安装——所以新版本会从发布页面获取。",
+    "readyHint": "重启只需片刻。若不重启，更新会在下次退出时应用。"
+  },
   "palette": {
     "placeholder": "搜索表、标签页和操作…",
     "label": "命令面板",
@@ -528,7 +550,9 @@
     "nothing": "没有匹配项。",
     "hintPath": "可用 music.album 这样的路径，或 ^a.*t$ 这样的表达式",
     "someOf": "{{total}} 项中的 {{shown}} 项",
-    "tryPath": "在其他路径下找到:"
+    "tryPath": "在其他路径下找到:",
+    "startupUpdatesOn": "启动时检查更新",
+    "startupUpdatesOff": "启动时不检查更新"
   },
   "container": {
     "size": "大小",

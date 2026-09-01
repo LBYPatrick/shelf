@@ -13,6 +13,7 @@ import { useAssistant } from '../../stores/assistant';
 import { useTheme } from '../../composables/useTheme';
 import { usePlatform } from '../../composables/usePlatform';
 import { rowLimitOptions, useSettings } from '../../stores/settings';
+import { useUpdates } from '../../stores/updates';
 import { useToasts } from '../../stores/toasts';
 import { parseSettings, serializeSettings, type SettingsState } from '@shared/settingsFile';
 import { documentFileName } from '@shared/fileNames';
@@ -54,6 +55,15 @@ const assistant = useAssistant();
 const theme = useTheme();
 const settings = useSettings();
 const platform = usePlatform();
+/*
+ * The update flow is a store, not a sheet this pane holds.
+ *
+ * Its panel is mounted above both views, beside the toasts, because a check
+ * started here can finish after Settings has been closed — and because the
+ * palette starts the same check with no sheet of its own to hand it to. So this
+ * pane presses the button and nothing else.
+ */
+const updates = useUpdates();
 
 const toasts = useToasts();
 const { t } = useTranslation();
@@ -791,6 +801,51 @@ const languageOptions = computed(() => [
             >
               <AppIcon name="refresh" :size="13" />
               {{ confirmingReset ? $t('action.confirm') : $t('action.reset') }}
+            </PressButton>
+          </div>
+        </div>
+      </section>
+
+      <!--
+        Updates, next to the version they change.
+        ────────────────────────────────────────
+        Immediately above the About block rather than in with the data
+        preferences, because the fact this section acts on is the number printed
+        four lines below it. A control belongs beside what it governs.
+
+        The switch is a switch and the check is a button, which is the honest
+        split: one is a standing preference and the other happens once, now.
+      -->
+      <section class="panel-section">
+        <div class="panel-section__head">
+          <h3 class="type-title">
+            {{ $t('update.section') }}
+          </h3>
+          <p class="panel-section__desc">
+            {{ $t('update.sectionDesc') }}
+          </p>
+        </div>
+
+        <div class="rows">
+          <div class="row">
+            <span class="row__label">{{ $t('update.startupRow') }}</span>
+            <ToggleSwitch
+              v-model="settings.values.checkUpdatesOnStartup"
+              class="row__control"
+              :aria-label="$t('update.startupRow')"
+            />
+          </div>
+
+          <div class="row">
+            <span class="row__label">{{ $t('update.checkRow') }}</span>
+            <PressButton
+              class="row__control"
+              size="sm"
+              :disabled="updates.busy"
+              @click="updates.check()"
+            >
+              <AppIcon name="download" :size="13" />
+              {{ $t('update.checkNow') }}
             </PressButton>
           </div>
         </div>

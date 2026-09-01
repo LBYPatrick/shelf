@@ -3,6 +3,7 @@ import type { AiProvider, AiProviderInput } from '@shared/ai';
 import type { HistoryEntry, SavedChat, SavedQuery } from '@shared/appdb';
 import type { SavedConnection } from '@shared/connections';
 import type { StorageUsage } from '@shared/storage';
+import type { UpdateState } from '@shared/updates';
 import { FOLDERS, SAVED_CONNECTIONS } from '../fixtures/database';
 
 /** A machine that has been used: one huge category and several small ones. */
@@ -37,6 +38,29 @@ const USAGE: StorageUsage = {
  * here fails the type check rather than failing in a story nobody opened.
  */
 
+/** A build that has nothing to say about updates until a story says otherwise. */
+const UPDATE_IDLE: UpdateState = {
+  phase: 'idle',
+  current: '1.0.0',
+  delivery: 'in-app',
+};
+
+/**
+ * A release for the bridge to find, so the flow can actually be walked.
+ *
+ * The stories seed the *store* to photograph one state; this is what the
+ * *bridge* answers with when a button is pressed. Without it the mock replied
+ * with a state carrying no release at all, so pressing Download in the Available
+ * story threw away the notes the story had just put there — the panel appeared
+ * to discard its own content, which is a bug in the mock that looks exactly like
+ * a bug in the component.
+ */
+const UPDATE_RELEASE = {
+  version: '1.4.0',
+  url: 'https://github.com/LBYPatrick/shelf/releases/tag/v1.4.0',
+  notes: '### Fixed\n\n- A tab dragged one width no longer moves two places.',
+};
+
 /** What the mock remembers between calls, resettable per story. */
 interface Store {
   settings: Map<string, unknown>;
@@ -47,6 +71,7 @@ interface Store {
   chats: SavedChat[];
   keys: Map<string, string>;
   keyringAvailable: boolean;
+  update: UpdateState;
 }
 
 const fresh = (): Store => ({
@@ -103,6 +128,7 @@ const fresh = (): Store => ({
   chats: [],
   keys: new Map(),
   keyringAvailable: true,
+  update: UPDATE_IDLE,
 });
 
 let store = fresh();
@@ -308,6 +334,46 @@ export const mockShelf: ShelfApi = {
           categories.includes(category.id) ? { ...category, items: 0, bytes: 0 } : category
         ),
       }),
+  },
+
+  /*
+   * An app that is already current, and can install its own updates.
+   *
+   * The states worth looking at — a release waiting, a download halfway, a
+   * check that failed — are reached by the story rather than by this: they are
+   * the whole subject of `UpdateSheet.stories.ts`, and a bridge that arrived
+   * already offering an update would put a modal over every other story in the
+   * book.
+   */
+  updates: {
+    state: () => settle(store.update),
+    check: () => {
+      store.update = { ...UPDATE_IDLE, phase: 'available', release: UPDATE_RELEASE };
+      return settle(store.update);
+    },
+    download: () => {
+      /*
+       * Keeps the release it is downloading, which is the whole point: the
+       * panel's notes must not vanish because a button was pressed.
+       *
+       * A story that seeded the *store* to photograph one state has told the
+       * bridge nothing, so the bridge may not know about a release yet. It
+       * finds one now rather than answering with a version-shaped hole in the
+       * heading — main cannot reach `download` without an `available` state
+       * either, so this is the mock arriving at the same precondition.
+       */
+      if (!store.update.release) {
+        store.update = { ...UPDATE_IDLE, phase: 'available', release: UPDATE_RELEASE };
+      }
+      store.update = { ...store.update, phase: 'ready' };
+      return settle(store.update);
+    },
+    install: noop,
+    openPage: () => settle(undefined),
+    dismiss: () => {
+      store.update = UPDATE_IDLE;
+    },
+    onChanged: () => noop,
   },
 
   dialogs: {

@@ -391,6 +391,28 @@
     "row": "What this app keeps on this machine",
     "open": "Manage…"
   },
+  "update": {
+    "title": "Software update",
+    "section": "Updates",
+    "sectionDesc": "Where new versions come from, and when Shelf goes looking for one.",
+    "startupRow": "Check when Shelf starts",
+    "checkRow": "Look for a newer version now",
+    "checkNow": "Check for updates",
+    "checking": "Looking for a newer version…",
+    "current": "Shelf is up to date.",
+    "available": "Shelf {{version}} is available.",
+    "downloading": "Downloading Shelf {{version}}…",
+    "ready": "Shelf {{version}} is ready to install.",
+    "failed": "The check did not finish.",
+    "installed": "You have {{version}}.",
+    "notes": "What changed",
+    "download": "Download",
+    "restart": "Restart now",
+    "openPage": "Open the release page",
+    "transferred": "{{done}} of {{total}}",
+    "manualHint": "This copy of Shelf was installed by something else — a package manager, or by hand — so the new version is downloaded from its page.",
+    "readyHint": "Restarting takes a moment. Left alone, the update is applied the next time you quit."
+  },
   "palette": {
     "placeholder": "Search tables, tabs and actions…",
     "label": "Command palette",
@@ -528,7 +550,9 @@
     "nothing": "Nothing matches that.",
     "hintPath": "Try a path like music.album, or a pattern like ^a.*t$",
     "someOf": "{{shown}} of {{total}}",
-    "tryPath": "Found under a different path:"
+    "tryPath": "Found under a different path:",
+    "startupUpdatesOn": "Check for updates when Shelf starts",
+    "startupUpdatesOff": "Do not check for updates at startup"
   },
   "container": {
     "size": "Size",

@@ -391,6 +391,28 @@
     "row": "Những gì ứng dụng này giữ trên máy",
     "open": "Quản lý…"
   },
+  "update": {
+    "title": "Cập nhật phần mềm",
+    "section": "Cập nhật",
+    "sectionDesc": "Phiên bản mới đến từ đâu, và khi nào Shelf đi tìm nó.",
+    "startupRow": "Kiểm tra khi Shelf khởi động",
+    "checkRow": "Tìm phiên bản mới ngay",
+    "checkNow": "Kiểm tra cập nhật",
+    "checking": "Đang tìm phiên bản mới…",
+    "current": "Shelf đã là bản mới nhất.",
+    "available": "Đã có Shelf {{version}}.",
+    "downloading": "Đang tải Shelf {{version}}…",
+    "ready": "Shelf {{version}} đã sẵn sàng để cài đặt.",
+    "failed": "Việc kiểm tra chưa hoàn tất.",
+    "installed": "Bạn đang dùng {{version}}.",
+    "notes": "Có gì thay đổi",
+    "download": "Tải về",
+    "restart": "Khởi động lại ngay",
+    "openPage": "Mở trang phát hành",
+    "transferred": "{{done}} trên {{total}}",
+    "manualHint": "Bản Shelf này được cài bằng cách khác — qua trình quản lý gói, hoặc thủ công — nên phiên bản mới được tải từ trang phát hành.",
+    "readyHint": "Khởi động lại chỉ mất một lát. Nếu để nguyên, bản cập nhật sẽ được áp dụng khi bạn thoát lần sau."
+  },
   "palette": {
     "placeholder": "Tìm bảng, thẻ và thao tác…",
     "label": "Bảng lệnh",
@@ -528,7 +550,9 @@
     "nothing": "Không có kết quả nào.",
     "hintPath": "Thử đường dẫn như music.album, hoặc mẫu như ^a.*t$",
     "someOf": "{{shown}} trong {{total}}",
-    "tryPath": "Tìm thấy ở đường dẫn khác:"
+    "tryPath": "Tìm thấy ở đường dẫn khác:",
+    "startupUpdatesOn": "Kiểm tra cập nhật khi khởi động",
+    "startupUpdatesOff": "Không kiểm tra cập nhật khi khởi động"
   },
   "container": {
     "size": "Kích thước",

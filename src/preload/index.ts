@@ -9,6 +9,7 @@ import {
   type SaveQueryInput,
 } from '@shared/appdb';
 import type { AiProviderInput } from '@shared/ai';
+import { UPDATE_CHANNELS, type UpdateApi, type UpdateState } from '@shared/updates';
 import type { SaveConnectionInput } from '@shared/connections';
 import {
   DIALOG_CHANNELS,
@@ -111,6 +112,28 @@ const appDb: AppDbApi = {
     ipcRenderer.invoke(APPDB_CHANNELS.setSetting, key, value),
 };
 
+/**
+ * The update flow.
+ *
+ * `onChanged` is the important half: a check can be started by one window and
+ * finish while the reader is in another, and the download reports progress the
+ * whole way through — so this is a subscription rather than a poll, and every
+ * window sees the same flow reach the same state at the same moment.
+ */
+const updates: UpdateApi = {
+  state: () => ipcRenderer.invoke(UPDATE_CHANNELS.state),
+  check: () => ipcRenderer.invoke(UPDATE_CHANNELS.check),
+  download: () => ipcRenderer.invoke(UPDATE_CHANNELS.download),
+  install: () => ipcRenderer.send(UPDATE_CHANNELS.install),
+  openPage: () => ipcRenderer.invoke(UPDATE_CHANNELS.openPage),
+  dismiss: () => ipcRenderer.send(UPDATE_CHANNELS.dismiss),
+  onChanged: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, state: UpdateState) => listener(state);
+    ipcRenderer.on(UPDATE_CHANNELS.changed, handler);
+    return () => ipcRenderer.off(UPDATE_CHANNELS.changed, handler);
+  },
+};
+
 const dialogs: DialogApi = {
   openFile: (options) => ipcRenderer.invoke(DIALOG_CHANNELS.openFile, options),
   saveFile: (options) => ipcRenderer.invoke(DIALOG_CHANNELS.saveFile, options),
@@ -125,6 +148,7 @@ const shelf = {
   window: windowApi,
   host: hostBridge,
   db: appDb,
+  updates,
   dialogs,
   platformInfo: () => ipcRenderer.invoke(WINDOW_CHANNELS.platformInfo) as Promise<PlatformInfo>,
 };

@@ -239,6 +239,16 @@ export function buildCommands({ theme, settings, navigation }: CommandContext): 
       set: (value) => write('wrapLines', value),
     }),
 
+    ...booleanCommands({
+      base: 'update-check',
+      setting: 'checkUpdatesOnStartup',
+      icon: 'download',
+      onTitle: t('commands.startupUpdatesOn'),
+      offTitle: t('commands.startupUpdatesOff'),
+      keywords: 'update version release launch startup automatic',
+      set: (value) => write('checkUpdatesOnStartup', value),
+    }),
+
     /*
      * One command per scheme, and it sets both halves.
      *

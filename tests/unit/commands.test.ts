@@ -69,6 +69,7 @@ describe('settings parity', () => {
       'primaryRun',
       'wrapLines',
       'maxRows',
+      'checkUpdatesOnStartup',
     ]);
 
     const unaccounted = all.filter((key) => !exempt.has(key) && !covered.has(key));

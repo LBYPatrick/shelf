@@ -758,6 +758,108 @@ test.describe('layout', () => {
     await sample.keyboard.press('Escape');
   });
 
+  test('a popup opened from a popup is drawn over it', async ({ sample }) => {
+    /*
+     * Every sheet sits on one layer, so which of two open ones is in front is
+     * decided by which is later in the document — and that is decided by which
+     * *view* mounted last. The update panel is the app's rather than a view's:
+     * it is mounted above both screens, so its place in the document is fixed
+     * before the workspace exists, and the workspace's sheets are appended
+     * after it.
+     *
+     * The result was a panel that behaved differently depending on where you
+     * were. Opened from Settings on the start screen it was in front; opened
+     * from Settings once a database was connected it was *behind* — a modal
+     * with its own scrim, dimming a sheet that was drawn on top of it, with
+     * nothing to click.
+     *
+     * Asserted with `elementFromPoint` rather than by reading `z-index`,
+     * because the stacking is what shipped wrong and the property was already
+     * equal on both.
+     */
+    await sample.getByRole('button', { name: 'Settings', exact: true }).click();
+    await expect(sample.getByRole('dialog', { name: 'Settings' })).toBeVisible();
+
+    await sample.getByRole('button', { name: 'Check for updates' }).click();
+    const update = sample.getByRole('dialog', { name: 'Software update' });
+    await expect(update).toBeVisible();
+    await settledSheet(sample, update);
+
+    const inFront = await sample.evaluate(() => {
+      const panel = [...document.querySelectorAll('[role=dialog]')].find((dialog) => {
+        const id = dialog.getAttribute('aria-labelledby');
+        return id && document.getElementById(id)?.textContent?.trim() === 'Software update';
+      });
+      if (!panel) return 'the update panel is not open';
+
+      // The middle of the panel, which is where its own content is.
+      const box = panel.getBoundingClientRect();
+      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      return hit && panel.contains(hit) ? 'update' : 'something else';
+    });
+
+    expect(inFront, 'a sheet opened from another sheet is behind it').toBe('update');
+
+    await sample.keyboard.press('Escape');
+    await expect(update).toBeHidden();
+    await sample.keyboard.press('Escape');
+  });
+
+  test('the update panel does not resize while it is checking', async ({ sample }) => {
+    /*
+     * Pressing Check for updates swapped a 28px button for a 2px progress bar
+     * and showed a line of text that had been hidden, so the panel measured
+     * 187px, then 181px while the request was out, then 187px again — a shrink
+     * and a grow, animated over a quarter of a second, every single press. The
+     * same thing happened on the way through a download: 445, 419, 475.
+     *
+     * The fix is that the button and the bar share one box that is as tall as
+     * the button whichever is standing in it, and that the version line no
+     * longer comes and goes.
+     *
+     * Asserted structurally rather than by watching a check happen, because
+     * under `SHELF_E2E` the check never reaches the network and so never
+     * renders its in-flight state — there is nothing to film. What can be
+     * checked is that the box is still reserved: delete the `min-height` and
+     * the panel starts moving again.
+     */
+    await sample.getByRole('button', { name: 'Settings', exact: true }).click();
+    await expect(sample.getByRole('dialog', { name: 'Settings' })).toBeVisible();
+
+    await sample.getByRole('button', { name: 'Check for updates' }).click();
+    const panel = sample.getByRole('dialog', { name: 'Software update' });
+    await expect(panel).toBeVisible();
+    await settledSheet(sample, panel);
+
+    const reserved = await sample.evaluate(() => {
+      const slot = document.querySelector('.slot');
+      const button = slot?.querySelector('button');
+      if (!slot || !button) return null;
+      return {
+        // Reported verbatim: an unreserved slot computes to `auto`, and
+        // `parseFloat('auto')` is NaN, which fails the comparison below with a
+        // number nobody can interpret.
+        minHeight: getComputedStyle(slot).minHeight,
+        floor: parseFloat(getComputedStyle(slot).minHeight) || 0,
+        button: Math.round(button.getBoundingClientRect().height),
+      };
+    });
+
+    expect(reserved, 'the update panel has no reserved slot').not.toBeNull();
+    expect(
+      reserved!.minHeight,
+      'the slot reserves no height, so the bar that replaces the button will be shorter than it'
+    ).not.toBe('auto');
+    expect(
+      reserved!.floor,
+      'the slot is shorter than the button in it, so swapping it for the bar moves the panel'
+    ).toBeGreaterThanOrEqual(reserved!.button);
+
+    await sample.keyboard.press('Escape');
+    await expect(panel).toBeHidden();
+    await sample.keyboard.press('Escape');
+  });
+
   test('a popup that loses content gets shorter, and travels there', async ({ sample }) => {
     /*
      * `scrollHeight` is never smaller than the box it is read from, so a panel

@@ -41,7 +41,26 @@ Download the latest build from [Releases](../../releases/latest).
 | Windows | `Shelf Setup *.exe`, or the portable `.exe` | x64 |
 | Linux | `.deb`, `.rpm` or `.AppImage` | x64; the packages install a desktop entry, the AppImage runs as it is |
 
-Nothing asks for an account, and nothing phones home.
+Nothing asks for an account.
+
+### Updates
+
+Shelf checks GitHub for a newer release a few seconds after it starts, and says
+nothing unless there is one. That check is the only request the app makes on its
+own, it sends nothing about you, and it is a switch in **Settings → Updates**
+that you can turn off. **Check for updates** in the same section — and `/update`
+in the command palette — asks on demand.
+
+When there is a new version, a panel says which one it is and what changed. What
+the button then does depends on how this copy was installed:
+
+| Install | What happens |
+| --- | --- |
+| macOS, the Windows installer, the Linux AppImage | Shelf downloads the update, installs it and restarts into it |
+| `.deb`, `.rpm`, the Windows portable build, a build from source | Shelf opens the release page; the update is yours to apply |
+
+A `.deb` or `.rpm` belongs to the package manager that installed it, so Shelf
+does not write over its own files behind `apt`'s back.
 
 Opening the app gives you a start screen, not an empty workspace: paste a
 connection URL and it fills in the form, or open the **sample database** — a

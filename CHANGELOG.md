@@ -6,6 +6,22 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Shelf tells you when there is a new version, and can install it itself.** A
+  few seconds after launch it asks GitHub whether a newer release exists, and
+  says nothing unless one does; **Settings → Updates** holds the switch that
+  turns that off and a button that asks on demand, and `/update` in the palette
+  does the same. The panel names the version, shows what changed, and ends in
+  one button — which is where the platforms differ. On macOS, the Windows
+  installer and the Linux AppImage it downloads the update, installs it and
+  restarts into it. On a `.deb`, an `.rpm`, the Windows portable build or a
+  build from source it opens the release page instead, and says why: a package
+  belongs to the package manager that installed it, and an app that wrote over
+  its own files behind `apt`'s back would be a worse citizen than one that
+  points at the download. Which of the two this copy is, is decided once and
+  declared — nobody is offered a Restart that was never going to work.
+
 ## [1.3.1] - 2026-09-01
 
 ### Fixed

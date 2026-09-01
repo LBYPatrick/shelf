@@ -32,6 +32,16 @@ export interface Settings {
   wrapLines: boolean;
   /** `system` follows the OS; anything else is an explicit choice. */
   language: LanguagePreference;
+  /**
+   * Whether to look for a newer build a moment after launch.
+   *
+   * On by default, because the alternative is an app that stays on the version
+   * it was installed at until somebody thinks to go looking — and the check is
+   * one request that says nothing at all unless there is something to say. It
+   * is a switch rather than a fact because the request leaves the machine, and
+   * that is always somebody's decision to make.
+   */
+  checkUpdatesOnStartup: boolean;
 }
 
 /**
@@ -101,6 +111,7 @@ const DEFAULTS: Settings = {
   editorFontSize: 13,
   wrapLines: true,
   language: 'system',
+  checkUpdatesOnStartup: true,
 };
 
 export const useSettings = defineStore('settings', () => {
