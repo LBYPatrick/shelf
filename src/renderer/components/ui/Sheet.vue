@@ -19,6 +19,34 @@ const props = defineProps<{
   subtitle?: string;
   /** A glyph before the name, for a sheet that is a place rather than a task. */
   icon?: string;
+  /**
+   * Keeps the name out of the chrome without taking it away.
+   *
+   * For a sheet whose content *is* its title — an announcement with one
+   * sentence in it, set large and centred, where a heading in the corner
+   * repeating the same idea is the second of two containers for one thing. The
+   * title is still rendered and still the dialog's accessible name; it is only
+   * not drawn, so nothing using a screen reader loses anything.
+   *
+   * Deliberately not "pass no title": a dialog with no accessible name is one
+   * that announces itself as "dialog".
+   */
+  bareTitle?: boolean;
+  /**
+   * Draws over the other sheets rather than beside them.
+   *
+   * Every sheet sits on the same layer, so which of two open ones is in front
+   * is decided by which is later in the document — and that is decided by which
+   * *view* mounted last. A sheet the app owns, mounted above both views, is
+   * therefore in front of the start screen's sheets and behind the workspace's:
+   * the update panel opened from Settings was drawn underneath Settings, but
+   * only once a database had been opened.
+   *
+   * So a sheet that can be opened over another one says so, rather than
+   * inheriting an answer from mount order. Still below the command palette,
+   * which is summoned deliberately and outranks everything.
+   */
+  overSheets?: boolean;
   wide?: boolean;
   /** Wider still, for a sheet holding a drawing rather than a form. */
   broad?: boolean;
@@ -393,7 +421,13 @@ void props;
 <template>
   <Teleport to="body">
     <Transition name="sheet">
-      <div v-if="open" class="scrim" @keydown="onKeydown" @click.self="open = false">
+      <div
+        v-if="open"
+        class="scrim"
+        :class="{ 'scrim--over': overSheets }"
+        @keydown="onKeydown"
+        @click.self="open = false"
+      >
         <div
           ref="panel"
           class="panel surface-sheet mat-edge-top"
@@ -414,7 +448,7 @@ void props;
               context — you read inward, and a title followed by something
               broader reads as an afterthought.
             -->
-            <div class="panel__titles">
+            <div class="panel__titles" :class="{ 'sr-only': bareTitle }">
               <p v-if="subtitle" class="panel__eyebrow">
                 {{ subtitle }}
               </p>
@@ -495,6 +529,16 @@ void props;
    */
   place-items: center;
   padding-block: 4vh;
+}
+
+/*
+ * One step over the other sheets, and one step under the command palette at
+ * 120 — see the note on `overSheets`. A whole layer apart would put it over the
+ * menus at 200 and the hover tips at 300 as well, which it has no business
+ * being.
+ */
+.scrim--over {
+  z-index: 110;
 }
 
 .panel {
