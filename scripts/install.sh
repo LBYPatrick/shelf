@@ -44,24 +44,64 @@ step "Verifying Electron"
 #
 # `--version` is the cheap way to ask, because it loads the framework rather
 # than just looking for the file: a second, against twenty minutes of tests.
-electron_works() { pnpm exec electron --version >/dev/null 2>&1; }
+#
+# The error is kept rather than thrown away. It used to go to /dev/null and the
+# advice was "run it yourself to see what it says", which is no advice at all on
+# a machine nobody is sitting at — a CI runner cannot run it yourself.
+electron_says=""
+electron_works() { electron_says="$(pnpm exec electron --version 2>&1)"; }
+
+# Where the downloaded archive is cached, per platform.
+#
+# This was `$HOME/Library/Caches/electron` unconditionally, which is macOS's
+# path — so on Linux and Windows the "clean download" below deleted nothing and
+# re-extracted the same archive. That made the retry a no-op there, and with it
+# the conclusion drawn from a second failure.
+electron_cache() {
+    if [[ -n "${ELECTRON_CACHE:-}" ]]; then echo "$ELECTRON_CACHE"; return; fi
+    case "$(uname -s)" in
+        Darwin) echo "$HOME/Library/Caches/electron" ;;
+        MINGW* | MSYS* | CYGWIN*) echo "${LOCALAPPDATA:-$HOME/AppData/Local}/electron/Cache" ;;
+        *) echo "${XDG_CACHE_HOME:-$HOME/.cache}/electron" ;;
+    esac
+}
 
 if electron_works; then
-    done_ "electron $(pnpm exec electron --version 2>/dev/null)"
+    done_ "electron $electron_says"
 else
     echo "  Electron will not start. Its framework is usually a truncated download,"
     echo "  so the download is what gets thrown away rather than the install."
+    echo ""
+    echo "$electron_says" | sed 's/^/    /'
     rm -rf node_modules/electron/dist
-    rm -rf "${ELECTRON_CACHE:-$HOME/Library/Caches/electron}"
+    rm -rf "$(electron_cache)"
     pnpm rebuild electron >/dev/null 2>&1 || true
 
     if electron_works; then
-        done_ "electron $(pnpm exec electron --version 2>/dev/null) (after re-downloading it)"
+        done_ "electron $electron_says (after re-downloading it)"
     else
+        # A clean download that still will not start is not a download problem.
+        #
+        # That is the whole of the distinction, and it needs no message-parsing
+        # to draw: this check exists to catch a *truncated* framework, and it
+        # has just replaced the framework. What is left is a fact about the
+        # machine — on Linux, almost always the shared libraries Electron links
+        # against, which a bare CI image does not carry.
+        #
+        # So it says so and gets out of the way. Failing here stopped a release
+        # on the Linux packaging runner, which never launches Electron at all:
+        # it unpacks one and repackages it. A check that cannot tell "this build
+        # is broken" from "this machine has no GUI libraries" must not be the
+        # thing that decides whether an install succeeded.
         echo ""
-        echo "  Electron still will not start after a clean download."
-        echo "  Run 'pnpm exec electron --version' to see what it says."
-        exit 1
+        echo "  A clean download will not start either, so this is the machine"
+        echo "  rather than the download — usually libraries Electron links"
+        echo "  against. Packaging does not need them; running the app does."
+        echo ""
+        echo "$electron_says" | sed 's/^/    /'
+        echo ""
+        echo "  Continuing. 'make dev' and the tests will not work until this is"
+        echo "  fixed; 'make package' will."
     fi
 fi
 
