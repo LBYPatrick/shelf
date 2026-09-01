@@ -6,6 +6,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-01
+
 ### Added
 
 - **Shelf tells you when there is a new version, and can install it itself.** A
@@ -21,6 +23,22 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   its own files behind `apt`'s back would be a worse citizen than one that
   points at the download. Which of the two this copy is, is decided once and
   declared — nobody is offered a Restart that was never going to work.
+
+### Fixed
+
+- **A popup no longer clips the last of what it is holding.** A sheet is the
+  size of its content, and some of that content arrives late — so the
+  measurement has to run again, and the two things that used to tell it to were
+  both unreliable. One is a browser observer that drops a notification rather
+  than recursing; the other fired at the end of the height animation, which
+  means it never fired at all for anybody who has asked for less motion. A
+  sheet that measured short stayed short, showing neither the rest of its
+  content nor a scrollbar to reach it with. It now asks the layout whether it
+  is showing less than it holds, and keeps measuring until it is not.
+- **And no longer stops two pixels short of it.** The same measurement compares
+  a fractional height against a rounded one, so on a machine whose fonts round
+  the other way a popup settled just under its content: a clipped last line, no
+  scrollbar, and small enough to look like nothing.
 
 ## [1.3.1] - 2026-09-01
 
