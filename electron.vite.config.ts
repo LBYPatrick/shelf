@@ -16,12 +16,28 @@ const r = (...p: string[]) => resolve(__dirname, ...p);
  */
 const version = JSON.stringify(readFileSync(r('VERSION'), 'utf8').trim());
 
+/**
+ * The repository releases come from, as `owner/repo`.
+ *
+ * From `package.json`'s `repository` field, which is the same line
+ * electron-builder resolves its GitHub publish target from — so the feed the
+ * updater reads and the page it offers cannot drift apart. A manifest without a
+ * usable one fails the build rather than shipping an app that checks a
+ * repository that does not exist.
+ */
+const manifest = JSON.parse(readFileSync(r('package.json'), 'utf8')) as {
+  repository?: { url?: string };
+};
+const slug = /github\.com[/:]([^/]+\/[^/.]+)/.exec(manifest.repository?.url ?? '')?.[1];
+if (!slug) throw new Error('package.json needs a GitHub "repository" url for updates.');
+const repository = JSON.stringify(slug);
+
 export default defineConfig({
   // Main process and the connection host are built together: both are Node-side
   // bundles that must keep native modules external so they resolve at runtime.
   main: {
     plugins: [externalizeDepsPlugin()],
-    define: { __APP_VERSION__: version },
+    define: { __APP_VERSION__: version, __APP_REPOSITORY__: repository },
     resolve: {
       alias: {
         '@shared': r('src/shared'),

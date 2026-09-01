@@ -320,5 +320,26 @@ module.exports = {
     }
   },
 
-  publish: null,
+  /*
+   * Where the app looks for a newer build.
+   *
+   * This is what makes the updater possible at all, and it does two things at
+   * once. It writes `app-update.yml` into the packaged app — the file
+   * `electron-updater` reads to know which repository to ask — and it produces
+   * the `latest*.yml` beside each installer, which is the feed itself: the
+   * version, the file to fetch and the hash to check it against. With
+   * `publish: null` neither existed, so an app built from this config could
+   * only ever report that it had no idea whether it was current.
+   *
+   * Owner and repository are not named here. electron-builder resolves them
+   * from `package.json`'s `repository` field, which is the same line the
+   * renderer's compiled-in slug is parsed from — one place for a fact that has
+   * to be true in three.
+   *
+   * It does not mean anything is *uploaded*: `scripts/package.sh` passes
+   * `--publish never`, and the release workflow attaches the files itself. A
+   * packager that could push to a release page as a side effect of building is
+   * a packager that does it from somebody's laptop by accident.
+   */
+  publish: { provider: 'github' },
 };

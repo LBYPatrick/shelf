@@ -112,7 +112,12 @@ if [[ -n "${ARCH:-}" ]]; then
 fi
 
 echo "==> Packaging for: ${wanted[*]}${ARCH:+ ($ARCH)}"
-pnpm exec electron-builder --config "$CONFIG" "${flags[@]}" ${arch_flags[@]+"${arch_flags[@]}"}
+# `--publish never`, always. The config names a GitHub provider so that the
+# update feed and `app-update.yml` are generated; electron-builder would
+# otherwise take a tagged CI build with a token in the environment as
+# permission to upload, and what goes on a release page is the release
+# workflow's decision, not a side effect of packaging.
+pnpm exec electron-builder --config "$CONFIG" --publish never "${flags[@]}" ${arch_flags[@]+"${arch_flags[@]}"}
 
 # What the packager produced, checked rather than assumed.
 #
@@ -133,6 +138,16 @@ while IFS= read -r app; do
     fail=1
   fi
 done < <(find "$OUT" -maxdepth 2 -name '*.app' -o -maxdepth 2 -name 'linux-*' -type d 2>/dev/null)
+
+# The update feed. Without `latest*.yml` beside the installers, every copy of
+# the app checks for updates, gets a 404 from its own release page, and reports
+# that it could not check — which is indistinguishable from being offline. It is
+# produced by the `publish` block in the builder config, so its absence means
+# that block has been removed or has stopped resolving the repository.
+if ! find "$OUT" -maxdepth 1 -name 'latest*.yml' | grep -q .; then
+  echo "  MISSING: no latest*.yml in $OUT — the app could not check for updates" >&2
+  fail=1
+fi
 
 # And the signature. Unsigned, a downloaded .app is refused as "damaged".
 if [[ "$(uname -s)" == Darwin ]]; then

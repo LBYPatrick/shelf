@@ -140,16 +140,25 @@ jobs:
       - name: Package
         run: bash scripts/package.sh ${{ matrix.platform }}
 
-      # What a person downloads, and nothing else. The output directory also
-      # holds the unpacked app, the builder's own debug log, and a .blockmap per
-      # archive — a differential-update index for an updater this app does not
-      # run.
+      # What a person downloads, and what the app downloads.
+      #
+      # The `latest*.yml` are the update feed: the running app fetches its own
+      # platform's file, compares the version, and takes the file name and hash
+      # from it. A release page without them is one every installed copy reads
+      # as "could not check". The `.blockmap` beside each archive is what lets
+      # an update fetch only the parts that changed — a few megabytes instead of
+      # a hundred — and its absence is a slower update rather than a broken one,
+      # which is exactly why it would be forgotten.
+      #
+      # Everything else in the output directory stays there: the unpacked app
+      # and the builder's own debug log.
       - name: Collect the distributables
         run: |
           mkdir -p dist
           find "release/${{ needs.version.outputs.version }}" -maxdepth 1 -type f \
             \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' \
-               -o -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \) \
+               -o -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \
+               -o -name '*.blockmap' -o -name 'latest*.yml' \) \
             -exec cp {} dist/ \;
           ls -l dist
 
