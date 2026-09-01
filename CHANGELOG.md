@@ -6,6 +6,19 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-09-01
+
+### Fixed
+
+- **The macOS download is signed and notarised.** 1.3.0's was not — the signing
+  credentials were not in place when it was built, so macOS refused it as
+  "damaged". The app itself is unchanged from 1.3.0; this release exists to ship
+  a package you can open.
+- **The build gate is green again.** One UI check measured a popup by the clock
+  rather than waiting for it to finish sizing, so it passed on a laptop and
+  failed on CI — which had left `main` red since 1.2.0 without anything being
+  wrong with the app.
+
 ## [1.3.0] - 2026-08-31
 
 ### Added
