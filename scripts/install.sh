@@ -28,5 +28,42 @@ else
     exit 1
 fi
 
+step "Verifying Electron"
+# Every UI and end-to-end test launches Electron, and nothing until now checked
+# that it *can* launch.
+#
+# Its framework is a 200MB download the package extracts, and a truncated one
+# extracts without complaint. The first launch then fails with
+#
+#   dyld: Library not loaded: @rpath/Electron Framework.framework/Electron Framework
+#   Reason: segment '__TEXT' load command content extends beyond end of file
+#
+# which Playwright reports as "Process failed to launch!" on every test that
+# opens a window — through both retries, because a corrupt file does not heal by
+# being opened again. It cost a red gate on `main` that read as flakiness.
+#
+# `--version` is the cheap way to ask, because it loads the framework rather
+# than just looking for the file: a second, against twenty minutes of tests.
+electron_works() { pnpm exec electron --version >/dev/null 2>&1; }
+
+if electron_works; then
+    done_ "electron $(pnpm exec electron --version 2>/dev/null)"
+else
+    echo "  Electron will not start. Its framework is usually a truncated download,"
+    echo "  so the download is what gets thrown away rather than the install."
+    rm -rf node_modules/electron/dist
+    rm -rf "${ELECTRON_CACHE:-$HOME/Library/Caches/electron}"
+    pnpm rebuild electron >/dev/null 2>&1 || true
+
+    if electron_works; then
+        done_ "electron $(pnpm exec electron --version 2>/dev/null) (after re-downloading it)"
+    else
+        echo ""
+        echo "  Electron still will not start after a clean download."
+        echo "  Run 'pnpm exec electron --version' to see what it says."
+        exit 1
+    fi
+fi
+
 echo ""
 done_ "Shelf is ready. Run 'make dev' to start."
