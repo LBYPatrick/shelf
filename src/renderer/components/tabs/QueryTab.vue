@@ -18,7 +18,7 @@ import { RpcCancelled } from '@shared/rpc';
 import { exportName as buildExportName } from '@shared/fileNames';
 import { host } from '../../lib/host';
 import { useConnections } from '../../stores/connections';
-import { useEntities } from '../../stores/entities';
+import { entityKey, useEntities } from '../../stores/entities';
 import { useQueries } from '../../stores/queries';
 import { rowLimitOptions, useSettings } from '../../stores/settings';
 import { useActivity } from '../../stores/activity';
@@ -29,7 +29,7 @@ import { shortcutLabel } from '../../lib/keybindings';
 import DataGrid from '../grid/DataGrid.vue';
 import ExportSheet from '../grid/ExportSheet.vue';
 import RowIndexToggle from '../grid/RowIndexToggle.vue';
-import SqlEditor, { type SchemaMap } from '../editor/SqlEditor.vue';
+import SqlEditor, { type EditorSchema } from '../editor/SqlEditor.vue';
 import PressButton from '../ui/PressButton.vue';
 import ProgressBar from '../ui/ProgressBar.vue';
 import ResizeHandle from '../ui/ResizeHandle.vue';
@@ -168,17 +168,22 @@ const selectedResultValue = computed({
   },
 });
 
-/** Completions come from the schema the sidebar already loaded. */
-const schema = computed<SchemaMap>(() => {
-  const namespace: Record<string, string[]> = {};
-  for (const entity of entities.entities) {
-    const columns = entities.columns.get(
-      entity.schema ? `${entity.schema}.${entity.name}` : entity.name
-    );
-    namespace[entity.name] = (columns ?? []).map((column) => column.name);
-  }
-  return namespace;
-});
+/**
+ * Completions come from the schema the sidebar already loaded.
+ *
+ * Namespaces included, and each table keeps the one it is in. Flattening them
+ * to bare names lost both halves of a qualified engine: `public` was not a word
+ * the editor had heard of, and two tables of the same name in two schemas
+ * collapsed into whichever one was read last.
+ */
+const schema = computed<EditorSchema>(() => ({
+  schemas: entities.schemas,
+  tables: entities.entities.map((entity) => ({
+    name: entity.name,
+    ...(entity.schema ? { schema: entity.schema } : {}),
+    columns: (entities.columns.get(entityKey(entity)) ?? []).map((column) => column.name),
+  })),
+}));
 
 async function execute(source: string): Promise<void> {
   const statement = source.trim();

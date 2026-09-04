@@ -19,11 +19,30 @@ import { EDITOR_THEMES, defineEditorTheme, monaco } from '../../lib/monaco';
 import { useSettings } from '../../stores/settings';
 import { useTheme } from '../../composables/useTheme';
 
-/** Table name to its column names, which is all the completer needs. */
-export type SchemaMap = Record<string, readonly string[]>;
+/**
+ * One entity the completer can offer, and what is inside it.
+ *
+ * A map of name to columns was the shape before, and it lost the two things a
+ * qualified engine needs: which namespace a table is in, and that the namespace
+ * is a name you can type. So `public.` offered nothing, and two tables called
+ * `users` in two schemas were one entry — the second overwrote the first, and
+ * whichever set of columns arrived last was the answer for both.
+ */
+export interface SchemaTable {
+  readonly name: string;
+  /** Absent on an engine with no namespaces, which is what MySQL looks like. */
+  readonly schema?: string;
+  readonly columns: readonly string[];
+}
+
+/** Everything the completer knows about the connected database. */
+export interface EditorSchema {
+  readonly schemas: readonly string[];
+  readonly tables: readonly SchemaTable[];
+}
 
 const props = defineProps<{
-  schema?: SchemaMap;
+  schema?: EditorSchema;
   /** Which dialect's own words to offer; without one, only the schema is. */
   engine?: EngineId;
   readOnly?: boolean;
@@ -66,8 +85,53 @@ const WORD_KINDS: Record<SqlWordKind, monaco.languages.CompletionItemKind> = {
  * `users` and the word `USING` should go to the table. A column belongs above a
  * keyword for the same reason and below its own table, which is the more
  * specific thing to have asked for.
+ *
+ * A schema sits under both and over the dialect. It is a name the reader has to
+ * be able to reach — that is the whole of what was missing — but there are a
+ * handful of them against hundreds of tables, and the way anyone reaches one is
+ * by typing enough of it to match, which `sortText` does not decide.
  */
-const ORDER = { table: '1', column: '2', keyword: '3', function: '4', type: '5' };
+const ORDER = {
+  table: '1',
+  column: '2',
+  schema: '3',
+  keyword: '4',
+  function: '5',
+  type: '6',
+};
+
+/** The qualified name, when the engine has namespaces to qualify with. */
+const tableLabel = (table: SchemaTable) =>
+  table.schema ? `${table.schema}.${table.name}` : table.name;
+
+/**
+ * The identifier the caret is reaching into, if it is reaching into one.
+ *
+ * `users.` and `public.users.` are the two questions worth answering, and both
+ * are answered by reading backwards from the start of the word being typed:
+ * everything that is a run of identifier characters separated by dots. Monaco
+ * does not treat `.` as a word character, so the word itself never contains the
+ * qualifier and the replacement range is right without adjustment.
+ */
+function qualifierAt(
+  textModel: monaco.editor.ITextModel,
+  position: monaco.Position,
+  wordStart: number
+): string[] {
+  const before = textModel
+    .getValueInRange({
+      startLineNumber: position.lineNumber,
+      endLineNumber: position.lineNumber,
+      startColumn: 1,
+      endColumn: wordStart,
+    })
+    .trimEnd();
+
+  if (!before.endsWith('.')) return [];
+
+  const match = /(?:[A-Za-z_$][\w$]*\.)+$/.exec(before);
+  return match ? match[0].slice(0, -1).split('.') : [];
+}
 
 /**
  * Table and column names from the schema the sidebar already loaded, and the
@@ -78,6 +142,17 @@ const ORDER = { table: '1', column: '2', keyword: '3', function: '4', type: '5' 
  * declared per engine in `shared/sqlKeywords.ts` rather than guessed, so a
  * MySQL editor does not offer `jsonb`.
  *
+ * Schemas are the other half that was missing, and their absence was the more
+ * confusing one: a Postgres reader typing `pub` was offered every table in the
+ * database and not the namespace they were reaching for, and `public.` was
+ * offered nothing at all — a list that goes empty after a dot reads as "there
+ * is nothing here", which is the opposite of true.
+ *
+ * What a dot means is decided before anything is offered, because the answer
+ * after one is a *different list* rather than the same list filtered: after a
+ * schema, its tables; after a table, its columns; after neither, everything.
+ * Offering all of it either way is what makes a completer noise.
+ *
  * Registered per editor instance and disposed with it, because a provider
  * registered globally would outlive the tab and start answering for a
  * connection that is no longer open.
@@ -86,6 +161,10 @@ function registerCompletions(): void {
   completions?.dispose();
 
   completions = monaco.languages.registerCompletionItemProvider('sql', {
+    // A dot is not a word character, so nothing re-opens the list after one
+    // unless it is asked for.
+    triggerCharacters: ['.'],
+
     provideCompletionItems: (textModel, position) => {
       const word = textModel.getWordUntilPosition(position);
       const range = {
@@ -95,35 +174,83 @@ function registerCompletions(): void {
         endColumn: word.endColumn,
       };
 
-      const schema = props.schema ?? {};
+      const schemas = props.schema?.schemas ?? [];
+      const tables = props.schema?.tables ?? [];
       const suggestions: monaco.languages.CompletionItem[] = [];
 
-      for (const [table, columns] of Object.entries(schema)) {
+      const column = (name: string, from: string) => ({
+        label: name,
+        kind: monaco.languages.CompletionItemKind.Field,
+        insertText: name,
+        detail: from,
+        sortText: `${ORDER.column}${name}`,
+        range,
+      });
+
+      const table = (entity: SchemaTable, insert: string) => ({
+        label: insert,
+        kind: monaco.languages.CompletionItemKind.Struct,
+        insertText: insert,
+        /*
+         * The count only when there is one. A table's columns are not loaded
+         * until it is expanded in the sidebar, so every unexpanded table was
+         * offering itself as having "0 columns" — which is not a smaller
+         * truth than the real number, it is a false one.
+         */
+        ...(entity.columns.length > 0 ? { detail: `${entity.columns.length} columns` } : {}),
+        sortText: `${ORDER.table}${insert}`,
+        range,
+      });
+
+      const parts = qualifierAt(textModel, position, word.startColumn);
+      const lower = (value: string) => value.toLowerCase();
+
+      if (parts.length > 0) {
+        const last = lower(parts[parts.length - 1]!);
+        const owner = parts.length > 1 ? lower(parts[parts.length - 2]!) : undefined;
+
+        /*
+         * A name can be both — Postgres will happily hold a schema called
+         * `audit` and a table called `audit` — so both readings are offered
+         * rather than the first one that matches winning silently.
+         */
+        if (schemas.some((name) => lower(name) === last)) {
+          for (const entity of tables) {
+            if (entity.schema && lower(entity.schema) === last) {
+              suggestions.push(table(entity, entity.name));
+            }
+          }
+        }
+
+        for (const entity of tables) {
+          if (lower(entity.name) !== last) continue;
+          if (owner && entity.schema && lower(entity.schema) !== owner) continue;
+          for (const name of entity.columns) suggestions.push(column(name, tableLabel(entity)));
+        }
+
+        return { suggestions };
+      }
+
+      for (const name of schemas) {
         suggestions.push({
-          label: table,
-          kind: monaco.languages.CompletionItemKind.Struct,
-          insertText: table,
-          /*
-           * The count only when there is one. A table's columns are not loaded
-           * until it is expanded in the sidebar, so every unexpanded table was
-           * offering itself as having "0 columns" — which is not a smaller
-           * truth than the real number, it is a false one.
-           */
-          ...(columns.length > 0 ? { detail: `${columns.length} columns` } : {}),
-          sortText: `${ORDER.table}${table}`,
+          label: name,
+          kind: monaco.languages.CompletionItemKind.Module,
+          insertText: name,
+          sortText: `${ORDER.schema}${name}`,
           range,
         });
+      }
 
-        for (const column of columns) {
-          suggestions.push({
-            label: column,
-            kind: monaco.languages.CompletionItemKind.Field,
-            insertText: column,
-            detail: table,
-            sortText: `${ORDER.column}${column}`,
-            range,
-          });
-        }
+      for (const entity of tables) {
+        suggestions.push(table(entity, entity.name));
+        /*
+         * And again qualified, so `music.album` can be typed as one word. Only
+         * where there is a schema to qualify with, and never as a second entry
+         * for an engine that has none.
+         */
+        if (entity.schema) suggestions.push(table(entity, tableLabel(entity)));
+
+        for (const name of entity.columns) suggestions.push(column(name, tableLabel(entity)));
       }
 
       for (const dialect of sqlWords(props.engine)) {

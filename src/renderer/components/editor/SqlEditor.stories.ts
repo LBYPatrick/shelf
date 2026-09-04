@@ -15,8 +15,11 @@ const meta = {
   component: SqlEditor,
   args: {
     schema: {
-      'music.album': ['id', 'artist_id', 'title', 'released'],
-      'music.artist': ['id', 'name', 'country'],
+      schemas: ['music', 'public'],
+      tables: [
+        { name: 'album', schema: 'music', columns: ['id', 'artist_id', 'title', 'released'] },
+        { name: 'artist', schema: 'music', columns: ['id', 'name', 'country'] },
+      ],
     },
     readOnly: false,
   },
