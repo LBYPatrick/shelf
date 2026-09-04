@@ -82,6 +82,23 @@ const maxRows = computed<string>({
   set: (value) => (settings.values.maxRows = Number(value)),
 });
 
+/**
+ * The provider every part of the app asks, as a setting rather than a habit.
+ *
+ * The unavailable CLIs are deliberately not offered here. The composer lists
+ * them greyed, because a reader looking at a picker of assistants is asking
+ * "what could I use"; a reader in Settings is choosing among what they have,
+ * and a `SelectMenu` row that cannot be chosen is a row that looks broken.
+ */
+const providerOptions = computed(() =>
+  assistant.providers.map((provider) => ({ value: provider.id, label: provider.name }))
+);
+
+const providerId = computed<string>({
+  get: () => assistant.active?.id ?? '',
+  set: (value) => assistant.choose(value),
+});
+
 /*
  * Two views of one state.
  *
@@ -688,6 +705,25 @@ const languageOptions = computed(() => [
         </div>
 
         <div class="rows">
+          <!--
+            Which provider is in use, said out loud.
+
+            It was only ever a picker on the floor of the chat composer, which
+            made "which model am I using" a question you answered by opening a
+            conversation — and the chat is not the only thing that asks it: the
+            button that names a saved query asks the same provider. It is the
+            same `choose` the composer calls, so the two cannot disagree.
+          -->
+          <div v-if="assistant.configured" class="row">
+            <span class="row__label">{{ $t('assistant.provider') }}</span>
+            <SelectMenu
+              v-model="providerId"
+              class="row__control row__control--select"
+              :options="providerOptions"
+              :aria-label="$t('assistant.provider')"
+            />
+          </div>
+
           <div class="row">
             <span class="row__label">{{
               assistant.configured

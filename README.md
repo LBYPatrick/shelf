@@ -165,6 +165,9 @@ AI Foundry takes your resource's endpoint and the deployment you turned on, and
 AWS Bedrock takes no key at all: it signs with the AWS credentials this machine
 already has.
 
+Which one is in use is a setting, in **Settings → Assistant**, and everything
+that asks a model asks that one.
+
 Keys are encrypted with a key from the system keyring and kept in Shelf's own
 database — the keyring holds the key, not the secret. They are sent to the
 provider from the background process, and never reach the part of the app that
