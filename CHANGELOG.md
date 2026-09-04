@@ -6,6 +6,31 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-09-04
+
+### Added
+
+- **Which assistant provider is in use is a setting.** It was only ever
+  choosable from the picker on the floor of the chat composer, so "which model
+  am I using" was a question you answered by opening a conversation — and the
+  pane that holds every other preference had a row for the provider *list* and
+  nothing about which of them answers. It is a row in **Settings → Assistant**
+  now, bound to the same choice the composer makes, so the two cannot disagree.
+
+### Fixed
+
+- **The query console's completion offers schemas, and knows what a dot
+  means.** It knew tables and columns and had nowhere to put the namespace they
+  were in, which lost two things at once: `public` was not a word the editor
+  had heard of, so a Postgres reader typing `pub` was offered every table in
+  the database and never the schema they were reaching for; and a name is only
+  unique inside its namespace, so two tables called `users` in two schemas were
+  one entry — whichever set of columns was read last was the answer for both.
+  Each table keeps the schema it lives in now, and after a dot the list is a
+  *different* list rather than the same one filtered: after a schema, its
+  tables; after a table, its columns. A table can also be typed qualified, as
+  `music.album`, in one word.
+
 ## [1.4.0] - 2026-09-01
 
 ### Added
