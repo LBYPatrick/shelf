@@ -177,6 +177,27 @@ let sizer: ResizeObserver | undefined;
 let queued = 0;
 
 /**
+ * The correction below, remembered, and the measurement it belongs to.
+ *
+ * The shortfall is evidence that disappears the moment it is acted on: the
+ * body is showing ten pixels less than it holds, the panel grows by ten, and
+ * the body is now showing all of it — so the next reading is zero and the
+ * wrapper, which never changed, says the old height again. Recomputed from
+ * scratch every frame, the two answers alternate, and the loop below stops on
+ * whichever of them the last frame happened to produce. Which is a coin flip:
+ * the same build settled correctly on a quiet machine and ten pixels short
+ * under load, and the sheet then has no scrollbar to reach the rest with.
+ *
+ * So the correction is kept rather than rediscovered, and it is dropped when —
+ * and only when — the thing it was a correction *to* changes. The wrapper is
+ * not constrained by the panel, so its height moves when the content moves and
+ * at no other time; that makes it the right thing to compare against, where
+ * the body's own reading is downstream of the height we just wrote.
+ */
+let floor = 0;
+let measured = 0;
+
+/**
  * How many frames a measurement is allowed to keep changing for.
  *
  * Four, because the content here settles in three steps and the fourth is what
@@ -317,14 +338,47 @@ function resize(): void {
    * false, and so no scrollbar to reach it with. Small enough to look like
    * nothing and to survive three rounds of chasing it.
    *
-   * So the browser's own account of what it cannot show is taken as a floor.
-   * It converges rather than oscillating: growing by the shortfall makes the
-   * shortfall zero, and height does not change what the text wraps to.
+   * So the browser's own account of what it cannot show is taken as a floor —
+   * a *kept* one. It was recomputed each frame on the argument that it
+   * converges, since growing by the shortfall makes the shortfall zero; but
+   * that is the reason it does not converge. Zero shortfall is what the
+   * correction having been applied looks like, so the next frame reads no
+   * evidence, falls back to the wrapper's unchanged answer, and gives the ten
+   * pixels back — then reads the shortfall again. See `floor` above.
    */
-  const shortfall = body.scrollHeight - body.clientHeight;
-  if (shortfall > 0 && height.value !== null && !overflowing.value) {
-    natural = Math.max(natural, height.value + shortfall);
+  if (natural !== measured) {
+    measured = natural;
+    floor = 0;
   }
+
+  /*
+   * ...and only while the body is as tall as the panel was told to be.
+   *
+   * The height is animated, so between writing it and the end of the curve the
+   * body's own box is whatever the transition has reached — and the shortfall
+   * read against that is not "how much more the content needs", it is "how far
+   * the animation has left to run". Instrumented, a properties popup measured
+   * 446, was written 446, and reported its body as 98 tall holding 330: a
+   * shortfall of 232 that meant nothing at all. Acted on, it asked for 678,
+   * which asked for more again — the popup grew until it hit the cap, and two
+   * popups with different content in them came out exactly the same size.
+   *
+   * The applied height and the padded chrome are both known here, so what the
+   * body *would* be if the transition were over is arithmetic. A pixel of
+   * tolerance for the fractional half of it. Under `prefers-reduced-motion`
+   * there is no transition and this is true on the first read, which is the
+   * one case a timer or a `transitionend` could never cover.
+   */
+  const applied = height.value === null || body.clientHeight === 0;
+  const arrived =
+    applied || Math.abs(body.clientHeight - (height.value! - chrome - padding)) <= 1;
+
+  const shortfall = body.scrollHeight - body.clientHeight;
+  if (arrived && shortfall > 0 && height.value !== null && !overflowing.value) {
+    floor = Math.max(floor, height.value + shortfall);
+  }
+
+  natural = Math.max(natural, floor);
 
   const view = window.innerHeight;
   const ceiling = Math.min(view * (1 - SCRIM * 2), Math.max(view * CEILING, FLOOR));
@@ -369,6 +423,9 @@ watch([open, measure], async ([isOpen]) => {
   sizer?.disconnect();
   sizer = undefined;
   cancelAnimationFrame(queued);
+
+  floor = 0;
+  measured = 0;
 
   if (!isOpen) {
     height.value = null;
