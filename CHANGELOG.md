@@ -30,6 +30,17 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   *different* list rather than the same one filtered: after a schema, its
   tables; after a table, its columns. A table can also be typed qualified, as
   `music.album`, in one word.
+- **A popup is the size of its content again, on any machine.** A sheet
+  measures what it holds and corrects itself against the browser's own account
+  of what it cannot show — and it was reading that account while its height was
+  still animating, where the number means "how far the animation has left to
+  run" rather than "how much more the content needs". Acted on, it asked for
+  more, which produced a bigger number, until the popup hit its ceiling: two
+  properties popups with quite different content in them came out exactly the
+  same size. The correction is also kept now rather than rediscovered each
+  frame, which is what made the same build settle correctly on a quiet machine
+  and ten pixels short of its content on a busy one, with no scrollbar to reach
+  the rest with.
 
 ## [1.4.0] - 2026-09-01
 
