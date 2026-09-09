@@ -291,20 +291,22 @@ const jobName = ref('');
  *
  * A job outlives the tab that started it — it is a row in a list that is still
  * there tomorrow — and `<database>-20260828-214500` says only when it ran. The
- * stamp is still the default, because it is a real name and never wrong, and
- * the reader can take it by pressing return.
+ * stamp is the fallback for unnamed queries, and the reader can take the
+ * suggested name by pressing return.
  */
 function dispatch(): void {
   const statement = (currentStatement.value?.text ?? text.value).trim();
   if (!statement || !connections.active) return;
 
   /*
-   * A dispatched query is usually a saved one — it is the long-running one you
-   * have written down — and the name it was saved under is a better answer than
-   * the moment it ran, which the card's started-at line already gives.
+   * A query may already have a name from a saved query, the assistant, or a
+   * renamed tab. Preserve that name; only generic tabs need the timestamp.
    */
-  jobName.value = savedQuery.value
-    ? savedJobName(savedQuery.value.name, randomSuffix())
+  const tabTitle = tabs.byId(props.tabId)?.title.trim() ?? '';
+  const queryName =
+    savedQuery.value?.name ?? (/^Query(?: \d+)?$/.test(tabTitle) ? '' : tabTitle);
+  jobName.value = queryName
+    ? savedJobName(queryName, randomSuffix())
     : defaultJobName(connections.active.database ?? connections.active.name ?? '', new Date());
   dispatching.value = true;
 }

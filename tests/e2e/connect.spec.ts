@@ -1228,3 +1228,36 @@ test('a dispatched saved query is named for the query, not for the clock', async
     /^Listener growth-[0-9a-z]{4}$/
   );
 });
+
+for (const title of ['Monthly revenue', undefined]) {
+  test(`a dispatched unsaved query uses ${title ? 'its tab title' : 'the timestamp for a generic tab'}`, async ({
+    page,
+  }) => {
+    await page.getByRole('button', { name: /Sample database/ }).click();
+    await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
+    await newQueryTab(page);
+    await typeQuery(page, 'select 1');
+
+    if (title) {
+      // Chat opens an unsaved query and renames its tab with the generated
+      // title. Renaming here reproduces that state without calling a model.
+      await page.locator('.striptab--on').dblclick();
+      const name = page.locator('.striptab__rename');
+      await name.fill(title);
+      await name.press('Enter');
+      await expect(page.locator('.striptab--on .striptab__title')).toHaveText(title);
+
+      // Escape leaves the committed title intact.
+      await page.locator('.striptab--on').dblclick();
+      await name.fill('Discard this rename');
+      await name.press('Escape');
+      await expect(page.locator('.striptab--on .striptab__title')).toHaveText(title);
+    }
+
+    await page.getByRole('button', { name: /What Run performs/i }).click();
+    await page.getByRole('menuitem', { name: /Dispatch/i }).click();
+    await expect(page.getByRole('textbox', { name: 'Job name' })).toHaveValue(
+      title ? /^Monthly revenue-[0-9a-z]{4}$/ : /^sample-\d{8}-\d{6}$/
+    );
+  });
+}
