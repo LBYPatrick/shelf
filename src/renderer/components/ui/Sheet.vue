@@ -363,15 +363,16 @@ function resize(): void {
    * which asked for more again — the popup grew until it hit the cap, and two
    * popups with different content in them came out exactly the same size.
    *
-   * The applied height and the padded chrome are both known here, so what the
+   * The applied height and the chrome are both known here, so what the
    * body *would* be if the transition were over is arithmetic. A pixel of
    * tolerance for the fractional half of it. Under `prefers-reduced-motion`
    * there is no transition and this is true on the first read, which is the
    * one case a timer or a `transitionend` could never cover.
    */
   const applied = height.value === null || body.clientHeight === 0;
-  const arrived =
-    applied || Math.abs(body.clientHeight - (height.value! - chrome - padding)) <= 1;
+  // clientHeight includes padding; subtracting it again prevents a settled
+  // padded body from ever reaching its expected height.
+  const arrived = applied || Math.abs(body.clientHeight - (height.value! - chrome)) <= 1;
 
   const shortfall = body.scrollHeight - body.clientHeight;
   if (arrived && shortfall > 0 && height.value !== null && !overflowing.value) {
