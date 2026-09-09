@@ -23,6 +23,9 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   tabs, Enter saves a rename, and Escape cancels it.
 
 
+- **Stored-data popups no longer clip their last row.** The height correction
+  now accounts for padding correctly after the sheet finishes opening.
+
 ## [1.4.1] - 2026-09-04
 
 ### Added
