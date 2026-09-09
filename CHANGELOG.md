@@ -6,6 +6,23 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-09-09
+
+### Fixed
+
+- **The assistant can use Shelf's read-only tools through Codex and Grok
+  Build.** Codex now approves calls to Shelf's tools, and Grok handles tool
+  permission requests without confusing them with replies. The shared MCP bridge
+  also answers health checks and identifies its tools as read-only.
+- **Dispatched queries keep their titles.** Queries opened from chat use their
+  AI-generated title as the suggested job name, and renamed query tabs do the
+  same. Saved-query naming and the timestamp fallback for unnamed queries are
+  preserved.
+- **Double-clicking a tab renames it again.** Pointer capture starts only after
+  a drag begins, so it no longer swallows double-clicks. Dragging still reorders
+  tabs, Enter saves a rename, and Escape cancels it.
+
+
 ## [1.4.1] - 2026-09-04
 
 ### Added
