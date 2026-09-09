@@ -170,6 +170,9 @@ export function useDrag(options: UseDragOptions) {
       if (Math.abs(rawDelta) < threshold) return;
       committed = true;
       dragging.value = true;
+      // Capturing on an ancestor before a drag commits retargets clicks to
+      // that ancestor, swallowing the tab's double-click-to-rename gesture.
+      target?.setPointerCapture(event.pointerId);
       // Re-anchor at the point the drag committed so the value does not jump by
       // the threshold distance on the first tracked frame.
       origin = position;
@@ -242,11 +245,9 @@ export function useDrag(options: UseDragOptions) {
 
     if (target && pointerId !== null) {
       if (target.hasPointerCapture(pointerId)) target.releasePointerCapture(pointerId);
-      target.removeEventListener('pointermove', handleMove);
-      target.removeEventListener('pointerup', handleUp);
-      target.removeEventListener('pointercancel', handleUp);
       target.removeEventListener('lostpointercapture', abandon);
     }
+    window.removeEventListener('pointermove', handleMove);
     window.removeEventListener('pointerup', handleUp);
     window.removeEventListener('pointercancel', handleUp);
     window.removeEventListener('blur', abandon);
@@ -279,16 +280,12 @@ export function useDrag(options: UseDragOptions) {
      */
     document.documentElement.classList.add(DRAGGING_CLASS);
 
-    target.setPointerCapture(pointerId);
-    target.addEventListener('pointermove', handleMove);
-    target.addEventListener('pointerup', handleUp);
-    target.addEventListener('pointercancel', handleUp);
+    // Track on the window before capture, including movement off the handle.
+    window.addEventListener('pointermove', handleMove);
     // Capture can be revoked without a release — the element being detached
     // does it — and the events then go back to whatever is under the pointer.
     target.addEventListener('lostpointercapture', abandon);
-    // The safety net for a release delivered somewhere else entirely. Both
-    // paths call the same handler, and the second finds the gesture already
-    // over.
+    // A release must end the gesture even before the pointer is captured.
     window.addEventListener('pointerup', handleUp);
     window.addEventListener('pointercancel', handleUp);
     window.addEventListener('blur', abandon);
