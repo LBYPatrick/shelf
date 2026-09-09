@@ -76,7 +76,7 @@ src/
   renderer/   Vue 3 application
 ```
 
-`CLAUDE.md` carries the rules behind these — why the renderer never imports a
+`AGENTS.md` carries the rules behind these — why the renderer never imports a
 driver, why values crossing the boundary are tagged, and the design invariants
 the UI gate enforces.
 
