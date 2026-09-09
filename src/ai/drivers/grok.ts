@@ -120,6 +120,33 @@ export function stopOf(reason: unknown): AiReply['stop'] {
   return 'end';
 }
 
+/** Approve one call to a tool offered by this turn's read-only bridge. */
+export function permissionOutcome(
+  params: Record<string, unknown>,
+  toolNames: readonly string[]
+): { outcome: 'selected'; optionId: string } | { outcome: 'cancelled' } {
+  const toolCall = params['toolCall'];
+  const options = params['options'];
+  if (typeof toolCall !== 'object' || toolCall === null || !Array.isArray(options)) {
+    return { outcome: 'cancelled' };
+  }
+  const { name, title } = toolCall as { name?: unknown; title?: unknown };
+  // Older ACP versions carry the tool name in the title. Match the whole
+  // namespaced name, never a substring or a tool's self-reported read kind.
+  const tool = name ?? title;
+  const allowed = typeof tool === 'string' && toolNames.includes(tool);
+  const option = options.find(
+    (value: unknown): value is { kind: string; optionId: string } =>
+      typeof value === 'object' &&
+      value !== null &&
+      'kind' in value &&
+      value.kind === (allowed ? 'allow_once' : 'reject_once') &&
+      'optionId' in value &&
+      typeof value.optionId === 'string'
+  );
+  return option ? { outcome: 'selected', optionId: option.optionId } : { outcome: 'cancelled' };
+}
+
 /**
  * Everything the model is told, as one string.
  *
@@ -158,7 +185,7 @@ function createAdapter(instance: AiProvider): AiAdapter {
       } finally {
         // Closed on every path. A turn that threw must not leave a socket
         // listening on loopback with a live token on it.
-        bridge?.close();
+        await bridge?.close();
       }
     },
   };
@@ -172,6 +199,8 @@ function run(
   bridge: ToolBridge | undefined
 ): Promise<AiReply> {
   return new Promise<AiReply>((resolve, reject) => {
+    const toolNames = bridge ? request.tools.map((tool) => `${BRIDGE_NAME}__${tool.name}`) : [];
+    const toolCalls = new Map<string, Record<string, unknown>>();
     const child = spawn(executable(), ['agent', 'stdio'], {
       cwd: tmpdir(),
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -231,7 +260,7 @@ function run(
         return;
       }
 
-      if (frame.id !== undefined && typeof frame.id === 'number') {
+      if (!frame.method && frame.id !== undefined && typeof frame.id === 'number') {
         const waiting = pending.get(frame.id);
         if (waiting) {
           pending.delete(frame.id);
@@ -240,12 +269,34 @@ function run(
         }
       }
 
+      if (frame.method === 'session/request_permission' && frame.id !== undefined) {
+        const params = frame.params ?? {};
+        const toolCall = params['toolCall'];
+        let details = params;
+        if (typeof toolCall === 'object' && toolCall !== null && 'toolCallId' in toolCall) {
+          const previous = toolCalls.get(String(toolCall.toolCallId));
+          details = { ...params, toolCall: { ...previous, ...toolCall } };
+        }
+        child.stdin.write(
+          `${JSON.stringify({
+            jsonrpc: '2.0',
+            id: frame.id,
+            result: {
+              outcome: signal.aborted
+                ? { outcome: 'cancelled' }
+                : permissionOutcome(details, toolNames),
+            },
+          })}\n`
+        );
+        return;
+      }
+
       /*
        * A request *from* the agent, which this client does not serve.
        *
        * `clientCapabilities` is empty, so a well-behaved agent asks for none of
-       * it — but permission prompts and file reads are the two it may try
-       * anyway, and a JSON-RPC request that is never answered hangs the session
+       * it — but file reads are something it may try anyway, and a JSON-RPC
+       * request that is never answered hangs the session
        * rather than failing it. Answered with an error, the agent moves on.
        */
       if (frame.method && frame.id !== undefined) {
@@ -262,6 +313,15 @@ function run(
       if (frame.method === 'session/update' && frame.params) {
         const update = frame.params['update'];
         if (typeof update !== 'object' || update === null) return;
+        const event = update as Record<string, unknown>;
+        if (
+          (event['sessionUpdate'] === 'tool_call' ||
+            event['sessionUpdate'] === 'tool_call_update') &&
+          typeof event['toolCallId'] === 'string'
+        ) {
+          const id = event['toolCallId'];
+          toolCalls.set(id, { ...toolCalls.get(id), ...event });
+        }
 
         const kind = (update as { sessionUpdate?: unknown }).sessionUpdate;
         const body = chunkText(update as Record<string, unknown>);

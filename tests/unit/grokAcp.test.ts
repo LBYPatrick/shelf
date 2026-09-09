@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { chunkText, stopOf } from '@ai/drivers/grok';
+import { chunkText, permissionOutcome, stopOf } from '@ai/drivers/grok';
 
 /**
- * The two places the Grok driver reads a shape it did not build.
+ * The Grok driver's interpretation of incoming ACP values.
  *
  * Everything else about it is a subprocess and a socket, which an end-to-end
- * test covers and a unit test cannot. These two are the parts that decide what
+ * test covers and a unit test cannot. These are the parts that decide what
  * the reader is shown, from JSON somebody else's program wrote — the same
  * reason the conformance suite asserts shapes rather than assuming them.
  */
@@ -55,5 +55,53 @@ describe('a stop reason', () => {
   it('treats a word it has not been taught as an ending', () => {
     expect(stopOf('something_new')).toBe('end');
     expect(stopOf(undefined)).toBe('end');
+  });
+});
+
+describe('a tool permission', () => {
+  const options = [
+    { kind: 'allow_always', optionId: 'always' },
+    { kind: 'allow_once', optionId: 'once' },
+    { kind: 'reject_once', optionId: 'no' },
+  ];
+  const tools = ['shelf__run_sql'];
+
+  it('allows only one call to an offered Shelf tool', () => {
+    expect(permissionOutcome({ toolCall: { name: 'shelf__run_sql' }, options }, tools)).toEqual(
+      {
+        outcome: 'selected',
+        optionId: 'once',
+      }
+    );
+  });
+
+  it.each(['bash', 'other__run_sql', 'shelf__run_sql_extra', 'run_sql'])(
+    'rejects %s',
+    (name) => {
+      expect(permissionOutcome({ toolCall: { name }, options }, tools)).toEqual({
+        outcome: 'selected',
+        optionId: 'no',
+      });
+    }
+  );
+
+  it('does not use a friendly title to override a different tool name', () => {
+    expect(
+      permissionOutcome({ toolCall: { name: 'bash', title: 'shelf__run_sql' }, options }, tools)
+    ).toEqual({
+      outcome: 'selected',
+      optionId: 'no',
+    });
+  });
+
+  it('declines malformed requests and persistent grants', () => {
+    expect(permissionOutcome({}, tools)).toEqual({ outcome: 'cancelled' });
+    expect(
+      permissionOutcome({ toolCall: { name: 'shelf__run_sql' }, options: [options[0]] }, tools)
+    ).toEqual({ outcome: 'cancelled' });
+    expect(permissionOutcome({ toolCall: { name: 'shelf__run_sql' }, options }, [])).toEqual({
+      outcome: 'selected',
+      optionId: 'no',
+    });
   });
 });

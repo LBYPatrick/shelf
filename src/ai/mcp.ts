@@ -5,10 +5,9 @@ import type { AiToolCall, AiToolDef, AiToolResult } from './types';
 /**
  * The tools, offered to a provider that runs in another process.
  *
- * Every other adapter is handed a list of tools and hands back the calls it
- * wants made; we run them and reply. Claude Code cannot work that way — it is a
- * subprocess with its own agent loop, and it reaches tools the way it reaches
- * every other tool, over MCP. So the tools have to be somewhere it can call.
+ * API adapters return tool calls for our loop to execute. Claude Code, Codex
+ * and Grok Build run their own loops in subprocesses and reach these tools
+ * over MCP instead.
  *
  * They are here: a JSON-RPC endpoint on the loopback interface, started for one
  * turn and shut down at the end of it. Nothing about it is durable and nothing
@@ -23,8 +22,8 @@ import type { AiToolCall, AiToolDef, AiToolResult } from './types';
  * with the same read-only rule enforced in the same place. Going out over a
  * socket does not buy the model any more permission than it had.
  *
- * A deliberately small slice of the protocol: initialise, list, call. That is
- * everything a client needs to use a tool, and each additional method would be
+ * A deliberately small slice of the protocol: initialise, ping, list, call.
+ * That is everything a client needs to use a tool, and each additional method would be
  * another shape to keep correct for no gain.
  */
 
@@ -59,11 +58,19 @@ export async function startToolBridge(
     name: tool.name,
     description: tool.description,
     inputSchema: tool.schema,
+    // The executor enforces this; clients use the hint for approval decisions.
+    annotations: { readOnlyHint: true, destructiveHint: false },
   }));
 
   const handle = async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
     if (request.headers.authorization !== `Bearer ${token}`) {
       response.writeHead(401).end();
+      return;
+    }
+
+    // This stateless bridge offers no SSE stream or session to delete.
+    if (request.method !== 'POST') {
+      response.writeHead(405, { Allow: 'POST' }).end();
       return;
     }
 
@@ -103,6 +110,11 @@ export async function startToolBridge(
         capabilities: { tools: {} },
         serverInfo: { name: BRIDGE_NAME, version: '1' },
       });
+      return;
+    }
+
+    if (message.method === 'ping') {
+      send({});
       return;
     }
 

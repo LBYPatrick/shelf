@@ -140,7 +140,7 @@ function createAdapter(instance: AiProvider): AiAdapter {
       } finally {
         // Closed on every path. A turn that threw must not leave a socket
         // listening on loopback with a live token on it.
-        bridge?.close();
+        await bridge?.close();
       }
     },
   };
@@ -176,6 +176,12 @@ function run(
              */
             '-c',
             `mcp_servers.${BRIDGE_NAME}.bearer_token_env_var="${TOKEN_VAR}"`,
+            // exec cannot ask for approval. Only Shelf's bridge is trusted;
+            // its executor enforces the read-only rule before running SQL.
+            '-c',
+            `mcp_servers.${BRIDGE_NAME}.default_tools_approval_mode="approve"`,
+            '-c',
+            `mcp_servers.${BRIDGE_NAME}.required=true`,
           ]
         : []),
       ...(instance.model && instance.model !== 'default' ? ['-m', instance.model] : []),
