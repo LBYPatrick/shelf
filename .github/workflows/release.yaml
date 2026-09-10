@@ -162,6 +162,8 @@ jobs:
                -o -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \
                -o -name '*.blockmap' -o -name 'latest*.yml' \) \
             -exec cp {} dist/ \;
+          # Match electron-builder's GitHub updater URLs before GitHub sanitizes spaces.
+          node scripts/normalize-artifacts.mjs dist
           ls -l dist
 
       - uses: actions/upload-artifact@v7

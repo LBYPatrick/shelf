@@ -144,6 +144,12 @@ Application changes require a new version. All three platforms must succeed
 before publication. When no draft exists, the workflow uses that version's
 committed changelog entry for the release notes.
 
+Windows artifact names are normalized to hyphens before upload to match the
+updater feed. If an older release has dotted Windows names from GitHub's space
+sanitization, push `HEAD:refs/heads/repair-windows-assets/vX.Y.Z`. That workflow
+verifies the existing installer's SHA-512 against the feed and adds the missing
+hyphenated installer and blockmap names without replacing published assets.
+
 ### Signing the macOS build
 
 Signing is opt-in, and a repository with none of the secrets below builds

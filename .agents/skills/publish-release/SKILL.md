@@ -91,3 +91,9 @@ Watch all three package jobs and publication to completion. The workflow uses
 the committed changelog when it needs to create a draft, so recovery does not
 require local GitHub API write access when the authorized Git push succeeds.
 Keep `dev` aligned with `main` and return to the original branch afterward.
+
+Verify updater feed URLs against the actual uploaded filenames and sizes, not
+just the presence of `latest*.yml`. Windows files containing spaces must be
+normalized before upload. For an already published release with dotted Windows
+asset names, use the checksum-verified `repair-windows-assets/vX.Y.Z` branch
+workflow described in `CONTRIBUTING.md`; it adds aliases without replacing assets.

@@ -143,3 +143,24 @@ fi
     expect(install(3)).toEqual({ status: 1, attempts: 3 });
   });
 });
+
+describe('artifact upload names', () => {
+  it('matches the updater URL by replacing spaces with hyphens', () => {
+    const cwd = fixture();
+    writeFileSync(join(cwd, 'Shelf Setup 1.4.2.exe'), 'installer');
+    writeFileSync(join(cwd, 'Shelf Setup 1.4.2.exe.blockmap'), 'blockmap');
+    const result = spawnSync(process.execPath, [join(scripts, 'normalize-artifacts.mjs'), cwd]);
+    expect(result.status).toBe(0);
+    expect(readFileSync(join(cwd, 'Shelf-Setup-1.4.2.exe'), 'utf8')).toBe('installer');
+    expect(readFileSync(join(cwd, 'Shelf-Setup-1.4.2.exe.blockmap'), 'utf8')).toBe('blockmap');
+  });
+  it('rejects collisions before renaming any artifacts', () => {
+    const cwd = fixture();
+    writeFileSync(join(cwd, 'Shelf Setup.exe'), 'original');
+    writeFileSync(join(cwd, 'Shelf-Setup.exe'), 'existing');
+    const result = spawnSync(process.execPath, [join(scripts, 'normalize-artifacts.mjs'), cwd]);
+    expect(result.status).not.toBe(0);
+    expect(readFileSync(join(cwd, 'Shelf Setup.exe'), 'utf8')).toBe('original');
+    expect(readFileSync(join(cwd, 'Shelf-Setup.exe'), 'utf8')).toBe('existing');
+  });
+});

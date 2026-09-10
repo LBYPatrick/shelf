@@ -1,0 +1,45 @@
+name: repair-windows-assets
+
+# Add correctly named copies of published Windows assets; never replace bytes.
+on:
+  push:
+    branches: ['repair-windows-assets/v*']
+
+concurrency:
+  group: shelf-release
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Download and verify the existing installer
+        run: |
+          TAG="${GITHUB_REF_NAME#repair-windows-assets/}"
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          VERSION="${TAG#v}"
+          export VERSION
+          gh release download "$TAG" --pattern latest.yml \
+            --pattern "Shelf.Setup.$VERSION.exe" \
+            --pattern "Shelf.Setup.$VERSION.exe.blockmap"
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { readFileSync, renameSync } from 'node:fs';
+          const version = process.env.VERSION;
+          const notes = readFileSync('latest.yml', 'utf8');
+          assert.ok(notes.includes(`version: ${version}\n`));
+          assert.ok(notes.includes(`url: Shelf-Setup-${version}.exe\n`));
+          const expected = notes.match(/^\s+sha512: (\S+)/m)?.[1];
+          const installer = `Shelf.Setup.${version}.exe`;
+          assert.equal(createHash('sha512').update(readFileSync(installer)).digest('base64'), expected);
+          renameSync(installer, `Shelf-Setup-${version}.exe`);
+          renameSync(`${installer}.blockmap`, `Shelf-Setup-${version}.exe.blockmap`);
+          JS
+          # No --clobber: published assets are immutable; only missing aliases are added.
+          gh release upload "$TAG" "Shelf-Setup-$VERSION.exe" "Shelf-Setup-$VERSION.exe.blockmap"
