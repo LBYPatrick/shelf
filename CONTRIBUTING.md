@@ -127,6 +127,23 @@ nothing to download.
 | `NOTES=notes.json` | `{"title": "…", "body": "…"}` for the release page |
 | `YES=1` | Skip the confirmation — for an agent, not for a person |
 
+### Recovering failed packaging
+
+Fix packaging failures on `main`, run `make format` and `make`, and commit the
+fix. To rebuild an existing, unpublished tag without moving it:
+
+```bash
+git push origin HEAD:refs/heads/release/v1.4.2
+```
+
+Replace the version with the failed release's version. The workflow rejects
+application changes relative to the tag and refuses recovery once the release
+is public. Allowed changes are limited to the packaging workflow, its recovery
+scripts and tests, documentation, and electron-builder with its lockfile.
+Application changes require a new version. All three platforms must succeed
+before publication. When no draft exists, the workflow uses that version's
+committed changelog entry for the release notes.
+
 ### Signing the macOS build
 
 Signing is opt-in, and a repository with none of the secrets below builds

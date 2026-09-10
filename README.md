@@ -314,8 +314,8 @@ make package    # build a distributable for this platform
 ```
 
 Needs Node 20+ and a C toolchain; `make install` handles the rest.
-[CONTRIBUTING.md](CONTRIBUTING.md) has the architecture, the test suites and the
-release process. Agent guidance is in [AGENTS.md](AGENTS.md), with the shared
+[CONTRIBUTING.md](CONTRIBUTING.md) documents release packaging recovery and has
+the architecture, test suites, and release process. Agent guidance is in [AGENTS.md](AGENTS.md), with the shared
 [publish-release skill](.agents/skills/publish-release/SKILL.md) under `.agents/skills`.
 `CLAUDE.md` imports that guidance, and Claude's skill directory links to the shared skill.
 

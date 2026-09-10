@@ -7,14 +7,17 @@ name: release
 # event — so listening for that one would leave the other two building nothing.
 # A tag push is the one thing all three do. The publish job writes the release
 # page when the tag arrived without one, and uploads into it when it did not.
+# A release/vX.Y.Z branch can recover failed packaging without moving its tag.
+# The version job permits only tooling and documentation changes for recovery.
 on:
   push:
     tags: ['v*']
+    branches: ['release/v*']
 
 # A release is never cancelled by a later one. Two tags pushed a minute apart
 # are two releases, and the first is not a stale run of the second.
 concurrency:
-  group: release-${{ github.ref }}
+  group: shelf-release
   cancel-in-progress: false
 
 jobs:
@@ -27,26 +30,27 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check.outputs.version }}
+      tag: ${{ steps.check.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - id: check
-        run: |
-          tag="${GITHUB_REF_NAME#v}"
-          file="$(tr -d '[:space:]' < VERSION)"
-          pkg="$(node -p "require('./package.json').version")"
+        run: node scripts/check-release.mjs >> "$GITHUB_OUTPUT"
 
-          if [[ "$tag" != "$file" || "$tag" != "$pkg" ]]; then
-            echo "The tag and the files disagree about which version this is:" >&2
-            echo "  tag           $GITHUB_REF_NAME  (-> $tag)" >&2
-            echo "  VERSION       $file" >&2
-            echo "  package.json  $pkg" >&2
-            echo "" >&2
-            echo "Set both files to $tag, commit, and move the tag onto it." >&2
+      - name: Refuse recovery of a published release
+        if: github.ref_type == 'branch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.check.outputs.tag }}
+        run: |
+          published="$(gh release list --limit 100 --json tagName,isDraft --jq '.[] | select(.isDraft == false) | .tagName')"
+          if printf '%s\n' "$published" | grep -qxF "$TAG"; then
+            echo "Release $TAG is already public; publish a new version instead." >&2
             exit 1
           fi
-
-          echo "version=$tag" >> "$GITHUB_OUTPUT"
 
   # No gate here. It runs on every push to main, so the commit a tag points at
   # has already passed it — and it could not pass on two of these three runners
@@ -103,9 +107,7 @@ jobs:
       # electron-builder unpacks the AppImage runtime with bsdtar.
       - name: Install the Linux packaging tools
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends rpm libarchive-tools
+        run: bash scripts/install-linux-packaging.sh
 
       # `scripts/install.sh` rather than `pnpm install`: better-sqlite3 is
       # compiled against Electron's ABI, and a plain install leaves it built for
@@ -180,6 +182,8 @@ jobs:
       contents: write
 
     steps:
+      - uses: actions/checkout@v7
+
       - uses: actions/download-artifact@v7
         with:
           path: dist
@@ -188,10 +192,8 @@ jobs:
       - name: Attach the packages to the release
         env:
           GH_TOKEN: ${{ github.token }}
-          # Nothing is checked out here, so `gh` has no remote to read the
-          # repository from and has to be told.
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ needs.version.outputs.tag }}
           VERSION: ${{ needs.version.outputs.version }}
         run: |
           shopt -s nullglob
@@ -214,7 +216,8 @@ jobs:
             grep -qxF "$TAG"; then
             echo "Release $TAG already exists; keeping its title and notes."
           else
-            gh release create "$TAG" --draft --title "Shelf $VERSION" --generate-notes
+            node scripts/release-notes.mjs "$VERSION" > "$RUNNER_TEMP/release-notes.md"
+            gh release create "$TAG" --draft --title "Shelf $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md"
           fi
 
           gh release upload "$TAG" "${files[@]}" --clobber

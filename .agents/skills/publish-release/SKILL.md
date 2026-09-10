@@ -77,3 +77,17 @@ After a release from `dev`, fast-forward it to the release commit and push `dev`
 so it includes the version bump and stays aligned with `main`. Return to the
 branch the user was working on. Report the version, release URL, validation,
 and any remaining packaging or publication failure.
+
+## Recover a failed package build
+
+For an existing unpublished tag, commit validated packaging fixes on `main`
+and push `HEAD:refs/heads/release/vX.Y.Z`. The release workflow compares the
+recovery commit with the immutable tag, permits only the files listed in
+`scripts/check-release.mjs`, and rejects changes to application code or runtime
+manifest dependencies. Review the lockfile to confirm only packaging tooling
+changed. A public release requires a new version instead.
+
+Watch all three package jobs and publication to completion. The workflow uses
+the committed changelog when it needs to create a draft, so recovery does not
+require local GitHub API write access when the authorized Git push succeeds.
+Keep `dev` aligned with `main` and return to the original branch afterward.

@@ -97,7 +97,7 @@
     "d3-zoom": "^3.0.0",
     "daisyui": "^5.7.16",
     "electron": "^43.4.0",
-    "electron-builder": "^26.15.3",
+    "electron-builder": "^26.16.1",
     "electron-vite": "^5.0.0",
     "monaco-editor": "^0.56.0",
     "oxlint": "^1.80.0",
