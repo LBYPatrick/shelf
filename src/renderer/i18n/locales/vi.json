@@ -415,7 +415,12 @@
     "syntaxBoth": "Bộ màu",
     "syntaxLight": "Bộ màu sáng",
     "syntaxDark": "Bộ màu tối",
-    "syntaxPreview": "Mẫu của lược đồ này, sáng ở trên và tối ở dưới"
+    "syntaxPreview": "Mẫu của lược đồ này, sáng ở trên và tối ở dưới",
+    "general": "Chung",
+    "about": "Giới thiệu Shelf",
+    "personalize": "Tùy chọn",
+    "liveChanges": "Thay đổi được áp dụng ngay. Tùy chọn được lưu trên thiết bị này.",
+    "documentChanges": "Chỉnh sửa tài liệu, rồi chọn Áp dụng để lưu thay đổi."
   },
   "storage": {
     "title": "Dữ liệu đã lưu",
@@ -556,9 +561,26 @@
     "scope": "Hàng",
     "scopePage": "Trang này ({{count}})",
     "scopeFull": "Toàn bộ truy vấn khớp",
-    "scopePageHint": "Ghi từ các hàng đã tải — không chạy lại.",
+    "scopePageHint": "Chạy lại câu lệnh với giới hạn xem trước hiện tại.",
     "scopeFullHint": "Chạy lại câu lệnh mà không giới hạn xem trước; nó khớp {{count}} hàng.",
-    "scopeFullHintUnknown": "Chạy lại câu lệnh mà không có giới hạn xem trước."
+    "scopeFullHintUnknown": "Chạy lại câu lệnh mà không có giới hạn xem trước.",
+    "summary": "Tóm tắt xuất",
+    "columns": "Cột",
+    "sample": "Mẫu · {{rows}} hàng · {{columns}} cột",
+    "noPreview": "Không có hàng đã tải để xem trước.",
+    "allMatching": "Tất cả hàng phù hợp",
+    "rowCount": "{{count}} hàng",
+    "previewHint": "Mẫu hiển thị các hàng đã tải. Dữ liệu xuất theo phạm vi đã chọn.",
+    "tableFileHint": "Xuất tất cả hàng phù hợp, kể cả các hàng chưa được tải.",
+    "jobFileHint": "Xuất toàn bộ kết quả đã lưu mà không chạy lại truy vấn.",
+    "formats": {
+      "csv": "Dành cho bảng tính",
+      "tsv": "Giá trị phân cách bằng tab",
+      "json": "Bản ghi có cấu trúc",
+      "jsonl": "Một bản ghi mỗi dòng",
+      "markdown": "Bảng dễ đọc",
+      "sql": "Câu lệnh INSERT"
+    }
   },
   "grid": {
     "oneBased": "Bắt đầu từ 1",

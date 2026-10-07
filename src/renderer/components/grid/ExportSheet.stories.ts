@@ -27,8 +27,26 @@ export const FromResults: Story = {
 
 /** A whole table: the host streams it, and the clipboard is not offered. */
 export const WholeTable: Story = {
-  args: { rows: [], fields: [], writeFile: async () => undefined },
+  args: { rows: [], fields: [], fileSource: 'table', writeFile: async () => undefined },
 };
 
 /** No writer at all — the clipboard is the only way out. */
 export const ClipboardOnly: Story = { args: { writeFile: undefined } };
+
+/** A query preview may be a tiny part of an answer whose total is not known. */
+export const TruncatedQuery: Story = {
+  args: { truncated: true, writeFile: async () => undefined },
+};
+export const KnownTotal: Story = {
+  args: { truncated: true, fullRows: 25000, writeFile: async () => undefined },
+};
+export const SavedJob: Story = {
+  args: { fileSource: 'job', fullRows: 25000, writeFile: async () => undefined },
+};
+export const LongName: Story = {
+  args: {
+    name: 'Quarterly analysis of transactions across every region and account with a very long descriptive name',
+    writeFile: async () => undefined,
+  },
+};
+export const EmptyResults: Story = { args: { rows: [], writeFile: undefined } };

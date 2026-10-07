@@ -415,7 +415,12 @@
     "syntaxBoth": "Scheme",
     "syntaxLight": "Light scheme",
     "syntaxDark": "Dark scheme",
-    "syntaxPreview": "A sample of this scheme, light above dark"
+    "syntaxPreview": "A sample of this scheme, light above dark",
+    "general": "General",
+    "about": "About Shelf",
+    "personalize": "Preferences",
+    "liveChanges": "Changes apply immediately. Your preferences stay on this device.",
+    "documentChanges": "Edit the document, then choose Apply to save your changes."
   },
   "storage": {
     "title": "Stored data",
@@ -556,9 +561,26 @@
     "scope": "Rows",
     "scopePage": "This page ({{count}})",
     "scopeFull": "Everything the query matches",
-    "scopePageHint": "Written from the rows already loaded — no second run.",
+    "scopePageHint": "Runs the statement again with the current preview limit.",
     "scopeFullHint": "Runs the statement again without the preview limit; it matched {{count}} rows.",
-    "scopeFullHintUnknown": "Runs the statement again without the preview limit."
+    "scopeFullHintUnknown": "Runs the statement again without the preview limit.",
+    "summary": "Export summary",
+    "columns": "Columns",
+    "sample": "Sample · {{rows}} rows · {{columns}} columns",
+    "noPreview": "No loaded rows to preview.",
+    "allMatching": "All matching rows",
+    "rowCount": "{{count}} rows",
+    "previewHint": "This sample shows loaded rows. The export follows the selected scope.",
+    "tableFileHint": "Exports every matching row, including rows not currently loaded.",
+    "jobFileHint": "Exports the complete saved result without running the query again.",
+    "formats": {
+      "csv": "For spreadsheets",
+      "tsv": "Tab-separated values",
+      "json": "Structured records",
+      "jsonl": "One record per line",
+      "markdown": "A readable table",
+      "sql": "INSERT statements"
+    }
   },
   "grid": {
     "oneBased": "1-based",

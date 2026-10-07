@@ -7,7 +7,7 @@ import { vTip } from '../../lib/hoverTip';
  * choosing an accent is a visual decision and you should be able to see it
  * being made rather than confirm and hope.
  */
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { LOCALES } from '../../i18n';
 import { useTranslation } from 'i18next-vue';
 import { useAssistant } from '../../stores/assistant';
@@ -44,7 +44,7 @@ const open = defineModel<boolean>({ required: true });
 /*
  * The provider list is a sheet of its own rather than a section here, because
  * it is a list with an editor behind it — two levels of navigation inside a
- * pane that is already a long scroll. Settings names it and hands it over.
+ * focused preference pane. Settings names it and hands it over.
  */
 const emit = defineEmits<{
   'manage-providers': [];
@@ -110,10 +110,47 @@ const providerId = computed<string>({
  */
 const view = ref<'visual' | 'json'>('visual');
 
-const views = computed(() => [
-  { value: 'visual' as const, label: t('settings.viewVisual') },
-  { value: 'json' as const, label: t('settings.viewJson') },
+type Category =
+  'appearance' | 'data' | 'editor' | 'general' | 'assistant' | 'file' | 'about' | 'json';
+const category = ref<Category>('appearance');
+const content = ref<HTMLElement>();
+const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+const stopReveal = () =>
+  content.value?.getAnimations().forEach((animation) => animation.cancel());
+motionPreference.addEventListener('change', stopReveal);
+onBeforeUnmount(() => motionPreference.removeEventListener('change', stopReveal));
+const categories = computed(() => [
+  { id: 'appearance' as const, label: t('settings.appearance'), icon: 'eye' },
+  { id: 'data' as const, label: t('settings.data'), icon: 'table' },
+  { id: 'editor' as const, label: t('settings.editor'), icon: 'query' },
+  { id: 'general' as const, label: t('settings.general'), icon: 'settings' },
+  { id: 'assistant' as const, label: t('assistant.title'), icon: 'assistant' },
+  { id: 'file' as const, label: t('settings.file'), icon: 'folder' },
+  { id: 'about' as const, label: t('settings.about'), icon: 'info' },
+  { id: 'json' as const, label: t('settings.viewJson'), icon: 'terminal' },
 ]);
+
+/** Navigation is immediate; only pointer changes receive a single quiet reveal. */
+async function selectCategory(next: Category, event: MouseEvent): Promise<void> {
+  if (category.value === next) return;
+  content.value?.getAnimations().forEach((animation) => animation.cancel());
+  category.value = next;
+  view.value = next === 'json' ? 'json' : 'visual';
+  await nextTick();
+  if (category.value !== next) return;
+  if (content.value) content.value.scrollTop = 0;
+  if (event.detail === 0 || !content.value) return;
+  const reduce = motionPreference.matches;
+  content.value.animate(
+    reduce
+      ? [{ opacity: 0.6 }, { opacity: 1 }]
+      : [
+          { opacity: 0.6, transform: 'translateY(4px)' },
+          { opacity: 1, transform: 'translateY(0)' },
+        ],
+    { duration: 180, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' }
+  );
+}
 
 function currentState(): SettingsState {
   return {
@@ -335,19 +372,34 @@ const languageOptions = computed(() => [
 </script>
 
 <template>
-  <Sheet v-model="open" :title="$t('settings.title')" icon="settings" flush>
-    <!--
-      What the sheet is showing sits beside its name; what it can do sits at the
-      far end with the close button. The switcher used to be the first thing
-      *inside* the body, which spent a row of the scrolling area on chrome and
-      pushed the first actual setting under the fold.
-    -->
-    <template #lead>
-      <SegmentedControl v-model="view" :options="views" :aria-label="$t('settings.title')" />
-    </template>
-
-    <div v-show="view === 'visual'" class="panels">
-      <!--
+  <Sheet v-model="open" :title="$t('settings.title')" icon="settings" broad flush>
+    <div class="settings-layout">
+      <nav class="settings-nav" :aria-label="$t('settings.title')">
+        <p class="settings-nav__caption">{{ $t('settings.personalize') }}</p>
+        <button
+          v-for="item in categories"
+          :key="item.id"
+          :data-settings-category="item.id"
+          class="settings-nav__item focus-fill"
+          :class="{
+            'settings-nav__item--active': category === item.id,
+            'settings-nav__item--document': item.id === 'json',
+          }"
+          :aria-current="category === item.id ? 'page' : undefined"
+          @click="selectCategory(item.id, $event)"
+        >
+          <AppIcon :name="item.icon" :size="16" />
+          <span>{{ item.label }}</span>
+        </button>
+        <p class="settings-nav__note">
+          {{
+            category === 'json' ? $t('settings.documentChanges') : $t('settings.liveChanges')
+          }}
+        </p>
+      </nav>
+      <div ref="content" class="settings-content">
+        <div v-show="view === 'visual'" class="panels">
+          <!--
         Every section is a heading, a sentence saying what it is for, and one
         card of rows.
 
@@ -358,355 +410,355 @@ const languageOptions = computed(() => [
         fields, because a card with inset rules reads as one list of settings
         where full-bleed lines read as a stack of unrelated slices.
       -->
-      <section class="panel-section">
-        <div class="panel-section__head">
-          <h3 class="type-title">
-            {{ $t('settings.appearance') }}
-          </h3>
-          <p class="panel-section__desc">
-            {{ $t('settings.appearanceDesc') }}
-          </p>
-        </div>
-
-        <div class="rows">
-          <div class="row">
-            <span class="row__label">{{ $t('settings.theme') }}</span>
-            <SegmentedControl
-              v-model="theme.mode"
-              class="row__control"
-              :options="modes"
-              :aria-label="$t('settings.theme')"
-            />
-          </div>
-
-          <div class="row">
-            <span class="row__label">
-              {{ $t('settings.accent') }}
-              <span class="row__hint">{{ $t('settings.accentHelp') }}</span>
-            </span>
-            <div class="row__control accents">
-              <button
-                v-for="preset in theme.presets"
-                :key="preset.id"
-                class="accent"
-                :class="{ 'accent--on': theme.activePreset?.id === preset.id }"
-                :style="{ '--chip': oklch(preset.seed) }"
-                :aria-pressed="theme.activePreset?.id === preset.id"
-                v-tip="preset.name"
-                @click="theme.accent = preset.seed"
-              >
-                <span class="sr-only">{{ preset.name }}</span>
-              </button>
+          <section v-show="category === 'appearance'" class="panel-section">
+            <div class="panel-section__head">
+              <h3 class="type-title">
+                {{ $t('settings.appearance') }}
+              </h3>
+              <p class="panel-section__desc">
+                {{ $t('settings.appearanceDesc') }}
+              </p>
             </div>
-          </div>
 
-          <div class="row">
-            <span class="row__label">{{ $t('settings.density') }}</span>
-            <SegmentedControl
-              v-model="theme.density"
-              class="row__control"
-              :options="densities"
-              :aria-label="$t('settings.density')"
-            />
-          </div>
+            <div class="rows">
+              <div class="row">
+                <span class="row__label">{{ $t('settings.theme') }}</span>
+                <SegmentedControl
+                  v-model="theme.mode"
+                  class="row__control"
+                  :options="modes"
+                  :ariaLabel="$t('settings.theme')"
+                />
+              </div>
 
-          <!--
+              <div class="row">
+                <span class="row__label">
+                  {{ $t('settings.accent') }}
+                  <span class="row__hint">{{ $t('settings.accentHelp') }}</span>
+                </span>
+                <div class="row__control accents">
+                  <button
+                    v-for="preset in theme.presets"
+                    :key="preset.id"
+                    class="accent"
+                    :class="{ 'accent--on': theme.activePreset?.id === preset.id }"
+                    :style="{ '--chip': oklch(preset.seed) }"
+                    :aria-pressed="theme.activePreset?.id === preset.id"
+                    v-tip="preset.name"
+                    @click="theme.accent = preset.seed"
+                  >
+                    <span class="sr-only">{{ preset.name }}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="row">
+                <span class="row__label">{{ $t('settings.density') }}</span>
+                <SegmentedControl
+                  v-model="theme.density"
+                  class="row__control"
+                  :options="densities"
+                  :ariaLabel="$t('settings.density')"
+                />
+              </div>
+
+              <!--
             Two schemes, because a palette drawn for a dark background is
             unreadable on a light one — one picker would be offering to make the
             editor illegible half the time. The switch is the shortcut for the
             common case: take a family and use both of its halves.
           -->
-          <div class="row">
-            <span class="row__label">
-              {{ $t('settings.syntax') }}
-              <span class="row__hint">{{ $t('settings.syntaxHelp') }}</span>
-            </span>
-            <ToggleSwitch
-              v-model="theme.syntax.sync"
-              class="row__control"
-              :aria-label="$t('settings.syntaxSync')"
-            />
-          </div>
+              <div class="row">
+                <span class="row__label">
+                  {{ $t('settings.syntax') }}
+                  <span class="row__hint">{{ $t('settings.syntaxHelp') }}</span>
+                </span>
+                <ToggleSwitch
+                  v-model="theme.syntax.sync"
+                  class="row__control"
+                  :ariaLabel="$t('settings.syntaxSync')"
+                />
+              </div>
 
-          <div class="row">
-            <span class="row__label">{{
-              theme.syntax.sync ? $t('settings.syntaxBoth') : $t('settings.syntaxLight')
-            }}</span>
-            <!--
+              <div class="row">
+                <span class="row__label">{{
+                  theme.syntax.sync ? $t('settings.syntaxBoth') : $t('settings.syntaxLight')
+                }}</span>
+                <!--
               The specimen sits with the picker, on its side of the row: a name
               and what the name looks like are one answer, and separating them
               puts the reader back to choosing, looking, and coming back.
             -->
-            <span class="row__control scheme">
-              <SelectMenu
-                v-model="theme.syntax.light"
-                class="scheme__pick"
-                :options="schemes"
-                :aria-label="$t('settings.syntaxLight')"
-              />
-              <PaletteStrip
-                :light="theme.syntax.light"
-                :dark="theme.syntax.dark"
-                :appearances="theme.syntax.sync ? ['light', 'dark'] : ['light']"
-                :label="$t('settings.syntaxPreview')"
-              />
-            </span>
-          </div>
+                <span class="row__control scheme">
+                  <SelectMenu
+                    v-model="theme.syntax.light"
+                    class="scheme__pick"
+                    :options="schemes"
+                    :ariaLabel="$t('settings.syntaxLight')"
+                  />
+                  <PaletteStrip
+                    :light="theme.syntax.light"
+                    :dark="theme.syntax.dark"
+                    :appearances="theme.syntax.sync ? ['light', 'dark'] : ['light']"
+                    :label="$t('settings.syntaxPreview')"
+                  />
+                </span>
+              </div>
 
-          <div v-if="!theme.syntax.sync" class="row">
-            <span class="row__label">{{ $t('settings.syntaxDark') }}</span>
-            <span class="row__control scheme">
-              <SelectMenu
-                v-model="theme.syntax.dark"
-                class="scheme__pick"
-                :options="schemes"
-                :aria-label="$t('settings.syntaxDark')"
-              />
-              <PaletteStrip
-                :light="theme.syntax.light"
-                :dark="theme.syntax.dark"
-                :appearances="['dark']"
-                :label="$t('settings.syntaxPreview')"
-              />
-            </span>
-          </div>
-        </div>
-      </section>
+              <div v-if="!theme.syntax.sync" class="row">
+                <span class="row__label">{{ $t('settings.syntaxDark') }}</span>
+                <span class="row__control scheme">
+                  <SelectMenu
+                    v-model="theme.syntax.dark"
+                    class="scheme__pick"
+                    :options="schemes"
+                    :ariaLabel="$t('settings.syntaxDark')"
+                  />
+                  <PaletteStrip
+                    :light="theme.syntax.light"
+                    :dark="theme.syntax.dark"
+                    :appearances="['dark']"
+                    :label="$t('settings.syntaxPreview')"
+                  />
+                </span>
+              </div>
+            </div>
+          </section>
 
-      <!--
+          <!--
         Materials get their own section rather than sitting under Appearance.
         They are the one pair of settings whose effect you can watch happen —
         this sheet is itself a piece of glass — and burying them under the
         accent swatches would put the demonstration off screen while you drag.
       -->
-      <section class="panel-section">
-        <div class="panel-section__head">
-          <h3 class="type-title">
-            {{ $t('settings.materials') }}
-          </h3>
-          <p class="panel-section__desc">
-            {{ $t('settings.opacityHelp') }}
-          </p>
-        </div>
+          <section v-show="category === 'appearance'" class="panel-section">
+            <div class="panel-section__head">
+              <h3 class="type-title">
+                {{ $t('settings.materials') }}
+              </h3>
+              <p class="panel-section__desc">
+                {{ $t('settings.opacityHelp') }}
+              </p>
+            </div>
 
-        <div class="rows">
-          <div class="row">
-            <span class="row__label">{{ $t('settings.opacity') }}</span>
-            <RangeSlider
-              v-model="opacity"
-              class="row__control row__control--wide"
-              :min="OPACITY_FLOOR"
-              :max="100"
-              :step="5"
-              :aria-label="$t('settings.opacity')"
-              :display="(opacity / 100).toFixed(2)"
-            />
-          </div>
+            <div class="rows">
+              <div class="row">
+                <span class="row__label">{{ $t('settings.opacity') }}</span>
+                <RangeSlider
+                  v-model="opacity"
+                  class="row__control row__control--wide"
+                  :min="OPACITY_FLOOR"
+                  :max="100"
+                  :step="5"
+                  :ariaLabel="$t('settings.opacity')"
+                  :display="(opacity / 100).toFixed(2)"
+                />
+              </div>
 
-          <div v-if="!materialsAreDefault" class="row">
-            <span class="row__label">{{ $t('settings.resetMaterials') }}</span>
-            <!--
+              <div v-if="!materialsAreDefault" class="row">
+                <span class="row__label">{{ $t('settings.resetMaterials') }}</span>
+                <!--
               The row says what is being reset and the button carries the verb,
               which leaves two buttons in this sheet both reading "Reset". The
               name a screen reader gets is the whole phrase, because a control
               is announced without the row it sits in.
             -->
-            <PressButton
-              class="row__control"
-              size="sm"
-              :aria-label="$t('settings.resetMaterials')"
-              @click="theme.resetMaterials"
-            >
-              {{ $t('action.reset') }}
-            </PressButton>
-          </div>
-        </div>
-      </section>
+                <PressButton
+                  class="row__control"
+                  size="sm"
+                  :aria-label="$t('settings.resetMaterials')"
+                  @click="theme.resetMaterials"
+                >
+                  {{ $t('action.reset') }}
+                </PressButton>
+              </div>
+            </div>
+          </section>
 
-      <section class="panel-section">
-        <div class="panel-section__head">
-          <h3 class="type-title">
-            {{ $t('settings.data') }}
-          </h3>
-          <p class="panel-section__desc">
-            {{ $t('settings.dataDesc') }}
-          </p>
-        </div>
+          <section v-show="category === 'data'" class="panel-section">
+            <div class="panel-section__head">
+              <h3 class="type-title">
+                {{ $t('settings.data') }}
+              </h3>
+              <p class="panel-section__desc">
+                {{ $t('settings.dataDesc') }}
+              </p>
+            </div>
 
-        <div class="rows">
-          <div class="row">
-            <label class="row__label" for="settings-page-size">{{
-              $t('settings.rowsPerPage')
-            }}</label>
-            <input
-              id="settings-page-size"
-              v-model.number="settings.values.pageSize"
-              class="textfield row__control row__control--number"
-              type="number"
-              min="10"
-              max="1000"
-              step="10"
-            />
-          </div>
+            <div class="rows">
+              <div class="row">
+                <label class="row__label" for="settings-page-size">{{
+                  $t('settings.rowsPerPage')
+                }}</label>
+                <input
+                  id="settings-page-size"
+                  v-model.number="settings.values.pageSize"
+                  class="textfield row__control row__control--number"
+                  type="number"
+                  min="10"
+                  max="1000"
+                  step="10"
+                />
+              </div>
 
-          <!--
+              <!--
             The same seven choices the query toolbar offers, from the same list.
             It was a free number box here and nothing at all there, so the limit
             was a preference you had to leave the query to change — and any
             number at all could be typed into it, including ones that make the
             app hold a million rows in memory.
           -->
-          <div class="row">
-            <span class="row__label">
-              {{ $t('settings.maxRows') }}
-              <span class="row__hint">{{ $t('settings.maxRowsHelp') }}</span>
-            </span>
-            <SelectMenu
-              v-model="maxRows"
-              class="row__control row__control--select"
-              :options="rowLimits"
-              :aria-label="$t('settings.maxRows')"
-            />
-          </div>
+              <div class="row">
+                <span class="row__label">
+                  {{ $t('settings.maxRows') }}
+                  <span class="row__hint">{{ $t('settings.maxRowsHelp') }}</span>
+                </span>
+                <SelectMenu
+                  v-model="maxRows"
+                  class="row__control row__control--select"
+                  :options="rowLimits"
+                  :ariaLabel="$t('settings.maxRows')"
+                />
+              </div>
 
-          <!--
+              <!--
             Which statement ⌘↩ runs was reachable only from the command palette,
             so this pane did not show the whole of what can be changed and the
             JSON view listed a key with no visual counterpart. Same words as the
             query bar uses, so the two surfaces cannot drift.
           -->
-          <div class="row">
-            <span class="row__label">{{ $t('settings.primaryRun') }}</span>
-            <SegmentedControl
-              v-model="settings.values.primaryRun"
-              class="row__control"
-              :options="runActions"
-              :aria-label="$t('settings.primaryRun')"
-            />
-          </div>
+              <div class="row">
+                <span class="row__label">{{ $t('settings.primaryRun') }}</span>
+                <SegmentedControl
+                  v-model="settings.values.primaryRun"
+                  class="row__control"
+                  :options="runActions"
+                  :ariaLabel="$t('settings.primaryRun')"
+                />
+              </div>
 
-          <div class="row">
-            <span class="row__label">{{ $t('settings.editTrigger') }}</span>
-            <SegmentedControl
-              v-model="settings.values.editTrigger"
-              class="row__control"
-              :options="triggers"
-              :aria-label="$t('settings.editTrigger')"
-            />
-          </div>
+              <div class="row">
+                <span class="row__label">{{ $t('settings.editTrigger') }}</span>
+                <SegmentedControl
+                  v-model="settings.values.editTrigger"
+                  class="row__control"
+                  :options="triggers"
+                  :ariaLabel="$t('settings.editTrigger')"
+                />
+              </div>
 
-          <div class="row">
-            <span class="row__label">{{ $t('settings.binaryAs') }}</span>
-            <SegmentedControl
-              v-model="settings.values.binaryEncoding"
-              class="row__control"
-              :options="encodings"
-              :aria-label="$t('settings.binaryAs')"
-            />
-          </div>
-        </div>
-      </section>
+              <div class="row">
+                <span class="row__label">{{ $t('settings.binaryAs') }}</span>
+                <SegmentedControl
+                  v-model="settings.values.binaryEncoding"
+                  class="row__control"
+                  :options="encodings"
+                  :ariaLabel="$t('settings.binaryAs')"
+                />
+              </div>
+            </div>
+          </section>
 
-      <section class="panel-section">
-        <div class="panel-section__head">
-          <h3 class="type-title">
-            {{ $t('settings.editor') }}
-          </h3>
-          <p class="panel-section__desc">
-            {{ $t('settings.editorDesc') }}
-          </p>
-        </div>
+          <section v-show="category === 'editor'" class="panel-section">
+            <div class="panel-section__head">
+              <h3 class="type-title">
+                {{ $t('settings.editor') }}
+              </h3>
+              <p class="panel-section__desc">
+                {{ $t('settings.editorDesc') }}
+              </p>
+            </div>
 
-        <div class="rows">
-          <div class="row">
-            <label class="row__label" for="settings-font-size">{{
-              $t('settings.fontSize')
-            }}</label>
-            <input
-              id="settings-font-size"
-              v-model.number="settings.values.editorFontSize"
-              class="textfield row__control row__control--number"
-              type="number"
-              min="10"
-              max="24"
-            />
-          </div>
+            <div class="rows">
+              <div class="row">
+                <label class="row__label" for="settings-font-size">{{
+                  $t('settings.fontSize')
+                }}</label>
+                <input
+                  id="settings-font-size"
+                  v-model.number="settings.values.editorFontSize"
+                  class="textfield row__control row__control--number"
+                  type="number"
+                  min="10"
+                  max="24"
+                />
+              </div>
 
-          <!--
+              <!--
             The caption points at the input rather than wrapping it: a `<label>`
             around this component would put a label inside a label, which is
             neither valid nor answerable by a screen reader. Clicking the words
             still toggles it, which is the part that matters.
           -->
-          <div class="row">
-            <label class="row__label" for="settings-wrap-lines">{{
-              $t('settings.wrapLines')
-            }}</label>
-            <CheckBox
-              id="settings-wrap-lines"
-              v-model="settings.values.wrapLines"
-              class="row__control"
-            />
-          </div>
-        </div>
-      </section>
+              <div class="row">
+                <label class="row__label" for="settings-wrap-lines">{{
+                  $t('settings.wrapLines')
+                }}</label>
+                <CheckBox
+                  id="settings-wrap-lines"
+                  v-model="settings.values.wrapLines"
+                  class="row__control"
+                />
+              </div>
+            </div>
+          </section>
 
-      <section class="panel-section">
-        <div class="panel-section__head">
-          <h3 class="type-title">
-            {{ $t('settings.language') }}
-          </h3>
-          <p class="panel-section__desc">
-            {{ $t('settings.languageHelp') }}
-          </p>
-        </div>
+          <section v-show="category === 'general'" class="panel-section">
+            <div class="panel-section__head">
+              <h3 class="type-title">
+                {{ $t('settings.language') }}
+              </h3>
+              <p class="panel-section__desc">
+                {{ $t('settings.languageHelp') }}
+              </p>
+            </div>
 
-        <div class="rows">
-          <div class="row">
-            <span class="row__label">{{ $t('settings.language') }}</span>
-            <SelectMenu
-              v-model="settings.values.language"
-              class="row__control row__control--select"
-              :options="languageOptions"
-              :aria-label="$t('settings.language')"
-            />
-          </div>
-        </div>
-      </section>
+            <div class="rows">
+              <div class="row">
+                <span class="row__label">{{ $t('settings.language') }}</span>
+                <SelectMenu
+                  v-model="settings.values.language"
+                  class="row__control row__control--select"
+                  :options="languageOptions"
+                  :ariaLabel="$t('settings.language')"
+                />
+              </div>
+            </div>
+          </section>
 
-      <section class="panel-section">
-        <div class="panel-section__head">
-          <h3 class="type-title">
-            {{ $t('settings.keyboard') }}
-          </h3>
-          <p class="panel-section__desc">
-            {{ $t('settings.keyboardHelp') }}
-          </p>
-        </div>
+          <section v-show="category === 'general'" class="panel-section">
+            <div class="panel-section__head">
+              <h3 class="type-title">
+                {{ $t('settings.keyboard') }}
+              </h3>
+              <p class="panel-section__desc">
+                {{ $t('settings.keyboardHelp') }}
+              </p>
+            </div>
 
-        <div class="rows">
-          <div class="row">
-            <span class="row__label">{{ $t('settings.keyboardRow') }}</span>
-            <PressButton class="row__control" size="sm" @click="emit('manage-shortcuts')">
-              <AppIcon name="keyboard" :size="13" />
-              {{ $t('settings.keyboardOpen') }}
-            </PressButton>
-          </div>
-        </div>
-      </section>
+            <div class="rows">
+              <div class="row">
+                <span class="row__label">{{ $t('settings.keyboardRow') }}</span>
+                <PressButton class="row__control" size="sm" @click="emit('manage-shortcuts')">
+                  <AppIcon name="keyboard" :size="13" />
+                  {{ $t('settings.keyboardOpen') }}
+                </PressButton>
+              </div>
+            </div>
+          </section>
 
-      <section class="panel-section">
-        <div class="panel-section__head">
-          <h3 class="type-title">
-            {{ $t('assistant.title') }}
-          </h3>
-          <p class="panel-section__desc">
-            {{ $t('assistant.settingsDesc') }}
-          </p>
-        </div>
+          <section v-show="category === 'assistant'" class="panel-section">
+            <div class="panel-section__head">
+              <h3 class="type-title">
+                {{ $t('assistant.title') }}
+              </h3>
+              <p class="panel-section__desc">
+                {{ $t('assistant.settingsDesc') }}
+              </p>
+            </div>
 
-        <div class="rows">
-          <!--
+            <div class="rows">
+              <!--
             Which provider is in use, said out loud.
 
             It was only ever a picker on the floor of the chat composer, which
@@ -715,68 +767,68 @@ const languageOptions = computed(() => [
             button that names a saved query asks the same provider. It is the
             same `choose` the composer calls, so the two cannot disagree.
           -->
-          <div v-if="assistant.configured" class="row">
-            <span class="row__label">{{ $t('assistant.provider') }}</span>
-            <SelectMenu
-              v-model="providerId"
-              class="row__control row__control--select"
-              :options="providerOptions"
-              :aria-label="$t('assistant.provider')"
-            />
-          </div>
+              <div v-if="assistant.configured" class="row">
+                <span class="row__label">{{ $t('assistant.provider') }}</span>
+                <SelectMenu
+                  v-model="providerId"
+                  class="row__control row__control--select"
+                  :options="providerOptions"
+                  :ariaLabel="$t('assistant.provider')"
+                />
+              </div>
 
-          <div class="row">
-            <span class="row__label">{{
-              assistant.configured
-                ? $t('assistant.configuredCount', { count: assistant.providers.length })
-                : $t('assistant.noProviderYet')
-            }}</span>
-            <PressButton
-              class="row__control"
-              size="sm"
-              @click="
-                open = false;
-                emit('manage-providers');
-              "
-            >
-              <AppIcon name="assistant" filled :size="13" />
-              {{ $t('assistant.manageProviders') }}
-            </PressButton>
-          </div>
-        </div>
-      </section>
+              <div class="row">
+                <span class="row__label">{{
+                  assistant.configured
+                    ? $t('assistant.configuredCount', { count: assistant.providers.length })
+                    : $t('assistant.noProviderYet')
+                }}</span>
+                <PressButton
+                  class="row__control"
+                  size="sm"
+                  @click="
+                    open = false;
+                    emit('manage-providers');
+                  "
+                >
+                  <AppIcon name="assistant" filled :size="13" />
+                  {{ $t('assistant.manageProviders') }}
+                </PressButton>
+              </div>
+            </div>
+          </section>
 
-      <section class="panel-section">
-        <div class="panel-section__head">
-          <h3 class="type-title">
-            {{ $t('settings.file') }}
-          </h3>
-          <p class="panel-section__desc">
-            {{ $t('settings.fileDesc') }}
-          </p>
-        </div>
+          <section v-show="category === 'file'" class="panel-section">
+            <div class="panel-section__head">
+              <h3 class="type-title">
+                {{ $t('settings.file') }}
+              </h3>
+              <p class="panel-section__desc">
+                {{ $t('settings.fileDesc') }}
+              </p>
+            </div>
 
-        <div class="rows">
-          <!-- The row says what happens; the button carries the verb. -->
-          <div class="row">
-            <span class="row__label">{{ $t('settings.exportRow') }}</span>
-            <PressButton class="row__control" size="sm" @click="exportSettings">
-              <AppIcon name="download" :size="13" />
-              {{ $t('settings.exportSettings') }}
-            </PressButton>
-          </div>
+            <div class="rows">
+              <!-- The row says what happens; the button carries the verb. -->
+              <div class="row">
+                <span class="row__label">{{ $t('settings.exportRow') }}</span>
+                <PressButton class="row__control" size="sm" @click="exportSettings">
+                  <AppIcon name="download" :size="13" />
+                  {{ $t('settings.exportSettings') }}
+                </PressButton>
+              </div>
 
-          <div class="row">
-            <span class="row__label">{{ $t('settings.importRow') }}</span>
-            <PressButton class="row__control" size="sm" @click="importSettings">
-              <AppIcon name="upload" :size="13" />
-              {{ $t('settings.importSettings') }}
-            </PressButton>
-          </div>
-        </div>
-      </section>
+              <div class="row">
+                <span class="row__label">{{ $t('settings.importRow') }}</span>
+                <PressButton class="row__control" size="sm" @click="importSettings">
+                  <AppIcon name="upload" :size="13" />
+                  {{ $t('settings.importSettings') }}
+                </PressButton>
+              </div>
+            </div>
+          </section>
 
-      <!--
+          <!--
         Stored data is its own sheet, for the reason the provider list is.
         ────────────────────────────────────────────────────────────────
         It is seven categories with sizes beside them and a destructive verb at
@@ -784,66 +836,66 @@ const languageOptions = computed(() => [
         the palette opens the same sheet directly, which is exactly why the
         surface is owned by the view rather than by this control.
       -->
-      <section class="panel-section">
-        <div class="panel-section__head">
-          <h3 class="type-title">
-            {{ $t('storage.title') }}
-          </h3>
-          <p class="panel-section__desc">
-            {{ $t('storage.row') }}
-          </p>
-        </div>
+          <section v-show="category === 'file'" class="panel-section">
+            <div class="panel-section__head">
+              <h3 class="type-title">
+                {{ $t('storage.title') }}
+              </h3>
+              <p class="panel-section__desc">
+                {{ $t('storage.row') }}
+              </p>
+            </div>
 
-        <div class="rows">
-          <div class="row">
-            <span class="row__label">{{ $t('storage.manage') }}</span>
-            <PressButton class="row__control" size="sm" @click="emit('manage-storage')">
-              <AppIcon name="database" :size="13" />
-              {{ $t('storage.open') }}
-            </PressButton>
-          </div>
-        </div>
-      </section>
+            <div class="rows">
+              <div class="row">
+                <span class="row__label">{{ $t('storage.manage') }}</span>
+                <PressButton class="row__control" size="sm" @click="emit('manage-storage')">
+                  <AppIcon name="database" :size="13" />
+                  {{ $t('storage.open') }}
+                </PressButton>
+              </div>
+            </div>
+          </section>
 
-      <section class="panel-section">
-        <div class="panel-section__head">
-          <h3 class="type-title">
-            {{ $t('settings.resetAll') }}
-          </h3>
-          <p class="panel-section__desc">
-            {{ $t('settings.resetDesc') }}
-          </p>
-        </div>
+          <section v-show="category === 'file'" class="panel-section">
+            <div class="panel-section__head">
+              <h3 class="type-title">
+                {{ $t('settings.resetAll') }}
+              </h3>
+              <p class="panel-section__desc">
+                {{ $t('settings.resetDesc') }}
+              </p>
+            </div>
 
-        <div class="rows">
-          <div class="row">
-            <!--
+            <div class="rows">
+              <div class="row">
+                <!--
               Two steps rather than a dialog, and it disarms itself.
               A confirmation sheet opened from a sheet is a stack two deep for a
               button nobody presses on purpose, and an undo toast is no help
               either: it would be dismissed with the sheet that raised it. So
               the button arms, and forgets if you walk away.
             -->
-            <span class="row__label">{{
-              confirmingReset ? $t('settings.resetConfirm') : $t('settings.resetRow')
-            }}</span>
-            <PressButton
-              class="row__control"
-              size="sm"
-              :variant="confirmingReset ? 'danger' : undefined"
-              :aria-label="
-                confirmingReset ? $t('settings.resetConfirm') : $t('settings.resetRow')
-              "
-              @click="resetAll"
-            >
-              <AppIcon name="refresh" :size="13" />
-              {{ confirmingReset ? $t('action.confirm') : $t('action.reset') }}
-            </PressButton>
-          </div>
-        </div>
-      </section>
+                <span class="row__label">{{
+                  confirmingReset ? $t('settings.resetConfirm') : $t('settings.resetRow')
+                }}</span>
+                <PressButton
+                  class="row__control"
+                  size="sm"
+                  :variant="confirmingReset ? 'danger' : undefined"
+                  :aria-label="
+                    confirmingReset ? $t('settings.resetConfirm') : $t('settings.resetRow')
+                  "
+                  @click="resetAll"
+                >
+                  <AppIcon name="refresh" :size="13" />
+                  {{ confirmingReset ? $t('action.confirm') : $t('action.reset') }}
+                </PressButton>
+              </div>
+            </div>
+          </section>
 
-      <!--
+          <!--
         Updates, next to the version they change.
         ────────────────────────────────────────
         Immediately above the About block rather than in with the data
@@ -853,42 +905,42 @@ const languageOptions = computed(() => [
         The switch is a switch and the check is a button, which is the honest
         split: one is a standing preference and the other happens once, now.
       -->
-      <section class="panel-section">
-        <div class="panel-section__head">
-          <h3 class="type-title">
-            {{ $t('update.section') }}
-          </h3>
-          <p class="panel-section__desc">
-            {{ $t('update.sectionDesc') }}
-          </p>
-        </div>
+          <section v-show="category === 'about'" class="panel-section">
+            <div class="panel-section__head">
+              <h3 class="type-title">
+                {{ $t('update.section') }}
+              </h3>
+              <p class="panel-section__desc">
+                {{ $t('update.sectionDesc') }}
+              </p>
+            </div>
 
-        <div class="rows">
-          <div class="row">
-            <span class="row__label">{{ $t('update.startupRow') }}</span>
-            <ToggleSwitch
-              v-model="settings.values.checkUpdatesOnStartup"
-              class="row__control"
-              :aria-label="$t('update.startupRow')"
-            />
-          </div>
+            <div class="rows">
+              <div class="row">
+                <span class="row__label">{{ $t('update.startupRow') }}</span>
+                <ToggleSwitch
+                  v-model="settings.values.checkUpdatesOnStartup"
+                  class="row__control"
+                  :ariaLabel="$t('update.startupRow')"
+                />
+              </div>
 
-          <div class="row">
-            <span class="row__label">{{ $t('update.checkRow') }}</span>
-            <PressButton
-              class="row__control"
-              size="sm"
-              :disabled="updates.busy"
-              @click="updates.check()"
-            >
-              <AppIcon name="download" :size="13" />
-              {{ $t('update.checkNow') }}
-            </PressButton>
-          </div>
-        </div>
-      </section>
+              <div class="row">
+                <span class="row__label">{{ $t('update.checkRow') }}</span>
+                <PressButton
+                  class="row__control"
+                  size="sm"
+                  :disabled="updates.busy"
+                  @click="updates.check()"
+                >
+                  <AppIcon name="download" :size="13" />
+                  {{ $t('update.checkNow') }}
+                </PressButton>
+              </div>
+            </div>
+          </section>
 
-      <!--
+          <!--
         Which app this is, and which one of it.
         ──────────────────────────────────────
         At the foot rather than the head: settings are opened to change
@@ -900,18 +952,18 @@ const languageOptions = computed(() => [
         The version comes from the running app rather than from a constant
         compiled in beside it, so a build can only ever report what it is.
       -->
-      <footer class="about">
-        <AppMark :size="80" />
-        <p class="about__name">
-          {{ $t('app.name') }}
-        </p>
-        <p class="about__version">
-          {{ $t('settings.version', { version: platform.info.appVersion }) }}
-        </p>
-      </footer>
-    </div>
+          <footer v-show="category === 'about'" class="about">
+            <AppMark :size="80" />
+            <p class="about__name">
+              {{ $t('app.name') }}
+            </p>
+            <p class="about__version">
+              {{ $t('settings.version', { version: platform.info.appVersion }) }}
+            </p>
+          </footer>
+        </div>
 
-    <!--
+        <!--
       The same settings, as the file they are stored as. Kept mounted rather
       than swapped in, so switching views does not tear down an editor and lose
       the caret in a document someone is halfway through editing.
@@ -920,10 +972,14 @@ const languageOptions = computed(() => [
       inset inside it, because a code surface with a margin around it reads as a
       widget on a page, and this view *is* the page.
     -->
-    <div v-show="view === 'json'" class="json">
-      <JsonEditor v-model="jsonText" class="json__editor" :label="$t('settings.viewJson')" />
+        <div v-show="view === 'json'" class="json">
+          <JsonEditor
+            v-model="jsonText"
+            class="json__editor"
+            :label="$t('settings.viewJson')"
+          />
 
-      <!--
+          <!--
         The document's own bar: what it is, and what can be done with it.
         ────────────────────────────────────────────────────────────────
         Copying used to sit in the sheet's header, pinned across both views —
@@ -933,86 +989,130 @@ const languageOptions = computed(() => [
         already is when they are looking at the document, and it now reads as a
         row: a state on the left, the actions on the right, one of them filled.
       -->
-      <div class="json__bar">
-        <span v-if="jsonError" class="json__state json__state--error" role="alert">
-          <AppIcon name="warning" :size="13" />
-          {{ jsonError }}
-        </span>
-        <span v-else class="json__state json__state--ok">
-          <AppIcon name="check" :size="13" />
-          {{ $t('settings.jsonValid') }}
-        </span>
+          <div class="json__bar">
+            <span v-if="jsonError" class="json__state json__state--error" role="alert">
+              <AppIcon name="warning" :size="13" />
+              {{ jsonError }}
+            </span>
+            <span v-else class="json__state json__state--ok">
+              <AppIcon name="check" :size="13" />
+              {{ $t('settings.jsonValid') }}
+            </span>
 
-        <span class="json__count" aria-hidden="true">·</span>
-        <span class="json__count">{{
-          $t('settings.jsonLines', { count: jsonText.split('\n').length })
-        }}</span>
+            <span class="json__count" aria-hidden="true">·</span>
+            <span class="json__count">{{
+              $t('settings.jsonLines', { count: jsonText.split('\n').length })
+            }}</span>
 
-        <span class="json__gap" />
+            <span class="json__gap" />
 
-        <button
-          v-tip="$t('settings.copyHint')"
-          type="button"
-          class="json__action focus-fill"
-          @click="copyToClipboard"
-        >
-          <AppIcon name="copy" :size="12" />
-          {{ $t('settings.copy') }}
-        </button>
+            <button
+              v-tip="$t('settings.copyHint')"
+              type="button"
+              class="json__action focus-fill"
+              @click="copyToClipboard"
+            >
+              <AppIcon name="copy" :size="12" />
+              {{ $t('settings.copy') }}
+            </button>
 
-        <button
-          v-tip="$t('settings.exportRow')"
-          type="button"
-          class="json__action focus-fill"
-          @click="exportSettings"
-        >
-          <AppIcon name="download" :size="12" />
-          {{ $t('settings.exportSettings') }}
-        </button>
+            <button
+              v-tip="$t('settings.exportRow')"
+              type="button"
+              class="json__action focus-fill"
+              @click="exportSettings"
+            >
+              <AppIcon name="download" :size="12" />
+              {{ $t('settings.exportSettings') }}
+            </button>
 
-        <PressButton size="sm" variant="primary" :disabled="!!jsonError" @click="applyJson">
-          {{ $t('action.apply') }}
-        </PressButton>
+            <PressButton size="sm" variant="primary" :disabled="!!jsonError" @click="applyJson">
+              {{ $t('action.apply') }}
+            </PressButton>
+          </div>
+        </div>
       </div>
     </div>
   </Sheet>
 </template>
 
 <style scoped>
-/*
- * The panes, in the shape the sibling project settled on: a column of sections,
- * each a heading, a sentence and one card of rows.
- *
- * What was here was a stack of labelled fields divided by hairlines, with the
- * view switcher inside the scrolling area and four buttons along the bottom —
- * so the sheet opened on a row of chrome, and the things you could *do* to your
- * settings were as loud as the settings themselves. Import, export and reset
- * are now rows like any other, in sections that say what they are for.
- */
-/*
- * The body carries its own padding, and the rule above it spans the sheet.
- *
- * The JSON view is full-bleed — the editor *is* the page — so the line between
- * the header and the document ran edge to edge, while the visual view had no
- * line at all and its content simply began. Two views of one popup, separated
- * from their own title in two different ways, and the switcher above them
- * inviting a comparison. So the sheet is flush in both and the padding moves in
- * here, where the line can be full width in both.
- */
+.settings-layout {
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);
+  min-height: min(30rem, 55vh);
+  border-top: 1px solid var(--separator);
+}
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-tight);
+  padding: var(--gap-loose);
+  border-inline-end: 1px solid var(--separator);
+  background: var(--fill-4);
+}
+.settings-nav__caption {
+  padding: var(--gap-tight) var(--gap);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-soft);
+}
+.settings-nav__item {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  min-height: max(var(--hit-min), var(--row-h));
+  padding: var(--gap) var(--gap);
+  border-radius: var(--radius-control);
+  text-align: start;
+  font-size: 0.8125rem;
+  color: var(--text-soft);
+  transition:
+    background-color var(--t-hover) var(--ease-out),
+    color var(--t-hover) var(--ease-out);
+}
+.settings-nav__item .icon {
+  flex: 0 0 auto;
+}
+.settings-nav__item--active {
+  background: var(--fill-2);
+  color: var(--color-base-content);
+  font-weight: 600;
+}
+.settings-nav__item--active .icon {
+  color: var(--color-primary-text);
+}
+.settings-nav__item--document {
+  margin-top: var(--gap-loose);
+}
+.settings-nav__item:active {
+  background: var(--fill-1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .settings-nav__item:hover {
+    background: var(--fill-3);
+    color: var(--color-base-content);
+  }
+}
+.settings-nav__note {
+  margin-top: auto;
+  padding: var(--gap-section) var(--gap) var(--gap);
+  color: var(--text-soft);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+}
+.settings-content {
+  min-width: 0;
+}
+
 .panels {
   display: flex;
   flex-direction: column;
   gap: var(--gap-section);
-  padding: var(--gap-loose) var(--gap-section) var(--gap-section);
-  border-top: 1px solid var(--separator);
+  padding: var(--gap-section);
 }
 
-/*
- * Type that grows tightens: the name is set a step above body copy with the
- * tracking pulled in, and the version sits under it at the size of a caption in
- * the muted colour. Weight carries the difference between them rather than
- * another size step — the two lines are one block, not two headings.
- */
 .about {
   display: flex;
   flex-direction: column;
@@ -1044,7 +1144,7 @@ const languageOptions = computed(() => [
 .panel-section__head {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: calc(var(--gap-tight) / 2);
 }
 
 .panel-section__desc {
@@ -1053,21 +1153,11 @@ const languageOptions = computed(() => [
   color: var(--text-soft);
 }
 
-/*
- * A grouped list, and the two things that make it one rather than a stack of
- * bordered boxes.
- *
- * The separator is inset to where the labels start instead of running wall to
- * wall: a full-bleed rule cuts the card into slices, an inset one reads as one
- * card with rows in it and points at the column the labels are in. And the
- * card is a *tint* with a hairline, not a raised surface — it sits on the
- * sheet, which is already the front-most object in the window.
- */
 .rows {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--separator);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-card);
   background: var(--fill-4);
   overflow: hidden;
 }
@@ -1082,7 +1172,7 @@ const languageOptions = computed(() => [
   flex-wrap: wrap;
   align-items: center;
   gap: var(--gap);
-  min-height: 3.25rem;
+  min-height: calc(var(--field-h) + var(--gap-loose) + var(--gap));
   padding: var(--gap) var(--gap-loose);
   font-size: 0.8125rem;
   font-weight: 500;
@@ -1100,7 +1190,7 @@ const languageOptions = computed(() => [
 .row__label {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: calc(var(--gap-tight) / 2);
   min-width: 0;
 }
 
@@ -1108,8 +1198,6 @@ label.row__label {
   cursor: pointer;
 }
 
-/* The sentence that used to be a `help` line under the field. It belongs with
-   the label, not under the control: it says what the setting means. */
 .row__hint {
   max-width: 46ch;
   font-size: 0.6875rem;
@@ -1118,21 +1206,6 @@ label.row__label {
   color: var(--text-soft);
 }
 
-.row__label--group {
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-soft);
-}
-
-.row--header {
-  min-height: 0;
-  padding-block: var(--gap-tight);
-  background: color-mix(in oklab, var(--color-base-content) 3%, transparent);
-}
-
-/* One column of controls down the right edge, whatever each of them is. */
 .row__control {
   flex: 0 0 auto;
   margin-inline-start: auto;
@@ -1142,7 +1215,6 @@ label.row__label {
   width: 5.5rem;
 }
 
-/* The picker and its specimen are one control as far as the row is concerned. */
 .scheme {
   display: flex;
   align-items: center;
@@ -1153,28 +1225,12 @@ label.row__label {
   width: 11rem;
 }
 
-/* Wide enough for its longest option and no wider; `SelectMenu` fills what it
-   is given, and given the row it would take the whole of it. */
 .row__control--select {
   width: 14rem;
 }
 
 .row__control--wide {
   width: min(20rem, 60%);
-}
-
-.keys {
-  display: flex;
-  gap: var(--gap-tight);
-}
-
-.keys kbd {
-  padding: 1px 6px;
-  border-radius: 4px;
-  border: 1px solid var(--separator-strong);
-  background: var(--color-base-100);
-  font-family: var(--font-ui);
-  font-size: 0.625rem;
 }
 
 .accents {
@@ -1187,7 +1243,7 @@ label.row__label {
 .accent {
   width: var(--hit-min);
   height: var(--hit-min);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--chip);
   transition: transform var(--t-press) var(--ease-out);
 }
@@ -1208,78 +1264,23 @@ label.row__label {
     0 0 0 4px var(--chip);
 }
 
-/* A quiet verb in the header, the same shape the tab toolbars use. */
-.tool {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--gap-tight);
-  height: var(--field-h);
-  padding-inline: var(--gap);
-  border-radius: var(--control-radius);
-  color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
-  font-size: 0.75rem;
-  font-weight: 500;
-  white-space: nowrap;
-  transition:
-    background-color var(--t-hover) var(--ease-out),
-    color var(--t-hover) var(--ease-out);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .tool:hover {
-    background-color: var(--fill-4);
-    color: var(--color-base-content);
-  }
-}
-
-/*
- * The document view fills the sheet.
- *
- * The body carries the padding every other view wants, so this one takes it
- * back rather than sitting inside it: an editor with a margin around it reads
- * as a widget dropped on a page, and here the editor *is* the page. The bar
- * underneath is the only chrome, butted against the sheet's own footer edge.
- */
 .json {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-top: 1px solid var(--separator);
 }
 
-/*
- * The one thing in this app with a height of its own.
- *
- * Everything else in a sheet is content that ends somewhere, so the sheet can
- * ask how tall it is; a text editor does not end — it is a window onto a
- * document, and sizing it to the document would make the popup grow by a line
- * every time a line is typed into it. So the editor is given a definite size
- * here, chosen to leave the sheet's own ceiling unreached on any window worth
- * opening it on, and the sheet measures *that* like it measures everything
- * else: switching views animates between the two heights instead of both views
- * inheriting one.
- */
+/* An editor is a viewport onto a document, so only this content owns a fixed height. */
 .json__editor {
   height: min(28rem, 52vh);
 }
 
-/*
- * The document's status bar.
- *
- * Its height comes from the control inside it plus an even margin either side,
- * rather than from a number that looked right — the same rhythm every other bar
- * in the app is built on, so this one does not read as a different kind of
- * furniture.
- *
- * Small text is tracked slightly *open*: type tightens as it grows and loosens
- * as it shrinks, and at eleven pixels the default spacing reads as cramped.
- */
 .json__bar {
   display: flex;
   align-items: center;
   gap: var(--gap-tight);
   min-height: calc(var(--field-h) + var(--gap));
-  padding-inline: var(--gap-section);
+  padding-inline: var(--gap-loose);
   padding-block: calc(var(--gap) / 2);
   border-top: 1px solid var(--separator);
   background: var(--fill-4);
@@ -1291,8 +1292,6 @@ label.row__label {
   flex: 1;
 }
 
-/* How long the document is. A fact about the thing on screen, in the row that
-   describes it — and the reason the left of the bar is no longer four words. */
 .json__count {
   font-variant-numeric: tabular-nums;
   color: var(--text-soft);
@@ -1315,8 +1314,6 @@ label.row__label {
     transform var(--t-press) var(--ease-out);
 }
 
-/* On the press, not the release: the acknowledgement has to land before the
-   hand has finished the gesture, or the row feels slow however fast it is. */
 .json__action:active {
   background-color: var(--fill-2);
   transform: scale(0.98);
@@ -1346,12 +1343,6 @@ label.row__label {
   color: var(--color-error);
 }
 
-/*
- * Status, not decoration. The words stay quiet — they are the same four words
- * every time and nobody needs to read them twice — while the mark carries the
- * meaning in a colour, so "valid" is answered before anything is read. An error
- * takes the whole phrase, because that one does have to be read.
- */
 .json__state--ok {
   color: var(--text-soft);
 }
@@ -1364,6 +1355,38 @@ label.row__label {
   .accent:hover,
   .accent:active {
     transform: none;
+  }
+}
+@media (max-width: 650px) {
+  .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .settings-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    border-inline-end: 0;
+    border-bottom: 1px solid var(--separator);
+    padding: var(--gap);
+  }
+  .settings-nav__item {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  .settings-nav__item--document {
+    margin-top: 0;
+  }
+  .settings-nav__caption,
+  .settings-nav__note {
+    display: none;
+  }
+  .panels {
+    padding: var(--gap-loose);
+  }
+  .row__control--wide {
+    width: min(20rem, 100%);
+  }
+  .json__bar {
+    flex-wrap: wrap;
   }
 }
 </style>

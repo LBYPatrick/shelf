@@ -415,7 +415,12 @@
     "syntaxBoth": "配色",
     "syntaxLight": "ライトの配色",
     "syntaxDark": "ダークの配色",
-    "syntaxPreview": "このスキームの見本（上が明るいテーマ、下が暗いテーマ）"
+    "syntaxPreview": "このスキームの見本（上が明るいテーマ、下が暗いテーマ）",
+    "general": "一般",
+    "about": "Shelf について",
+    "personalize": "環境設定",
+    "liveChanges": "変更はすぐに適用されます。設定はこのデバイスに保存されます。",
+    "documentChanges": "ドキュメントを編集し、「適用」で変更を保存します。"
   },
   "storage": {
     "title": "保存されているデータ",
@@ -556,9 +561,26 @@
     "scope": "行",
     "scopePage": "このページ（{{count}}）",
     "scopeFull": "クエリに一致するすべて",
-    "scopePageHint": "読み込み済みの行から書き出します。再実行しません。",
+    "scopePageHint": "現在のプレビュー上限でステートメントを再実行します。",
     "scopeFullHint": "プレビュー上限なしで文を再実行します。一致は {{count}} 行です。",
-    "scopeFullHintUnknown": "プレビュー用の上限なしで文をもう一度実行します。"
+    "scopeFullHintUnknown": "プレビュー用の上限なしで文をもう一度実行します。",
+    "summary": "書き出しの概要",
+    "columns": "列",
+    "sample": "サンプル · {{rows}} 行 · {{columns}} 列",
+    "noPreview": "プレビューできる読み込み済みの行がありません。",
+    "allMatching": "一致するすべての行",
+    "rowCount": "{{count}} 行",
+    "previewHint": "サンプルには読み込み済みの行が表示されます。書き出しには選択した範囲が使われます。",
+    "tableFileHint": "未読み込みの行を含め、一致するすべての行を書き出します。",
+    "jobFileHint": "クエリを再実行せず、保存された結果全体を書き出します。",
+    "formats": {
+      "csv": "スプレッドシート向け",
+      "tsv": "タブ区切りの値",
+      "json": "構造化レコード",
+      "jsonl": "1 行に 1 レコード",
+      "markdown": "読みやすい表",
+      "sql": "INSERT ステートメント"
+    }
   },
   "grid": {
     "oneBased": "1 始まり",

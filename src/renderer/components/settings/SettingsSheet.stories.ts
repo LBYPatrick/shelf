@@ -1,3 +1,4 @@
+import { nextTick, onMounted } from 'vue';
 import type { Meta, StoryObj } from '@storybook/vue3-vite';
 import { useAssistant } from '@renderer/stores/assistant';
 import { connected, withProvider } from '../../../../.storybook/seed';
@@ -44,3 +45,31 @@ export const WithAssistant: Story = {
     template: `<SettingsSheet v-bind="args" />`,
   }),
 };
+
+/** Focused categories keep every preference reachable without one long scroll. */
+function categoryStory(category: string): Story {
+  return {
+    render: (args) => ({
+      components: { SettingsSheet },
+      setup: () => {
+        connected();
+        onMounted(
+          () =>
+            void nextTick(() => {
+              document
+                .querySelector<HTMLButtonElement>(`[data-settings-category="${category}"]`)
+                ?.click();
+            })
+        );
+        return { args };
+      },
+      template: `<SettingsSheet v-bind="args" />`,
+    }),
+  };
+}
+export const DataPreferences = categoryStory('data');
+export const EditorPreferences = categoryStory('editor');
+export const GeneralPreferences = categoryStory('general');
+export const SettingsFiles = categoryStory('file');
+export const AboutAndUpdates = categoryStory('about');
+export const JsonDocument = categoryStory('json');

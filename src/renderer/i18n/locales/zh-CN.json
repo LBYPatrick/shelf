@@ -415,7 +415,12 @@
     "syntaxBoth": "配色",
     "syntaxLight": "浅色配色",
     "syntaxDark": "深色配色",
-    "syntaxPreview": "该配色的示例，上为浅色、下为深色"
+    "syntaxPreview": "该配色的示例，上为浅色、下为深色",
+    "general": "通用",
+    "about": "关于 Shelf",
+    "personalize": "偏好设置",
+    "liveChanges": "更改即时生效。偏好设置保存在此设备上。",
+    "documentChanges": "编辑文档，然后选择“应用”以保存更改。"
   },
   "storage": {
     "title": "已存储的数据",
@@ -556,9 +561,26 @@
     "scope": "行",
     "scopePage": "当前页（{{count}}）",
     "scopeFull": "查询匹配的全部",
-    "scopePageHint": "用已加载的行写出，不会再次执行。",
+    "scopePageHint": "使用当前预览限制再次运行语句。",
     "scopeFullHint": "不带预览上限重新执行语句；共匹配 {{count}} 行。",
-    "scopeFullHintUnknown": "不带预览限制重新执行该语句。"
+    "scopeFullHintUnknown": "不带预览限制重新执行该语句。",
+    "summary": "导出摘要",
+    "columns": "列",
+    "sample": "示例 · {{rows}} 行 · {{columns}} 列",
+    "noPreview": "没有已加载的行可供预览。",
+    "allMatching": "所有匹配的行",
+    "rowCount": "{{count}} 行",
+    "previewHint": "示例显示已加载的行。导出范围以所选范围为准。",
+    "tableFileHint": "导出所有匹配的行，包括尚未加载的行。",
+    "jobFileHint": "导出完整的已保存结果，不会再次运行查询。",
+    "formats": {
+      "csv": "用于电子表格",
+      "tsv": "制表符分隔的值",
+      "json": "结构化记录",
+      "jsonl": "每行一条记录",
+      "markdown": "易读的表格",
+      "sql": "INSERT 语句"
+    }
   },
   "grid": {
     "oneBased": "从 1 开始",
