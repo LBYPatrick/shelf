@@ -21,6 +21,7 @@
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useTabs, type Tab } from '../../stores/tabs';
+import { useAssistant } from '../../stores/assistant';
 import { useDrag } from '../../composables/useDrag';
 import { useTranslation } from 'i18next-vue';
 import { shortcutLabel } from '../../lib/keybindings';
@@ -245,6 +246,87 @@ function openNewMenu(): void {
 function onNewChoose(id: string): void {
   if (id === 'query') tabs.openQuery();
   else if (id === 'chat') tabs.openChat();
+}
+
+/* -------------------------------------------------------------- tab actions */
+
+const tabMenuOpen = ref(false);
+const tabMenuAt = ref({ x: 0, y: 0 });
+const menuTabId = ref<string | null>(null);
+const menuTabIndex = computed(() => tabs.tabs.findIndex((tab) => tab.id === menuTabId.value));
+const tabMenuItems = computed<MenuItem[]>(() => [
+  {
+    id: 'duplicate',
+    label: t('tab.duplicate'),
+    icon: 'copy',
+    disabled: menuTabIndex.value < 0,
+  },
+  {
+    id: 'close',
+    label: t('tab.close'),
+    icon: 'close',
+    hint: shortcutLabel('tab.close'),
+    startsGroup: true,
+  },
+  { id: 'others', label: t('tab.closeOthers'), disabled: tabs.tabs.length < 2 },
+  { id: 'left', label: t('tab.closeLeft'), disabled: menuTabIndex.value <= 0 },
+  {
+    id: 'right',
+    label: t('tab.closeRight'),
+    disabled: menuTabIndex.value < 0 || menuTabIndex.value === tabs.tabs.length - 1,
+  },
+]);
+
+function openTabMenu(tab: Tab, at: { x: number; y: number }): void {
+  newMenuOpen.value = false;
+  menuTabId.value = tab.id;
+  tabMenuAt.value = at;
+  tabMenuOpen.value = true;
+}
+
+function onTabPointerDown(event: PointerEvent, tab: Tab, index: number): void {
+  if (event.button !== 0) return;
+  tabs.focus(tab.id);
+  beginDrag(event, index);
+}
+
+function onTabKey(event: KeyboardEvent, tab: Tab): void {
+  // Text editing and the close button own their keys.
+  if (event.target !== event.currentTarget) return;
+  if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+    event.preventDefault();
+    const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    openTabMenu(tab, { x: box.left, y: box.bottom });
+  } else if (event.key === 'Delete') {
+    event.preventDefault();
+    tabs.close(tab.id);
+  } else if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    tabs.focus(tab.id);
+  }
+}
+
+function onTabChoose(id: string): void {
+  const tabId = menuTabId.value;
+  const index = tabs.tabs.findIndex((tab) => tab.id === tabId);
+  if (!tabId || index < 0) return;
+  if (id === 'duplicate') {
+    const source = tabs.byId(tabId)!;
+    const copy = tabs.duplicate(tabId);
+    if (copy && source.kind === 'chat') useAssistant().duplicateConversation(tabId, copy.id);
+    return;
+  }
+  const targets =
+    id === 'close'
+      ? [tabs.tabs[index]!]
+      : id === 'others'
+        ? tabs.tabs.filter((tab) => tab.id !== tabId)
+        : id === 'left'
+          ? tabs.tabs.slice(0, index)
+          : id === 'right'
+            ? tabs.tabs.slice(index + 1)
+            : [];
+  for (const tab of targets) closeTab(tab.id);
 }
 
 /* ----------------------------------------------------------------- renaming */
@@ -679,13 +761,12 @@ const KIND_ICON: Record<Tab['kind'], string> = {
           role="tab"
           :aria-selected="tab.id === tabs.activeId"
           tabindex="0"
-          @pointerdown="
-            tabs.focus(tab.id);
-            beginDrag($event, index);
-          "
+          @pointerdown="onTabPointerDown($event, tab, index)"
           @auxclick="onAuxClick($event, tab)"
           @dblclick="beginRename(tab)"
-          @keydown.delete="closeTab(tab.id)"
+          :aria-label="tab.subtitle ? `${tab.title} · ${tab.subtitle}` : tab.title"
+          @contextmenu.prevent.stop="openTabMenu(tab, { x: $event.clientX, y: $event.clientY })"
+          @keydown="onTabKey($event, tab)"
         >
           <AppIcon class="striptab__mark" :name="KIND_ICON[tab.kind]" :size="12" />
           <!--
@@ -712,8 +793,10 @@ const KIND_ICON: Record<Tab['kind'], string> = {
             @keydown.esc.prevent="renaming = null"
             @blur="commitRename()"
           />
-          <span v-else class="striptab__title">{{ tab.title }}</span>
-          <span v-if="tab.subtitle" class="striptab__scope">{{ tab.subtitle }}</span>
+          <span v-else v-tip="tab.title" class="striptab__title">{{ tab.title }}</span>
+          <span v-if="tab.subtitle" v-tip="tab.subtitle" class="striptab__scope">{{
+            tab.subtitle
+          }}</span>
 
           <!--
           The dot is the unsaved mark and the cross is the action, in one place
@@ -724,7 +807,9 @@ const KIND_ICON: Record<Tab['kind'], string> = {
             class="striptab__close"
             :class="{ 'striptab__close--unsaved': tab.unsaved }"
             :aria-label="`Close ${tab.title}`"
+            v-tip="t('tab.close')"
             @pointerdown.stop
+            @dblclick.stop
             @click.stop="closeTab(tab.id)"
           >
             <span v-if="tab.unsaved" class="striptab__dot" aria-hidden="true" />
@@ -763,6 +848,13 @@ const KIND_ICON: Record<Tab['kind'], string> = {
     >
       <AppIcon name="plus" :size="13" />
     </button>
+
+    <ContextMenu
+      v-model="tabMenuOpen"
+      :items="tabMenuItems"
+      :at="tabMenuAt"
+      @choose="onTabChoose"
+    />
 
     <ContextMenu
       v-model="newMenuOpen"
@@ -923,8 +1015,8 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   position: absolute;
   top: 50%;
   left: 0;
-  height: calc(var(--tab-h) - var(--gap));
-  margin-top: calc((var(--tab-h) - var(--gap)) / -2);
+  height: max(var(--hit-min), calc(var(--tab-h) - var(--gap)));
+  margin-top: calc(max(var(--hit-min), var(--tab-h) - var(--gap)) / -2);
   border-radius: var(--control-radius);
   /*
    * The working surface, come up to meet the bar.
@@ -1020,9 +1112,11 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   display: flex;
   align-items: center;
   gap: var(--gap-tight);
+  min-width: 0;
+  overflow: hidden;
   flex: 0 0 auto;
   width: var(--tab-w, var(--tab-max));
-  height: calc(var(--tab-h) - var(--gap));
+  height: max(var(--hit-min), calc(var(--tab-h) - var(--gap)));
   padding-inline: var(--gap) var(--gap-tight);
   border-radius: var(--control-radius);
   font-size: 0.75rem;
@@ -1052,7 +1146,7 @@ const KIND_ICON: Record<Tab['kind'], string> = {
  * inline transform, which beats this rule anyway, so the exclusion is here to
  * say that on purpose rather than to rely on it.
  */
-.striptab:active:not(.striptab--dragging) {
+.striptab:active:not(.striptab--dragging):not(:has(.striptab__close:active)) {
   transform: scale(0.98);
 }
 
@@ -1132,7 +1226,7 @@ const KIND_ICON: Record<Tab['kind'], string> = {
 }
 
 .striptab__title {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1140,7 +1234,12 @@ const KIND_ICON: Record<Tab['kind'], string> = {
 }
 
 .striptab__scope {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 30%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.625rem;
   opacity: 0.45;
 }
@@ -1149,8 +1248,8 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   display: grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 1.125rem;
-  height: 1.125rem;
+  width: var(--hit-min);
+  height: var(--hit-min);
   border-radius: 0.25rem;
   color: inherit;
   opacity: 0;
@@ -1209,7 +1308,7 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   flex: 0 0 auto;
   place-items: center;
   width: var(--hit-min);
-  height: calc(var(--tab-h) - var(--gap));
+  height: max(var(--hit-min), calc(var(--tab-h) - var(--gap)));
   border-radius: var(--control-radius);
   color: var(--text-soft);
   transition:

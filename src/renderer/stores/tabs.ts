@@ -296,7 +296,34 @@ export const useTabs = defineStore('tabs', () => {
     activeId.value = neighbour?.id ?? null;
   }
 
+  /** A separate view of the same content, inserted beside its source. */
+  function duplicate(id: string): Tab | undefined {
+    const index = tabs.value.findIndex((tab) => tab.id === id);
+    const source = tabs.value[index];
+    if (!source) return;
+    // Tab state is the same plain data we persist. Copy nested scope/entity
+    // values as well, so editing a duplicate never mutates its source.
+    const copy = JSON.parse(JSON.stringify(source)) as Tab;
+    const copyId = nextId();
+    if (copy.kind === 'chat') delete copy.chatId;
+    const duplicated = { ...copy, id: copyId };
+    tabs.value = [
+      ...tabs.value.slice(0, index + 1),
+      duplicated,
+      ...tabs.value.slice(index + 1),
+    ];
+    focus(duplicated.id);
+    return duplicated;
+  }
+
+  function closeToLeft(id: string): void {
+    const index = tabs.value.findIndex((tab) => tab.id === id);
+    if (index === -1) return;
+    for (const tab of tabs.value.slice(0, index)) close(tab.id);
+  }
+
   function closeOthers(id: string): void {
+    if (!byId(id)) return;
     for (const tab of [...tabs.value]) {
       if (tab.id !== id) close(tab.id);
     }
@@ -421,11 +448,13 @@ export const useTabs = defineStore('tabs', () => {
     setUnsaved,
     openChat,
     rename,
+    duplicate,
     openJob,
     closeJob,
     close,
     closeOthers,
     closeToRight,
+    closeToLeft,
     reopenLastClosed,
     move,
     nextTab,

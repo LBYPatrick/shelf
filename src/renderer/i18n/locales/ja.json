@@ -46,6 +46,13 @@
     "updateQuery": "クエリを更新",
     "duplicate": "複製"
   },
+  "tab": {
+    "duplicate": "タブを複製",
+    "close": "タブを閉じる",
+    "closeOthers": "ほかのタブを閉じる",
+    "closeLeft": "左側のタブを閉じる",
+    "closeRight": "右側のタブを閉じる"
+  },
   "time": {
     "justNow": "たった今",
     "minutesAgo": "{{count}}分前",

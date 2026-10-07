@@ -26,6 +26,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Add tab context menus for duplication and closing other tabs, tabs to the left,
+  or tabs to the right. Keep long titles and scopes inside crowded tabs and
+  reserve a full-size close target.
+
 - Consolidate connection tile actions into an animated three-dot menu.
 
 - Refine connection tiles with aligned metadata and actions, balanced engine

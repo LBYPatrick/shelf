@@ -46,6 +46,13 @@
     "updateQuery": "쿼리 업데이트",
     "duplicate": "복제"
   },
+  "tab": {
+    "duplicate": "탭 복제",
+    "close": "탭 닫기",
+    "closeOthers": "다른 탭 닫기",
+    "closeLeft": "왼쪽 탭 닫기",
+    "closeRight": "오른쪽 탭 닫기"
+  },
   "time": {
     "justNow": "방금",
     "minutesAgo": "{{count}}분 전",

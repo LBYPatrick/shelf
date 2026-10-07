@@ -46,6 +46,13 @@
     "updateQuery": "Update Query",
     "duplicate": "Duplicate"
   },
+  "tab": {
+    "duplicate": "Duplicate tab",
+    "close": "Close tab",
+    "closeOthers": "Close other tabs",
+    "closeLeft": "Close tabs to the left",
+    "closeRight": "Close tabs to the right"
+  },
   "time": {
     "justNow": "just now",
     "minutesAgo": "{{count}}m ago",

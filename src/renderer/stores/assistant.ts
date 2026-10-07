@@ -320,6 +320,31 @@ export const useAssistant = defineStore('assistant', () => {
     return conversations.value.get(tabId)!;
   }
 
+  /** Fork a snapshot without sharing an in-flight request or a saved row. */
+  function duplicateConversation(fromTabId: string, toTabId: string): void {
+    const source = conversations.value.get(fromTabId);
+    if (!source) return;
+    const turns = JSON.parse(JSON.stringify(source.turns)) as ChatTurn[];
+    for (const turn of turns) {
+      if (turn.state === 'running') turn.state = 'stopped';
+      delete turn.phase;
+      turn.items = turn.items.map((item) =>
+        item.kind === 'step' && item.state === 'running'
+          ? { ...item, state: 'failed', detail: i18next.t('assistant.stopped') }
+          : item
+      );
+    }
+    conversations.value = new Map(conversations.value).set(toTabId, {
+      tabId: toTabId,
+      id: '',
+      title: source.title,
+      scope: JSON.parse(JSON.stringify(source.scope)) as SchemaScope,
+      turns,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  }
+
   /** Puts a saved conversation into a tab, ready to be continued. */
   async function adopt(tabId: string, chat: SavedChat): Promise<Conversation> {
     const full = chat.body ? chat : ((await window.shelf.db.readChat(chat.id)) ?? chat);
@@ -586,6 +611,7 @@ export const useAssistant = defineStore('assistant', () => {
     suggestName,
     warmSchema,
     conversation,
+    duplicateConversation,
     forget,
     ask,
     interrupt,

@@ -46,6 +46,13 @@
     "updateQuery": "Cập nhật truy vấn",
     "duplicate": "Nhân bản"
   },
+  "tab": {
+    "duplicate": "Nhân đôi thẻ",
+    "close": "Đóng thẻ",
+    "closeOthers": "Đóng các thẻ khác",
+    "closeLeft": "Đóng các thẻ bên trái",
+    "closeRight": "Đóng các thẻ bên phải"
+  },
   "time": {
     "justNow": "vừa xong",
     "minutesAgo": "{{count}} phút trước",
