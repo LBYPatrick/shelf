@@ -188,7 +188,8 @@
     "removeTitle": "移除{{name}}？",
     "removeHelp": "这将移除已保存的连接及凭据，数据库本身不受影响。打开的连接将断开。",
     "exportIncludesSecrets": "导出包含已保存的密码",
-    "details": "连接信息"
+    "details": "连接信息",
+    "reenterCredentials": "重新输入凭据"
   },
   "workspace": {
     "entities": "对象",

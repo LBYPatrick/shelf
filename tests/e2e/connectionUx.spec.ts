@@ -117,3 +117,69 @@ test('clearing a saved password removes it instead of silently keeping it', asyn
   });
   expect(secrets['password']).toBeUndefined();
 });
+
+test('preserves unreadable credentials until their replacement is explicit', async ({
+  app,
+  page,
+}) => {
+  const saved = await page.evaluate(() =>
+    window.shelf.db.saveConnection({
+      name: 'Credential recovery',
+      engine: 'postgres',
+      rememberSecrets: true,
+      config: { engine: 'postgres', host: 'localhost', port: 5432, username: 'reader' },
+    })
+  );
+  await app.evaluate(({ app }, id) => {
+    const Database = process
+      .getBuiltinModule('module')
+      .createRequire(`${process.cwd()}/package.json`)('better-sqlite3');
+    const db = new Database(`${app.getPath('userData')}/shelf.db`);
+    db.prepare('INSERT INTO secret (owner_id, key, value) VALUES (?, ?, ?)').run(
+      id,
+      'password',
+      Buffer.from('invalid-test-ciphertext')
+    );
+    db.close();
+  }, saved.id);
+  await page.reload();
+  await page.getByRole('button', { name: 'Edit Credential recovery', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
+  await expect(page.locator('.credential-recovery')).toContainText('could not decrypt');
+  expect(
+    await app.evaluate(({ app }, id) => {
+      const Database = process
+        .getBuiltinModule('module')
+        .createRequire(`${process.cwd()}/package.json`)('better-sqlite3');
+      const db = new Database(`${app.getPath('userData')}/shelf.db`, { readonly: true });
+      const row = db
+        .prepare('SELECT value FROM secret WHERE owner_id=? AND key=?')
+        .get(id, 'password');
+      db.close();
+      return row.value.toString() === 'invalid-test-ciphertext';
+    }, saved.id)
+  ).toBe(true);
+  await page.getByRole('button', { name: 'Re-enter credentials', exact: true }).click();
+  await page.getByLabel('Password', { exact: true }).fill('replacement');
+  await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeEnabled();
+  const handle = await page.evaluate(
+    ({ id, config }) =>
+      window.shelf.db.prepareConnection({
+        kind: 'draft',
+        basedOn: id,
+        config,
+        secrets: {
+          password: 'replacement',
+          sshPassword: '',
+          sshPassphrase: '',
+          proxyPassword: '',
+        },
+      }),
+    saved
+  );
+  expect(handle).toBeTruthy();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  expect(
+    await page.evaluate((id) => window.shelf.db.revealSecrets(id), saved.id)
+  ).toMatchObject({ password: 'replacement' });
+});

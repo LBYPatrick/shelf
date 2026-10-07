@@ -188,7 +188,8 @@
     "removeTitle": "Xóa {{name}}?",
     "removeHelp": "Xóa kết nối đã lưu và thông tin xác thực. Cơ sở dữ liệu không đổi. Kết nối đang mở sẽ bị ngắt.",
     "exportIncludesSecrets": "Xuất bao gồm mật khẩu đã lưu",
-    "details": "Thông tin kết nối"
+    "details": "Thông tin kết nối",
+    "reenterCredentials": "Nhập lại thông tin đăng nhập"
   },
   "workspace": {
     "entities": "Đối tượng",

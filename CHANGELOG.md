@@ -10,6 +10,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Resolve SSH host aliases using the local OpenSSH configuration, expand
   home-directory key paths, and close active sockets when a tunnel is closed.
+- Preserve saved credentials when a build cannot decrypt them, report the
+  problem, and allow an explicit replacement from the connection editor.
 - Preserve Google tool-call signatures and OpenAI reasoning when the assistant
   takes another turn after inspecting or querying a database.
 - Accept the read-only Shelf tool names used by both Grok ACP naming formats.

@@ -188,7 +188,8 @@
     "removeTitle": "{{name}}を削除しますか？",
     "removeHelp": "保存済み接続と認証情報を削除します。データベース自体は変更されません。開いている接続は切断されます。",
     "exportIncludesSecrets": "エクスポートには保存済みパスワードが含まれます",
-    "details": "接続情報"
+    "details": "接続情報",
+    "reenterCredentials": "認証情報を再入力"
   },
   "workspace": {
     "entities": "オブジェクト",

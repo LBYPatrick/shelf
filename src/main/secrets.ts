@@ -75,10 +75,11 @@ export function createSecretStore(db: AppDatabase): SecretStore {
       try {
         return safeStorage.decryptString(row.value);
       } catch {
-        // The keyring changed underneath us — a restored backup, a new machine.
-        // The stored bytes are unreadable, so drop them and prompt instead.
-        deleteOne.run(ownerId, key);
-        return undefined;
+        // Another build may lack access to the key that encrypted this row.
+        // Reading must not erase a credential still usable by the original app.
+        throw new Error(
+          'This build could not decrypt the saved credentials. Re-enter them in the connection editor, or open the build that saved them.'
+        );
       }
     },
 

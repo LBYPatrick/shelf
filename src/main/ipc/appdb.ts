@@ -99,7 +99,16 @@ export function registerAppDbHandlers(
       } else {
         // Missing credentials inherit the saved value; an explicit empty
         // string means the reader cleared the field and must stay empty.
-        const stored = request.basedOn ? connections.resolveConfig(request.basedOn) : undefined;
+        const inheritsSecrets = [
+          'password',
+          'sshPassword',
+          'sshPassphrase',
+          'proxyPassword',
+        ].some((key) => request.secrets?.[key] === undefined);
+        const stored =
+          request.basedOn && inheritsSecrets
+            ? connections.resolveConfig(request.basedOn)
+            : undefined;
 
         const password = request.secrets?.['password'] ?? stored?.password;
         const ssh = request.config.ssh

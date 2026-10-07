@@ -516,6 +516,14 @@ function chooseEngine(engine: EngineId | null): void {
   detailPage.value = 'details';
   draft.engine = engine;
 }
+
+function reenterCredentials(): void {
+  draft.password = '';
+  draft.sshPassword = '';
+  draft.sshPassphrase = '';
+  draft.proxyPassword = '';
+  secretsError.value = '';
+}
 </script>
 
 <template>
@@ -534,6 +542,12 @@ function chooseEngine(engine: EngineId | null): void {
     </aside>
     <section class="connection-details" :inert="busy || secretsLoading || undefined">
       <template v-if="descriptor && chosen">
+        <div v-if="secretsError" class="credential-recovery" role="alert">
+          <p>{{ secretsError }}</p>
+          <PressButton variant="glass" @click="reenterCredentials">
+            {{ $t('connection.reenterCredentials') }}
+          </PressButton>
+        </div>
         <header class="details-heading">
           <EngineMark :engine="chosen.id" :size="20" />
           <h3>{{ chosen.name }}</h3>
@@ -870,6 +884,18 @@ function chooseEngine(engine: EngineId | null): void {
 </template>
 
 <style scoped>
+.credential-recovery {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-md);
+  padding: var(--gap-md);
+  border-radius: var(--radius-box);
+  background: var(--fill-2);
+  font-size: 0.8125rem;
+}
+.credential-recovery p {
+  flex: 1;
+}
 .connection-layout {
   display: grid;
   grid-template-columns: 11rem minmax(0, 1fr);

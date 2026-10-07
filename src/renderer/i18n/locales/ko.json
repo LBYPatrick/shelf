@@ -188,7 +188,8 @@
     "removeTitle": "{{name}}을 삭제할까요?",
     "removeHelp": "저장된 연결과 인증 정보를 삭제합니다. 데이터베이스는 그대로이며 열린 연결은 끊어집니다.",
     "exportIncludesSecrets": "내보내기에 저장된 비밀번호 포함",
-    "details": "연결 정보"
+    "details": "연결 정보",
+    "reenterCredentials": "인증 정보 다시 입력"
   },
   "workspace": {
     "entities": "객체",

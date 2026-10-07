@@ -67,9 +67,15 @@ connection URL and it fills in the form, or open the **sample database** — a
 synthetic database with schemas, views, foreign keys, JSON, binary, big integers
 and nulls. Everything works against it, and nothing is installed or saved.
 
+The welcome library searches saved connections, recently used databases, and
+retained query history. Opening a history entry restores its statement without
+running it. Manage connections from the workspace without disconnecting.
+
 For a database behind a bastion, enable SSH under **Security & routing** in the
 connection editor. SSH host aliases use your local OpenSSH configuration;
 explicit port and username fields take precedence, and key paths accept `~/`.
+If a build cannot read a saved credential, it preserves the encrypted value and
+offers **Re-enter credentials**; replacement is written only when you save.
 
 ---
 

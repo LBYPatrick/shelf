@@ -188,7 +188,8 @@
     "removeTitle": "Remove {{name}}?",
     "removeHelp": "This removes the saved connection and its credentials. The database itself is unchanged. An open connection will be disconnected.",
     "exportIncludesSecrets": "Export includes saved passwords",
-    "details": "Connection details"
+    "details": "Connection details",
+    "reenterCredentials": "Re-enter credentials"
   },
   "workspace": {
     "entities": "Entities",
