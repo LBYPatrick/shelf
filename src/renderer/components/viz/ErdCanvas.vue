@@ -315,7 +315,7 @@ function bindDrag(): void {
   element.selectAll<SVGGElement, Node>('.erd-node').call(
     drag<SVGGElement, Node>()
       .on('start', (event, node) => {
-        simulation?.alphaTarget(0.15).restart();
+        if (!reducedMotion.value) simulation?.alphaTarget(0.15).restart();
         node.fx = node.x;
         node.fy = node.y;
         void event;
@@ -323,6 +323,11 @@ function bindDrag(): void {
       .on('drag', (event, node) => {
         node.fx = event.x;
         node.fy = event.y;
+        if (reducedMotion.value) {
+          node.x = event.x;
+          node.y = event.y;
+          tick.value += 1;
+        }
       })
       .on('end', (_event, node) => {
         simulation?.alphaTarget(0);
