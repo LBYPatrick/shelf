@@ -26,6 +26,9 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Refine connection tiles with aligned metadata and actions, balanced engine
+  marks, separate card spacing, and subtle pointer feedback that respects
+  reduced motion.
 - Redesign connection setup with a persistent engine list, clear connection
   methods, separate routing controls, validation, and explicit save actions.
 - Redesign the welcome page as a searchable library with bounded pages for saved

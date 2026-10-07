@@ -7,8 +7,8 @@
  * three shapes that happen to sit under each other. What differs is the mark on
  * the left and whatever the row carries on the right, and both are arguments.
  *
- * The row is a container rather than a button because a connection carries two
- * more actions, and a button cannot hold a button.
+ * The row is a container rather than a button because a connection carries
+ * additional actions, and a button cannot hold a button.
  */
 import type { EngineId } from '@drivers/types';
 import AppIcon from '../ui/AppIcon.vue';
@@ -36,7 +36,7 @@ const props = withDefaults(
     /** Paths and hosts are read character by character; prose is not. */
     mono?: boolean;
     /**
-     * The short fact at the end of the second line — when it was last opened.
+     * When it was last opened, in its own trailing column.
      *
      * Its own field rather than the tail of the subtitle, because the two want
      * opposite things when the row is narrow: the host may be truncated to
@@ -66,6 +66,7 @@ defineEmits<{ open: [] }>();
   <div
     class="row"
     :class="{ 'row--busy': busy }"
+    :aria-busy="busy || undefined"
     :style="accent ? { '--label': accent } : undefined"
   >
     <button type="button" class="row__open" :aria-label="label" @click="$emit('open')">
@@ -80,15 +81,15 @@ defineEmits<{ open: [] }>();
           <slot name="badge" />
         </span>
 
-        <span v-if="subtitle || meta" class="row__line row__line--sub">
-          <span v-if="subtitle" class="row__sub" :class="{ 'row__sub--mono': mono }">{{
-            subtitle
-          }}</span>
-          <span v-if="meta" class="row__meta">{{ meta }}</span>
+        <span v-if="subtitle" class="row__line">
+          <span class="row__sub" :class="{ 'row__sub--mono': mono }">{{ subtitle }}</span>
         </span>
       </span>
 
-      <AppIcon class="row__chevron" name="chevron" :size="16" />
+      <span v-if="meta || !$slots.actions" class="row__trailing">
+        <span v-if="meta" class="row__meta">{{ meta }}</span>
+        <AppIcon v-if="!$slots.actions" class="row__chevron" name="chevron" :size="16" />
+      </span>
     </button>
 
     <!--
@@ -104,7 +105,9 @@ defineEmits<{ open: [] }>();
       <slot name="actions" />
     </div>
 
-    <span v-if="busy" class="row__progress" aria-hidden="true" />
+    <span v-if="busy" class="row__activity" aria-hidden="true">
+      <span class="row__progress" />
+    </span>
   </div>
 </template>
 
@@ -118,31 +121,45 @@ defineEmits<{ open: [] }>();
 .row {
   position: relative;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  transition: background-color var(--t-hover) var(--ease-out);
+  isolation: isolate;
+}
+
+.row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--fill-2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-hover) var(--ease-out);
 }
 
 /* The connection's own colour, along the edge you read first. */
 .row::before {
   content: '';
   position: absolute;
-  inset-block: 0;
+  inset-block: var(--gap-loose);
   inset-inline-start: 0;
-  width: 3px;
+  width: 2px;
+  border-radius: var(--radius-field);
   background: var(--label, transparent);
 }
 
 /* Rows follow the desktop density scale, regardless of window size. */
 .row__open {
-  display: flex;
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--gap);
+  gap: var(--gap-loose);
   width: 100%;
   /* A grid item will not shrink below its content either, so the chain of
      min-widths has to run all the way from the row to the text. */
   min-width: 0;
-  min-height: max(calc(var(--hit-min) + var(--gap)), calc(2.75rem * var(--density)));
+  min-height: max(calc(var(--hit-min) + var(--gap-loose)), calc(3.5rem * var(--density)));
   padding: var(--gap) var(--gap-loose);
   text-align: start;
   font-size: 0.8125rem;
@@ -152,45 +169,38 @@ defineEmits<{ open: [] }>();
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 2rem;
+  height: 2rem;
   border-radius: var(--radius-field);
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
-  background: var(--fill-3);
+  color: var(--text-soft);
+  background: var(--fill-2);
   transition: transform var(--t-hover) var(--ease-out);
 }
 
-/*
- * The mark grows with the row, like the icon beside it does.
- *
- * `EngineMark` takes a pixel size because two of its three callers are fixed
- * tiles; this row is the one that is sized in `em` all the way down, so the
- * drawn mark is overridden here and the fallback letters take their size from
- * the same place they always did.
- */
+/* Engine glyphs and action icons share one optical size, including fallbacks. */
 .row__glyph {
-  font-size: 0.66em;
+  font-size: 0.6875rem;
 }
 
 .row__glyph.mark,
 .row__mark .mark {
-  width: 1.15em;
-  height: 1.15em;
+  width: 1rem;
+  height: 1rem;
 }
 
 /* The icon is drawn at a fixed pixel size, so it is the one thing in the row
    that would not grow with it. */
 .row__mark .icon {
-  width: 1.1em;
-  height: 1.1em;
+  width: 1rem;
+  height: 1rem;
 }
 
 .row__text {
   display: flex;
   flex-direction: column;
-  gap: 0.1em;
+  gap: var(--gap-tight);
   min-width: 0;
   flex: 1;
 }
@@ -206,8 +216,12 @@ defineEmits<{ open: [] }>();
   min-width: 0;
 }
 
-.row__line--sub {
-  justify-content: space-between;
+.row__trailing {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gap);
+  min-width: 0;
 }
 
 /* When it was last opened. Tabular so a column of them lines up, and never
@@ -215,6 +229,7 @@ defineEmits<{ open: [] }>();
 .row__meta {
   flex: 0 0 auto;
   font-size: 0.6875rem;
+  line-height: 1.4;
   font-variant-numeric: tabular-nums;
   color: var(--text-soft);
   white-space: nowrap;
@@ -224,7 +239,8 @@ defineEmits<{ open: [] }>();
   flex: 0 1 auto;
   min-width: 0;
   font-size: 0.8125rem;
-  font-weight: 550;
+  font-weight: 600;
+  line-height: 1.4;
   letter-spacing: -0.006em;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -250,36 +266,37 @@ defineEmits<{ open: [] }>();
 }
 
 /*
- * The chevron points where the row is going. It is the only thing that moves on
- * hover, which is what makes the movement mean something.
+ * The chevron points where the row is going; its small travel reinforces that
+ * direction without moving the label or the click target.
  */
 .row__chevron {
   flex: 0 0 auto;
   width: 1em;
   height: 1em;
   color: var(--text-soft);
-  transition:
-    transform var(--t-hover) var(--ease-out),
-    opacity var(--t-hover) var(--ease-out),
-    color var(--t-hover) var(--ease-out);
+  transition: transform var(--t-hover) var(--ease-out);
 }
 
 .row__actions {
   display: flex;
   align-items: center;
-  gap: 0.2em;
-  padding-inline-end: 0.5em;
-  opacity: 1;
-  transition: opacity var(--t-hover) var(--ease-out);
+  gap: var(--gap-tight);
+  padding-inline-end: var(--gap-loose);
 }
 
 /* A line that sweeps the row while the connection opens: "working", without
    taking any space or moving anything else. */
-.row__progress {
+.row__activity {
   position: absolute;
-  inset-block-end: 0;
-  inset-inline: 0;
+  inset-block-end: 1px;
+  inset-inline: var(--gap-loose);
   height: 2px;
+  overflow: hidden;
+  border-radius: var(--radius-field);
+}
+.row__progress {
+  display: block;
+  height: 100%;
   background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
   animation: row-sweep 1.1s var(--ease-in-out) infinite;
 }
@@ -297,52 +314,41 @@ defineEmits<{ open: [] }>();
   background: color-mix(in oklab, var(--color-primary) 8%, transparent);
 }
 
-.row:active:not(.row--busy) {
-  background: var(--fill-2);
+.row .row__open:active .row__mark {
+  transform: scale(0.94);
+  transition-duration: var(--t-press);
+}
+.row:focus-within::after {
+  opacity: 1;
+  transition: none;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .row__actions {
-    opacity: 0;
-  }
-  .row:hover {
-    background: var(--fill-3);
+  .row:hover::after {
+    opacity: 1;
   }
 
   .row:hover .row__mark {
-    transform: scale(1.06);
+    transform: scale(1.04);
   }
 
   .row:hover .row__chevron {
     transform: translateX(2px);
     color: var(--text-soft);
   }
+}
 
-  /*
-   * The actions take the chevron's place rather than crowding beside it.
-   *
-   * Only the opacity moves. They were given a few pixels of travel as well,
-   * which is a box that changes position under a pointer already on its way to
-   * it — the one place in the interface where a flourish costs a click.
-   */
-  .row:hover .row__actions,
-  .row:focus-within .row__actions {
-    opacity: 1;
-  }
-
-  /*
-   * A row that carries actions does not carry a chevron as well: two things
-   * pointing at the end of the same row, one of which appears only sometimes.
-   * The chevron stays on the rows that are a single destination.
-   */
-  .row:has(.row__actions) .row__chevron {
-    display: none;
-  }
+/* Keyboard focus changes immediately; only pointer feedback carries motion. */
+.row__open:focus-visible .row__mark,
+.row__open:focus-visible .row__chevron {
+  transform: none;
+  transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .row:hover .row__mark,
-  .row:hover .row__chevron {
+  .row:hover .row__chevron,
+  .row .row__open:active .row__mark {
     transform: none;
   }
 

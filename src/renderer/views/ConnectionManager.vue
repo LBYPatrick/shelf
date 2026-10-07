@@ -933,13 +933,26 @@ watch(
   border-radius: var(--radius-field);
   overflow: hidden;
 }
-.group__row + .group__row {
-  border-top: 1px solid var(--separator);
+.collection .group__list {
+  display: grid;
+  gap: var(--gap);
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+}
+.group__row {
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-field);
 }
 .flag {
   color: var(--text-soft);
   font-size: 0.625rem;
   white-space: nowrap;
+  flex: none;
+  line-height: 1.4;
+  padding: 0.125rem var(--gap-tight);
+  border-radius: var(--control-radius);
+  background: var(--fill-2);
 }
 .rowaction {
   display: grid;
@@ -948,6 +961,19 @@ watch(
   height: var(--hit-min);
   border-radius: var(--control-radius);
   color: var(--text-soft);
+  transition:
+    background-color var(--t-hover) ease,
+    color var(--t-hover) ease;
+}
+.rowaction :deep(.icon) {
+  transition: transform var(--t-press) var(--ease-out);
+}
+.rowaction:active :deep(.icon) {
+  transform: scale(0.9);
+}
+.rowaction:focus-visible :deep(.icon) {
+  transform: none;
+  transition: none;
 }
 .blank {
   padding-block: var(--gap-section);
@@ -1090,6 +1116,9 @@ watch(
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .rowaction:active :deep(.icon) {
+    transform: none;
+  }
   .rise-enter-from,
   .rise-leave-to {
     transform: none;
