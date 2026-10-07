@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { usePlatform } from './composables/usePlatform';
 import { useTheme } from './composables/useTheme';
 import { useSettings } from './stores/settings';
@@ -18,6 +18,7 @@ const updates = useUpdates();
 
 const connections = useConnections();
 const connected = computed(() => connections.active !== null);
+const managerEditing = ref(false);
 
 /*
  * The window is sized to the screen it is showing. A workspace is a tool you
@@ -62,8 +63,8 @@ onMounted(async () => {
     structure is.
   -->
   <main class="h-full min-h-0">
-    <Workspace v-if="connected" />
-    <ConnectionManager v-else />
+    <Workspace v-if="connected && !managerEditing" />
+    <ConnectionManager v-else @editing-change="managerEditing = $event" />
   </main>
 
   <!--

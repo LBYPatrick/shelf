@@ -61,6 +61,41 @@ const props = defineProps<{
   flush?: boolean;
 }>();
 const open = defineModel<boolean>({ required: true });
+const emit = defineEmits<{ 'after-leave': [] }>();
+
+/** Vue detects the scrim's duration, but the panel has its own, longer exit.
+ * Wait for the actual CSS transitions on both objects rather than guessing a
+ * token in JavaScript; media overrides and interrupted transitions count too. */
+const motionJobs = new WeakMap<Element, symbol>();
+function cancelMotion(element: Element): void {
+  motionJobs.delete(element);
+}
+function finishMotion(element: Element, done: () => void): void {
+  const job = Symbol();
+  motionJobs.set(element, job);
+  void nextTick(() =>
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        if (motionJobs.get(element) !== job) return;
+        const objects = [element, element.querySelector('.panel')].filter(
+          (object): object is Element => object !== null
+        );
+        const animations = objects
+          .flatMap((object) => object.getAnimations())
+          .filter(
+            (animation) =>
+              'transitionProperty' in animation &&
+              ['transform', 'opacity'].includes((animation as CSSTransition).transitionProperty)
+          );
+        void Promise.allSettled(animations.map((animation) => animation.finished)).then(() => {
+          if (motionJobs.get(element) !== job) return;
+          motionJobs.delete(element);
+          done();
+        });
+      })
+    )
+  );
+}
 
 const panel = ref<HTMLElement>();
 /**
@@ -484,7 +519,14 @@ void props;
 
 <template>
   <Teleport to="body">
-    <Transition name="sheet">
+    <Transition
+      name="sheet"
+      @enter="finishMotion"
+      @leave="finishMotion"
+      @enter-cancelled="cancelMotion"
+      @leave-cancelled="cancelMotion"
+      @after-leave="emit('after-leave')"
+    >
       <div
         v-if="open"
         class="scrim"

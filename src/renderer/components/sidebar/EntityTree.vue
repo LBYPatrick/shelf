@@ -9,7 +9,8 @@ import { vTip } from '../../lib/hoverTip';
  * than in the row components, which are destroyed as they scroll away.
  */
 import ProgressBar from '../ui/ProgressBar.vue';
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { pointerMotion, useReducedMotion } from '../../composables/useMotion';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { CellValue, ContainerRef, Entity, EntityRef, Field } from '@drivers/types';
 import { useTranslation } from 'i18next-vue';
 import AppIcon from '../ui/AppIcon.vue';
@@ -26,6 +27,8 @@ import { useEntities, type TreeRow } from '../../stores/entities';
 import { useTabs } from '../../stores/tabs';
 import { useToasts } from '../../stores/toasts';
 
+const reducedMotion = useReducedMotion();
+const instantActivation = ref(false);
 const entities = useEntities();
 const connections = useConnections();
 const tabs = useTabs();
@@ -118,6 +121,7 @@ onBeforeUnmount(() => {
  */
 const revealed = ref<{ from: number; to: number } | null>(null);
 let revealTimer: ReturnType<typeof setTimeout> | undefined;
+let revealSequence = 0;
 
 /** The whole cascade, start to finish. Longer than this reads as a wait. */
 const REVEAL_MS = 260;
@@ -150,6 +154,24 @@ function revealIndex(absolute: number): number | null {
  */
 const collapsing = ref<{ from: number; to: number; key: string } | null>(null);
 let collapseTimer: ReturnType<typeof setTimeout> | undefined;
+let pendingCollapse: TreeRow | undefined;
+
+function flushCollapse(): void {
+  clearTimeout(collapseTimer);
+  collapseTimer = undefined;
+  collapsing.value = null;
+  const pending = pendingCollapse;
+  pendingCollapse = undefined;
+  if (pending) toggleOf(pending);
+}
+
+watch(reducedMotion, (reduced) => {
+  if (!reduced) return;
+  revealSequence += 1;
+  clearTimeout(revealTimer);
+  revealed.value = null;
+  flushCollapse();
+});
 
 /** Out faster than in: the reader has already decided. */
 const COLLAPSE_MS = 140;
@@ -180,40 +202,42 @@ function toggleOf(row: TreeRow): void {
   else if (row.entity) entities.toggle(row.entity);
 }
 
-function activate(row: TreeRow): void {
-  if (!opens(row)) return;
-
+function activate(requested: TreeRow, instant = false): void {
+  // A visual exit cannot own an accepted action. Finish it before resolving
+  // the next node, since the flattened rows may have changed in the meantime.
+  const sequence = ++revealSequence;
+  flushCollapse();
+  const row = entities.rows.find((current) => current.key === requested.key);
+  if (!row || !opens(row)) return;
+  instantActivation.value = instant;
+  const animate = !instant && !reducedMotion.value;
+  clearTimeout(revealTimer);
+  revealed.value = null;
   const before = entities.rows.length;
   const at = entities.rows.indexOf(row);
 
-  if (row.expanded && at >= 0) {
+  if (animate && row.expanded && at >= 0) {
     const count = descendants(at, row.depth);
-    if (count === 0) {
-      toggleOf(row);
+    if (count > 0) {
+      pendingCollapse = row;
+      collapsing.value = { from: at + 1, to: at + count, key: row.key };
+      collapseTimer = setTimeout(flushCollapse, COLLAPSE_MS);
       return;
     }
-
-    clearTimeout(collapseTimer);
-    collapsing.value = { from: at + 1, to: at + count, key: row.key };
-    collapseTimer = setTimeout(() => {
-      collapsing.value = null;
-      toggleOf(row);
-    }, COLLAPSE_MS);
-    return;
   }
-
   toggleOf(row);
-
-  // Measured after the store has recomputed, which it does synchronously.
+  if (!animate) return;
   void nextTick(() => {
+    if (sequence !== revealSequence) return;
     const grew = entities.rows.length - before;
     if (grew > 0 && at >= 0) markRevealed(at, grew);
   });
 }
 
 onBeforeUnmount(() => {
+  revealSequence += 1;
   clearTimeout(revealTimer);
-  clearTimeout(collapseTimer);
+  flushCollapse();
 });
 
 /** Folders and tables open; columns and notes are leaves. */
@@ -457,7 +481,12 @@ const KIND_ICON: Record<string, string> = {
 </script>
 
 <template>
-  <div ref="viewport" class="tree" @scroll="onScroll">
+  <div
+    ref="viewport"
+    class="tree"
+    :class="{ 'tree--instant': instantActivation }"
+    @scroll="onScroll"
+  >
     <!--
       One row's worth of height, measured and never seen. The virtualiser needs
       the real number to size its spacer, and the alternative — reading it off a
@@ -524,12 +553,12 @@ const KIND_ICON: Record<string, string> = {
           :aria-posinset="window.first + index + 1"
           :aria-expanded="opens(row) ? row.expanded : undefined"
           :tabindex="opens(row) ? 0 : -1"
-          @click="activate(row)"
+          @click="activate(row, !pointerMotion($event))"
           @contextmenu="openMenu($event, row)"
           @dblclick="row.entity && open(row.entity)"
-          @keydown.enter="row.entity ? open(row.entity) : activate(row)"
-          @keydown.right.prevent="!row.expanded && activate(row)"
-          @keydown.left.prevent="row.expanded && activate(row)"
+          @keydown.enter="row.entity ? open(row.entity) : activate(row, true)"
+          @keydown.right.prevent="!row.expanded && activate(row, true)"
+          @keydown.left.prevent="row.expanded && activate(row, true)"
         >
           <!--
             A folder: database or schema. The same disclosure, icon and count as
@@ -832,6 +861,10 @@ const KIND_ICON: Record<string, string> = {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 45%;
+}
+
+.tree--instant .row__twisty {
+  transition: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

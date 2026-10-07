@@ -173,6 +173,7 @@ const selectionBox = computed(() => {
  */
 const dragging = ref(false);
 let anchor: number | null = null;
+let brushPointer: number | null = null;
 
 /** Below this the gesture was a click, and a click clears the selection. */
 const DRAG_MIN_PX = 4;
@@ -189,7 +190,8 @@ function timeAt(event: PointerEvent): number {
 }
 
 function beginBrush(event: PointerEvent): void {
-  if (event.button !== 0) return;
+  if (event.button !== 0 || brushPointer !== null) return;
+  brushPointer = event.pointerId;
   const target = event.currentTarget as SVGRectElement;
   target.setPointerCapture(event.pointerId);
   anchor = timeAt(event);
@@ -198,13 +200,13 @@ function beginBrush(event: PointerEvent): void {
 }
 
 function moveBrush(event: PointerEvent): void {
-  if (anchor === null) return;
+  if (anchor === null || event.pointerId !== brushPointer) return;
   const now = timeAt(event);
   emit('select', [Math.min(anchor, now), Math.max(anchor, now)]);
 }
 
 function endBrush(event: PointerEvent): void {
-  if (anchor === null) return;
+  if (anchor === null || event.pointerId !== brushPointer) return;
 
   const box = plot.value?.getBoundingClientRect();
   const travelled = box
@@ -214,6 +216,7 @@ function endBrush(event: PointerEvent): void {
   if (travelled < DRAG_MIN_PX) emit('select', null);
 
   anchor = null;
+  brushPointer = null;
   dragging.value = false;
   if (
     event.currentTarget instanceof Element &&

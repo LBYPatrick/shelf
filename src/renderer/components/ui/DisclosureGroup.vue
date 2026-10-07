@@ -11,15 +11,33 @@
  * `auto` is not an animatable length — the usual reason disclosures snap open.
  */
 import { ref } from 'vue';
+import { pointerMotion, useReducedMotion } from '../../composables/useMotion';
 
 defineProps<{ label: string; hint?: string }>();
 const open = defineModel<boolean>({ default: false });
 
 const content = ref<HTMLElement>();
+const reducedMotion = useReducedMotion();
+const instant = ref(true);
+function toggle(event: MouseEvent): void {
+  instant.value = !pointerMotion(event);
+  open.value = !open.value;
+}
+
+let interruptedHeight: number | undefined;
+function cancelled(element: Element): void {
+  interruptedHeight = element.getBoundingClientRect().height;
+}
 
 function enter(element: Element): void {
   const el = element as HTMLElement;
-  el.style.height = '0px';
+  if (instant.value || reducedMotion.value) {
+    interruptedHeight = undefined;
+    el.style.height = open.value ? 'auto' : '0px';
+    return;
+  }
+  el.style.height = `${interruptedHeight ?? 0}px`;
+  interruptedHeight = undefined;
   // Force a reflow so the browser has a start value to animate from.
   void el.offsetHeight;
   el.style.height = `${el.scrollHeight}px`;
@@ -32,20 +50,21 @@ function afterEnter(element: Element): void {
 
 function leave(element: Element): void {
   const el = element as HTMLElement;
-  el.style.height = `${el.scrollHeight}px`;
+  if (instant.value || reducedMotion.value) {
+    interruptedHeight = undefined;
+    el.style.height = open.value ? 'auto' : '0px';
+    return;
+  }
+  el.style.height = `${interruptedHeight ?? el.getBoundingClientRect().height}px`;
+  interruptedHeight = undefined;
   void el.offsetHeight;
   el.style.height = '0px';
 }
 </script>
 
 <template>
-  <div class="disclosure">
-    <button
-      class="disclosure__trigger"
-      type="button"
-      :aria-expanded="open"
-      @click="open = !open"
-    >
+  <div class="disclosure" :class="{ 'disclosure--instant': instant || reducedMotion }">
+    <button class="disclosure__trigger" type="button" :aria-expanded="open" @click="toggle">
       <svg
         class="disclosure__chevron"
         :class="{ 'disclosure__chevron--open': open }"
@@ -65,7 +84,14 @@ function leave(element: Element): void {
       <span v-if="hint" class="disclosure__hint">{{ hint }}</span>
     </button>
 
-    <Transition name="disclose" @enter="enter" @after-enter="afterEnter" @leave="leave">
+    <Transition
+      name="disclose"
+      @enter="enter"
+      @after-enter="afterEnter"
+      @leave="leave"
+      @enter-cancelled="cancelled"
+      @leave-cancelled="cancelled"
+    >
       <div v-show="open" ref="content" class="disclosure__panel">
         <div class="disclosure__inner">
           <slot />
@@ -128,6 +154,12 @@ function leave(element: Element): void {
   .disclosure__trigger:hover {
     color: var(--color-base-content);
   }
+}
+
+.disclosure--instant .disclosure__panel,
+.disclosure--instant .disclosure__chevron,
+.disclosure--instant .disclosure__inner {
+  transition: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

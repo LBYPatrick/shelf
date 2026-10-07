@@ -94,7 +94,7 @@ function choose(id: string): void {
     <AppIcon class="picker__caret" name="chevron" :size="10" />
   </button>
 
-  <ContextMenu v-model="open" :items="options" :at="at" @choose="choose">
+  <ContextMenu v-model="open" :items="options" :at="at" :trigger="trigger" @choose="choose">
     <!-- Forwarded only when a caller has one, so the menu keeps its own
          fallback for every other list in the app. -->
     <template v-if="$slots.icon" #icon="slotProps">

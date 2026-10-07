@@ -210,6 +210,7 @@ function onProvider(id: string): void {
 /* ------------------------------------------------------------- transcript */
 
 const scroller = ref<HTMLElement>();
+const column = ref<HTMLElement>();
 
 /**
  * Whether the reader is at the bottom.
@@ -229,10 +230,10 @@ function onScroll(): void {
 }
 
 async function follow(): Promise<void> {
-  if (!pinned.value) return;
+  if (!props.active || !pinned.value) return;
   await nextTick();
   const box = scroller.value;
-  if (!box) return;
+  if (!box || !props.active || !pinned.value) return;
   /*
    * Jumped, never smooth-scrolled. A smooth scroll re-requested many times a
    * second never arrives: each call restarts the animation from wherever the
@@ -242,11 +243,36 @@ async function follow(): Promise<void> {
   box.scrollTop = box.scrollHeight;
 }
 
+let followFrame: number | undefined;
+function scheduleFollow(): void {
+  if (!props.active || !pinned.value || followFrame !== undefined) return;
+  followFrame = requestAnimationFrame(() => {
+    followFrame = undefined;
+    void follow();
+  });
+}
+function cancelFollow(): void {
+  if (followFrame !== undefined) cancelAnimationFrame(followFrame);
+  followFrame = undefined;
+}
+// The natural wrapper grows when a streamed item wraps, even when neither
+// item count nor turn state changes. Hidden tabs do not keep an observer alive.
 watch(
-  () => chat.value.turns.map((turn) => turn.items.length + (turn.state === 'running' ? 1 : 0)),
-  () => void follow(),
-  { deep: true }
+  [column, () => props.active],
+  ([element, active], _previous, cleanup) => {
+    cancelFollow();
+    if (!element || !active) return;
+    const observer = new ResizeObserver(scheduleFollow);
+    observer.observe(element);
+    scheduleFollow();
+    cleanup(() => {
+      observer.disconnect();
+      cancelFollow();
+    });
+  },
+  { flush: 'post' }
 );
+onBeforeUnmount(cancelFollow);
 
 /* ---------------------------------------------------------------- sending */
 
@@ -418,7 +444,11 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
         one fills the pane and scrolls as normal. There is never a gap between
         the last thing said and the box for saying the next thing.
       -->
-      <div class="chat__column" :class="{ 'chat__column--opening': chat.turns.length === 0 }">
+      <div
+        ref="column"
+        class="chat__column"
+        :class="{ 'chat__column--opening': chat.turns.length === 0 }"
+      >
         <section v-if="chat.turns.length === 0" class="opening">
           <AppIcon class="opening__mark" name="assistant" filled :size="22" />
           <h2 class="opening__title">

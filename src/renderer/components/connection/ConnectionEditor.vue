@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { SaveConnectionInput, SavedConnection } from '@shared/connections';
 import type { ParsedConnection } from '@shared/connectionUrl';
 import { errorMessage } from '@shared/errors';
@@ -33,8 +33,12 @@ const fingerprint = computed(() => form.value?.fingerprint());
 const ready = computed(() => form.value?.isValid() ?? false);
 const problem = computed(() => form.value?.problem());
 const testable = computed(() => form.value?.hasEngine() ?? false);
-let closeTimer: ReturnType<typeof setTimeout> | undefined;
-onBeforeUnmount(() => clearTimeout(closeTimer));
+let closed = false;
+function afterLeave(): void {
+  if (open.value || closed) return;
+  closed = true;
+  emit('close');
+}
 
 // Dismissing through Escape, the scrim or Cancel follows the same recovery flow.
 const sheetOpen = computed({
@@ -45,7 +49,6 @@ const sheetOpen = computed({
 });
 function close(): void {
   open.value = false;
-  closeTimer = setTimeout(() => emit('close'), 260);
 }
 function requestClose(): void {
   if (saving.value) return;
@@ -112,6 +115,7 @@ async function save(input: SaveConnectionInput, connect: boolean): Promise<void>
 <template>
   <Sheet
     v-model="sheetOpen"
+    @after-leave="afterLeave"
     :title="
       editing ? $t('connection.editTitle', { name: editing.name }) : $t('connection.newTitle')
     "

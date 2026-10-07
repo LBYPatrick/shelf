@@ -102,12 +102,55 @@ const { start, dragging } = useDrag({
   },
 });
 
+let grabPointer: number | null = null;
+function releaseGrab(event?: PointerEvent): void {
+  if (event && event.pointerId !== grabPointer) return;
+  grabPointer = null;
+  window.removeEventListener('pointerup', releaseGrab);
+  window.removeEventListener('pointercancel', releaseGrab);
+  window.removeEventListener('blur', abandonGrab);
+  if (!dragging.value) offset.value = 0;
+  if (root.value) {
+    root.value.style.transition = '';
+    root.value.style.transform = `translateX(${offset.value}px)`;
+    root.value.style.opacity = String(1 - fade.value);
+  }
+}
+function abandonGrab(): void {
+  releaseGrab();
+}
+onBeforeUnmount(() => releaseGrab());
+
 function onGrab(event: PointerEvent): void {
   // Not from the close button or the action: those are targets, and a press on
   // a target that also starts a drag is a target that misfires when the hand
   // moves two pixels.
-  if ((event.target as HTMLElement).closest('button')) return;
+  if (
+    event.button !== 0 ||
+    grabPointer !== null ||
+    dragging.value ||
+    (event.target as HTMLElement).closest('button')
+  )
+    return;
+  const element = root.value;
+  if (!element) return;
+  // Read the presentation value before suppressing the return transition.
+  // A second grab starts exactly where the notice is drawn, not at its target.
+  const transform = getComputedStyle(element).transform;
+  const presentation = transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m41;
+  element.style.transition = 'none';
+  offset.value = presentation;
+  element.style.transform = `translateX(${presentation}px)`;
+  element.style.opacity = String(
+    1 - Math.min(1, Math.abs(presentation) / (element.offsetWidth * THROW))
+  );
+  grabPointer = event.pointerId;
   start(event);
+  // useDrag registers first: it resolves dismissal/return before this restores
+  // the normal transition, including a press released before its drag threshold.
+  window.addEventListener('pointerup', releaseGrab);
+  window.addEventListener('pointercancel', releaseGrab);
+  window.addEventListener('blur', abandonGrab);
 }
 
 /* ---------------------------------------------------------------- countdown */
@@ -194,7 +237,7 @@ function act(): void {
     ref="root"
     class="notice surface-popover"
     :class="[`notice--${notice.tone}`, { 'notice--dragging': dragging }]"
-    :style="{ '--offset': `${offset}px`, '--fade': String(1 - fade) }"
+    :style="{ transform: `translateX(${offset}px)`, opacity: String(1 - fade) }"
     :role="live"
     @pointerdown="onGrab"
     @pointerenter="hovered = true"
@@ -239,8 +282,6 @@ function act(): void {
   cursor: default;
   /* The gesture is horizontal, so the browser keeps the vertical one. */
   touch-action: pan-y;
-  opacity: var(--fade, 1);
-  transform: translateX(var(--offset, 0));
 }
 
 /* Under the hand it tracks one to one, so nothing is animated; released, it

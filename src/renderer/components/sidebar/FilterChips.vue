@@ -17,13 +17,14 @@
  * rather than vanishing makes "off" and "gone" two different gestures. Click
  * the body to disable, the cross to discard.
  */
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, ref, toRaw } from 'vue';
 import { useTranslation } from 'i18next-vue';
 import {
   CHOICES,
   addCriterion,
   removeCriterion,
   toggleCriterion,
+  type Criterion,
   type CriterionKind,
   type JobFilter,
 } from '@shared/jobFilter';
@@ -89,8 +90,26 @@ function drop(at: number): void {
   filter.value = removeCriterion(filter.value, at);
 }
 
+// Equal conditions are allowed, so kind/value is not an identity. Keep local
+// object identities across removal and carry the identity through replacement
+// when one condition is switched off. Nothing new enters the persisted shape.
+const criterionIds = new WeakMap<Criterion, number>();
+let nextCriterionId = 0;
+function criterionId(criterion: Criterion): number {
+  const key = toRaw(criterion);
+  let id = criterionIds.get(key);
+  if (id === undefined) {
+    id = ++nextCriterionId;
+    criterionIds.set(key, id);
+  }
+  return id;
+}
 function toggle(at: number): void {
-  filter.value = toggleCriterion(filter.value, at);
+  const previous = filter.value.criteria[at];
+  const updated = toggleCriterion(filter.value, at);
+  const replacement = updated.criteria[at];
+  if (previous && replacement) criterionIds.set(toRaw(replacement), criterionId(previous));
+  filter.value = updated;
 }
 
 const any = computed(() => filter.value.criteria.length > 0);
@@ -101,7 +120,7 @@ const any = computed(() => filter.value.criteria.length > 0);
     <TransitionGroup name="chip">
       <span
         v-for="(criterion, index) in filter.criteria"
-        :key="`${criterion.kind}-${criterion.value}-${index}`"
+        :key="criterionId(criterion)"
         class="chip"
         :class="{ 'chip--off': !criterion.enabled }"
       >

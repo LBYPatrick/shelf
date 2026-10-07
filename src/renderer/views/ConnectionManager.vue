@@ -29,7 +29,7 @@ import { useConnections } from '../stores/connections';
 import { useToasts } from '../stores/toasts';
 
 const props = defineProps<{ embedded?: boolean }>();
-const emit = defineEmits<{ connected: [] }>();
+const emit = defineEmits<{ connected: []; 'editing-change': [boolean] }>();
 const removing = ref<SavedConnection>();
 const removeOpen = ref(false);
 const removeBusy = ref(false);
@@ -130,6 +130,9 @@ function historyConnection(entry: HistoryEntry): string {
   );
 }
 const editing = ref<SavedConnection | null | undefined>(undefined);
+// The root keeps this view through the editor's actual leave. Connecting may
+// finish first; database work is never made to wait for a visual transition.
+watch(editing, (value) => emit('editing-change', value !== undefined), { immediate: true });
 const seed = ref<ParsedConnection | undefined>(undefined);
 const opening = ref<string | null>(null);
 const sampling = ref(false);
@@ -423,7 +426,6 @@ async function openSample(): Promise<void> {
 }
 
 async function saved(connection: SavedConnection, connect: boolean): Promise<void> {
-  editing.value = undefined;
   search.value = '';
   if (connect) await open(connection);
 }

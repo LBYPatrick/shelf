@@ -125,7 +125,6 @@ const libraryOpen = ref(false);
 const editingConnection = ref<SavedConnection | null | undefined>(undefined);
 
 function onConnectionSaved(connection: SavedConnection, connectNow: boolean): void {
-  editingConnection.value = undefined;
   if (connectNow) void connections.connect(connection);
 }
 
