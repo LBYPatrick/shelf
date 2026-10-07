@@ -6,7 +6,7 @@
  * thing you are looking for is the thing that stands out, without reading any
  * numbers. Hot steps are tinted toward the warning colour on the same scale.
  */
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { hierarchy, tree, type HierarchyPointNode } from 'd3-hierarchy';
 import { linkVertical } from 'd3-shape';
 import { select } from 'd3-selection';
@@ -14,6 +14,8 @@ import { zoom, zoomIdentity, type ZoomBehavior } from 'd3-zoom';
 import { maxCost, type PlanNode } from '@shared/explain';
 import { textWidth } from '../../lib/columnWidths';
 import ZoomControl from './ZoomControl.vue';
+import { motionEaseOut, useReducedMotion, zoomDestination } from '../../composables/useMotion';
+const reducedMotion = useReducedMotion();
 
 const props = defineProps<{ plan: PlanNode }>();
 
@@ -287,6 +289,12 @@ async function toPng(): Promise<string | undefined> {
  */
 const transform = ref(zoomIdentity);
 let zoomBehavior: ZoomBehavior<SVGSVGElement, unknown> | undefined;
+let zoomTarget = zoomIdentity;
+watch(reducedMotion, (reduced) => {
+  if (reduced && svg.value && zoomBehavior) {
+    select(svg.value).interrupt().call(zoomBehavior.transform, zoomTarget);
+  }
+});
 
 /** The height the pane takes: the drawing's own, up to a share of the window. */
 const paneHeight = computed(() => `min(${size.value.height + 24}px, 58vh)`);
@@ -295,24 +303,49 @@ onMounted(() => {
   if (!svg.value) return;
 
   zoomBehavior = zoom<SVGSVGElement, unknown>()
+    .duration(0)
     .scaleExtent([0.3, 5])
-    .on('zoom', (event) => (transform.value = event.transform));
+    .on('zoom', (event) => {
+      if (event.sourceEvent) zoomTarget = event.transform;
+      transform.value = event.transform;
+    });
 
   select(svg.value).call(zoomBehavior);
 });
 
 onBeforeUnmount(() => {
-  if (svg.value) select(svg.value).on('.zoom', null);
+  if (svg.value) select(svg.value).interrupt().on('.zoom', null);
 });
 
-function nudge(by: number): void {
+function nudge(by: number, animate = false): void {
   if (!svg.value || !zoomBehavior) return;
-  select(svg.value).transition().duration(180).call(zoomBehavior.scaleBy, by);
+  const target = select(svg.value).interrupt();
+  const center: [number, number] = [svg.value.clientWidth / 2, svg.value.clientHeight / 2];
+  // Start at the presentation transform, not an earlier queued destination.
+  const current = transform.value;
+  const extent = zoomBehavior.scaleExtent();
+  const next = zoomDestination(current, by, center, [extent[0]!, extent[1]!]);
+  zoomTarget = zoomIdentity.translate(next.x, next.y).scale(next.k);
+  if (animate && !reducedMotion.value)
+    target
+      .transition()
+      .duration(180)
+      .ease(motionEaseOut)
+      .call(zoomBehavior.transform, zoomTarget);
+  else target.call(zoomBehavior.transform, zoomTarget);
 }
 
-function fit(): void {
+function fit(animate = false): void {
   if (!svg.value || !zoomBehavior) return;
-  select(svg.value).transition().duration(300).call(zoomBehavior.transform, zoomIdentity);
+  zoomTarget = zoomIdentity;
+  const target = select(svg.value).interrupt();
+  if (animate && !reducedMotion.value)
+    target
+      .transition()
+      .duration(260)
+      .ease(motionEaseOut)
+      .call(zoomBehavior.transform, zoomTarget);
+  else target.call(zoomBehavior.transform, zoomTarget);
 }
 
 defineExpose({ toSvg, toPng });

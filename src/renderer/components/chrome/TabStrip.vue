@@ -27,7 +27,15 @@ import { useTranslation } from 'i18next-vue';
 import { shortcutLabel } from '../../lib/keybindings';
 import { vTip } from '../../lib/hoverTip';
 import AppIcon from '../ui/AppIcon.vue';
+const pointerSelection = ref(false);
+const immediateKeyboard = () => {
+  pointerSelection.value = false;
+};
+onMounted(() => window.addEventListener('keydown', immediateKeyboard, true));
+onBeforeUnmount(() => window.removeEventListener('keydown', immediateKeyboard, true));
 import ContextMenu, { type MenuItem } from '../ui/ContextMenu.vue';
+import { useReducedMotion } from '../../composables/useMotion';
+const reducedMotion = useReducedMotion();
 
 /**
  * Which surface the strip wears.
@@ -435,6 +443,10 @@ const LEAVE_MS = 180;
 
 function closeTab(id: string): void {
   if (leaving.value.has(id)) return;
+  if (!pointerSelection.value || reducedMotion.value) {
+    tabs.close(id);
+    return;
+  }
 
   leaving.value = new Set(leaving.value).add(id);
   leaveTimers.set(
@@ -450,6 +462,7 @@ function closeTab(id: string): void {
 }
 
 function markEntering(id: string): void {
+  if (!pointerSelection.value || reducedMotion.value) return;
   entering.value = new Set(entering.value).add(id);
 
   clearTimeout(enterTimers.get(id));
@@ -710,7 +723,13 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   <div
     ref="stripEl"
     class="strip drag-region"
-    :class="props.tight ? 'mat-regular panel-sidebar' : 'panel-content'"
+    :class="[
+      props.tight ? 'mat-regular panel-sidebar' : 'panel-content',
+      { 'strip--instant': !pointerSelection },
+    ]"
+    @pointerdown.capture="pointerSelection = true"
+    @click.capture="pointerSelection = $event.detail > 0"
+    @keydown.capture="pointerSelection = false"
     @pointerenter="onStripEnter"
     @pointerleave="onStripLeave"
   >
@@ -1324,5 +1343,19 @@ const KIND_ICON: Record<Tab['kind'], string> = {
 
 .strip__new:active {
   transform: scale(0.92);
+}
+@media (prefers-reduced-motion: reduce) {
+  .striptab:active:not(.striptab--dragging):not(:has(.striptab__close:active)),
+  .strip__new:active {
+    transform: none;
+  }
+}
+.strip--instant .strip__marker,
+.strip--instant .striptab {
+  transition: none;
+  animation: none;
+}
+.strip--instant .striptab--leaving {
+  display: none;
 }
 </style>

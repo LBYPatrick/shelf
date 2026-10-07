@@ -12,9 +12,10 @@
  * meant to stay legible against.
  */
 import AppIcon from '../ui/AppIcon.vue';
+import { pointerMotion } from '../../composables/useMotion';
 
 defineProps<{ scale: number }>();
-const emit = defineEmits<{ zoom: [number]; fit: [] }>();
+const emit = defineEmits<{ zoom: [number, boolean]; fit: [boolean] }>();
 
 /** One notch. A ratio, so every press moves the same visual distance. */
 const STEP = 1.4;
@@ -27,7 +28,7 @@ const STEP = 1.4;
       type="button"
       class="zoomer__step focus-fill"
       :aria-label="$t('erd.zoomOut')"
-      @click="emit('zoom', 1 / STEP)"
+      @click="emit('zoom', 1 / STEP, pointerMotion($event))"
     >
       <AppIcon name="minus" :size="13" />
     </button>
@@ -39,12 +40,16 @@ const STEP = 1.4;
       type="button"
       class="zoomer__step focus-fill"
       :aria-label="$t('erd.zoomIn')"
-      @click="emit('zoom', STEP)"
+      @click="emit('zoom', STEP, pointerMotion($event))"
     >
       <AppIcon name="plus" :size="13" />
     </button>
 
-    <button type="button" class="zoomer__fit focus-fill" @click="emit('fit')">
+    <button
+      type="button"
+      class="zoomer__fit focus-fill"
+      @click="emit('fit', pointerMotion($event))"
+    >
       {{ $t('erd.fit') }}
     </button>
   </div>

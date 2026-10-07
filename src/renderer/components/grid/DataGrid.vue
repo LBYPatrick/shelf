@@ -721,8 +721,6 @@ watch(
   position: absolute;
   inset: 0;
   background: color-mix(in oklab, var(--color-base-100) 45%, transparent);
-  -webkit-backdrop-filter: blur(1px);
-  backdrop-filter: blur(1px);
   pointer-events: none;
   animation: veil-in var(--t-press) var(--ease-out);
 }

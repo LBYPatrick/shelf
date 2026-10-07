@@ -53,40 +53,6 @@ const connections = useConnections();
 const entities = useEntities();
 const tabs = useTabs();
 
-/**
- * A tab that has just been opened, and is still arriving.
- *
- * A new tab used to be *there* — the whole apparatus of an editor, a divider,
- * two toolbars and an empty grid, painted complete in one frame, which reads as
- * a jump cut rather than as something opening. So the pane's regions arrive in
- * order, top to bottom, over about a third of a second.
- *
- * Held per tab id rather than run on every mount, because the pane is kept in
- * the tree while its tab is in the background: a CSS animation on a box that
- * goes `display: none` and back restarts each time, which would replay the
- * whole cascade on every switch between two tabs. This runs when the tab is
- * *new*, which is the thing being animated.
- */
-const opening = ref(new Set<string>());
-const OPENING_MS = 700;
-
-watch(
-  () => tabs.tabs.map((tab) => tab.id),
-  (ids, before) => {
-    const had = new Set(before ?? []);
-    for (const id of ids) {
-      if (had.has(id)) continue;
-      opening.value.add(id);
-      // A `Set` mutated in place is reactive in Vue 3, but the timer has to
-      // trigger the render itself.
-      setTimeout(() => {
-        opening.value.delete(id);
-        opening.value = new Set(opening.value);
-      }, OPENING_MS);
-    }
-    opening.value = new Set(opening.value);
-  }
-);
 const queries = useQueries();
 const jobs = useJobs();
 const { t } = useTranslation();
@@ -689,11 +655,7 @@ onBeforeUnmount(() => stopPersisting?.());
       <section class="content panel-content" :class="{ 'content--alone': sidebarCollapsed }">
         <div class="content__body">
           <template v-for="tab in tabs.tabs" :key="tab.id">
-            <div
-              v-show="tab.id === tabs.activeId"
-              class="content__pane"
-              :class="{ 'content__pane--opening': opening.has(tab.id) }"
-            >
+            <div v-show="tab.id === tabs.activeId" class="content__pane">
               <TableTab
                 v-if="tab.kind === 'table' && tab.entity"
                 :entity="tab.entity"
@@ -1353,12 +1315,13 @@ onBeforeUnmount(() => stopPersisting?.());
   transition: transform var(--t-hover) var(--ease-out);
 }
 
-.sidebar__tool--in:hover:not(:disabled) :deep(.icon) {
-  transform: scaleY(0.78);
-}
-
-.sidebar__tool--out:hover:not(:disabled) :deep(.icon) {
-  transform: scaleY(1.22);
+@media (hover: hover) and (pointer: fine) {
+  .sidebar__tool--in:hover:not(:disabled) :deep(.icon) {
+    transform: scaleY(0.78);
+  }
+  .sidebar__tool--out:hover:not(:disabled) :deep(.icon) {
+    transform: scaleY(1.22);
+  }
 }
 
 /*
@@ -1485,66 +1448,6 @@ onBeforeUnmount(() => stopPersisting?.());
 .content__pane {
   position: absolute;
   inset: 0;
-}
-
-/*
- * The regions of a new tab arrive in order.
- * ─────────────────────────────────────────
- * `> * > *` is the tab component's own top-level regions — the editor, the
- * divider, the toolbar, the results — rather than the component root, because
- * animating the root is one box fading, which is the thing that already looked
- * like a jump cut with a fade on it.
- *
- * `backwards` so each region holds its first frame through its own delay
- * instead of being painted in place and then snapping back to start.
- */
-.content__pane--opening > * > * {
-  animation: pane-region-in var(--t-sheet) var(--ease-out) backwards;
-}
-
-.content__pane--opening > * > :nth-child(2) {
-  animation-delay: 45ms;
-}
-
-.content__pane--opening > * > :nth-child(3) {
-  animation-delay: 90ms;
-}
-
-.content__pane--opening > * > :nth-child(4) {
-  animation-delay: 135ms;
-}
-
-.content__pane--opening > * > :nth-child(n + 5) {
-  animation-delay: 175ms;
-}
-
-@keyframes pane-region-in {
-  from {
-    opacity: 0;
-    /*
-     * Offset only, and a small one: a larger move on a full-width region reads
-     * as the whole pane sliding rather than as its parts settling.
-     *
-     * Not scaled. A scale on a region holding the grid changes the width its
-     * container measures, so the grid refit its columns when the animation
-     * ended — a full remeasure of every loaded row, for a frame of decoration.
-     * The invariant that catches it is `switching back to a tab does not redraw
-     * its grid`.
-     */
-    transform: translateY(6px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .content__pane--opening > * > * {
-    animation: pane-region-fade var(--t-hover) var(--ease-out) backwards;
-  }
-
-  @keyframes pane-region-fade {
-    from {
-      opacity: 0;
-    }
-  }
 }
 
 .content__todo,

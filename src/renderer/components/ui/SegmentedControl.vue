@@ -5,6 +5,7 @@
  * options belong to the same axis of choice.
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { pointerMotion } from '../../composables/useMotion';
 
 const props = defineProps<{
   options: readonly { value: T; label: string }[];
@@ -14,11 +15,13 @@ const props = defineProps<{
 const model = defineModel<T>({ required: true });
 
 const container = ref<HTMLElement>();
+const animate = ref(false);
 const indicator = ref({ left: 0, width: 0, visible: false });
 
 const selectedIndex = computed(() => props.options.findIndex((o) => o.value === model.value));
 
 function step(direction: number): void {
+  animate.value = false;
   if (!props.options.length) return;
   const index = (selectedIndex.value + direction + props.options.length) % props.options.length;
   model.value = props.options[index]!.value;
@@ -68,6 +71,7 @@ onBeforeUnmount(() => {
   <div
     ref="container"
     class="segmented"
+    :class="{ 'segmented--instant': !animate }"
     role="radiogroup"
     :aria-label="ariaLabel"
     @keydown.left.prevent="step(-1)"
@@ -88,7 +92,10 @@ onBeforeUnmount(() => {
       role="radio"
       :aria-checked="model === option.value"
       :tabindex="model === option.value ? 0 : -1"
-      @click="model = option.value"
+      @click="
+        animate = pointerMotion($event);
+        model = option.value;
+      "
     >
       {{ option.label }}
     </button>
@@ -185,6 +192,11 @@ onBeforeUnmount(() => {
   .segmented__option:not([aria-checked='true']):hover {
     color: color-mix(in oklab, var(--color-base-content) 85%, transparent);
   }
+}
+
+.segmented--instant .segmented__indicator,
+.segmented--instant .segmented__option {
+  transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

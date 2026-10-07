@@ -7,7 +7,9 @@
  * product: all nine are equally supported and equally free.
  */
 import type { EngineId } from '@drivers/types';
-import { nextTick } from 'vue';
+import { nextTick, ref } from 'vue';
+import { pointerMotion } from '../../composables/useMotion';
+const animate = ref(false);
 import EngineMark from './EngineMark.vue';
 import { ENGINES } from '@shared/engines';
 
@@ -18,6 +20,7 @@ withDefaults(defineProps<{ layout?: 'grid' | 'sidebar'; disabled?: boolean }>(),
 });
 
 async function move(event: KeyboardEvent, offset: number): Promise<void> {
+  animate.value = false;
   const root = event.currentTarget as HTMLElement;
   const at = ENGINES.findIndex((engine) => engine.id === model.value);
   model.value = ENGINES[(Math.max(0, at) + offset + ENGINES.length) % ENGINES.length]!.id;
@@ -29,7 +32,7 @@ async function move(event: KeyboardEvent, offset: number): Promise<void> {
 <template>
   <div
     class="engines"
-    :class="{ 'engines--list': layout === 'sidebar' }"
+    :class="{ 'engines--list': layout === 'sidebar', 'engines--instant': !animate }"
     role="radiogroup"
     :aria-label="$t('connection.engineLabel')"
     @keydown.down.prevent="!disabled && move($event, 1)"
@@ -47,7 +50,10 @@ async function move(event: KeyboardEvent, offset: number): Promise<void> {
       :tabindex="model === engine.id || (!model && engine === ENGINES[0]) ? 0 : -1"
       role="radio"
       :aria-checked="model === engine.id"
-      @click="model = engine.id"
+      @click="
+        animate = pointerMotion($event);
+        model = engine.id;
+      "
     >
       <span class="engine__mark" aria-hidden="true">
         <EngineMark :engine="engine.id" :size="14" />
@@ -210,4 +216,8 @@ async function move(event: KeyboardEvent, offset: number): Promise<void> {
  * specificity, and its `transition-duration` lost to the `!important` in
  * `base.css`. Two rules that read as care and did nothing.
  */
+.engines--instant .engine,
+.engines--instant .engine__mark {
+  transition: none;
+}
 </style>

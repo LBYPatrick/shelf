@@ -21,6 +21,7 @@ import { computed, nextTick, ref } from 'vue';
 import { useDismiss } from '../../composables/useDismiss';
 import { listStyle, useAnchoredList } from '../../composables/useAnchoredList';
 import AppIcon from './AppIcon.vue';
+import { pointerMotion } from '../../composables/useMotion';
 
 const props = defineProps<{
   options: readonly { value: T; label: string }[];
@@ -31,6 +32,7 @@ const props = defineProps<{
 const model = defineModel<T>({ required: true });
 
 const open = ref(false);
+const animate = ref(false);
 
 /*
  * Through the shared stack, so a select inside a sheet gives the sheet back
@@ -60,7 +62,8 @@ const { placement, reposition } = useAnchoredList(
   onPointerDown
 );
 
-function show(): void {
+function show(event?: Event): void {
+  animate.value = pointerMotion(event);
   active.value = Math.max(0, selectedIndex.value);
   reposition();
   open.value = true;
@@ -94,7 +97,7 @@ function move(delta: number): void {
 </script>
 
 <template>
-  <div ref="root" class="selectmenu">
+  <div ref="root" class="selectmenu" :class="{ 'selectmenu--instant': !animate }">
     <button
       :id="id"
       type="button"
@@ -104,7 +107,7 @@ function move(delta: number): void {
       :aria-label="ariaLabel"
       aria-haspopup="listbox"
       :aria-controls="open ? `${id ?? 'select'}-list` : undefined"
-      @click="open ? (open = false) : show()"
+      @click="open ? (open = false) : show($event)"
       @keydown.down.prevent="move(1)"
       @keydown.up.prevent="move(-1)"
       @keydown.enter.prevent="open ? choose(active) : show()"
@@ -125,7 +128,7 @@ function move(delta: number): void {
         :id="`${id ?? 'select'}-list`"
         ref="list"
         class="menulist surface-popover"
-        :class="{ 'menulist--above': placement.above }"
+        :class="{ 'menulist--above': placement.above, 'menulist--instant': !animate }"
         :style="listStyle(placement)"
         role="listbox"
         :aria-label="ariaLabel"
@@ -213,5 +216,13 @@ function move(delta: number): void {
   .select__chevron {
     transition: none;
   }
+}
+@media (prefers-reduced-motion: reduce) {
+  .select__trigger:active {
+    transform: none;
+  }
+}
+.selectmenu--instant .select__chevron {
+  transition: none;
 }
 </style>

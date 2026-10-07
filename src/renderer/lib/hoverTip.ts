@@ -51,7 +51,7 @@ function clear(): void {
   timer = undefined;
 }
 
-function show(element: HTMLElement, label: string): void {
+function show(element: HTMLElement, label: string, instant = false): void {
   clear();
   if (!label) return;
 
@@ -59,11 +59,11 @@ function show(element: HTMLElement, label: string): void {
     const box = element.getBoundingClientRect();
     tip.label = label;
     tip.anchor = { top: box.top, bottom: box.bottom, left: box.left, right: box.right };
-    tip.instant = tip.visible || Date.now() - closedAt < GRACE;
+    tip.instant = instant || tip.visible || Date.now() - closedAt < GRACE;
     tip.visible = true;
   };
 
-  if (tip.visible || Date.now() - closedAt < GRACE) open();
+  if (instant || tip.visible || Date.now() - closedAt < GRACE) open();
   else timer = setTimeout(open, DELAY);
 }
 
@@ -99,7 +99,7 @@ export const vTip: Directive<HTMLElement, string | undefined> = {
     // there over the thing that changed.
     element.addEventListener('pointerdown', hideTip);
     element.addEventListener('focus', () => {
-      if (element.matches(':focus-visible')) show(element, label());
+      if (element.matches(':focus-visible')) show(element, label(), true);
     });
     element.addEventListener('blur', hideTip);
   },

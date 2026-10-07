@@ -175,4 +175,9 @@ withDefaults(
     color: var(--color-error-content);
   }
 }
+@media (prefers-reduced-motion: reduce) {
+  .press:active:not(:disabled) {
+    transform: none;
+  }
+}
 </style>

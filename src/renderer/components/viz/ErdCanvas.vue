@@ -28,6 +28,8 @@ import { zoom, zoomIdentity, type ZoomBehavior } from 'd3-zoom';
 import { drag } from 'd3-drag';
 import { linkHorizontal } from 'd3-shape';
 import ZoomControl from './ZoomControl.vue';
+import { motionEaseOut, useReducedMotion, zoomDestination } from '../../composables/useMotion';
+const reducedMotion = useReducedMotion();
 
 export interface ErdTable {
   readonly key: string;
@@ -67,6 +69,13 @@ const tick = ref(0);
 
 let simulation: Simulation<Node, Link> | undefined;
 let zoomBehavior: ZoomBehavior<SVGSVGElement, unknown> | undefined;
+let zoomTarget = zoomIdentity;
+watch(reducedMotion, (reduced) => {
+  if (reduced) simulation?.stop();
+  if (reduced && svg.value && zoomBehavior) {
+    select(svg.value).interrupt().call(zoomBehavior.transform, zoomTarget);
+  }
+});
 
 /** Node size follows content: a wide table should look wide. */
 const HEADER_HEIGHT = 26;
@@ -164,6 +173,22 @@ function build(): void {
   // The layout runs to a resting state and stops. Leaving it running would
   // make the diagram creep while you are reading it.
   simulation.alpha(1).alphaDecay(0.03);
+  if (reducedMotion.value) {
+    const layout = simulation.stop();
+    let remaining = 230;
+    const settle = () => {
+      if (simulation !== layout) return;
+      const batch = Math.min(16, remaining);
+      layout.tick(batch);
+      remaining -= batch;
+      if (remaining > 0) requestAnimationFrame(settle);
+      else {
+        tick.value += 1;
+        if (!touched.value) fit(false);
+      }
+    };
+    requestAnimationFrame(settle);
+  }
 }
 
 /*
@@ -250,12 +275,16 @@ onMounted(() => {
    * diagram had been shrunk to fit in the first place.
    */
   zoomBehavior = zoom<SVGSVGElement, unknown>()
+    .duration(0)
     .scaleExtent([0.05, 4])
     .on('zoom', (event) => {
       // A gesture has a source event behind it; our own `fit` does not. Once
       // the reader has moved the view it is theirs, and the layout settling a
       // second later must not take it back.
-      if (event.sourceEvent) touched.value = true;
+      if (event.sourceEvent) {
+        touched.value = true;
+        zoomTarget = event.transform;
+      }
       transform.value = event.transform;
     });
 
@@ -310,7 +339,9 @@ watch(nodes, () => void nextTick(bindDrag));
 
 onBeforeUnmount(() => {
   simulation?.stop();
+  simulation = undefined;
   watcher?.disconnect();
+  if (svg.value) select(svg.value).interrupt().on('.zoom', null);
 });
 
 /**
@@ -320,7 +351,7 @@ onBeforeUnmount(() => {
  * where the browser had it" — and where the browser had it depended on a
  * `viewBox` that had already shrunk the drawing to nothing.
  */
-function fit(animate = true): void {
+function fit(animate = false): void {
   if (!svg.value || !zoomBehavior) return;
 
   const box = bounds();
@@ -339,15 +370,30 @@ function fit(animate = true): void {
     )
     .scale(scale);
 
-  const target = select(svg.value);
-  if (animate) target.transition().duration(400).call(zoomBehavior.transform, next);
+  zoomTarget = next;
+  const target = select(svg.value).interrupt();
+  if (animate && !reducedMotion.value)
+    target.transition().duration(260).ease(motionEaseOut).call(zoomBehavior.transform, next);
   else target.call(zoomBehavior.transform, next);
 }
 
-function nudge(by: number): void {
+function nudge(by: number, animate = false): void {
   if (!svg.value || !zoomBehavior) return;
   touched.value = true;
-  select(svg.value).transition().duration(180).call(zoomBehavior.scaleBy, by);
+  const target = select(svg.value).interrupt();
+  const center: [number, number] = [svg.value.clientWidth / 2, svg.value.clientHeight / 2];
+  // Start at the presentation transform, not an earlier queued destination.
+  const current = transform.value;
+  const extent = zoomBehavior.scaleExtent();
+  const next = zoomDestination(current, by, center, [extent[0]!, extent[1]!]);
+  zoomTarget = zoomIdentity.translate(next.x, next.y).scale(next.k);
+  if (animate && !reducedMotion.value)
+    target
+      .transition()
+      .duration(180)
+      .ease(motionEaseOut)
+      .call(zoomBehavior.transform, zoomTarget);
+  else target.call(zoomBehavior.transform, zoomTarget);
 }
 
 defineExpose({ fit });
@@ -417,7 +463,7 @@ defineExpose({ fit });
       </g>
     </svg>
 
-    <ZoomControl :scale="transform.k" @zoom="nudge" @fit="fit()" />
+    <ZoomControl :scale="transform.k" @zoom="nudge" @fit="fit" />
   </div>
 </template>
 

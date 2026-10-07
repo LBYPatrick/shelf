@@ -125,7 +125,7 @@ const percent = (share: number) =>
         :key="slice.id"
         class="donut__entry"
         :class="{ 'donut__entry--on': active === slice.id }"
-        :style="{ '--share': `${(slice.share * 100).toFixed(2)}%`, '--slice': slice.colour }"
+        :style="{ '--slice': slice.colour }"
         @pointerenter="active = slice.id"
       >
         <span class="donut__swatch" aria-hidden="true" />
@@ -136,7 +136,9 @@ const percent = (share: number) =>
           three read as one line rather than as three columns with a gulf
           between them.
         -->
-        <span class="donut__bar" aria-hidden="true" />
+        <span class="donut__bar" aria-hidden="true"
+          ><span class="donut__barfill" :style="{ transform: `scaleX(${slice.share})` }"
+        /></span>
         <span class="donut__value">{{ slice.value.toLocaleString() }}</span>
         <span class="donut__percent">{{ percent(slice.share) }}</span>
       </div>
@@ -249,21 +251,21 @@ const percent = (share: number) =>
   overflow: hidden;
 }
 
-.donut__bar::before {
-  content: '';
+.donut__barfill {
   position: absolute;
   inset-block: 0;
   inset-inline-start: 0;
-  width: var(--share);
+  width: 100%;
+  transform-origin: left center;
   border-radius: 999px;
   background: var(--slice);
   opacity: 0.75;
   transition:
-    width var(--t-pop) var(--ease-out),
+    transform var(--t-pop) var(--ease-out),
     opacity var(--t-hover) var(--ease-out);
 }
 
-.donut__entry--on .donut__bar::before {
+.donut__entry--on .donut__barfill {
   opacity: 1;
 }
 

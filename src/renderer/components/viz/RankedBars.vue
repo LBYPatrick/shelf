@@ -70,19 +70,27 @@ function widthOf(value: number): number {
       :class="{ 'bars__row--on': bar.id === selected }"
       :style="{
         height: `${rowHeight - GUTTER}px`,
-        '--fill': `${widthOf(bar.value)}%`,
-        '--inner': `${widthOf(bar.inner ?? 0)}%`,
       }"
       @pointerdown="emit('pick', bar.id)"
     >
-      <span class="bars__fill" :class="`bars__fill--${bar.tone ?? 'accent'}`" />
+      <span
+        class="bars__fill"
+        :class="`bars__fill--${bar.tone ?? 'accent'}`"
+        :style="{ transform: `scaleX(${widthOf(bar.value) / 100})` }"
+      />
       <!--
         The part sits at the *end* of the whole, not at its start. Drawn from
         the same edge it reads as a second, shorter bar racing the first; drawn
         at the tip it reads as the portion of the bar that is the problem — and
         it stops covering the label, which begins at the same edge.
       -->
-      <span v-if="bar.inner !== undefined && bar.inner > 0" class="bars__inner" />
+      <span
+        v-if="bar.inner !== undefined && bar.inner > 0"
+        class="bars__inner"
+        :style="{
+          transform: `translateX(${widthOf(bar.value) - widthOf(bar.inner)}%) scaleX(${widthOf(bar.inner) / 100})`,
+        }"
+      />
       <!--
         Drawn over the bar, not after it. A label placed after a bar moves as
         the value changes, so a column of them zig-zags down the chart and the
@@ -124,19 +132,17 @@ function widthOf(value: number): number {
   position: absolute;
   inset-block: 0;
   border-radius: var(--radius-field);
-  transition:
-    width var(--t-pop) var(--ease-out),
-    inset-inline-start var(--t-pop) var(--ease-out);
+  width: 100%;
+  inset-inline-start: 0;
+  transform-origin: left center;
+  transition: transform var(--t-pop) var(--ease-out);
 }
 
 .bars__fill {
   inset-inline-start: 0;
-  width: var(--fill);
 }
 
 .bars__inner {
-  inset-inline-start: calc(var(--fill) - var(--inner));
-  width: var(--inner);
 }
 
 .bars__fill--accent {

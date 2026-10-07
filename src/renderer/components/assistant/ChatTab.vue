@@ -1151,4 +1151,13 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
     transition: none;
   }
 }
+@media (prefers-reduced-motion: reduce) {
+  .opening__cta:active,
+  .opening__chip:active,
+  .clip__drop:active,
+  .composer__clip:active,
+  .composer__go:active:not(:disabled) {
+    transform: none;
+  }
+}
 </style>

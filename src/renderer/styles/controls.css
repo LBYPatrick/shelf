@@ -531,6 +531,10 @@
 }
 
 /* Opening upwards, it grows from the edge nearest the control. */
+.menulist--instant {
+  animation: none;
+}
+
 .menulist--above {
   transform-origin: bottom center;
 }
@@ -790,11 +794,10 @@
   height: var(--hit-min);
   border-radius: var(--control-radius);
   color: var(--text-soft);
-  transform: translateX(6px);
   transition:
     background-color var(--t-hover) var(--ease-out),
     color var(--t-hover) var(--ease-out),
-    transform var(--t-pop) var(--ease-sheet);
+    transform var(--t-press) var(--ease-out);
 }
 
 .tile:hover .tile__tool,
@@ -813,6 +816,10 @@
 .tile__tool:active {
   background: var(--fill-1);
   transform: scale(0.94);
+}
+
+.tile:focus-within .tile__tools {
+  transition: none;
 }
 
 /* The column the tiles sit in. */
@@ -842,7 +849,9 @@
     transition: none;
   }
 
-  .tile__tool {
+  .tile__tool,
+  .tile__tool:active,
+  .tile__face:active {
     transform: none;
   }
 }

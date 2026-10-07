@@ -14,6 +14,10 @@
  * being pushed across. It is one spring-shaped curve on `transform`, so it
  * composites and cannot be interrupted into an inconsistent state.
  */
+import { ref } from 'vue';
+import { pointerMotion } from '../../composables/useMotion';
+const animate = ref(false);
+
 const model = defineModel<boolean>({ required: true });
 
 withDefaults(defineProps<{ ariaLabel: string; disabled?: boolean }>(), { disabled: false });
@@ -23,12 +27,15 @@ withDefaults(defineProps<{ ariaLabel: string; disabled?: boolean }>(), { disable
   <button
     type="button"
     class="switch"
-    :class="{ 'switch--on': model }"
+    :class="{ 'switch--on': model, 'switch--instant': !animate }"
     role="switch"
     :aria-checked="model"
     :aria-label="ariaLabel"
     :disabled="disabled"
-    @click="model = !model"
+    @click="
+      animate = pointerMotion($event);
+      model = !model;
+    "
   >
     <span class="switch__knob" aria-hidden="true" />
   </button>
@@ -108,6 +115,17 @@ withDefaults(defineProps<{ ariaLabel: string; disabled?: boolean }>(), { disable
   outline-offset: 2px;
 }
 
+.switch--instant::before,
+.switch--instant .switch__knob {
+  transition: none;
+}
+.switch:focus-visible:active:not(:disabled) .switch__knob {
+  width: 1rem;
+}
+.switch--on:focus-visible:active:not(:disabled) .switch__knob {
+  transform: translateX(0.875rem);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .switch,
   .switch::before,
@@ -117,6 +135,9 @@ withDefaults(defineProps<{ ariaLabel: string; disabled?: boolean }>(), { disable
 
   .switch:active:not(:disabled) .switch__knob {
     width: 1rem;
+  }
+  .switch--on:active:not(:disabled) .switch__knob {
+    transform: translateX(0.875rem);
   }
 }
 </style>

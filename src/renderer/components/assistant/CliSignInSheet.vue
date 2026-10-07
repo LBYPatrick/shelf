@@ -286,4 +286,9 @@ const verdict = computed(() => {
   color: var(--color-base-content);
   opacity: 0.75;
 }
+@media (prefers-reduced-motion: reduce) {
+  .command__copy:active {
+    transform: none;
+  }
+}
 </style>

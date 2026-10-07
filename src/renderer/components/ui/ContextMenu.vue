@@ -17,6 +17,9 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useDismiss } from '../../composables/useDismiss';
 import AppIcon from './AppIcon.vue';
+import { usePointerActivation } from '../../composables/useMotion';
+const pointerActivation = usePointerActivation();
+const animate = ref(false);
 
 export interface MenuItem {
   readonly id: string;
@@ -136,14 +139,19 @@ function onWindowPointerDown(event: PointerEvent): void {
   open.value = false;
 }
 
-watch(open, async (isOpen) => {
-  if (!isOpen) return;
+watch(
+  open,
+  async (isOpen) => {
+    animate.value = pointerActivation();
+    if (!isOpen) return;
 
-  active.value = -1;
-  await nextTick();
-  place();
-  panel.value?.focus();
-});
+    active.value = -1;
+    await nextTick();
+    place();
+    panel.value?.focus();
+  },
+  { flush: 'sync' }
+);
 
 watch(() => props.at, place);
 
@@ -158,7 +166,7 @@ onBeforeUnmount(() => {
 
 <template>
   <Teleport to="body">
-    <Transition name="menu">
+    <Transition name="menu" :css="animate">
       <div
         v-if="open"
         ref="panel"

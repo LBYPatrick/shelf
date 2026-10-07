@@ -274,6 +274,7 @@ const importing = ref(false);
  * a filter is in force, so it can never hide one.
  */
 const filterOpen = ref(false);
+const filterAnimate = ref(false);
 
 const filterCount = computed(() => {
   const applied = appliedFilter.value;
@@ -347,6 +348,7 @@ function discard(): void {
 useHotkeys({
   'data.filter': () => {
     if (!props.active) return;
+    filterAnimate.value = false;
     filterOpen.value = true;
     filterBar.value?.focus();
   },
@@ -418,7 +420,10 @@ watch(
         :class="{ 'toolbar__mode--on': filterCount > 0 }"
         :aria-pressed="filterOpen"
         :aria-expanded="filterOpen"
-        @click="filterOpen = !filterOpen"
+        @click="
+          filterAnimate = $event.detail > 0;
+          filterOpen = !filterOpen;
+        "
       >
         <AppIcon name="filter" :size="12" />
         {{ $t('action.filter') }}
@@ -477,7 +482,13 @@ watch(
       </button>
     </div>
 
-    <div class="table-tab__filter" :class="{ 'table-tab__filter--open': filterOpen }">
+    <div
+      class="table-tab__filter"
+      :class="{
+        'table-tab__filter--open': filterOpen,
+        'table-tab__filter--instant': !filterAnimate,
+      }"
+    >
       <div class="table-tab__filter-inner">
         <FilterBar
           ref="filterBar"
@@ -687,5 +698,8 @@ watch(
     opacity: 0;
     transform: translateY(3px);
   }
+}
+.table-tab__filter--instant {
+  transition: none;
 }
 </style>

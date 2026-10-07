@@ -24,6 +24,7 @@ import { computed, nextTick, ref } from 'vue';
 import { useDismiss } from '../../composables/useDismiss';
 import { listStyle, useAnchoredList } from '../../composables/useAnchoredList';
 import AppIcon from './AppIcon.vue';
+import { pointerMotion } from '../../composables/useMotion';
 
 const props = defineProps<{
   options: readonly string[];
@@ -37,6 +38,7 @@ const props = defineProps<{
 const model = defineModel<string>({ required: true });
 
 const open = ref(false);
+const animate = ref(false);
 
 /* Through the shared stack, so this inside a sheet gives the sheet back rather
    than closing with it. */
@@ -82,7 +84,8 @@ function scrollToActive(): void {
   });
 }
 
-function show(): void {
+function show(event?: Event): void {
+  animate.value = pointerMotion(event);
   const at = shown.value.indexOf(model.value);
   active.value = Math.max(0, at);
   reposition();
@@ -130,8 +133,8 @@ function onEnter(event: KeyboardEvent): void {
  * the other thing clicks in a text field are for — closing the list the last
  * click opened.
  */
-function onClick(): void {
-  if (!open.value) show();
+function onClick(event: MouseEvent): void {
+  if (!open.value) show(event);
 }
 
 function onInput(): void {
@@ -142,7 +145,7 @@ function onInput(): void {
 </script>
 
 <template>
-  <div ref="root" class="suggest">
+  <div ref="root" class="suggest" :class="{ 'suggest--instant': !animate }">
     <input
       :id="id"
       ref="field"
@@ -191,7 +194,7 @@ function onInput(): void {
         :id="`${id ?? 'suggest'}-list`"
         ref="list"
         class="menulist surface-popover"
-        :class="{ 'menulist--above': placement.above }"
+        :class="{ 'menulist--above': placement.above, 'menulist--instant': !animate }"
         :style="listStyle(placement)"
         role="listbox"
         :aria-label="ariaLabel"
@@ -270,5 +273,8 @@ function onInput(): void {
   .suggest__chevron {
     transition: none;
   }
+}
+.suggest--instant .suggest__chevron {
+  transition: none;
 }
 </style>

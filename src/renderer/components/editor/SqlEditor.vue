@@ -18,6 +18,8 @@ import type { EngineId } from '@drivers/types';
 import { EDITOR_THEMES, defineEditorTheme, monaco } from '../../lib/monaco';
 import { useSettings } from '../../stores/settings';
 import { useTheme } from '../../composables/useTheme';
+import { useReducedMotion } from '../../composables/useMotion';
+const reducedMotion = useReducedMotion();
 
 /**
  * One entity the completer can offer, and what is inside it.
@@ -379,8 +381,8 @@ onMounted(() => {
     // say the same things twice.
     scrollBeyondLastLine: false,
     renderLineHighlight: 'line',
-    smoothScrolling: true,
-    cursorBlinking: 'smooth',
+    smoothScrolling: !reducedMotion.value,
+    cursorBlinking: reducedMotion.value ? 'solid' : 'smooth',
     padding: { top: 8, bottom: 8 },
     scrollbar: { verticalScrollbarSize: 9, horizontalScrollbarSize: 9, useShadows: false },
     overviewRulerLanes: 0,
@@ -433,6 +435,13 @@ onBeforeUnmount(() => {
 
 // External changes — loading a saved query — are written in without disturbing
 // the cursor if the text is already what we have.
+watch(reducedMotion, (reduced) => {
+  editor?.updateOptions({
+    smoothScrolling: !reduced,
+    cursorBlinking: reduced ? 'solid' : 'smooth',
+  });
+});
+
 watch(model, (value) => {
   if (!editor || value === editor.getValue()) return;
   applyingExternal = true;

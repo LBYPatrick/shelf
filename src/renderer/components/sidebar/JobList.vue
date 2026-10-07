@@ -757,4 +757,9 @@ function startedAt(job: Job): string {
     transform: none;
   }
 }
+@media (prefers-reduced-motion: reduce) {
+  .job__confirm:active {
+    transform: none;
+  }
+}
 </style>
