@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { effectScope } from 'vue';
+import { effectScope, nextTick, ref, watch } from 'vue';
 import {
   motionEaseOut,
   pointerMotion,
@@ -8,7 +8,10 @@ import {
   zoomDestination,
 } from '../../src/renderer/composables/useMotion';
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 
 describe('imperative motion policy', () => {
   it('tracks a live preference and removes its listener with the component scope', () => {
@@ -72,7 +75,8 @@ describe('imperative motion policy', () => {
 });
 
 describe('overlay event origin', () => {
-  it('exists during dispatch, resets before asynchronous work and cleans up', async () => {
+  it('survives the owner reactive flush, clears at the next task and cleans up', async () => {
+    vi.useFakeTimers();
     class Click extends Event {
       constructor(
         type: string,
@@ -91,10 +95,23 @@ describe('overlay event origin', () => {
     const scope = effectScope();
     const origin = scope.run(() => usePointerActivation())!;
     const observed: boolean[] = [];
-    target.addEventListener('click', () => observed.push(origin()));
+    const ownerOpen = ref(false);
+    let childOrigin: boolean | undefined;
+    scope.run(() =>
+      watch(ownerOpen, () => {
+        childOrigin = origin();
+      })
+    );
+    target.addEventListener('click', () => {
+      observed.push(origin());
+      ownerOpen.value = !ownerOpen.value;
+    });
     target.dispatchEvent(new Click('click', 1));
     expect(observed).toEqual([true]);
-    await Promise.resolve();
+    await nextTick();
+    expect(childOrigin).toBe(true);
+    expect(origin()).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
     expect(origin()).toBe(false);
     target.dispatchEvent(new Click('click', 0));
     expect(observed).toEqual([true, false]);
@@ -104,5 +121,6 @@ describe('overlay event origin', () => {
     expect(origin()).toBe(false);
     scope.stop();
     expect(remove).toHaveBeenCalledTimes(3);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

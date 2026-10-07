@@ -45,25 +45,30 @@ export function zoomDestination(
 }
 
 /**
- * For overlays opened by their owner: origin exists only during this dispatch,
- * never as a sticky last-input preference. Read it in a synchronous open watcher.
+ * For overlays opened by their owner: keep origin through the native event task
+ * and its reactive flush, then clear it. A microtask in capture can run before
+ * the target handler or Vue's parent-to-child prop update. This is an activation
+ * window, never a persistent last-input preference.
  */
 export function usePointerActivation() {
   let pointer = false;
-  let dispatch = 0;
+  let reset: ReturnType<typeof setTimeout> | undefined;
   const record = (event: Event) => {
-    const turn = ++dispatch;
+    clearTimeout(reset);
     pointer =
       event.type === 'contextmenu'
         ? event instanceof MouseEvent && event.button === 2
         : pointerMotion(event);
-    queueMicrotask(() => {
-      if (dispatch === turn) pointer = false;
-    });
+    reset = setTimeout(() => {
+      pointer = false;
+      reset = undefined;
+    }, 0);
   };
   const events = ['click', 'contextmenu', 'keydown'] as const;
   for (const name of events) globalThis.addEventListener(name, record, true);
   onScopeDispose(() => {
+    clearTimeout(reset);
+    pointer = false;
     for (const name of events) globalThis.removeEventListener(name, record, true);
   });
   return () => pointer;
