@@ -26,6 +26,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Consolidate connection tile actions into an animated three-dot menu.
+
 - Refine connection tiles with aligned metadata and actions, balanced engine
   marks, separate card spacing, and subtle pointer feedback that respects
   reduced motion.

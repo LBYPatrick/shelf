@@ -5,6 +5,7 @@
   },
   "action": {
     "cancel": "Huỷ",
+    "edit": "Sửa",
     "save": "Lưu",
     "test": "Kiểm tra",
     "connect": "Kết nối",

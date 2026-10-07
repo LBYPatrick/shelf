@@ -214,51 +214,60 @@ function lastUsed(connection: SavedConnection): string {
   }
 }
 
-/**
- * Writes one connection out as a preset, credentials and all.
- *
- * The point of a preset is that it moves a connection to another machine, and
- * one that arrives needing a password remembered is half a move. So the
- * secrets go with it.
- *
- * They are read here rather than in the document module, because the keyring
- * belongs to the main process and this is the one place with a reason to ask.
- * A connection with nothing stored exports a document with no `secrets` field
- * at all, and the note inside says which kind it is — as does the toast,
- * because a file that quietly contains a password is the one people attach to
- * a ticket.
- */
-/**
- * Two ways out, on one control.
- *
- * A file is the way to move a connection to another machine; the clipboard is
- * the way to put one in a message to a colleague, and it was the more likely of
- * the two every time somebody wanted to *share* rather than to back up. A menu
- * rather than a second icon in the row, because they are one idea — take this
- * connection away with you — asked in two shapes.
- */
-const exportMenu = ref(false);
-const exportAt = ref<{ x: number; y: number }>({ x: 0, y: 0 });
-const exportTrigger = ref<HTMLElement>();
-const exporting = ref<SavedConnection | null>(null);
+/** One anchored menu keeps secondary actions out of the tile's reading flow. */
+const actionMenu = ref(false);
+const actionAt = ref({ x: 0, y: 0 });
+const actionTrigger = ref<HTMLElement>();
+const actionConnection = ref<SavedConnection | null>(null);
 
-const exportItems = computed<MenuItem[]>(() => [
-  { id: 'notice', label: t('connection.exportIncludesSecrets'), disabled: true },
+const actionItems = computed<MenuItem[]>(() => [
+  { id: 'edit', label: t('action.edit'), icon: 'pencil' },
+  { id: 'duplicate', label: t('action.duplicate'), icon: 'copy' },
+  {
+    id: 'notice',
+    label: t('connection.exportIncludesSecrets'),
+    disabled: true,
+    startsGroup: true,
+  },
   { id: 'file', label: t('start.exportToFile'), icon: 'download' },
   { id: 'clipboard', label: t('start.exportToClipboard'), icon: 'copy' },
+  { id: 'delete', label: t('action.delete'), icon: 'close', startsGroup: true },
 ]);
 
-function openExport(connection: SavedConnection, event: MouseEvent): void {
-  exporting.value = connection;
-  exportTrigger.value = event.currentTarget as HTMLElement;
-  exportAt.value = { x: event.clientX, y: event.clientY };
-  exportMenu.value = true;
+function openActions(connection: SavedConnection, event: MouseEvent): void {
+  const trigger = event.currentTarget as HTMLElement;
+  if (actionMenu.value && actionTrigger.value === trigger) {
+    actionMenu.value = false;
+    return;
+  }
+  const box = trigger.getBoundingClientRect();
+  actionConnection.value = connection;
+  actionTrigger.value = trigger;
+  actionAt.value = { x: box.right, y: box.bottom };
+  actionMenu.value = true;
 }
 
-function chooseExport(id: string): void {
-  const connection = exporting.value;
+function chooseAction(id: string): void {
+  const connection = actionConnection.value;
   if (!connection) return;
-  void (id === 'clipboard' ? copyConnection(connection) : exportConnection(connection));
+  switch (id) {
+    case 'edit':
+      seed.value = undefined;
+      editing.value = connection;
+      break;
+    case 'duplicate':
+      void duplicate(connection);
+      break;
+    case 'file':
+      void exportConnection(connection);
+      break;
+    case 'clipboard':
+      void copyConnection(connection);
+      break;
+    case 'delete':
+      requestRemove(connection);
+      break;
+  }
 }
 
 /** The document, and whether it carries anything worth warning about. */
@@ -625,41 +634,13 @@ watch(
                 <button
                   type="button"
                   class="rowaction"
-                  :aria-label="$t('start.export', { name: connection.name })"
-                  v-tip="$t('start.export', { name: connection.name })"
-                  @click="openExport(connection, $event)"
+                  :aria-label="$t('menu.actionsFor', { name: connection.name })"
+                  v-tip="$t('menu.actionsFor', { name: connection.name })"
+                  aria-haspopup="menu"
+                  :aria-expanded="actionMenu && actionConnection?.id === connection.id"
+                  @click="openActions(connection, $event)"
                 >
-                  <AppIcon name="download" :size="16" />
-                </button>
-                <button
-                  type="button"
-                  class="rowaction"
-                  :aria-label="$t('start.duplicate', { name: connection.name })"
-                  v-tip="$t('start.duplicate', { name: connection.name })"
-                  @click="duplicate(connection)"
-                >
-                  <AppIcon name="copy" :size="16" />
-                </button>
-                <button
-                  type="button"
-                  class="rowaction"
-                  :aria-label="$t('start.edit', { name: connection.name })"
-                  v-tip="$t('start.edit', { name: connection.name })"
-                  @click="
-                    seed = undefined;
-                    editing = connection;
-                  "
-                >
-                  <AppIcon name="pencil" :size="16" />
-                </button>
-                <button
-                  type="button"
-                  class="rowaction rowaction--danger"
-                  :aria-label="$t('start.remove', { name: connection.name })"
-                  v-tip="$t('start.remove', { name: connection.name })"
-                  @click="requestRemove(connection)"
-                >
-                  <AppIcon name="close" :size="16" />
+                  <AppIcon name="more" :size="16" />
                 </button>
               </template>
             </LineupRow>
@@ -708,11 +689,11 @@ watch(
     <StorageSheet v-model="storageOpen" />
 
     <ContextMenu
-      v-model="exportMenu"
-      :items="exportItems"
-      :at="exportAt"
-      :trigger="exportTrigger"
-      @choose="chooseExport"
+      v-model="actionMenu"
+      :items="actionItems"
+      :at="actionAt"
+      :trigger="actionTrigger"
+      @choose="chooseAction"
     />
 
     <Sheet
@@ -1102,9 +1083,6 @@ watch(
   .history-entry:hover {
     background: var(--fill-2);
     color: var(--color-base-content);
-  }
-  .rowaction--danger:hover {
-    color: var(--color-error);
   }
 }
 @media (max-width: 700px) {

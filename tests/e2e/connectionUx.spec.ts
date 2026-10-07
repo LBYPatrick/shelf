@@ -81,11 +81,13 @@ test('manages and edits saved connections without disconnecting the workspace', 
   const library = page.getByRole('dialog', { name: 'Manage connections', exact: true });
   await expect(library).toBeVisible();
   await expect(page.locator('.strip')).toBeVisible();
-  await library.getByRole('button', { name: 'Edit Keep open', exact: true }).click();
+  await library.getByRole('button', { name: 'Actions for Keep open', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
   await page.getByLabel('Name', { exact: true }).fill('Renamed');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(library.getByText('Renamed', { exact: true })).toBeVisible();
-  await library.getByRole('button', { name: 'Delete Renamed', exact: true }).click();
+  await library.getByRole('button', { name: 'Actions for Renamed', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Remove Renamed?' })).toBeVisible();
   await page
     .getByRole('dialog', { name: 'Remove Renamed?' })
@@ -107,7 +109,10 @@ test('clearing a saved password removes it instead of silently keeping it', asyn
   await page.getByLabel('Name', { exact: true }).fill('Clear credentials');
   await page.getByLabel('Password', { exact: true }).fill('remove-me');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.getByRole('button', { name: 'Edit Clear credentials', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Actions for Clear credentials', exact: true })
+    .click();
+  await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
   await expect(page.getByLabel('Password', { exact: true })).toHaveValue('remove-me');
   await page.getByLabel('Password', { exact: true }).fill('');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -143,7 +148,10 @@ test('preserves unreadable credentials until their replacement is explicit', asy
     db.close();
   }, saved.id);
   await page.reload();
-  await page.getByRole('button', { name: 'Edit Credential recovery', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Actions for Credential recovery', exact: true })
+    .click();
+  await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
   await expect(page.locator('.credential-recovery')).toContainText('could not decrypt');
   expect(

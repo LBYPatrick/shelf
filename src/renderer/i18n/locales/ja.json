@@ -5,6 +5,7 @@
   },
   "action": {
     "cancel": "キャンセル",
+    "edit": "編集",
     "save": "保存",
     "test": "接続テスト",
     "connect": "接続",

@@ -5,6 +5,7 @@
   },
   "action": {
     "cancel": "Cancel",
+    "edit": "Edit",
     "save": "Save",
     "test": "Test",
     "connect": "Connect",

@@ -5,6 +5,7 @@
   },
   "action": {
     "cancel": "取消",
+    "edit": "编辑",
     "save": "保存",
     "test": "测试连接",
     "connect": "连接",

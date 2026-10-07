@@ -178,10 +178,8 @@ test('editing a connection shows the password it saved', async ({ page }) => {
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
-  await page
-    .getByRole('button', { name: /Edit Reveal me/ })
-    .first()
-    .click();
+  await page.getByRole('button', { name: 'Actions for Reveal me', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
   const field = page.getByRole('textbox', { name: 'Password' });
   await expect(field).toHaveValue('hunter2');
   // Masked until asked, and asked with one control rather than two.
@@ -292,7 +290,7 @@ test('a connection can be written to a file and read back', async ({ app, page }
   });
   await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
 
-  await page.getByRole('button', { name: 'Export Portable' }).click();
+  await page.getByRole('button', { name: 'Actions for Portable' }).click();
   // Two ways out now — a file, or the clipboard. This test is about the file.
   await page.getByRole('menuitem', { name: 'Save to a file…' }).click();
 
@@ -312,7 +310,8 @@ test('a connection can be written to a file and read back', async ({ app, page }
   expect(preset.connections[0]).not.toHaveProperty('secrets');
 
   // Read it back: the same connection arrives again, from the file alone.
-  await page.getByRole('button', { name: 'Delete Portable' }).click();
+  await page.getByRole('button', { name: 'Actions for Portable' }).click();
+  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   await page
     .getByRole('dialog', { name: 'Remove Portable?' })
     .getByRole('button', { name: 'Delete', exact: true })
@@ -348,7 +347,7 @@ test('a connection can be copied to the clipboard', async ({ page }) => {
   await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
 
   const document = await withClipboard(async () => {
-    await page.getByRole('button', { name: 'Export Copyable' }).click();
+    await page.getByRole('button', { name: 'Actions for Copyable' }).click();
     await page.getByRole('menuitem', { name: 'Copy to clipboard' }).click();
     await expect(page.locator('.notices [role="status"]')).toContainText('clipboard');
     return page.evaluate(() => navigator.clipboard.readText());
@@ -378,7 +377,7 @@ test('a connection carries its password through the file', async ({ app, page })
   await page.getByLabel('Password', { exact: true }).fill('hunter2');
   await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
 
-  await page.getByRole('button', { name: 'Export WithSecret' }).click();
+  await page.getByRole('button', { name: 'Actions for WithSecret' }).click();
   // Two ways out now — a file, or the clipboard. This test is about the file.
   await page.getByRole('menuitem', { name: 'Save to a file…' }).click();
 
@@ -394,7 +393,8 @@ test('a connection carries its password through the file', async ({ app, page })
   expect(document.note).toContain('plain text');
 
   // And back again, from the file alone.
-  await page.getByRole('button', { name: 'Delete WithSecret' }).click();
+  await page.getByRole('button', { name: 'Actions for WithSecret' }).click();
+  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   await page
     .getByRole('dialog', { name: 'Remove WithSecret?' })
     .getByRole('button', { name: 'Delete', exact: true })
@@ -408,7 +408,8 @@ test('a connection carries its password through the file', async ({ app, page })
 
   // The editor shows the secret it holds, so this is where an import that
   // dropped the password on the way in would show up.
-  await page.getByRole('button', { name: 'Edit WithSecret' }).click();
+  await page.getByRole('button', { name: 'Actions for WithSecret' }).click();
+  await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
   await expect(page.getByLabel('Password', { exact: true })).toHaveValue('hunter2', {
     timeout: 15_000,
   });
@@ -621,7 +622,8 @@ test('a connection can be duplicated, credentials and all', async ({ page }) => 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('button', { name: /Connect to Reporting/ })).toBeVisible();
 
-  await page.getByRole('button', { name: /Duplicate Reporting/ }).click();
+  await page.getByRole('button', { name: 'Actions for Reporting', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Duplicate', exact: true }).click();
   await expect(page.getByRole('button', { name: /Connect to Reporting copy/ })).toBeVisible();
 
   // The copy carries the original's settings rather than an empty form's.
@@ -646,6 +648,7 @@ test('a connection can be duplicated, credentials and all', async ({ page }) => 
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
   // And a copy of a copy counts rather than stacking the word.
-  await page.getByRole('button', { name: /Duplicate Reporting copy/ }).click();
+  await page.getByRole('button', { name: 'Actions for Reporting copy', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Duplicate', exact: true }).click();
   await expect(page.getByRole('button', { name: /Connect to Reporting copy 2/ })).toBeVisible();
 });
