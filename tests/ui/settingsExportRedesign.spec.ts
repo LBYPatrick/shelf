@@ -101,3 +101,80 @@ test('export distinguishes the whole table file from loaded clipboard rows and s
   await expect(csv).toHaveAttribute('aria-checked', 'true');
   await expect(sheet.getByRole('radio', { name: 'Markdown', exact: true })).toHaveCount(0);
 });
+
+test('settings keeps its frame across categories and JSON fills the remaining pane', async ({
+  app,
+  sample,
+}) => {
+  await sample.getByRole('button', { name: 'Settings', exact: true }).click();
+  const sheet = sample.getByRole('dialog', { name: 'Settings', exact: true });
+  for (const width of [1150, 620]) {
+    await app.evaluate(({ BrowserWindow }, width) => {
+      const window = BrowserWindow.getAllWindows()[0]!;
+      window.setMinimumSize(500, 400);
+      window.setSize(width, 780);
+    }, width);
+    await sample.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        )
+    );
+    await settledSheet(sample, sheet);
+    await sheet.evaluate(async (element) => {
+      await Promise.allSettled(
+        element.getAnimations({ subtree: true }).map((animation) => animation.finished)
+      );
+    });
+    await settledSheet(sample, sheet);
+    const original = await sheet.boundingBox();
+    for (const category of [
+      'appearance',
+      'data',
+      'editor',
+      'general',
+      'assistant',
+      'file',
+      'about',
+      'json',
+    ]) {
+      await sheet.locator(`[data-settings-category="${category}"]`).click();
+      await settledSheet(sample, sheet);
+      const current = await sheet.boundingBox();
+      expect(
+        Math.abs(current!.height - original!.height),
+        JSON.stringify({
+          width,
+          category,
+          original,
+          current,
+          details: await sheet.evaluate((el) => ({
+            offset: (el as HTMLElement).offsetHeight,
+            style: (el as HTMLElement).style.height,
+            animations: el
+              .getAnimations()
+              .map((a) => ({ state: a.playState, current: a.currentTime })),
+            transform: getComputedStyle(el).transform,
+          })),
+        })
+      ).toBeLessThanOrEqual(1);
+      expect(Math.abs(current!.y - original!.y)).toBeLessThanOrEqual(1);
+    }
+    const fit = await sheet.locator('.settings-content').evaluate((content) => {
+      const pane = content.getBoundingClientRect();
+      const editor = content.querySelector('.json__editor')!.getBoundingClientRect();
+      const bar = content.querySelector('.json__bar')!.getBoundingClientRect();
+      return {
+        topGap: editor.top - pane.top,
+        editorGap: bar.top - editor.bottom,
+        bottomGap: pane.bottom - bar.bottom,
+        editorHeight: editor.height,
+        expectedHeight: pane.height - bar.height,
+      };
+    });
+    expect(Math.abs(fit.topGap)).toBeLessThanOrEqual(1);
+    expect(Math.abs(fit.editorGap)).toBeLessThanOrEqual(1);
+    expect(Math.abs(fit.bottomGap)).toBeLessThanOrEqual(1);
+    expect(Math.abs(fit.editorHeight - fit.expectedHeight)).toBeLessThanOrEqual(1);
+  }
+});

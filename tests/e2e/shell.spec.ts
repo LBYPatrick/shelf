@@ -95,6 +95,7 @@ test('switching language translates the interface', async ({ page }) => {
   const settings = page.getByRole('dialog');
   // A real listbox now, not a native select: open it and choose, which is what
   // a person does and what a native `selectOption` could never exercise.
+  await settings.locator('.settings-nav [data-settings-category="general"]').click();
   await settings.getByLabel('Language').click();
   // The list is drawn in the body rather than inside the control, so nothing
   // between the two can clip it — which also puts it outside the dialog.
@@ -102,6 +103,7 @@ test('switching language translates the interface', async ({ page }) => {
 
   // By role, because the sections now carry a sentence each and one of them
   // mentions another section by name.
+  await settings.locator('.settings-nav [data-settings-category="appearance"]').click();
   await expect(settings.getByRole('heading', { name: '外観' })).toBeVisible();
   // Option labels are built at setup time unless they are computed; these used
   // to keep whichever language the component mounted in.
@@ -207,7 +209,7 @@ test('settings go out to a file and come back through the form', async ({ app, p
   await expect(page.getByRole('dialog')).toBeVisible();
 
   // The document view shows the live state rather than a copy of the defaults.
-  await page.getByRole('radio', { name: 'JSON' }).click();
+  await page.locator('.settings-nav [data-settings-category="json"]').click();
   await expect(page.locator('.monaco-editor').first()).toBeVisible();
   await expect(page.getByText('Valid JSON.')).toBeVisible();
   await expect(page.locator('.monaco-editor').first()).toContainText('shelf.settings');
@@ -215,7 +217,7 @@ test('settings go out to a file and come back through the form', async ({ app, p
   // Writing a file is a row in the visual pane now rather than a button in a
   // footer that stood over both views — the document view's own chrome is the
   // validity bar and Apply, and nothing else.
-  await page.getByRole('radio', { name: 'Visual' }).click();
+  await page.locator('.settings-nav [data-settings-category="file"]').click();
   await page.getByRole('button', { name: 'Export…' }).click();
   await expect
     .poll(async () => readFile(target, 'utf8').catch(() => ''), { timeout: 15_000 })
@@ -244,6 +246,7 @@ test('settings go out to a file and come back through the form', async ({ app, p
     .toBe('compact');
 
   // The form is showing the same thing, because there is only one state.
+  await page.locator('.settings-nav [data-settings-category="appearance"]').click();
   await expect(page.getByRole('radio', { name: 'Compact' })).toHaveAttribute(
     'aria-checked',
     'true'
@@ -264,6 +267,7 @@ test('settings go out to a file and come back through the form', async ({ app, p
     )
     .toBe('#5e81ac');
 
+  await page.locator('.settings-nav [data-settings-category="general"]').click();
   await page.getByRole('button', { name: 'Customise' }).click();
   await expect(page.getByRole('dialog').last().getByText('⌘⇧N')).toBeVisible();
 });
@@ -426,6 +430,7 @@ test('records a new shortcut, and the window obeys it', async ({ page }) => {
   await createConnection(page, { engine: 'SQLite', file: join(directory, 'keys.db') });
 
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.locator('.settings-nav [data-settings-category="general"]').click();
   await page.getByRole('button', { name: 'Customise' }).click();
 
   const sheet = page.getByRole('dialog').last();
@@ -476,6 +481,7 @@ test('records a new shortcut, and the window obeys it', async ({ page }) => {
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Shelf' })).toBeVisible({ timeout: 20_000 });
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.locator('.settings-nav [data-settings-category="general"]').click();
   await page.getByRole('button', { name: 'Customise' }).click();
   await expect(page.getByRole('dialog').last().getByText('⌘J')).toBeVisible();
 });

@@ -640,6 +640,7 @@ const KIND_ICON: Record<string, string> = {
     />
 
     <ExportSheet
+      file-source="table"
       v-if="exportOf"
       v-model="exportOpen"
       :fields="NO_FIELDS"
@@ -754,7 +755,7 @@ const KIND_ICON: Record<string, string> = {
 }
 
 .row {
-  border-radius: 0.4rem;
+  border-radius: var(--radius-control);
   margin-inline: var(--gap-tight);
   transition: background-color var(--t-press) var(--ease-out);
 }

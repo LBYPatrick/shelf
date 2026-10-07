@@ -229,7 +229,7 @@ const any = computed(() => filter.value.criteria.length > 0);
   max-width: 100%;
   height: var(--hit-min);
   padding-inline-start: var(--gap);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in oklab, var(--color-primary) 14%, transparent);
   font-size: 0.6875rem;
   transition:
@@ -286,7 +286,7 @@ const any = computed(() => filter.value.criteria.length > 0);
   width: 1.35rem;
   height: 100%;
   padding-inline-end: 0.2rem;
-  border-radius: 0 999px 999px 0;
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
   opacity: 0;
   color: inherit;
   transition: opacity var(--t-hover) var(--ease-out);
@@ -314,7 +314,7 @@ const any = computed(() => filter.value.criteria.length > 0);
   height: var(--hit-min);
   padding-inline: var(--gap);
   border: 1px dashed var(--separator);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 0.6875rem;
   color: var(--text-soft);
   transition:
@@ -335,7 +335,7 @@ const any = computed(() => filter.value.criteria.length > 0);
   inset-inline-start: 0;
   min-width: 11rem;
   padding: var(--gap-tight);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-popover);
   outline: none;
 }
 

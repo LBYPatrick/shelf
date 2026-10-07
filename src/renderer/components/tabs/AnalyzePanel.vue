@@ -826,7 +826,7 @@ onBeforeUnmount(stopSampling);
 .analyze__code {
   margin: 0;
   padding: var(--gap) var(--gap-loose);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-card);
   background: var(--fill-4);
   font-family: var(--font-mono);
   font-size: 0.75rem;
@@ -845,7 +845,7 @@ onBeforeUnmount(stopSampling);
   min-width: 0;
   margin-bottom: var(--gap-section);
   padding: var(--gap-loose);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-card);
   background: var(--fill-4);
 }
 
@@ -886,7 +886,7 @@ onBeforeUnmount(stopSampling);
   gap: 2px;
   min-width: 0;
   padding: var(--gap) var(--gap-loose);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-card);
   background: var(--fill-4);
 }
 
@@ -983,7 +983,7 @@ onBeforeUnmount(stopSampling);
 .stats__badge {
   flex: 0 0 auto;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in oklab, var(--color-primary) 14%, transparent);
   color: var(--color-primary-text, var(--color-primary));
   font-size: 0.5625rem;

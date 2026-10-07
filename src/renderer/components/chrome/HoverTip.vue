@@ -104,7 +104,7 @@ const placement = computed(() => {
   position: fixed;
   z-index: 300;
   padding: 0.3rem 0.6rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-control);
   background: var(--color-base-100);
   box-shadow: var(--elev-popover);
   color: var(--color-base-content);

@@ -659,7 +659,7 @@ void props;
    * lands.
    */
   max-height: min(92vh, max(80vh, 480px));
-  border-radius: 1.25rem;
+  border-radius: var(--radius-sheet);
   overflow: hidden;
   /*
    * The curve decelerates: fast at the start, settling at the end, which is
@@ -758,7 +758,7 @@ void props;
   place-items: center;
   width: var(--hit-min);
   height: var(--hit-min);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 0.75rem;
   color: var(--text-soft);
 }

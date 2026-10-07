@@ -51,7 +51,7 @@
 .monaco-editor .find-widget {
   max-width: min(34rem, calc(100% - 2rem));
   border: 1px solid var(--separator);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-popover);
   box-shadow: var(--elev-popover);
 }
 
@@ -175,7 +175,6 @@
   background-color: currentColor;
   -webkit-mask: var(--monaco-chevron) center / 0.625rem no-repeat;
   mask: var(--monaco-chevron) center / 0.625rem no-repeat;
-  transition: transform var(--t-pop) var(--ease-out);
 }
 
 .monaco-editor .find-widget {
@@ -201,7 +200,7 @@
 .monaco-editor .suggest-widget,
 .monaco-editor .monaco-hover,
 .monaco-menu-container {
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-popover);
   border: 1px solid var(--separator);
   box-shadow: var(--elev-popover);
   overflow: hidden;
@@ -220,7 +219,7 @@
  * ------------------------------------------------------------------------- */
 
 .monaco-editor .scrollbar > .slider {
-  border-radius: 6px;
+  border-radius: var(--radius-scrollbar);
 }
 
 /*

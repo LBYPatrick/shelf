@@ -317,7 +317,7 @@ const STATE_ICON: Record<string, string> = {
   width: 6px;
   height: 6px;
   margin-inline: 2px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--color-primary);
   animation: breathe 1.4s var(--ease-in-out) infinite;
 }
@@ -433,7 +433,7 @@ const STATE_ICON: Record<string, string> = {
   gap: var(--gap);
   margin: var(--gap) 0;
   padding: var(--gap-loose);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-card);
   background: color-mix(in oklab, var(--color-error, var(--color-primary)) 10%, transparent);
   font-size: 0.75rem;
   color: var(--color-error, var(--color-base-content));

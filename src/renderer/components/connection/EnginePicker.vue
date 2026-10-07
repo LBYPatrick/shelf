@@ -165,7 +165,7 @@ async function move(event: KeyboardEvent, offset: number): Promise<void> {
   flex: none;
   width: 1.25rem;
   height: 1.25rem;
-  border-radius: 0.4rem;
+  border-radius: var(--radius-control);
   font-size: 0.5rem;
   font-weight: 600;
   letter-spacing: -0.01em;

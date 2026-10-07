@@ -7,12 +7,13 @@
  * "is this a string containing JSON or an actual JSON column" is a question the
  * truncated cell cannot answer.
  */
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type { CellValue } from '@drivers/types';
 import { displayValue, valueKind } from '@shared/values';
 import { useSettings } from '../../stores/settings';
 import PressButton from '../ui/PressButton.vue';
 import Sheet from '../ui/Sheet.vue';
+import { errorMessage } from '@shared/errors';
 
 const props = defineProps<{ column: string; value: CellValue }>();
 const open = defineModel<boolean>({ required: true });
@@ -44,8 +45,26 @@ const size = computed(() => {
   return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`;
 });
 
+const copied = ref(false);
+const copyError = ref('');
+let copyTimer: ReturnType<typeof setTimeout> | undefined;
+function resetCopy(): void {
+  clearTimeout(copyTimer);
+  copied.value = false;
+  copyError.value = '';
+}
+watch([raw, open], resetCopy);
+onBeforeUnmount(() => clearTimeout(copyTimer));
+
 async function copy(): Promise<void> {
-  await navigator.clipboard.writeText(raw.value);
+  resetCopy();
+  try {
+    await navigator.clipboard.writeText(raw.value);
+    copied.value = true;
+    copyTimer = setTimeout(() => (copied.value = false), 2000);
+  } catch (caught) {
+    copyError.value = errorMessage(caught);
+  }
 }
 </script>
 
@@ -59,10 +78,18 @@ async function copy(): Promise<void> {
     </div>
 
     <pre class="value">{{ pretty || $t('value.empty') }}</pre>
+    <p v-if="copyError" role="alert" class="copy-error">{{ copyError }}</p>
 
     <template #footer>
       <PressButton @click="copy">
-        {{ $t('action.copy') }}
+        <span class="copy-label" aria-live="polite">
+          <span :aria-hidden="copied" :class="{ 'copy-label--hidden': copied }">{{
+            $t('action.copy')
+          }}</span>
+          <span :aria-hidden="!copied" :class="{ 'copy-label--hidden': !copied }">{{
+            $t('properties.copied')
+          }}</span>
+        </span>
       </PressButton>
       <PressButton variant="primary" @click="open = false">
         {{ $t('action.done') }}
@@ -72,6 +99,20 @@ async function copy(): Promise<void> {
 </template>
 
 <style scoped>
+.copy-label {
+  display: grid;
+}
+.copy-label > span {
+  grid-area: 1 / 1;
+  transition: opacity var(--t-press) var(--ease-out);
+}
+.copy-label--hidden {
+  opacity: 0;
+}
+.copy-error {
+  color: var(--color-error);
+  font-size: 0.75rem;
+}
 .meta {
   display: flex;
   gap: var(--gap-tight);
@@ -80,7 +121,7 @@ async function copy(): Promise<void> {
 
 .chip {
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--fill-3);
   font-size: 0.625rem;
   letter-spacing: 0.02em;
@@ -94,7 +135,7 @@ async function copy(): Promise<void> {
   max-height: 60vh;
   overflow: auto;
   padding: var(--gap-loose);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-card);
   background: var(--fill-4);
   font-family: var(--font-mono);
   font-size: 0.75rem;

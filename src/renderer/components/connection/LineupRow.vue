@@ -151,6 +151,7 @@ defineEmits<{ open: [] }>();
 
 /* Rows follow the desktop density scale, regardless of window size. */
 .row__open {
+  border-radius: inherit;
   display: grid;
   grid-template-columns: 2rem minmax(0, 1fr) auto;
   align-items: center;
@@ -171,7 +172,7 @@ defineEmits<{ open: [] }>();
   flex: 0 0 auto;
   width: 2rem;
   height: 2rem;
-  border-radius: var(--radius-field);
+  border-radius: var(--radius-control);
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--text-soft);

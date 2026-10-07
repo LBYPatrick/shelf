@@ -74,7 +74,7 @@ const progress = computed(() => {
  */
 .slider__input::-webkit-slider-runnable-track {
   height: 4px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: linear-gradient(
     to right,
     var(--color-primary) 0 calc(var(--progress) * 100%),
@@ -88,7 +88,7 @@ const progress = computed(() => {
   height: 1rem;
   /* Half the thumb's height above the 4px track, so it rides centred on it. */
   margin-top: -0.375rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--control-thumb);
   box-shadow: var(--elev-thumb);
   transition: transform var(--t-press) var(--ease-out);

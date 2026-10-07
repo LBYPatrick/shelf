@@ -215,7 +215,7 @@ onBeforeUnmount(() => {
   z-index: 200;
   min-width: 12rem;
   padding: var(--gap-tight);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-popover);
   outline: none;
 }
 

@@ -163,6 +163,7 @@ async function writeResultsToFile(
     <DataGrid v-else :fields="fields" :rows="rows" :loading="loading" />
 
     <ExportSheet
+      file-source="job"
       v-model="exporting"
       :fields="fields"
       :rows="rows as readonly Record<string, CellValue>[]"

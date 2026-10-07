@@ -432,7 +432,15 @@ defineExpose({ fit });
           @dblclick="emit('openTable', node.key)"
         >
           <rect class="erd-node__box" :width="node.width" :height="node.height" rx="10" />
-          <rect class="erd-node__header" :width="node.width" :height="HEADER_HEIGHT" rx="10" />
+          <!-- The node owns the outside arc; its header has a square lower join. -->
+          <svg
+            :width="node.width"
+            :height="HEADER_HEIGHT"
+            class="erd-node__header-clip"
+            aria-hidden="true"
+          >
+            <rect class="erd-node__header" :width="node.width" :height="HEADER_HEIGHT * 2" />
+          </svg>
           <text class="erd-node__title" x="10" :y="HEADER_HEIGHT / 2 + 4">
             {{ node.name }}
           </text>
@@ -473,6 +481,13 @@ defineExpose({ fit });
 </template>
 
 <style scoped>
+.erd-node__box,
+.erd-node__header {
+  rx: var(--radius-card);
+}
+.erd-node__header-clip {
+  overflow: hidden;
+}
 .erd {
   position: relative;
   /*

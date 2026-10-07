@@ -573,14 +573,12 @@
     "previewHint": "サンプルには読み込み済みの行が表示されます。書き出しには選択した範囲が使われます。",
     "tableFileHint": "未読み込みの行を含め、一致するすべての行を書き出します。",
     "jobFileHint": "クエリを再実行せず、保存された結果全体を書き出します。",
-    "formats": {
-      "csv": "スプレッドシート向け",
-      "tsv": "タブ区切りの値",
-      "json": "構造化レコード",
-      "jsonl": "1 行に 1 レコード",
-      "markdown": "読みやすい表",
-      "sql": "INSERT ステートメント"
-    }
+    "formatHintCsv": "スプレッドシート向け",
+    "formatHintTsv": "タブ区切りの値",
+    "formatHintJson": "構造化レコード",
+    "formatHintJsonl": "1 行に 1 レコード",
+    "formatHintMarkdown": "読みやすい表",
+    "formatHintSql": "INSERT ステートメント"
   },
   "grid": {
     "oneBased": "1 始まり",
@@ -746,7 +744,7 @@
   "jobs": {
     "empty": "まだ何も実行していません。バックグラウンド実行は単独で走り、結果全体をこの端末に保持し、完了時に通知します。",
     "dispatched": "{{name}} を実行しました。",
-    "finished": "完了 — {{rows}} 行、書き出せます。",
+    "finished": "完了",
     "open": "開く",
     "openResult": "{{name}} の行を開く",
     "rename": "名前を変更",
@@ -793,7 +791,10 @@
     "kindUpdated": "更新",
     "nameTitle": "ステートメントを実行に出す",
     "nameLabel": "ジョブ名",
-    "nameHelp": "実行に出したあと、ジョブ一覧にこの名前で並びます。"
+    "nameHelp": "実行に出したあと、ジョブ一覧にこの名前で並びます。",
+    "activity": "ジョブの状況",
+    "inProgress": "{{count}} 件実行中",
+    "activityFailed": "ジョブが失敗しました"
   },
   "value": {
     "asJson": "JSON として整形",

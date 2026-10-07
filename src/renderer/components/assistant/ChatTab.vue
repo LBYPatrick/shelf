@@ -766,7 +766,8 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
   margin: 0 0 var(--gap-loose);
   margin-inline-start: auto;
   padding: var(--gap) var(--gap-loose);
-  border-radius: 1rem 1rem 0.35rem 1rem;
+  border-radius: var(--radius-message) var(--radius-message) var(--radius-small)
+    var(--radius-message);
   background: var(--fill-2);
   font-size: 0.8125rem;
   line-height: 1.55;
@@ -788,7 +789,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
 .turn__pulse {
   width: 6px;
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--color-primary);
   animation: breathe 1.4s var(--ease-in-out) infinite;
 }
@@ -866,7 +867,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
   min-height: var(--hit-min);
   margin-top: var(--gap-tight);
   padding: var(--gap-tight) var(--gap-loose);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--color-primary);
   font-size: 0.75rem;
   font-weight: 500;
@@ -904,7 +905,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
   min-height: var(--hit-min);
   padding: var(--gap-tight) var(--gap-loose);
   border: 1px solid var(--separator);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 0.75rem;
   color: color-mix(in oklab, var(--color-base-content) 75%, transparent);
   transition:
@@ -965,7 +966,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
    */
   padding: var(--gap-loose);
   border: 1px solid var(--separator);
-  border-radius: 1.1rem;
+  border-radius: var(--radius-composer);
   background: var(--surface-raised);
   transition: border-color var(--t-hover) var(--ease-out);
 }
@@ -1136,7 +1137,7 @@ onBeforeUnmount(() => assistant.interrupt(props.tabId));
   place-items: center;
   width: var(--hit-min);
   height: var(--hit-min);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--color-primary);
   color: var(--color-primary-content, white);
   transition:

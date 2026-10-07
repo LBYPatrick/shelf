@@ -573,14 +573,12 @@
     "previewHint": "Mẫu hiển thị các hàng đã tải. Dữ liệu xuất theo phạm vi đã chọn.",
     "tableFileHint": "Xuất tất cả hàng phù hợp, kể cả các hàng chưa được tải.",
     "jobFileHint": "Xuất toàn bộ kết quả đã lưu mà không chạy lại truy vấn.",
-    "formats": {
-      "csv": "Dành cho bảng tính",
-      "tsv": "Giá trị phân cách bằng tab",
-      "json": "Bản ghi có cấu trúc",
-      "jsonl": "Một bản ghi mỗi dòng",
-      "markdown": "Bảng dễ đọc",
-      "sql": "Câu lệnh INSERT"
-    }
+    "formatHintCsv": "Dành cho bảng tính",
+    "formatHintTsv": "Giá trị phân cách bằng tab",
+    "formatHintJson": "Bản ghi có cấu trúc",
+    "formatHintJsonl": "Một bản ghi mỗi dòng",
+    "formatHintMarkdown": "Bảng dễ đọc",
+    "formatHintSql": "Câu lệnh INSERT"
   },
   "grid": {
     "oneBased": "Bắt đầu từ 1",
@@ -746,7 +744,7 @@
   "jobs": {
     "empty": "Chưa chạy nền tác vụ nào. Một câu lệnh chạy nền sẽ tự chạy, giữ toàn bộ kết quả trên máy này và báo khi xong.",
     "dispatched": "Đã chạy nền {{name}}.",
-    "finished": "Xong — {{rows}} hàng, sẵn sàng xuất.",
+    "finished": "Hoàn tất",
     "open": "Mở",
     "openResult": "Mở các hàng của {{name}}",
     "rename": "Đổi tên",
@@ -793,7 +791,10 @@
     "kindUpdated": "Cập nhật",
     "nameTitle": "Gửi câu lệnh đi chạy",
     "nameLabel": "Tên tác vụ",
-    "nameHelp": "Tên hiển thị trong danh sách tác vụ sau khi câu lệnh được gửi đi."
+    "nameHelp": "Tên hiển thị trong danh sách tác vụ sau khi câu lệnh được gửi đi.",
+    "activity": "Hoạt động tác vụ",
+    "inProgress": "{{count}} đang chạy",
+    "activityFailed": "Một tác vụ thất bại"
   },
   "value": {
     "asJson": "định dạng JSON",

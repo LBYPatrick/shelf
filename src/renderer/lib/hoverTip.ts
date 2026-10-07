@@ -45,6 +45,8 @@ const GRACE = 260;
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 let closedAt = 0;
+let owner: HTMLElement | undefined;
+const labels = new WeakMap<HTMLElement, string>();
 
 function clear(): void {
   if (timer !== undefined) clearTimeout(timer);
@@ -54,10 +56,13 @@ function clear(): void {
 function show(element: HTMLElement, label: string, instant = false): void {
   clear();
   if (!label) return;
+  owner = element;
 
   const open = () => {
     const box = element.getBoundingClientRect();
-    tip.label = label;
+    const current = labels.get(element);
+    if (!current) return;
+    tip.label = current;
     tip.anchor = { top: box.top, bottom: box.bottom, left: box.left, right: box.right };
     tip.instant = instant || tip.visible || Date.now() - closedAt < GRACE;
     tip.visible = true;
@@ -69,6 +74,7 @@ function show(element: HTMLElement, label: string, instant = false): void {
 
 export function hideTip(): void {
   clear();
+  owner = undefined;
   if (!tip.visible) return;
   tip.visible = false;
   closedAt = Date.now();
@@ -86,7 +92,8 @@ export function hideTip(): void {
  */
 export const vTip: Directive<HTMLElement, string | undefined> = {
   mounted(element, binding) {
-    const label = () => binding.value ?? '';
+    labels.set(element, binding.value ?? '');
+    const label = () => labels.get(element) ?? '';
 
     // Marked so the design gate can sweep them: a drawn label on a control
     // nobody can see is a label for nothing, and there is no other way to find
@@ -103,5 +110,15 @@ export const vTip: Directive<HTMLElement, string | undefined> = {
     });
     element.addEventListener('blur', hideTip);
   },
-  unmounted: hideTip,
+  updated(element, binding) {
+    labels.set(element, binding.value ?? '');
+    if (owner === element && tip.visible) {
+      if (binding.value) tip.label = binding.value;
+      else hideTip();
+    }
+  },
+  unmounted(element) {
+    labels.delete(element);
+    if (owner === element) hideTip();
+  },
 };

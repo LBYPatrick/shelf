@@ -48,10 +48,11 @@ const sheetOpen = computed({
   },
 });
 function close(): void {
+  if (!open.value) return;
   open.value = false;
 }
 function requestClose(): void {
-  if (saving.value) return;
+  if (!open.value || saving.value) return;
   if (form.value?.hasChanges()) discarding.value = true;
   else close();
 }
@@ -61,12 +62,12 @@ watch(fingerprint, () => {
 });
 
 function submit(connect: boolean): void {
-  if (!ready.value || saving.value || testing.value) return;
+  if (!open.value || !ready.value || saving.value || testing.value) return;
   const input = form.value?.buildInput();
   if (input) void save(input, connect);
 }
 function runTest(): void {
-  if (!ready.value || testing.value || saving.value) return;
+  if (!open.value || !ready.value || testing.value || saving.value) return;
   const input = form.value?.buildInput();
   if (input) void test(input);
 }
@@ -97,7 +98,7 @@ async function test(input: SaveConnectionInput): Promise<void> {
   }
 }
 async function save(input: SaveConnectionInput, connect: boolean): Promise<void> {
-  if (saving.value || testing.value || !ready.value) return;
+  if (!open.value || saving.value || testing.value || !ready.value) return;
   saving.value = true;
   saveError.value = '';
   try {
@@ -213,7 +214,7 @@ async function save(input: SaveConnectionInput, connect: boolean): Promise<void>
 }
 .feedback {
   padding: var(--gap) var(--gap-loose);
-  border-radius: var(--radius-field);
+  border-radius: var(--radius-card);
   background: var(--fill-3);
   font-size: 0.75rem;
   overflow-wrap: anywhere;

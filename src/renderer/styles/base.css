@@ -156,7 +156,6 @@ textarea,
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
-  border-radius: var(--radius-field);
 }
 
 ::selection {
@@ -180,7 +179,7 @@ textarea,
 
 ::-webkit-scrollbar-thumb {
   background: color-mix(in oklab, var(--color-base-content) 20%, transparent);
-  border-radius: 6px;
+  border-radius: var(--radius-scrollbar);
   border: 2px solid transparent;
   background-clip: content-box;
 }

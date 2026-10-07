@@ -300,7 +300,7 @@ watch(
 .comment {
   margin: 0 0 var(--gap-loose);
   padding: var(--gap) var(--gap-loose);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-card);
   background: color-mix(in oklab, var(--color-primary) 8%, transparent);
   font-size: 0.8125rem;
 }
@@ -329,7 +329,7 @@ watch(
   gap: 2px;
   min-width: 0;
   padding: var(--gap) var(--gap-loose);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-card);
   background: var(--fill-4);
 }
 

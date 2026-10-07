@@ -141,15 +141,10 @@ async function selectCategory(next: Category, event: MouseEvent): Promise<void> 
   if (content.value) content.value.scrollTop = 0;
   if (event.detail === 0 || !content.value) return;
   const reduce = motionPreference.matches;
-  content.value.animate(
-    reduce
-      ? [{ opacity: 0.6 }, { opacity: 1 }]
-      : [
-          { opacity: 0.6, transform: 'translateY(4px)' },
-          { opacity: 1, transform: 'translateY(0)' },
-        ],
-    { duration: 180, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' }
-  );
+  content.value.animate([{ opacity: 0.6 }, { opacity: 1 }], {
+    duration: 180,
+    easing: 'cubic-bezier(0.23, 1, 0.32, 1)',
+  });
 }
 
 function currentState(): SettingsState {
@@ -1042,13 +1037,18 @@ const languageOptions = computed(() => [
 .settings-layout {
   display: grid;
   grid-template-columns: 12rem minmax(0, 1fr);
-  min-height: min(30rem, 55vh);
+  grid-template-rows: minmax(0, 1fr);
+  /* Preferences are a stable workspace; its categories scroll inside it. */
+  height: min(38rem, calc(80vh - 4.5rem));
+  min-height: 0;
   border-top: 1px solid var(--separator);
 }
 .settings-nav {
   min-width: 0;
   border-inline-end: 1px solid var(--separator);
   background: var(--fill-4);
+  min-height: 0;
+  overflow: hidden;
 }
 .settings-nav__inner {
   position: sticky;
@@ -1056,7 +1056,7 @@ const languageOptions = computed(() => [
   display: flex;
   flex-direction: column;
   gap: var(--gap-tight);
-  max-height: calc(80vh - 4rem);
+  max-height: 100%;
   overflow-y: auto;
   padding: var(--gap-loose);
 }
@@ -1112,7 +1112,11 @@ const languageOptions = computed(() => [
   line-height: 1.5;
 }
 .settings-content {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .panels {
@@ -1120,6 +1124,10 @@ const languageOptions = computed(() => [
   flex-direction: column;
   gap: var(--gap-section);
   padding: var(--gap-section);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .about {
@@ -1277,11 +1285,15 @@ label.row__label {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
-/* An editor is a viewport onto a document, so only this content owns a fixed height. */
+/* The document fills its pane, leaving only its own toolbar below it. */
 .json__editor {
-  height: min(28rem, 52vh);
+  flex: 1;
+  min-height: 0;
+  height: auto;
 }
 
 .json__bar {
@@ -1295,6 +1307,7 @@ label.row__label {
   background: var(--fill-4);
   font-size: 0.6875rem;
   letter-spacing: 0.01em;
+  flex: none;
 }
 
 .json__gap {
@@ -1369,6 +1382,7 @@ label.row__label {
 @media (max-width: 650px) {
   .settings-layout {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
   }
   .settings-nav {
     position: sticky;

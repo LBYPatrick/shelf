@@ -96,7 +96,7 @@ const properties = ref<EntityProperties>({});
   flex-direction: column;
   gap: 2px;
   padding: var(--gap) var(--gap-loose);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-card);
   background: var(--fill-4);
 }
 
@@ -116,7 +116,7 @@ const properties = ref<EntityProperties>({});
 .comment {
   margin: 0 0 var(--gap-loose);
   padding: var(--gap) var(--gap-loose);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-card);
   background: color-mix(in oklab, var(--color-primary) 8%, transparent);
   font-size: 0.8125rem;
 }
@@ -137,7 +137,7 @@ const properties = ref<EntityProperties>({});
   flex: 1;
   min-height: 12rem;
   max-height: min(26rem, 42vh);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-card);
   border: 1px solid var(--separator);
   overflow: hidden;
 }

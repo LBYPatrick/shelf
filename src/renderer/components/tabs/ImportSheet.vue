@@ -14,6 +14,7 @@ import { host } from '../../lib/host';
 import CheckBox from '../ui/CheckBox.vue';
 import FormField from '../ui/FormField.vue';
 import PressButton from '../ui/PressButton.vue';
+import ProgressBar from '../ui/ProgressBar.vue';
 import SelectMenu from '../ui/SelectMenu.vue';
 import Sheet from '../ui/Sheet.vue';
 import { errorMessage } from '@shared/errors';
@@ -203,6 +204,9 @@ watch(open, (isOpen) => {
     <p v-if="error" class="error" role="alert">
       {{ error }}
     </p>
+    <Transition name="import-progress">
+      <ProgressBar v-if="running" :aria-label="$t('import.importing')" />
+    </Transition>
 
     <template #footer>
       <PressButton @click="open = false">
@@ -220,6 +224,14 @@ watch(open, (isOpen) => {
 </template>
 
 <style scoped>
+.import-progress-enter-active,
+.import-progress-leave-active {
+  transition: opacity var(--t-press) var(--ease-out);
+}
+.import-progress-enter-from,
+.import-progress-leave-to {
+  opacity: 0;
+}
 .file {
   display: flex;
   align-items: center;
@@ -257,7 +269,7 @@ watch(open, (isOpen) => {
 
 .preview {
   overflow-x: auto;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-card);
   border: 1px solid var(--separator);
   margin-bottom: var(--gap-loose);
 }
@@ -313,7 +325,7 @@ watch(open, (isOpen) => {
 
 .note {
   padding: var(--gap) var(--gap-loose);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-card);
   background: color-mix(in oklab, var(--color-warning) 14%, transparent);
   font-size: 0.6875rem;
   margin-bottom: var(--gap-loose);
@@ -322,7 +334,7 @@ watch(open, (isOpen) => {
 .error {
   margin-top: var(--gap-loose);
   padding: var(--gap) var(--gap-loose);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-card);
   background: color-mix(in oklab, var(--color-error) 15%, transparent);
   font-size: 0.75rem;
 }

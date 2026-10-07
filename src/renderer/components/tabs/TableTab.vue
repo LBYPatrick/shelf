@@ -513,6 +513,7 @@ watch(
     />
 
     <ExportSheet
+      file-source="table"
       v-model="exporting"
       :fields="fields"
       :rows="rows as readonly Record<string, CellValue>[]"
@@ -613,7 +614,7 @@ watch(
   min-width: 1.125rem;
   height: 1.125rem;
   padding-inline: 0.25rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--color-warning);
   color: var(--color-warning-content);
   font-size: 0.625rem;
@@ -661,7 +662,7 @@ watch(
 .toolbar__done {
   font-size: 0.625rem;
   padding: 1px 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in oklab, var(--color-success) 24%, transparent);
 }
 
@@ -688,7 +689,7 @@ watch(
 .tabstatus__done {
   font-size: 0.625rem;
   padding: 1px 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in oklab, var(--color-success) 24%, transparent);
   animation: done-in var(--t-panel) var(--ease-out);
 }

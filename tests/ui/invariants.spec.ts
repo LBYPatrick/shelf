@@ -638,6 +638,7 @@ test.describe('layout', () => {
      */
     await sample.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(sample.getByRole('dialog', { name: 'Settings' })).toBeVisible();
+    await sample.locator('.settings-nav [data-settings-category="file"]').click();
     await sample.getByRole('button', { name: 'Manage…' }).click();
 
     const dialog = sample.getByRole('dialog', { name: 'Stored data' });
@@ -720,6 +721,7 @@ test.describe('layout', () => {
      */
     await sample.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(sample.getByRole('dialog', { name: 'Settings' })).toBeVisible();
+    await sample.locator('.settings-nav [data-settings-category="file"]').click();
     await sample.getByRole('button', { name: 'Manage…' }).click();
 
     const stored = sample.getByRole('dialog', { name: 'Stored data' });
@@ -780,6 +782,7 @@ test.describe('layout', () => {
     await sample.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(sample.getByRole('dialog', { name: 'Settings' })).toBeVisible();
 
+    await sample.locator('.settings-nav [data-settings-category="about"]').click();
     await sample.getByRole('button', { name: 'Check for updates' }).click();
     const update = sample.getByRole('dialog', { name: 'Software update' });
     await expect(update).toBeVisible();
@@ -826,6 +829,7 @@ test.describe('layout', () => {
     await sample.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(sample.getByRole('dialog', { name: 'Settings' })).toBeVisible();
 
+    await sample.locator('.settings-nav [data-settings-category="about"]').click();
     await sample.getByRole('button', { name: 'Check for updates' }).click();
     const panel = sample.getByRole('dialog', { name: 'Software update' });
     await expect(panel).toBeVisible();
@@ -861,19 +865,23 @@ test.describe('layout', () => {
   });
 
   test('a popup that loses content gets shorter, and travels there', async ({ sample }) => {
-    /*
-     * `scrollHeight` is never smaller than the box it is read from, so a panel
-     * already holding a height reports that height as its content's. Every
-     * sheet could therefore grow and none could shrink: switching settings from
-     * its long list of sections to its short JSON editor left the editor above
-     * a third of a window of nothing, and it stayed that way until the popup
-     * was closed and opened again.
-     */
+    // Short detail sheets follow natural content even though Settings now
+    // deliberately owns a stable frame for its category workspace.
     await sample.getByRole('button', { name: 'Settings', exact: true }).click();
-    const dialog = sample.getByRole('dialog');
+    await sample.locator('.settings-nav [data-settings-category="file"]').click();
+    await sample.getByRole('button', { name: 'Manage…' }).click();
+    const dialog = sample.getByRole('dialog', { name: 'Stored data' });
     await expect(dialog).toBeVisible();
     await sample.waitForTimeout(700);
-    const long = (await dialog.boundingBox())!.height;
+    // Settings intentionally keeps its frame stable. A content-sized detail
+    // sheet still has to follow shrinking content without a jump.
+    await dialog.locator('.panel__measure').evaluate((wrapper) => {
+      const extra = document.createElement('div');
+      extra.dataset['shrinkSample'] = 'yes';
+      extra.style.height = '120px';
+      wrapper.append(extra);
+    });
+    const long = (await settledSheet(sample, dialog)).height;
 
     /*
      * Sampled every frame across the change, because *how* it gets there is
@@ -884,12 +892,10 @@ test.describe('layout', () => {
      * its new size with an animation from that size to itself.
      */
     const frames = await sample.evaluate(async () => {
-      const panel = document.querySelector('.panel') as HTMLElement;
+      const panel = [...document.querySelectorAll<HTMLElement>('.panel')].at(-1)!;
       const heights: number[] = [];
       const until = performance.now() + 500;
-      [...document.querySelectorAll('label, button')]
-        .find((node) => node.textContent?.trim() === 'JSON')
-        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      panel.querySelector('[data-shrink-sample]')?.remove();
       while (performance.now() < until) {
         heights.push(panel.getBoundingClientRect().height);
         await new Promise((settle) => requestAnimationFrame(settle));
@@ -1521,6 +1527,7 @@ test.describe('materials', () => {
      */
     await sample.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(sample.getByRole('dialog')).toBeVisible();
+    await sample.locator('.settings-nav [data-settings-category="general"]').click();
     await sample.getByLabel('Language', { exact: true }).click();
     await expect(sample.getByRole('listbox')).toBeVisible();
 
@@ -1581,6 +1588,7 @@ test.describe('controls', () => {
      * rule is one or the other: be visible, or take no pointer events.
      */
     await sample.getByRole('button', { name: 'Settings', exact: true }).click();
+    await sample.locator('.settings-nav [data-settings-category="general"]').click();
     await sample.getByRole('button', { name: 'Customise' }).click();
     await expect(sample.getByText('New query tab')).toBeVisible();
 
@@ -2758,6 +2766,7 @@ test.describe('pickers', () => {
     await sample.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(sample.getByRole('dialog')).toBeVisible();
 
+    await sample.locator('.settings-nav [data-settings-category="assistant"]').click();
     await sample.getByRole('button', { name: 'Manage providers' }).click();
     await sample.getByRole('button', { name: 'Add provider' }).click();
 

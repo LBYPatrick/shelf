@@ -151,7 +151,7 @@ watch(
 .comment {
   margin: 0 0 var(--gap-loose);
   padding: var(--gap) var(--gap-loose);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-card);
   background: color-mix(in oklab, var(--color-primary) 8%, transparent);
   font-size: 0.8125rem;
 }
@@ -205,7 +205,7 @@ watch(
 
 .columns__key {
   padding: 0 5px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background-color: color-mix(in oklab, var(--color-primary) 14%, transparent);
   color: var(--color-primary-text, var(--color-primary));
   font-family: var(--font-ui);

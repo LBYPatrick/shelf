@@ -327,7 +327,7 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
   display: flex;
   flex-direction: column;
   border: 1px solid var(--separator);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-card);
   background: var(--fill-4);
   overflow: hidden;
 }
@@ -418,7 +418,7 @@ const changedCount = computed(() => Object.keys(currentOverrides()).length);
 
 .keys kbd {
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-small);
   border: 1px solid var(--separator-strong);
   background: var(--color-base-100);
   font-family: var(--font-ui);

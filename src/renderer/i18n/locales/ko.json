@@ -573,14 +573,12 @@
     "previewHint": "샘플에는 불러온 행이 표시됩니다. 내보내기에는 선택한 범위가 적용됩니다.",
     "tableFileHint": "아직 불러오지 않은 행을 포함해 일치하는 모든 행을 내보냅니다.",
     "jobFileHint": "쿼리를 다시 실행하지 않고 저장된 전체 결과를 내보냅니다.",
-    "formats": {
-      "csv": "스프레드시트용",
-      "tsv": "탭으로 구분된 값",
-      "json": "구조화된 레코드",
-      "jsonl": "줄마다 레코드 하나",
-      "markdown": "읽기 쉬운 표",
-      "sql": "INSERT 문"
-    }
+    "formatHintCsv": "스프레드시트용",
+    "formatHintTsv": "탭으로 구분된 값",
+    "formatHintJson": "구조화된 레코드",
+    "formatHintJsonl": "줄마다 레코드 하나",
+    "formatHintMarkdown": "읽기 쉬운 표",
+    "formatHintSql": "INSERT 문"
   },
   "grid": {
     "oneBased": "1부터",
@@ -746,7 +744,7 @@
   "jobs": {
     "empty": "아직 실행한 작업이 없습니다. 백그라운드 실행은 따로 돌아가며, 결과 전체를 이 컴퓨터에 보관하고 끝나면 알려 줍니다.",
     "dispatched": "{{name}}을(를) 실행했습니다.",
-    "finished": "완료 — {{rows}}행, 내보낼 수 있습니다.",
+    "finished": "완료",
     "open": "열기",
     "openResult": "{{name}}의 행 열기",
     "rename": "이름 바꾸기",
@@ -793,7 +791,10 @@
     "kindUpdated": "수정됨",
     "nameTitle": "문 보내기",
     "nameLabel": "작업 이름",
-    "nameHelp": "보낸 뒤 작업 목록에 표시될 이름입니다."
+    "nameHelp": "보낸 뒤 작업 목록에 표시될 이름입니다.",
+    "activity": "작업 활동",
+    "inProgress": "{{count}}개 진행 중",
+    "activityFailed": "작업 실패"
   },
   "value": {
     "asJson": "JSON으로 정렬됨",

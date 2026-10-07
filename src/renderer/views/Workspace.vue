@@ -313,7 +313,7 @@ onBeforeUnmount(() => stopPersisting?.());
       -->
       <div class="topbar__lead mat-regular panel-sidebar" />
 
-      <TabStrip :tight="sidebarCollapsed" />
+      <TabStrip :tight="sidebarCollapsed" @show-jobs="selectRail('jobs')" />
     </header>
 
     <div class="workspace__main">
@@ -950,7 +950,7 @@ onBeforeUnmount(() => stopPersisting?.());
   margin-left: calc(var(--rail-item) / -2);
   width: var(--rail-item);
   height: var(--rail-item);
-  border-radius: 0.6rem;
+  border-radius: var(--radius-control);
   /*
    * The marker is the whole indicator. The selected item used to paint its own
    * surface as well, so there were two highlights for one selection — which is
@@ -966,7 +966,7 @@ onBeforeUnmount(() => stopPersisting?.());
   place-items: center;
   width: var(--rail-item);
   height: var(--rail-item);
-  border-radius: 0.6rem;
+  border-radius: var(--radius-control);
   color: var(--text-soft);
   transition:
     color var(--t-hover) var(--ease-out),
@@ -1120,7 +1120,7 @@ onBeforeUnmount(() => stopPersisting?.());
 .sidebar__search-key {
   flex: 0 0 auto;
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: var(--radius-small);
   background: var(--fill-3);
   font-family: var(--font-ui);
   font-size: 0.625rem;
@@ -1142,7 +1142,7 @@ onBeforeUnmount(() => stopPersisting?.());
 .sidebar__badge {
   min-width: 1.1em;
   padding-inline: 0.28em;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--color-primary);
   color: var(--color-primary-content, #fff);
   font-size: 0.625rem;
@@ -1496,7 +1496,7 @@ onBeforeUnmount(() => stopPersisting?.());
   width: 3.25rem;
   height: 3.25rem;
   margin-bottom: var(--gap);
-  border-radius: 1rem;
+  border-radius: var(--radius-palette);
   background: linear-gradient(
     145deg,
     oklch(64% 0.16 var(--engine-hue)),
@@ -1577,7 +1577,7 @@ onBeforeUnmount(() => stopPersisting?.());
   flex: 0 0 auto;
   width: 1.75rem;
   height: 1.75rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-well);
   background: var(--fill-4);
   color: var(--color-primary-text);
 }

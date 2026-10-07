@@ -573,14 +573,12 @@
     "previewHint": "示例显示已加载的行。导出范围以所选范围为准。",
     "tableFileHint": "导出所有匹配的行，包括尚未加载的行。",
     "jobFileHint": "导出完整的已保存结果，不会再次运行查询。",
-    "formats": {
-      "csv": "用于电子表格",
-      "tsv": "制表符分隔的值",
-      "json": "结构化记录",
-      "jsonl": "每行一条记录",
-      "markdown": "易读的表格",
-      "sql": "INSERT 语句"
-    }
+    "formatHintCsv": "用于电子表格",
+    "formatHintTsv": "制表符分隔的值",
+    "formatHintJson": "结构化记录",
+    "formatHintJsonl": "每行一条记录",
+    "formatHintMarkdown": "易读的表格",
+    "formatHintSql": "INSERT 语句"
   },
   "grid": {
     "oneBased": "从 1 开始",
@@ -746,7 +744,7 @@
   "jobs": {
     "empty": "还没有后台任务。后台运行会自行执行、把完整结果留在本机，并在完成时通知你。",
     "dispatched": "已后台运行 {{name}}。",
-    "finished": "完成 —— {{rows}} 行，可以导出。",
+    "finished": "已完成",
     "open": "打开",
     "openResult": "打开 {{name}} 的行",
     "rename": "重命名",
@@ -793,7 +791,10 @@
     "kindUpdated": "更新时间",
     "nameTitle": "派发语句",
     "nameLabel": "任务名称",
-    "nameHelp": "派发之后，这次运行在任务列表中的名称。"
+    "nameHelp": "派发之后，这次运行在任务列表中的名称。",
+    "activity": "任务活动",
+    "inProgress": "{{count}} 个正在进行",
+    "activityFailed": "任务失败"
   },
   "value": {
     "asJson": "按 JSON 格式化",

@@ -96,7 +96,7 @@ function isNull(row: Row, field: Field): boolean {
 .rows {
   margin: var(--gap) 0;
   border: 1px solid var(--separator);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-card);
   overflow: hidden;
   /* The same paper the statement above it is on — see the note in `SqlBlock`. */
   background: var(--surface-raised);

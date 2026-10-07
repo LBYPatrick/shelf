@@ -141,7 +141,7 @@ function nudge(delta: number): void {
   left: 50%;
   width: 3px;
   height: 2.25rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in oklab, var(--color-base-content) 40%, transparent);
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.6);
@@ -189,7 +189,7 @@ function nudge(delta: number): void {
 .handle:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: -1px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 @media (prefers-reduced-motion: reduce) {

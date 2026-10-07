@@ -39,7 +39,7 @@ const icon = computed(() => ICONS[props.tone]);
   gap: 0.25rem;
   height: 1.125rem;
   padding-inline: 0.375rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 0.625rem;
   font-weight: 600;
   letter-spacing: 0.01em;

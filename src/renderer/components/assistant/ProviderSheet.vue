@@ -433,7 +433,7 @@ async function remove(): Promise<void> {
   width: 100%;
   min-height: calc(var(--hit-min) + var(--gap));
   padding: var(--gap-tight) var(--gap-loose);
-  border-radius: 0.625rem;
+  border-radius: var(--control-radius);
   text-align: start;
   transition: background-color var(--t-hover) var(--ease-out);
 }
@@ -478,7 +478,7 @@ async function remove(): Promise<void> {
 .row__badge {
   margin-inline-start: auto;
   padding: 0.1rem var(--gap);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in oklab, var(--color-primary) 16%, transparent);
   color: var(--color-primary-text, var(--color-primary));
 }

@@ -80,7 +80,7 @@ const model = defineModel<boolean>({ required: true });
   width: 1rem;
   height: 1rem;
   margin-top: 0.0625rem;
-  border-radius: 0.3125rem;
+  border-radius: var(--radius-checkbox);
   border: 1.5px solid var(--separator-strong);
   background: color-mix(in oklab, var(--color-base-100) 60%, transparent);
   color: var(--color-primary-content);

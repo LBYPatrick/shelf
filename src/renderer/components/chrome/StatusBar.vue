@@ -168,7 +168,7 @@ const activity = useActivity();
   width: 0.4375rem;
   height: 0.4375rem;
   margin-inline-end: 4px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--label, var(--color-success));
 }
 

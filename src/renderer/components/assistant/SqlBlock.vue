@@ -113,7 +113,7 @@ function copy(): void {
 .sqlblock {
   margin: var(--gap) 0;
   border: 1px solid var(--separator);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-card);
   /*
    * Paper standing on the well, not a slab sunk into it.
    *

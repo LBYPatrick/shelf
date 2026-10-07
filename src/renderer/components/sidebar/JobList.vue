@@ -693,7 +693,7 @@ function startedAt(job: Job): string {
 .job__status-mark--live {
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--color-primary);
   animation: job-breathe 1.8s var(--ease-out) infinite;
 }

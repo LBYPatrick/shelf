@@ -889,7 +889,7 @@ function reenterCredentials(): void {
   align-items: center;
   gap: var(--gap-md);
   padding: var(--gap-md);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-card);
   background: var(--fill-2);
   font-size: 0.8125rem;
 }

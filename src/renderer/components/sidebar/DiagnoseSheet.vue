@@ -363,7 +363,7 @@ const verdict = computed<{ tone: Tone; text: string }>(() => {
   gap: var(--gap);
   min-height: 3rem;
   padding-inline: var(--gap-loose);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-card);
   font-size: 0.9375rem;
   font-weight: 600;
 }
@@ -474,7 +474,7 @@ const verdict = computed<{ tone: Tone; text: string }>(() => {
   margin: 0;
   padding: 0;
   border: 1px solid var(--separator);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-card);
   background: var(--fill-4);
   list-style: none;
   overflow: hidden;

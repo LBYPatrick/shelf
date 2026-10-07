@@ -365,7 +365,7 @@ const primaryIcon = computed(() => {
      now, and the only one on it. */
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in oklab, var(--color-primary) 14%, transparent);
   color: var(--color-primary-text);
   /*

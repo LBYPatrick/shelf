@@ -169,6 +169,8 @@ const svg = ref<SVGSVGElement>();
  * only way to be sure the exported picture is the one that was on screen.
  */
 const PAINTED = [
+  'rx',
+  'ry',
   'fill',
   'fill-opacity',
   'stroke',
@@ -419,6 +421,9 @@ defineExpose({ toSvg, toPng });
 </template>
 
 <style scoped>
+.plan__box {
+  rx: var(--radius-card);
+}
 .plan {
   position: relative;
   min-height: 0;

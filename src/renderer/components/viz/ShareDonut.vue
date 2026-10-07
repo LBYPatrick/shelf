@@ -222,7 +222,7 @@ const percent = (share: number) =>
   flex: 0 0 auto;
   width: 8px;
   height: 8px;
-  border-radius: 2px;
+  border-radius: var(--radius-swatch);
   background: var(--slice);
   transition: transform var(--t-pop) var(--ease-out);
 }
@@ -246,7 +246,7 @@ const percent = (share: number) =>
   flex: 1;
   min-width: 2rem;
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--fill-4);
   overflow: hidden;
 }
@@ -257,7 +257,7 @@ const percent = (share: number) =>
   inset-inline-start: 0;
   width: 100%;
   transform-origin: left center;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--slice);
   opacity: 0.75;
   transition:

@@ -304,8 +304,8 @@ function onChoose(id: string): void {
   width: 100%;
   min-height: var(--header-h);
   padding-inline: 0 var(--gap-tight);
-  border-start-end-radius: 0.625rem;
-  border-end-end-radius: 0.625rem;
+  border-start-end-radius: var(--radius-control);
+  border-end-end-radius: var(--radius-control);
   text-align: start;
   transition:
     background-color var(--t-hover) var(--ease-out),
@@ -333,7 +333,7 @@ function onChoose(id: string): void {
   flex: 0 0 auto;
   width: 1.5rem;
   height: 1.5rem;
-  border-radius: 0.4375rem;
+  border-radius: var(--radius-control);
   font-size: 0.5625rem;
   font-weight: 650;
   color: var(--color-base-content);
@@ -397,7 +397,7 @@ function onChoose(id: string): void {
   width: 5px;
   height: 5px;
   margin-inline-end: 1px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--color-success);
 }
 
@@ -423,7 +423,7 @@ function onChoose(id: string): void {
 .switcher__flag {
   flex: 0 0 auto;
   padding-inline: 4px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in oklab, var(--color-warning) 26%, transparent);
   font-size: 0.5rem;
   text-transform: uppercase;

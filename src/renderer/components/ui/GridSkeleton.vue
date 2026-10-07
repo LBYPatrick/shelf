@@ -79,7 +79,7 @@ const WIDTHS = [92, 64, 78, 55, 86, 70, 60, 88];
 
 .skeleton__cell {
   height: 0.5rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in oklab, var(--color-base-content) 11%, transparent);
 }
 

@@ -27,6 +27,8 @@ import { useTranslation } from 'i18next-vue';
 import { shortcutLabel } from '../../lib/keybindings';
 import { vTip } from '../../lib/hoverTip';
 import AppIcon from '../ui/AppIcon.vue';
+import JobsActivity from './JobsActivity.vue';
+const emit = defineEmits<{ 'show-jobs': [] }>();
 const pointerSelection = ref(false);
 const immediateKeyboard = () => {
   pointerSelection.value = false;
@@ -540,11 +542,21 @@ function sizeTabs(): void {
   const min = bound('--tab-min', 104);
   const max = bound('--tab-max', 208);
 
+  const style = getComputedStyle(strip);
+  const gap = Number.parseFloat(style.gap) || 0;
   const newButton = strip.querySelector<HTMLElement>('.strip__new');
-  const gap = Number.parseFloat(getComputedStyle(strip).gap) || 0;
-  // The button is outside the scroller now, so its width and the gap before it
-  // come off the room the tabs have; the rest of the gaps are between them.
-  const room = strip.clientWidth - (newButton?.offsetWidth ?? 0) - gap * (count + 1);
+  const activity = strip.querySelector<HTMLElement>('.job-activity');
+  // Actions stay outside the scroller. Exclude fixed padding and the Jobs
+  // button's trailing margin; its auto leading margin takes only unused room.
+  const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+  const activityMargin = activity ? parseFloat(getComputedStyle(activity).marginInlineEnd) : 0;
+  const room =
+    strip.clientWidth -
+    padding -
+    (newButton?.offsetWidth ?? 0) -
+    (activity?.offsetWidth ?? 0) -
+    activityMargin -
+    gap * (count + 1);
 
   const fair = Math.round(Math.max(min, Math.min(max, room / count)));
   tabSize.value = hovering.value && held > 0 ? Math.min(fair, held) : fair;
@@ -867,6 +879,8 @@ const KIND_ICON: Record<Tab['kind'], string> = {
     >
       <AppIcon name="plus" :size="13" />
     </button>
+
+    <JobsActivity @select="emit('show-jobs')" />
 
     <ContextMenu
       v-model="tabMenuOpen"
@@ -1269,7 +1283,7 @@ const KIND_ICON: Record<Tab['kind'], string> = {
   place-items: center;
   width: var(--hit-min);
   height: var(--hit-min);
-  border-radius: 0.25rem;
+  border-radius: var(--radius-small);
   color: inherit;
   opacity: 0;
   transition:
@@ -1289,7 +1303,7 @@ const KIND_ICON: Record<Tab['kind'], string> = {
 .striptab__dot {
   width: 6px;
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: currentColor;
 }
 

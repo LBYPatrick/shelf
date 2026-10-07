@@ -62,7 +62,7 @@ const rows = computed(() =>
   flex: 0 0 auto;
   gap: 2px;
   padding: 3px;
-  border-radius: 6px;
+  border-radius: var(--radius-scrollbar);
   /* The scheme's own colours are the subject; the frame under them is a well,
      so a pale palette does not float on the card. */
   background: var(--surface-well);
@@ -76,6 +76,6 @@ const rows = computed(() =>
 .palettestrip__chip {
   width: 0.75rem;
   height: 0.6875rem;
-  border-radius: 2px;
+  border-radius: var(--radius-swatch);
 }
 </style>

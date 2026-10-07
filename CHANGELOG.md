@@ -8,6 +8,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Keep Settings the same height across categories and fill its JSON pane with the editor.
+- Preserve rapid tree actions and pinned assistant scrolling during streamed
+  answers; keep sheet exits and interrupted gestures continuous.
+- Honor keyboard input and live reduced-motion preferences in controls,
+  diagrams and the SQL editor; keep tile actions stationary under the pointer.
+
 - Resolve SSH host aliases using the local OpenSSH configuration, expand
   home-directory key paths, and close active sockets when a tunnel is closed.
 - Preserve saved credentials when a build cannot decrypt them, report the
@@ -25,6 +31,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   within visible controls.
 
 ### Changed
+
+- Show live job counts in the top-right toolbar with accessible tooltips and animated completion or failure feedback.
+- Redesign Settings with category navigation and result exports with a format,
+  scope and sample preview, using the window's width and adapting when narrow.
+- Unify control, card, menu and sheet corners while preserving structural seams,
+  grid cells and grouped control joins; add copy and import progress feedback.
 
 - Add tab context menus for duplication and closing other tabs, tabs to the left,
   or tabs to the right. Keep long titles and scopes inside crowded tabs and

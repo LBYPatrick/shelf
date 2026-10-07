@@ -369,7 +369,7 @@ async function run(): Promise<void> {
             >
               <span class="format-choice__name">{{ option.label }}</span>
               <span class="format-choice__desc">{{
-                $t(`export.formats.${option.value}`)
+                $t(`export.formatHint${option.value[0]!.toUpperCase()}${option.value.slice(1)}`)
               }}</span>
               <AppIcon
                 v-if="format === option.value"

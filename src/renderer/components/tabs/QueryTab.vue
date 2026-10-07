@@ -1204,7 +1204,7 @@ watch(
   gap: var(--gap-tight);
   padding-inline: var(--gap);
   height: calc(var(--field-h) * 0.9);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in oklab, var(--color-warning) 22%, transparent);
   font-size: 0.6875rem;
 }
@@ -1277,7 +1277,7 @@ watch(
 .query__pulse {
   width: 6px;
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--color-primary);
   animation: query-pulse 1.4s var(--ease-out) infinite;
 }
@@ -1405,7 +1405,7 @@ watch(
 .results__error {
   padding: var(--gap) var(--gap-loose);
   margin: var(--gap);
-  border-radius: var(--radius-field);
+  border-radius: var(--radius-card);
   background: color-mix(in oklab, var(--color-error) 15%, transparent);
   font-family: var(--font-mono);
   font-size: 0.75rem;
@@ -1498,7 +1498,7 @@ watch(
 .query__pulse {
   width: 6px;
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--color-primary);
   animation: query-pulse 1.4s var(--ease-out) infinite;
 }
@@ -1522,7 +1522,7 @@ watch(
 
 .key {
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: var(--radius-small);
   background: color-mix(in oklab, currentColor 18%, transparent);
   color: inherit;
   font-family: var(--font-ui);
@@ -1556,7 +1556,7 @@ watch(
 
 .tabstatus__txn {
   padding-inline: var(--gap);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in oklab, var(--color-warning) 26%, transparent);
   font-size: 0.625rem;
 }

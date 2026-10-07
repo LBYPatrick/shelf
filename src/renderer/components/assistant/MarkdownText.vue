@@ -189,7 +189,7 @@ export default defineComponent({
 
 .md :deep(.md__code) {
   padding: 0.1em 0.35em;
-  border-radius: 0.3rem;
+  border-radius: var(--radius-small);
   background: var(--fill-2);
   font-family: var(--font-mono);
   /* Monospace at the same nominal size reads larger; this puts the x-heights
@@ -221,7 +221,7 @@ export default defineComponent({
   margin: 0 0 0.75em;
   overflow-x: auto;
   border: 1px solid var(--separator);
-  border-radius: 0.6rem;
+  border-radius: var(--radius-card);
 }
 
 .md :deep(.md__table) {

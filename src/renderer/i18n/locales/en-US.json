@@ -573,14 +573,12 @@
     "previewHint": "This sample shows loaded rows. The export follows the selected scope.",
     "tableFileHint": "Exports every matching row, including rows not currently loaded.",
     "jobFileHint": "Exports the complete saved result without running the query again.",
-    "formats": {
-      "csv": "For spreadsheets",
-      "tsv": "Tab-separated values",
-      "json": "Structured records",
-      "jsonl": "One record per line",
-      "markdown": "A readable table",
-      "sql": "INSERT statements"
-    }
+    "formatHintCsv": "For spreadsheets",
+    "formatHintTsv": "Tab-separated values",
+    "formatHintJson": "Structured records",
+    "formatHintJsonl": "One record per line",
+    "formatHintMarkdown": "A readable table",
+    "formatHintSql": "INSERT statements"
   },
   "grid": {
     "oneBased": "1-based",
@@ -746,7 +744,7 @@
   "jobs": {
     "empty": "Nothing dispatched yet. A dispatched statement runs on its own, keeps its whole answer on this machine, and tells you when it is done.",
     "dispatched": "Dispatched {{name}}.",
-    "finished": "Finished — {{rows}} rows, ready to export.",
+    "finished": "Finished",
     "open": "Open",
     "openResult": "Open the rows from {{name}}",
     "rename": "Rename",
@@ -793,7 +791,10 @@
     "kindUpdated": "Updated",
     "nameTitle": "Dispatch statement",
     "nameLabel": "Job name",
-    "nameHelp": "How this run is listed under the jobs panel once it is away."
+    "nameHelp": "How this run is listed under the jobs panel once it is away.",
+    "activity": "Job activity",
+    "inProgress": "{{count}} in progress",
+    "activityFailed": "A job failed"
   },
   "value": {
     "asJson": "formatted as JSON",

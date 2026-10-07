@@ -106,7 +106,7 @@ void props;
  */
 .plansheet {
   padding: var(--gap-loose);
-  border-radius: var(--radius-box);
+  border-radius: var(--radius-card);
   background: var(--fill-4);
 }
 

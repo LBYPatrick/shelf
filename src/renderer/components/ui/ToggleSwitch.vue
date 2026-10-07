@@ -52,7 +52,7 @@ withDefaults(defineProps<{ ariaLabel: string; disabled?: boolean }>(), { disable
    */
   width: 2.125rem;
   height: var(--hit-min);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: transparent;
 }
 
@@ -87,7 +87,7 @@ withDefaults(defineProps<{ ariaLabel: string; disabled?: boolean }>(), { disable
   left: 0.125rem;
   width: 1rem;
   height: 1rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--switch-knob);
   box-shadow: var(--elev-switch);
   transition: transform var(--t-pop) var(--ease-sheet);

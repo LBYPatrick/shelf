@@ -1093,7 +1093,7 @@ watch(() => props.entity, load);
 
 .rows__drop {
   padding: 3px;
-  border-radius: 0.3rem;
+  border-radius: var(--radius-small);
   opacity: 0;
   color: var(--text-soft);
   transition:
@@ -1135,7 +1135,7 @@ watch(() => props.entity, load);
   flex: 0 0 auto;
   align-items: center;
   padding: 1px 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background-color: var(--fill-3);
   font-size: 0.625rem;
   font-weight: 500;

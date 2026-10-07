@@ -925,7 +925,7 @@ watch(
 }
 .group__row {
   border: 1px solid var(--separator);
-  border-radius: var(--radius-field);
+  border-radius: var(--control-radius);
 }
 .flag {
   color: var(--text-soft);
@@ -1001,7 +1001,7 @@ watch(
   min-height: calc(var(--hit-min) + var(--gap-loose));
   padding: var(--gap);
   text-align: start;
-  border-radius: var(--radius-field);
+  border-radius: var(--control-radius);
 }
 .history-entry__text {
   display: flex;

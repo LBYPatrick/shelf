@@ -680,7 +680,7 @@ function commit(): void {
 
 .palette {
   width: min(38rem, calc(100vw - 4rem));
-  border-radius: 1rem;
+  border-radius: var(--radius-palette);
   overflow: hidden;
   box-shadow: var(--elev-sheet);
 }
@@ -727,13 +727,13 @@ function commit(): void {
   place-items: center;
   width: var(--hit-min);
   height: var(--hit-min);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--text-soft);
 }
 
 .palette__key {
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: var(--radius-small);
   background: var(--fill-4);
   font-family: var(--font-ui);
   font-size: 0.625rem;
@@ -799,7 +799,7 @@ function commit(): void {
   flex: 0 0 auto;
   width: 0.8125rem;
   height: 0.8125rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   box-shadow: inset 0 0 0 1px var(--separator-strong);
 }
 

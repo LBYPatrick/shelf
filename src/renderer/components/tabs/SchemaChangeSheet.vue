@@ -104,7 +104,7 @@ async function copy(): Promise<void> {
 <style scoped>
 .summary {
   padding: var(--gap) var(--gap-loose);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-card);
   background: var(--fill-4);
   font-size: 0.8125rem;
   margin-bottom: var(--gap-loose);
@@ -121,7 +121,7 @@ async function copy(): Promise<void> {
 
 .sql {
   padding: var(--gap-loose);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-card);
   background: var(--fill-4);
   font-family: var(--font-mono);
   font-size: 0.75rem;
