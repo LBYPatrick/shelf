@@ -76,7 +76,9 @@ function focusables(): HTMLElement[] {
     ...panel.value.querySelectorAll<HTMLElement>(
       'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
     ),
-  ];
+  ].filter(
+    (item) => item.tabIndex >= 0 && !item.closest('[inert]') && item.getClientRects().length > 0
+  );
 }
 
 /*
@@ -97,25 +99,29 @@ function onKeydown(event: KeyboardEvent): void {
   const current = document.activeElement;
 
   // Wrap at both ends so Tab never escapes the sheet into the page behind it.
-  if (event.shiftKey && current === first) {
+  if (event.shiftKey && (current === first || !items.includes(current as HTMLElement))) {
     event.preventDefault();
     last.focus();
-  } else if (!event.shiftKey && current === last) {
+  } else if (!event.shiftKey && (current === last || !items.includes(current as HTMLElement))) {
     event.preventDefault();
     first.focus();
   }
 }
 
-watch(open, async (isOpen) => {
-  if (isOpen) {
-    previouslyFocused = document.activeElement as HTMLElement | null;
-    await nextTick();
-    focusables()[0]?.focus();
-  } else {
-    previouslyFocused?.focus();
-    previouslyFocused = null;
-  }
-});
+watch(
+  open,
+  async (isOpen) => {
+    if (isOpen) {
+      previouslyFocused = document.activeElement as HTMLElement | null;
+      await nextTick();
+      if (open.value) focusables()[0]?.focus();
+    } else {
+      previouslyFocused?.focus();
+      previouslyFocused = null;
+    }
+  },
+  { immediate: true }
+);
 
 /**
  * Withholds the body's scroll-driven edge for one frame after mounting.
@@ -324,7 +330,7 @@ function resize(): void {
   const box = getComputedStyle(body);
   const padding = parseFloat(box.paddingTop) + parseFloat(box.paddingBottom);
   const chrome = (head.value?.offsetHeight ?? 0) + (foot.value?.offsetHeight ?? 0);
-  let natural = chrome + Math.ceil(measure.value!.getBoundingClientRect().height + padding) + 1;
+  let natural = chrome + Math.ceil(measure.value!.offsetHeight + padding) + 1;
 
   /*
    * And never shorter than what the body says it is holding.

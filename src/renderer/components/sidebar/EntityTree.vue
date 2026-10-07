@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vTip } from '../../lib/hoverTip';
 /**
  * The entity list.
  *
@@ -552,7 +553,7 @@ const KIND_ICON: Record<string, string> = {
             <button
               class="row__action"
               :aria-label="$t('menu.actionsFor', { name: row.label })"
-              :title="$t('menu.actionsFor', { name: row.label })"
+              v-tip="$t('menu.actionsFor', { name: row.label })"
               @pointerdown.stop
               @click.stop="openMenu($event, row)"
             >
@@ -576,7 +577,7 @@ const KIND_ICON: Record<string, string> = {
             <button
               class="row__action"
               :aria-label="$t('menu.actionsFor', { name: row.label })"
-              :title="$t('menu.actionsFor', { name: row.label })"
+              v-tip="$t('menu.actionsFor', { name: row.label })"
               @pointerdown.stop
               @click.stop="openMenu($event, row)"
             >
@@ -807,6 +808,7 @@ const KIND_ICON: Record<string, string> = {
   transition:
     opacity var(--t-press) var(--ease-out),
     color var(--t-press) var(--ease-out);
+  pointer-events: none;
 }
 
 .row--entity:hover .row__action,
@@ -814,6 +816,7 @@ const KIND_ICON: Record<string, string> = {
 .row--database:hover .row__action,
 .row__action:focus-visible {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .row__action:hover {

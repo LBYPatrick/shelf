@@ -35,7 +35,12 @@ import { useConnections } from '../../stores/connections';
  * a surface owned by whichever control happens to open it can only ever be
  * opened by that one. The row asks; the window answers.
  */
-const emit = defineEmits<{ diagnose: []; 'new-connection': [] }>();
+const emit = defineEmits<{
+  diagnose: [];
+  'new-connection': [];
+  'manage-connections': [];
+  'edit-connection': [];
+}>();
 
 const connections = useConnections();
 const { t } = useTranslation();
@@ -67,8 +72,16 @@ const detail = computed(() => {
  * words there would push the version off the end.
  */
 const state = computed<'live' | 'connecting' | 'failed'>(() => {
-  if (connections.status.state === 'connecting') return 'connecting';
-  if (connections.status.state === 'error') return 'failed';
+  if (
+    connections.status.state === 'connecting' &&
+    connections.status.connectionId === connections.active?.id
+  )
+    return 'connecting';
+  if (
+    connections.status.state === 'failed' &&
+    connections.status.connectionId === connections.active?.id
+  )
+    return 'failed';
   return 'live';
 });
 
@@ -128,6 +141,10 @@ const menuItems = computed<MenuItem[]>(() => {
     startsGroup: items.length > 0,
   });
 
+  items.push({ id: 'manage', label: t('connection.manage'), icon: 'database' });
+  if (connections.saved.some((entry) => entry.id === connections.active?.id))
+    items.push({ id: 'edit', label: t('connection.editCurrent'), icon: 'pencil' });
+
   items.push({
     id: 'diagnose',
     label: t('diagnose.action'),
@@ -186,8 +203,13 @@ function onChoose(id: string): void {
 
   // Everything past the list goes to the list, which is the start screen — the
   // one place every saved connection is, with its search.
-  if (id === 'all') {
-    void connections.disconnect();
+  if (id === 'all' || id === 'manage') {
+    emit('manage-connections');
+    return;
+  }
+
+  if (id === 'edit') {
+    emit('edit-connection');
     return;
   }
 
@@ -221,11 +243,7 @@ function onChoose(id: string): void {
         that animation, and the collapse moves nothing.
       -->
       <span ref="slot" class="switcher__slot">
-        <span
-          class="switcher__mark"
-          :style="{ '--engine-hue': engine?.hue ?? 250 }"
-          aria-hidden="true"
-        >
+        <span class="switcher__mark" aria-hidden="true">
           <EngineMark v-if="engine" :engine="engine.id" :size="15" />
         </span>
       </span>
@@ -318,15 +336,8 @@ function onChoose(id: string): void {
   border-radius: 0.4375rem;
   font-size: 0.5625rem;
   font-weight: 650;
-  color: oklch(99% 0 0);
-  background: var(
-    --label,
-    linear-gradient(
-      145deg,
-      oklch(64% 0.16 var(--engine-hue)),
-      oklch(52% 0.17 var(--engine-hue))
-    )
-  );
+  color: var(--color-base-content);
+  background: var(--fill-3);
 }
 
 /*
@@ -387,7 +398,7 @@ function onChoose(id: string): void {
   height: 5px;
   margin-inline-end: 1px;
   border-radius: 999px;
-  background: var(--color-success, oklch(72% 0.17 150));
+  background: var(--color-success);
 }
 
 .switcher__dot--connecting {

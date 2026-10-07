@@ -369,7 +369,7 @@ const verdict = computed<{ tone: Tone; text: string }>(() => {
 }
 
 .verdict--ok {
-  background: color-mix(in oklab, var(--color-success, oklch(72% 0.17 150)) 14%, transparent);
+  background: color-mix(in oklab, var(--color-success) 14%, transparent);
   color: var(--color-base-content);
 }
 
@@ -501,7 +501,7 @@ const verdict = computed<{ tone: Tone; text: string }>(() => {
 
 .check__mark {
   flex: 0 0 auto;
-  color: var(--color-success, oklch(60% 0.15 150));
+  color: var(--color-success);
 }
 
 .check--failed .check__mark {

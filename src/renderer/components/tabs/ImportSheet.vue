@@ -58,6 +58,10 @@ async function choose(): Promise<void> {
   if (!chosen) return;
 
   path.value = chosen;
+  header.value = [];
+  preview.value = [];
+  total.value = 0;
+  mapping.value = {};
   error.value = null;
 
   try {

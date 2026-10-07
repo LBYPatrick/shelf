@@ -28,6 +28,7 @@ import type { LiveConnection } from '@renderer/stores/connections';
  */
 
 export const CAPABILITIES: Capabilities = {
+  builtInEntities: false,
   sql: true,
   queryLanguage: 'sql',
   schemas: true,

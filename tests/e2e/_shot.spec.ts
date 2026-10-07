@@ -62,7 +62,7 @@ test('capture the interface', async ({ app, page }) => {
 
   const shot = async (name: string): Promise<void> => {
     if (!FROM_SCREEN) {
-      await shot('${name}');
+      await page.screenshot({ path: `${OUT}/${name}.png`, omitBackground: true });
       return;
     }
     // Focused for every capture, not once at the start. Focus drifts over a

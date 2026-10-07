@@ -219,11 +219,11 @@ export const mockShelf: ShelfApi = {
       ];
       return settle(undefined);
     },
-    listHistory: (connectionId) =>
+    listHistory: (connectionId, limit = 200) =>
       settle(
         store.history.filter(
           (entry) => connectionId === null || entry.connectionId === connectionId
-        )
+        ).slice(0, limit)
       ),
     clearHistory: () => {
       store.history = [];

@@ -7,21 +7,44 @@
  * product: all nine are equally supported and equally free.
  */
 import type { EngineId } from '@drivers/types';
+import { nextTick } from 'vue';
 import EngineMark from './EngineMark.vue';
 import { ENGINES } from '@shared/engines';
 
 const model = defineModel<EngineId | null>({ required: true });
+withDefaults(defineProps<{ layout?: 'grid' | 'sidebar'; disabled?: boolean }>(), {
+  layout: 'grid',
+  disabled: false,
+});
+
+async function move(event: KeyboardEvent, offset: number): Promise<void> {
+  const root = event.currentTarget as HTMLElement;
+  const at = ENGINES.findIndex((engine) => engine.id === model.value);
+  model.value = ENGINES[(Math.max(0, at) + offset + ENGINES.length) % ENGINES.length]!.id;
+  await nextTick();
+  root.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus();
+}
 </script>
 
 <template>
-  <div class="engines" role="radiogroup" :aria-label="$t('connection.engineLabel')">
+  <div
+    class="engines"
+    :class="{ 'engines--list': layout === 'sidebar' }"
+    role="radiogroup"
+    :aria-label="$t('connection.engineLabel')"
+    @keydown.down.prevent="!disabled && move($event, 1)"
+    @keydown.up.prevent="!disabled && move($event, -1)"
+    @keydown.right.prevent="!disabled && move($event, 1)"
+    @keydown.left.prevent="!disabled && move($event, -1)"
+  >
     <button
       v-for="engine in ENGINES"
       :key="engine.id"
       type="button"
       class="engine"
       :class="{ 'engine--on': model === engine.id }"
-      :style="{ '--engine-hue': engine.hue }"
+      :disabled="disabled"
+      :tabindex="model === engine.id || (!model && engine === ENGINES[0]) ? 0 : -1"
       role="radio"
       :aria-checked="model === engine.id"
       @click="model = engine.id"
@@ -60,6 +83,35 @@ const model = defineModel<EngineId | null>({ required: true });
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
   gap: var(--gap-tight);
+}
+
+.engines--list {
+  grid-template-columns: 1fr;
+  gap: var(--gap-hair);
+}
+.engines--list .engine {
+  padding: var(--gap-tight) var(--gap);
+  min-height: var(--row-h);
+  background: transparent;
+  text-align: start;
+}
+.engines--list .engine--on {
+  background: var(--fill-3);
+  border-color: transparent;
+}
+.engines--list .engine__mark {
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-soft);
+}
+.engines--list .engine--on .engine__mark {
+  color: var(--color-primary-text);
+}
+.engines--list .engine__name {
+  color: var(--text-soft);
+}
+.engines--list .engine--on .engine__name {
+  color: var(--color-base-content);
 }
 
 .engine {
@@ -111,14 +163,8 @@ const model = defineModel<EngineId | null>({ required: true });
   font-size: 0.5rem;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: oklch(99% 0 0);
-  /* A slight gradient and a bright top edge give the mark a surface. */
-  background: linear-gradient(
-    145deg,
-    oklch(64% 0.16 var(--engine-hue)),
-    oklch(52% 0.17 var(--engine-hue))
-  );
-  box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.32);
+  color: var(--text-soft);
+  background: var(--surface-well);
   transition: transform var(--t-pop) var(--ease-out);
 }
 

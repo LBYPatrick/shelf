@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { AppDatabase } from './database';
+import { HISTORY_LIMIT } from '@shared/appdb';
 
 /**
  * Query history and saved queries.
@@ -8,8 +9,6 @@ import type { AppDatabase } from './database';
  * into a slow, unsearchable log. Trimming on write keeps the table small enough
  * that the recent list stays instant.
  */
-
-const HISTORY_LIMIT = 2000;
 
 export interface HistoryEntry {
   readonly id: string;
@@ -134,7 +133,11 @@ export class QueryRepository {
           WHERE (? IS NULL OR connection_id = ?)
           ORDER BY executed_at DESC LIMIT ?`
       )
-      .all(connectionId, connectionId, limit) as HistoryRow[];
+      .all(
+        connectionId,
+        connectionId,
+        Number.isFinite(limit) ? Math.min(HISTORY_LIMIT, Math.max(1, Math.floor(limit))) : 200
+      ) as HistoryRow[];
 
     return rows.map((row) => ({
       id: row.id,

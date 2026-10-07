@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vTip } from '../../lib/hoverTip';
 /**
  * Preferences.
  *
@@ -391,7 +392,7 @@ const languageOptions = computed(() => [
                 :class="{ 'accent--on': theme.activePreset?.id === preset.id }"
                 :style="{ '--chip': oklch(preset.seed) }"
                 :aria-pressed="theme.activePreset?.id === preset.id"
-                :title="preset.name"
+                v-tip="preset.name"
                 @click="theme.accent = preset.seed"
               >
                 <span class="sr-only">{{ preset.name }}</span>

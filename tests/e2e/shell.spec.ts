@@ -56,7 +56,9 @@ test('every engine is offered on equal terms', async ({ page }) => {
     .getByRole('button', { name: /New connection/ })
     .first()
     .click();
-  await expect(page.getByRole('radio')).toHaveCount(9);
+  await expect(
+    page.getByRole('dialog', { name: 'New connection', exact: true }).getByRole('radio')
+  ).toHaveCount(9);
 
   // No tier markers, no upsell: the words that would signal a paid edition must
   // not appear anywhere.
@@ -147,36 +149,18 @@ test('escape dismisses one overlay at a time, from the top', async ({ page }) =>
  * to be told and then remember, and one that silently discards a password the
  * moment they type a single character and delete it again.
  */
-/**
- * The engine is chosen once, and then it is a row.
- *
- * Nine marks in two wrapping rows was the loudest thing on the sheet and it was
- * there on every visit — including the ones where somebody came to change a
- * port. It is the whole content while nothing is chosen, which is the honest
- * first step of a new connection, and one line afterwards.
- */
-test('the engine picker collapses once an engine is chosen', async ({ page }) => {
+test('the engine list stays available while editing connection details', async ({ page }) => {
   await page
     .getByRole('button', { name: /New connection/ })
     .first()
     .click();
-
-  // Nothing chosen: the grid is the content, and it is how the choice is made.
-  await expect(page.getByRole('radio', { name: 'PostgreSQL', exact: true })).toBeVisible();
-  await page.getByRole('radio', { name: 'PostgreSQL', exact: true }).click();
-
-  // Chosen: one row that names it, and the grid is gone rather than merely
-  // scrolled past.
-  await expect(page.locator('.engine-row__name')).toHaveText('PostgreSQL');
-  await expect(page.getByRole('radio', { name: 'PostgreSQL', exact: true })).toHaveCount(0);
-  // And the fields it was hiding are the ones that matter now.
-  await expect(page.getByLabel('Host')).toBeVisible();
-
-  // Changing it is one press, and choosing again settles it again.
-  await page.getByRole('button', { name: 'Change' }).click();
-  await expect(page.getByRole('radio', { name: 'MySQL', exact: true })).toBeVisible();
+  const pg = page.getByRole('radio', { name: 'PostgreSQL', exact: true });
+  await pg.click();
+  await expect(pg).toBeChecked();
+  await expect(page.getByLabel('Host', { exact: true })).toBeVisible();
   await page.getByRole('radio', { name: 'MySQL', exact: true }).click();
-  await expect(page.locator('.engine-row__name')).toHaveText('MySQL');
+  await expect(pg).toBeVisible();
+  await expect(page.getByRole('radio', { name: 'MySQL', exact: true })).toBeChecked();
 });
 
 test('editing a connection shows the password it saved', async ({ page }) => {
@@ -329,6 +313,10 @@ test('a connection can be written to a file and read back', async ({ app, page }
 
   // Read it back: the same connection arrives again, from the file alone.
   await page.getByRole('button', { name: 'Delete Portable' }).click();
+  await page
+    .getByRole('dialog', { name: 'Remove Portable?' })
+    .getByRole('button', { name: 'Delete', exact: true })
+    .click();
   await expect(page.getByRole('button', { name: 'Connect to Portable' })).toBeHidden();
 
   await page.getByRole('button', { name: /Import presets/ }).click();
@@ -407,6 +395,10 @@ test('a connection carries its password through the file', async ({ app, page })
 
   // And back again, from the file alone.
   await page.getByRole('button', { name: 'Delete WithSecret' }).click();
+  await page
+    .getByRole('dialog', { name: 'Remove WithSecret?' })
+    .getByRole('button', { name: 'Delete', exact: true })
+    .click();
   await expect(page.getByRole('button', { name: 'Connect to WithSecret' })).toBeHidden();
 
   await page.getByRole('button', { name: /Import presets/ }).click();
@@ -645,6 +637,13 @@ test('a connection can be duplicated, credentials and all', async ({ page }) => 
   const copy = rows.find((row) => row.name === 'Reporting copy')!;
   expect(copy.engine).toBe(original.engine);
   expect(copy.config.filePath).toBe(original.config.filePath);
+
+  await expect(page.getByRole('dialog', { name: 'Edit Reporting copy' })).toBeVisible();
+  await page
+    .getByRole('dialog', { name: 'Edit Reporting copy' })
+    .getByRole('button', { name: 'Cancel' })
+    .click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 
   // And a copy of a copy counts rather than stacking the word.
   await page.getByRole('button', { name: /Duplicate Reporting copy/ }).click();

@@ -78,6 +78,18 @@ const sessionKey = (connectionId: string) => `session:${connectionId}`;
 export const useTabs = defineStore('tabs', () => {
   const tabs = ref<Tab[]>([]);
   const activeId = ref<string | null>(null);
+  let queuedQuery: { connectionId: string; text: string } | undefined;
+  function queueQuery(connectionId: string, text: string): void {
+    queuedQuery = { connectionId, text };
+  }
+  function clearQueuedQuery(): void {
+    queuedQuery = undefined;
+  }
+  function openQueuedQuery(connectionId: string): void {
+    const query = queuedQuery;
+    queuedQuery = undefined;
+    if (query?.connectionId === connectionId) openQuery(query.text);
+  }
   /** Closed tabs, most recent first, so reopening is possible. */
   const closed = ref<Tab[]>([]);
 
@@ -402,6 +414,9 @@ export const useTabs = defineStore('tabs', () => {
     openEntity,
     openErd,
     openQuery,
+    queueQuery,
+    clearQueuedQuery,
+    openQueuedQuery,
     bindSavedQuery,
     setUnsaved,
     openChat,

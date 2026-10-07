@@ -11,6 +11,23 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Preserve Google tool-call signatures and OpenAI reasoning when the assistant
   takes another turn after inspecting or querying a database.
 - Accept the read-only Shelf tool names used by both Grok ACP naming formats.
+- Preserve connection-editor drafts, report connection-test results persistently,
+  and allow saved credentials to be cleared without silently restoring them.
+- Keep the workspace connected while managing its saved connection presets.
+- Retain query history when removing a saved connection, and open recovered
+  statements after workspace restoration without executing them.
+- Clear stale import previews when a replacement file cannot be read.
+- Measure sheets independently of their opening scale and trap keyboard focus
+  within visible controls.
+
+### Changed
+
+- Redesign connection setup with a persistent engine list, clear connection
+  methods, separate routing controls, validation, and explicit save actions.
+- Redesign the welcome page as a searchable library with bounded pages for saved
+  connections, recent databases, and all retained query history.
+- Align connection badges, control radii, tooltips, and keyboard navigation with
+  the shared component design language.
 
 ## [1.4.2] - 2026-09-09
 
@@ -38,7 +55,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Which assistant provider is in use is a setting.** It was only ever
   choosable from the picker on the floor of the chat composer, so "which model
   am I using" was a question you answered by opening a conversation — and the
-  pane that holds every other preference had a row for the provider *list* and
+  pane that holds every other preference had a row for the provider _list_ and
   nothing about which of them answers. It is a row in **Settings → Assistant**
   now, bound to the same choice the composer makes, so the two cannot disagree.
 
@@ -52,7 +69,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unique inside its namespace, so two tables called `users` in two schemas were
   one entry — whichever set of columns was read last was the answer for both.
   Each table keeps the schema it lives in now, and after a dot the list is a
-  *different* list rather than the same one filtered: after a schema, its
+  _different_ list rather than the same one filtered: after a schema, its
   tables; after a table, its columns. A table can also be typed qualified, as
   `music.album`, in one word.
 - **A popup is the size of its content again, on any machine.** A sheet
@@ -216,7 +233,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - **The engine chips answered a hover with nothing**, and scaled their mark to
-  exactly the size the *selected* chip uses, so pointing at one made it look
+  exactly the size the _selected_ chip uses, so pointing at one made it look
   chosen.
 - The sign-in sheet's hint sat higher than the buttons beside it, in every sheet
   in the app.
@@ -356,7 +373,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - The macOS app opened as "damaged" and had to be moved to the Trash. It was
-  not signed at all, so a downloaded copy carried only the ad-hoc *linker*
+  not signed at all, so a downloaded copy carried only the ad-hoc _linker_
   signature from the Electron executable — identifying itself as `Electron`,
   sealing no resources, and describing a bundle it no longer matched. The app
   is ad-hoc signed now, which is not notarisation but is the difference between
@@ -511,7 +528,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Control surfaces are derived, not hand-picked.** Fills come from one
   neutral grey at Apple's four levels with per-theme alphas, elevation is spent
   only on things that genuinely float, and the accent has a second, lighter
-  form for use as *type*.
+  form for use as _type_.
 
 ### Changed
 
@@ -588,7 +605,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the next is immediate, because moving along a row of icons is one gesture and
   waiting again at every stop is what makes a toolbar feel slow.
 - **Every properties popup is the same, settled height.** They are opened and
-  *then* their content arrives, so sized by that content each was one height
+  _then_ their content arrives, so sized by that content each was one height
   while it said "Loading…" and another once the answer landed — and the next one
   opened was a different size again. They have a definite height now and their
   bodies scroll.
@@ -694,7 +711,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   label, which is shorter than the header row and beat the stylesheet.
 - **An empty outlined box floated below the last row.** This stylesheet
   replaces Tabulator's rather than extending it, and the range overlay's
-  *positioning* rules were never carried across — only its colours. The overlay
+  _positioning_ rules were never carried across — only its colours. The overlay
   therefore laid out in normal flow instead of over the cells, so the selection
   rectangle sat one column left and one row below the cell it belonged to.
 - **Two highlights for one selection in the icon rail.** The travelling marker
@@ -742,7 +759,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   hairline" was 8% white. They come from the neutral grey the fills use now,
   and the gate fails any border brighter than the text beside it.
 - **The dark sidebar washed out over a bright wallpaper.** A dark surface at
-  58% opacity composites *lighter* than the opaque content pane next to it, so
+  58% opacity composites _lighter_ than the opaque content pane next to it, so
   the two stopped reading as the same window. Dark materials hold their tone
   now.
 - **A grey pill was painted across the whole status bar.** `.status` is a
@@ -759,9 +776,9 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   long empty track — which reads as a progress bar with a label on it rather
   than a choice between three things. It is sized to its options.
 - **The select drew a box inside a box, with two chevrons in it.** Its root
-  element was `class="select"` — which is a daisyUI *component* class, so the
+  element was `class="select"` — which is a daisyUI _component_ class, so the
   framework applied its own border, fixed height, `width: clamp(3rem, 20rem,
-  100%)` and a background-image arrow on top of ours. The gate now fails on any
+100%)` and a background-image arrow on top of ours. The gate now fails on any
   component that takes a framework component's name.
 - **The table toolbar and filter bar are rebuilt.** The filter now fits on one
   line for the common case — `where · column · operator · value` — with the

@@ -82,8 +82,8 @@ const appDb: AppDbApi = {
     ipcRenderer.invoke(APPDB_CHANNELS.revealSecrets, connectionId),
   recordHistory: (entry: HistoryInput) =>
     ipcRenderer.invoke(APPDB_CHANNELS.recordHistory, entry),
-  listHistory: (connectionId: string | null) =>
-    ipcRenderer.invoke(APPDB_CHANNELS.listHistory, connectionId),
+  listHistory: (connectionId: string | null, limit?: number) =>
+    ipcRenderer.invoke(APPDB_CHANNELS.listHistory, connectionId, limit),
   clearHistory: (connectionId: string | null) =>
     ipcRenderer.invoke(APPDB_CHANNELS.clearHistory, connectionId),
   listSavedQueries: (connectionId: string | null) =>

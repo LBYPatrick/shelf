@@ -682,9 +682,7 @@ function commit(): void {
   width: min(38rem, calc(100vw - 4rem));
   border-radius: 1rem;
   overflow: hidden;
-  box-shadow:
-    0 1px 2px oklch(0% 0 0 / 0.08),
-    0 24px 64px oklch(0% 0 0 / 0.28);
+  box-shadow: var(--elev-sheet);
 }
 
 .palette__field {
@@ -802,7 +800,7 @@ function commit(): void {
   width: 0.8125rem;
   height: 0.8125rem;
   border-radius: 999px;
-  box-shadow: inset 0 0 0 1px oklch(0% 0 0 / 0.15);
+  box-shadow: inset 0 0 0 1px var(--separator-strong);
 }
 
 .palette__label {

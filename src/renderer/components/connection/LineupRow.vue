@@ -10,9 +10,7 @@
  * The row is a container rather than a button because a connection carries two
  * more actions, and a button cannot hold a button.
  */
-import { computed } from 'vue';
 import type { EngineId } from '@drivers/types';
-import { engineDescriptor } from '@shared/engines';
 import AppIcon from '../ui/AppIcon.vue';
 import EngineMark from './EngineMark.vue';
 
@@ -62,9 +60,6 @@ const props = withDefaults(
 );
 
 defineEmits<{ open: [] }>();
-
-/** The tile's colour, which is the engine's — absent, it stays neutral fill. */
-const hue = computed(() => (props.engine ? engineDescriptor(props.engine).hue : undefined));
 </script>
 
 <template>
@@ -74,12 +69,7 @@ const hue = computed(() => (props.engine ? engineDescriptor(props.engine).hue : 
     :style="accent ? { '--label': accent } : undefined"
   >
     <button type="button" class="row__open" :aria-label="label" @click="$emit('open')">
-      <span
-        class="row__mark"
-        :class="{ 'row__mark--engine': hue !== undefined }"
-        :style="hue !== undefined ? { '--engine-hue': hue } : undefined"
-        aria-hidden="true"
-      >
+      <span class="row__mark" aria-hidden="true">
         <AppIcon v-if="icon" :name="icon" :size="16" />
         <EngineMark v-else-if="engine" class="row__glyph" :engine="engine" :size="16" />
       </span>
@@ -143,54 +133,33 @@ const hue = computed(() => (props.engine ? engineDescriptor(props.engine).hue : 
   background: var(--label, transparent);
 }
 
-/*
- * Sized in `em` rather than in fixed rem.
- *
- * The start screen sets one font-size from the size of the window, so a row
- * grows with it and a large window gets a large lineup instead of the same
- * small one adrift in the middle. The floor is still the density scale's: `em`
- * here bottoms out at the column's own clamp, which is in rem, so an enlarged
- * OS text size scales this with it.
- */
+/* Rows follow the desktop density scale, regardless of window size. */
 .row__open {
   display: flex;
   align-items: center;
-  gap: 0.75em;
+  gap: var(--gap);
   width: 100%;
   /* A grid item will not shrink below its content either, so the chain of
      min-widths has to run all the way from the row to the text. */
   min-width: 0;
-  min-height: max(calc(var(--hit-min) + var(--gap)), 2.7em);
-  padding: 0.5em 0.75em;
+  min-height: max(calc(var(--hit-min) + var(--gap)), calc(2.75rem * var(--density)));
+  padding: var(--gap) var(--gap-loose);
   text-align: start;
+  font-size: 0.8125rem;
 }
 
 .row__mark {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  width: 2.2em;
-  height: 2.2em;
-  border-radius: 0.66em;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-field);
   font-weight: 600;
   letter-spacing: -0.01em;
   color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
   background: var(--fill-3);
   transition: transform var(--t-hover) var(--ease-out);
-}
-
-/*
- * An engine gets its own colour, so staging and production are told apart
- * before either name has been read.
- */
-.row__mark--engine {
-  color: oklch(99% 0 0);
-  background: linear-gradient(
-    145deg,
-    oklch(64% 0.16 var(--engine-hue)),
-    oklch(52% 0.17 var(--engine-hue))
-  );
-  box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.3);
 }
 
 /*
@@ -245,7 +214,7 @@ const hue = computed(() => (props.engine ? engineDescriptor(props.engine).hue : 
    allowed to shrink — a truncated duration is a wrong duration. */
 .row__meta {
   flex: 0 0 auto;
-  font-size: 0.75em;
+  font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
   color: var(--text-soft);
   white-space: nowrap;
@@ -254,7 +223,7 @@ const hue = computed(() => (props.engine ? engineDescriptor(props.engine).hue : 
 .row__title {
   flex: 0 1 auto;
   min-width: 0;
-  font-size: 0.95em;
+  font-size: 0.8125rem;
   font-weight: 550;
   letter-spacing: -0.006em;
   overflow: hidden;
@@ -267,7 +236,7 @@ const hue = computed(() => (props.engine ? engineDescriptor(props.engine).hue : 
      host name is exactly the content that has to. */
   flex: 0 1 auto;
   min-width: 0;
-  font-size: 0.8em;
+  font-size: 0.6875rem;
   line-height: 1.35;
   color: var(--text-soft);
   overflow: hidden;
@@ -277,7 +246,7 @@ const hue = computed(() => (props.engine ? engineDescriptor(props.engine).hue : 
 
 .row__sub--mono {
   font-family: var(--font-mono);
-  font-size: 0.75em;
+  font-size: 0.6875rem;
 }
 
 /*
@@ -300,7 +269,7 @@ const hue = computed(() => (props.engine ? engineDescriptor(props.engine).hue : 
   align-items: center;
   gap: 0.2em;
   padding-inline-end: 0.5em;
-  opacity: 0;
+  opacity: 1;
   transition: opacity var(--t-hover) var(--ease-out);
 }
 
@@ -333,6 +302,9 @@ const hue = computed(() => (props.engine ? engineDescriptor(props.engine).hue : 
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .row__actions {
+    opacity: 0;
+  }
   .row:hover {
     background: var(--fill-3);
   }

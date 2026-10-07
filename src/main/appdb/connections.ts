@@ -142,8 +142,15 @@ export class ConnectionRepository {
   }
 
   remove(id: string): void {
-    this.secrets.clear(id);
-    this.db.prepare('DELETE FROM connection WHERE id = ?').run(id);
+    this.db.transaction(() => {
+      // Removing a preset must not silently erase the work recorded against it.
+      // Unlink before the legacy foreign-key cascade; history remains copyable.
+      this.db
+        .prepare('UPDATE query_history SET connection_id = NULL WHERE connection_id = ?')
+        .run(id);
+      this.secrets.clear(id);
+      this.db.prepare('DELETE FROM connection WHERE id = ?').run(id);
+    })();
   }
 
   markUsed(id: string): void {

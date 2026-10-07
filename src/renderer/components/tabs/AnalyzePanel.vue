@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vTip } from '../../lib/hoverTip';
 /**
  * What the server has been spending its time on.
  *
@@ -406,7 +407,7 @@ onBeforeUnmount(stopSampling);
               type="button"
               class="snippet__copy"
               :aria-label="$t('action.copy')"
-              :title="$t('action.copy')"
+              v-tip="$t('action.copy')"
               @click="copy(SETUP)"
             >
               <AppIcon name="copy" :size="13" />
@@ -559,7 +560,7 @@ onBeforeUnmount(stopSampling);
                 type="button"
                 class="snippet__copy"
                 :aria-label="$t('action.copy')"
-                :title="$t('action.copy')"
+                v-tip="$t('action.copy')"
                 @click="copy(chosen.text)"
               >
                 <AppIcon name="copy" :size="13" />

@@ -1,4 +1,5 @@
 <script setup lang="ts" generic="T">
+import { vTip } from '../../lib/hoverTip';
 /**
  * The table filter.
  *
@@ -220,7 +221,7 @@ defineExpose({ focus });
           type="button"
           class="filterbar__drop focus-fill"
           :aria-label="$t('filter.removeRow')"
-          :title="$t('filter.removeRow')"
+          v-tip="$t('filter.removeRow')"
           @click="removeRow(index)"
         >
           <AppIcon name="close" :size="10" />

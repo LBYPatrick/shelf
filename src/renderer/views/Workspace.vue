@@ -28,6 +28,8 @@ import TableTab from '../components/tabs/TableTab.vue';
 import SettingsSheet from '../components/settings/SettingsSheet.vue';
 import ShortcutSheet from '../components/settings/ShortcutSheet.vue';
 import DiagnoseSheet from '../components/sidebar/DiagnoseSheet.vue';
+import ConnectionManager from './ConnectionManager.vue';
+import Sheet from '../components/ui/Sheet.vue';
 import ConnectionEditor from '../components/connection/ConnectionEditor.vue';
 import AppIcon from '../components/ui/AppIcon.vue';
 import PressButton from '../components/ui/PressButton.vue';
@@ -153,6 +155,7 @@ function askToSignIn(kind: AiDriverKind): void {
  * you are in, so it opens here rather than sending you back to the start screen
  * to do it.
  */
+const libraryOpen = ref(false);
 const editingConnection = ref<SavedConnection | null | undefined>(undefined);
 
 function onConnectionSaved(connection: SavedConnection, connectNow: boolean): void {
@@ -282,6 +285,7 @@ onMounted(async () => {
   // be written over the session we are about to read.
   void queries.refresh();
   await tabs.restore(connectionId);
+  tabs.openQueuedQuery(connectionId);
   stopPersisting = tabs.persistTo(connectionId);
 });
 
@@ -366,6 +370,12 @@ onBeforeUnmount(() => stopPersisting?.());
         <ConnectionSwitcher
           @diagnose="diagnoseOpen = true"
           @new-connection="editingConnection = null"
+          @manage-connections="libraryOpen = true"
+          @edit-connection="
+            editingConnection = connections.saved.find(
+              (entry) => entry.id === connections.active?.id
+            )
+          "
         />
 
         <div class="leftpanel__body">
@@ -788,6 +798,9 @@ onBeforeUnmount(() => stopPersisting?.());
     <StorageSheet v-model="storageOpen" />
     <DiagnoseSheet v-model="diagnoseOpen" />
 
+    <Sheet v-model="libraryOpen" :title="$t('connection.manage')" wide>
+      <ConnectionManager v-if="libraryOpen" embedded @connected="libraryOpen = false" />
+    </Sheet>
     <ConnectionEditor
       v-if="editingConnection !== undefined"
       :editing="editingConnection"

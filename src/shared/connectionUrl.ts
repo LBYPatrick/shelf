@@ -49,7 +49,7 @@ export function looksLikeUrl(text: string): boolean {
   return /^[a-z][a-z0-9+.-]*:\/\//i.test(text.trim()) || /^[/~.]/.test(text.trim());
 }
 
-export function parseConnectionUrl(input: string): ParsedConnection | undefined {
+function readConnectionUrl(input: string): ParsedConnection | undefined {
   const text = input.trim();
   if (!text) return undefined;
 
@@ -115,4 +115,13 @@ export function parseConnectionUrl(input: string): ParsedConnection | undefined 
     ...(url.password ? { password: decodeURIComponent(url.password) } : {}),
     suggestedName: database ? `${url.hostname}/${database}` : url.hostname,
   };
+}
+
+/** Invalid URL escapes are form input, not an exception that can take down a view. */
+export function parseConnectionUrl(input: string): ParsedConnection | undefined {
+  try {
+    return readConnectionUrl(input);
+  } catch {
+    return undefined;
+  }
 }

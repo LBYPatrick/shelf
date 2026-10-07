@@ -33,7 +33,7 @@ test('creates, tests and opens a SQLite connection end to end', async ({ page })
   await page.getByRole('button', { name: 'Test' }).click();
   await expect(page.getByRole('status')).toContainText('SQLite', { timeout: 15_000 });
 
-  await page.getByRole('button', { name: 'Connect', exact: true }).click();
+  await page.getByRole('button', { name: 'Save & connect', exact: true }).click();
 
   // The workspace replaces the start screen, and the title bar identifies the
   // database we are actually attached to.
@@ -85,13 +85,7 @@ test('reports a bad connection instead of failing silently', async ({ page }) =>
 
   await sheet.getByRole('button', { name: 'Test' }).click();
 
-  /*
-   * The failure is reported rather than swallowed, and it says something. It
-   * arrives as a notice rather than as a line at the foot of the form: the form
-   * is often taller than the popup holding it, so the one place the answer must
-   * not be is below the fold of the thing that asked the question.
-   */
-  const notice = page.locator('.notice').first();
+  const notice = sheet.locator('.feedback--error');
   await expect(notice).toBeVisible({ timeout: 25_000 });
   await expect(notice).not.toBeEmpty();
 });

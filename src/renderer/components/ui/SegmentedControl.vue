@@ -18,6 +18,13 @@ const indicator = ref({ left: 0, width: 0, visible: false });
 
 const selectedIndex = computed(() => props.options.findIndex((o) => o.value === model.value));
 
+function step(direction: number): void {
+  if (!props.options.length) return;
+  const index = (selectedIndex.value + direction + props.options.length) % props.options.length;
+  model.value = props.options[index]!.value;
+  container.value?.querySelectorAll<HTMLButtonElement>('[data-segment]')[index]?.focus();
+}
+
 function measure(): void {
   const root = container.value;
   if (!root) return;
@@ -63,10 +70,8 @@ onBeforeUnmount(() => {
     class="segmented"
     role="radiogroup"
     :aria-label="ariaLabel"
-    @keydown.left.prevent="
-      model = options[(selectedIndex - 1 + options.length) % options.length]!.value
-    "
-    @keydown.right.prevent="model = options[(selectedIndex + 1) % options.length]!.value"
+    @keydown.left.prevent="step(-1)"
+    @keydown.right.prevent="step(1)"
   >
     <span
       v-show="indicator.visible"
@@ -104,7 +109,7 @@ onBeforeUnmount(() => {
  */
 .segmented {
   --seg-pad: 3px;
-  --seg-radius: 10px;
+  --seg-radius: var(--control-radius);
   position: relative;
   display: inline-flex;
   align-self: flex-start;

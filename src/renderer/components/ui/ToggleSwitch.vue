@@ -44,13 +44,23 @@ withDefaults(defineProps<{ ariaLabel: string; disabled?: boolean }>(), { disable
    * that makes the two positions readable at a glance.
    */
   width: 2.125rem;
-  height: 1.25rem;
+  height: var(--hit-min);
   border-radius: 999px;
-  background: color-mix(in oklab, var(--color-base-content) 22%, transparent);
+  background: transparent;
+}
+
+.switch::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: calc(50% - 0.625rem);
+  height: 1.25rem;
+  border-radius: inherit;
+  background: var(--switch-off);
   transition: background-color var(--t-pop) var(--ease-sheet);
 }
 
-.switch--on {
+.switch--on::before {
   background: var(--color-primary);
 }
 
@@ -66,15 +76,13 @@ withDefaults(defineProps<{ ariaLabel: string; disabled?: boolean }>(), { disable
  */
 .switch__knob {
   position: absolute;
-  top: 0.125rem;
+  top: calc(50% - 0.5rem);
   left: 0.125rem;
   width: 1rem;
   height: 1rem;
   border-radius: 999px;
-  background: #fff;
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 25%),
-    0 0 0 0.5px rgb(0 0 0 / 6%);
+  background: var(--switch-knob);
+  box-shadow: var(--elev-switch);
   transition: transform var(--t-pop) var(--ease-sheet);
 }
 
@@ -102,6 +110,7 @@ withDefaults(defineProps<{ ariaLabel: string; disabled?: boolean }>(), { disable
 
 @media (prefers-reduced-motion: reduce) {
   .switch,
+  .switch::before,
   .switch__knob {
     transition: none;
   }

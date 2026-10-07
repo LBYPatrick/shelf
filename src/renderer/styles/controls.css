@@ -43,6 +43,9 @@
   /* The raised part of a control: a segmented thumb, a switch knob. */
   --control-thumb: oklch(100% 0 0);
   --switch-off: oklch(92.5% 0 0);
+  --switch-knob: oklch(100% 0 0);
+  --elev-switch:
+    0 1px 2px rgb(var(--shadow-ink) / 25%), 0 0 0 0.5px rgb(var(--shadow-ink) / 6%);
 
   /* One radius for every control, so a button and the segmented track beside it
      stop each choosing their own. */

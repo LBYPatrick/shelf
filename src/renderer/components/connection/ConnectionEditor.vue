@@ -1,17 +1,10 @@
 <script setup lang="ts">
-/**
- * Setting up a connection.
- *
- * A sheet rather than a permanent panel: creating a connection is a deliberate,
- * occasional act, and giving it the whole window while it is happening is
- * better than leaving a form on screen forever competing with the list.
- */
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type { SaveConnectionInput, SavedConnection } from '@shared/connections';
 import type { ParsedConnection } from '@shared/connectionUrl';
+import { errorMessage } from '@shared/errors';
 import { useTranslation } from 'i18next-vue';
 import { useConnections } from '../../stores/connections';
-import { useToasts } from '../../stores/toasts';
 import PressButton from '../ui/PressButton.vue';
 import Sheet from '../ui/Sheet.vue';
 import ConnectionForm from './ConnectionForm.vue';
@@ -20,70 +13,65 @@ const props = defineProps<{
   editing: SavedConnection | null;
   seed?: ParsedConnection | undefined;
   keyringAvailable: boolean;
+  overSheets?: boolean;
 }>();
-
 const emit = defineEmits<{
   close: [];
   saved: [SavedConnection, boolean];
   draft: [SaveConnectionInput];
 }>();
-
 const connections = useConnections();
-const toasts = useToasts();
 const { t } = useTranslation();
-
 const form = ref<InstanceType<typeof ConnectionForm>>();
 const open = ref(true);
 const testing = ref(false);
-/**
- * The form's own validity, polled rather than mirrored: duplicating the rules
- * here is how the button and the form drift apart.
- */
-const tick = ref(0);
-const ready = computed(() => {
-  void tick.value;
-  return form.value?.isValid() ?? false;
-});
-const problem = computed(() => {
-  void tick.value;
-  return form.value?.problem();
-});
+const saving = ref(false);
+const discarding = ref(false);
+const saveError = ref('');
+const testResult = ref<{ ok: boolean; message: string }>();
+const fingerprint = computed(() => form.value?.fingerprint());
+const ready = computed(() => form.value?.isValid() ?? false);
+const problem = computed(() => form.value?.problem());
+const testable = computed(() => form.value?.hasEngine() ?? false);
+let closeTimer: ReturnType<typeof setTimeout> | undefined;
+onBeforeUnmount(() => clearTimeout(closeTimer));
 
-/**
- * Whether there is anything to test yet.
- *
- * Hidden rather than disabled before an engine is chosen. A disabled control is
- * a promise that it will become available, which is worth making when the
- * reader can see what is missing — and on the first step of this sheet the only
- * thing on screen is the engine grid, so a greyed "Test" beside it is a second
- * thing to work out before the first one has been answered.
- */
-const testable = computed(() => {
-  void tick.value;
-  return form.value?.hasEngine() ?? false;
+// Dismissing through Escape, the scrim or Cancel follows the same recovery flow.
+const sheetOpen = computed({
+  get: () => open.value,
+  set: (value: boolean) => {
+    if (!value) requestClose();
+  },
 });
-
-// Cheap and bounded: the sheet is open for seconds, not minutes.
-const poll = setInterval(() => (tick.value += 1), 150);
-onBeforeUnmount(() => clearInterval(poll));
+function close(): void {
+  open.value = false;
+  closeTimer = setTimeout(() => emit('close'), 260);
+}
+function requestClose(): void {
+  if (saving.value) return;
+  if (form.value?.hasChanges()) discarding.value = true;
+  else close();
+}
+watch(fingerprint, () => {
+  testResult.value = undefined;
+  saveError.value = '';
+});
 
 function submit(connect: boolean): void {
+  if (!ready.value || saving.value || testing.value) return;
   const input = form.value?.buildInput();
   if (input) void save(input, connect);
 }
-
 function runTest(): void {
+  if (!ready.value || testing.value || saving.value) return;
   const input = form.value?.buildInput();
   if (input) void test(input);
 }
-/*
- * The answer arrives as a notification, not as a line that appears at the foot
- * of the form and shifts everything above it. It is a *result*, which is what
- * toasts are for — and the form it reports on is often taller than the popup,
- * so the line reporting it could easily be off screen when it arrived.
- */
 async function test(input: SaveConnectionInput): Promise<void> {
+  if (testing.value) return;
   testing.value = true;
+  testResult.value = undefined;
+  const tested = fingerprint.value;
   try {
     const result = await connections.test({
       kind: 'draft',
@@ -91,132 +79,165 @@ async function test(input: SaveConnectionInput): Promise<void> {
       ...(input.secrets ? { secrets: input.secrets } : {}),
       ...(input.id ? { basedOn: input.id } : {}),
     });
-
-    toasts.show(
-      result.ok
-        ? {
-            id: 'connection-test',
-            tone: 'success',
-            message: t('connection.testOk', { version: result.version }),
-          }
-        : { id: 'connection-test', tone: 'error', message: result.message }
-    );
+    if (tested === fingerprint.value)
+      testResult.value = {
+        ok: result.ok,
+        message: result.ok
+          ? t('connection.testOk', { version: result.version })
+          : result.message,
+      };
+  } catch (caught) {
+    if (tested === fingerprint.value)
+      testResult.value = { ok: false, message: errorMessage(caught) };
   } finally {
     testing.value = false;
   }
 }
-
 async function save(input: SaveConnectionInput, connect: boolean): Promise<void> {
-  const stored = await connections.save(input);
-  open.value = false;
-  emit('saved', stored, connect);
-}
-
-function close(): void {
-  open.value = false;
-  // Let the exit animation finish before the component is torn down.
-  setTimeout(() => emit('close'), 260);
+  if (saving.value || testing.value || !ready.value) return;
+  saving.value = true;
+  saveError.value = '';
+  try {
+    const stored = await connections.save(input);
+    open.value = false;
+    emit('saved', stored, connect);
+  } catch (caught) {
+    saveError.value = errorMessage(caught);
+  } finally {
+    saving.value = false;
+  }
 }
 </script>
 
 <template>
   <Sheet
-    v-model="open"
-    :title="props.editing ? props.editing.name : 'New connection'"
+    v-model="sheetOpen"
+    :title="
+      editing ? $t('connection.editTitle', { name: editing.name }) : $t('connection.newTitle')
+    "
+    :over-sheets="overSheets"
     wide
-    @update:model-value="!$event && close()"
+    flush
   >
     <ConnectionForm
       ref="form"
-      :editing="props.editing"
-      :seed="props.seed"
-      :keyring-available="props.keyringAvailable"
+      :editing="editing"
+      :seed="seed"
+      :keyring-available="keyringAvailable"
       :testing="testing"
+      :busy="saving"
       @save="save($event, false)"
-      @connect="save($event, true)"
-      @test="test"
     />
-
-    <!--
-      A check on the left, decisions on the right.
-      ───────────────────────────────────────────
-      All four used to sit in one cluster, so the row read as four things you
-      might press to finish — and two of them, Save and Connect, both finish.
-      Test does not: it tells you whether the details are right and leaves you
-      exactly where you were. Position is what separates the kinds, which is
-      cheaper than a word explaining it, and the filled button is the one action
-      that commits.
-    -->
     <template #footer>
-      <!--
-        It arrives rather than appearing. Choosing an engine turns the whole
-        sheet from one grid into a form, and a control blinking into the footer
-        on the same beat is the one movement in that change that has no reason
-        the reader can see — so it takes the same short fade the rest of the
-        sheet's own changes take.
-      -->
-      <Transition name="check">
-        <PressButton
-          v-if="testable"
-          variant="glass"
-          :disabled="!ready || testing"
-          @click="runTest"
-        >
-          {{ testing ? $t('connection.testing') : $t('action.test') }}
-        </PressButton>
-      </Transition>
-
-      <span v-if="problem" class="problem">{{ problem }}</span>
-
-      <PressButton class="footer__decisions" @click="close">
-        {{ $t('action.cancel') }}
-      </PressButton>
-      <PressButton :disabled="!ready" @click="submit(false)">
-        {{ $t('action.save') }}
-      </PressButton>
-      <PressButton variant="primary" :disabled="!ready" @click="submit(true)">
-        {{ $t('action.connect') }}
-      </PressButton>
+      <div class="editor-footer">
+        <div v-if="discarding" class="discard" role="alert">
+          <div>
+            <strong>{{ $t('connection.discardTitle') }}</strong>
+            <p>{{ $t('connection.discardHelp') }}</p>
+          </div>
+          <PressButton variant="glass" @click="discarding = false">{{
+            $t('connection.keepEditing')
+          }}</PressButton>
+          <PressButton @click="close">{{ $t('connection.discard') }}</PressButton>
+        </div>
+        <template v-else>
+          <p
+            v-if="testResult || saveError"
+            class="feedback"
+            :class="{ 'feedback--error': saveError || !testResult?.ok }"
+            :role="saveError || !testResult?.ok ? 'alert' : 'status'"
+          >
+            {{ saveError || testResult?.message }}
+          </p>
+          <div class="editor-actions">
+            <PressButton
+              v-if="testable"
+              variant="glass"
+              :disabled="!ready || testing || saving"
+              @click="runTest"
+              >{{ testing ? $t('connection.testing') : $t('action.test') }}</PressButton
+            >
+            <span class="problem">{{
+              problem || $t(editing ? 'connection.editHelp' : 'connection.saveHelp')
+            }}</span>
+            <PressButton class="footer-decisions" :disabled="saving" @click="requestClose">{{
+              $t('action.cancel')
+            }}</PressButton>
+            <PressButton
+              v-if="testable"
+              :disabled="!ready || testing || saving"
+              @click="submit(false)"
+              >{{ $t('action.save') }}</PressButton
+            >
+            <PressButton
+              v-if="testable"
+              variant="primary"
+              :disabled="!ready || testing || saving"
+              @click="submit(true)"
+              >{{
+                saving ? $t('connection.saving') : $t('connection.saveConnect')
+              }}</PressButton
+            >
+          </div>
+        </template>
+      </div>
     </template>
   </Sheet>
 </template>
 
 <style scoped>
-/*
- * Guidance, in the voice of a hint rather than a warning.
- *
- * Every action this describes is already disabled, so the sentence can only be
- * read before anything has been attempted — and amber on a form nobody has
- * touched spends the warning colour on the one state where nothing is wrong.
- */
-/*
- * Everything from Cancel rightwards is pushed over, rather than the check being
- * pushed left. The problem line comes and goes, and hanging the split on it
- * would close the gap the moment the form became valid.
- */
-.footer__decisions {
+.editor-footer {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+.editor-actions,
+.discard {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+}
+.footer-decisions {
   margin-inline-start: auto;
 }
-
-/*
- * A transition, not a keyframe: the engine can be changed again a moment later,
- * and this has to be able to turn round from wherever it got to.
- */
-.check-enter-active,
-.check-leave-active {
-  transition:
-    opacity var(--t-press) var(--ease-out),
-    transform var(--t-press) var(--ease-out);
-}
-
-.check-enter-from,
-.check-leave-to {
-  opacity: 0;
-  transform: scale(0.94);
-}
-
 .problem {
   font-size: 0.6875rem;
   color: var(--text-soft);
+  max-width: 17rem;
+}
+.feedback {
+  padding: var(--gap) var(--gap-loose);
+  border-radius: var(--radius-field);
+  background: var(--fill-3);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+  max-height: 7rem;
+  overflow: auto;
+  color: var(--color-success);
+}
+.feedback--error {
+  color: var(--color-error);
+}
+.discard > div {
+  flex: 1;
+  font-size: 0.8125rem;
+}
+.discard p {
+  margin-top: var(--gap-hair);
+  font-size: 0.75rem;
+  color: var(--text-soft);
+}
+@media (max-width: 600px) {
+  .editor-actions,
+  .discard {
+    flex-wrap: wrap;
+  }
+  .problem {
+    flex-basis: 100%;
+    order: -1;
+    max-width: none;
+  }
 }
 </style>

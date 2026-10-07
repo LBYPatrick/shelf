@@ -128,7 +128,7 @@ function ago(at: number): string {
 }
 
 .entry__state--ok {
-  color: var(--color-success, oklch(72% 0.17 150));
+  color: var(--color-success);
 }
 
 .entry__state--bad {

@@ -68,8 +68,10 @@ export function registerAppDbHandlers(
   ipcMain.handle(APPDB_CHANNELS.recordHistory, (_event, entry: HistoryInput) =>
     queries.record(entry)
   );
-  ipcMain.handle(APPDB_CHANNELS.listHistory, (_event, connectionId: string | null) =>
-    queries.history(connectionId)
+  ipcMain.handle(
+    APPDB_CHANNELS.listHistory,
+    (_event, connectionId: string | null, limit?: number) =>
+      queries.history(connectionId, limit)
   );
   ipcMain.handle(APPDB_CHANNELS.clearHistory, (_event, connectionId: string | null) =>
     queries.clearHistory(connectionId)
@@ -95,17 +97,26 @@ export function registerAppDbHandlers(
       if (request.kind === 'saved') {
         config = connections.resolveConfig(request.connectionId);
       } else {
-        // A draft may leave the password field blank to mean "keep the one you
-        // already have", which is the normal case when editing a saved
-        // connection, so fall back to the keyring for anything not retyped.
+        // Missing credentials inherit the saved value; an explicit empty
+        // string means the reader cleared the field and must stay empty.
         const stored = request.basedOn ? connections.resolveConfig(request.basedOn) : undefined;
 
-        const password = request.secrets?.['password'] || stored?.password;
+        const password = request.secrets?.['password'] ?? stored?.password;
         const ssh = request.config.ssh
           ? {
               ...request.config.ssh,
-              password: request.secrets?.['sshPassword'] || stored?.ssh?.password,
-              passphrase: request.secrets?.['sshPassphrase'] || stored?.ssh?.passphrase,
+              password: request.secrets?.['sshPassword'] ?? stored?.ssh?.password,
+              passphrase: request.secrets?.['sshPassphrase'] ?? stored?.ssh?.passphrase,
+            }
+          : undefined;
+
+        const proxy = request.config.proxy
+          ? {
+              ...request.config.proxy,
+              password:
+                request.secrets?.['proxyPassword'] ??
+                request.config.proxy.password ??
+                stored?.proxy?.password,
             }
           : undefined;
 
@@ -113,6 +124,7 @@ export function registerAppDbHandlers(
           ...request.config,
           ...(password ? { password } : {}),
           ...(ssh ? { ssh } : {}),
+          ...(proxy ? { proxy } : {}),
         };
       }
 

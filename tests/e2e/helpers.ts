@@ -73,7 +73,7 @@ export async function createConnection(
   if (options.name) await page.getByLabel('Name').fill(options.name);
 
   if (options.connect !== false) {
-    await page.getByRole('button', { name: 'Connect', exact: true }).click();
+    await page.getByRole('button', { name: 'Save & connect', exact: true }).click();
     await expect(page.locator('.strip')).toBeVisible({ timeout: 20_000 });
   }
 }

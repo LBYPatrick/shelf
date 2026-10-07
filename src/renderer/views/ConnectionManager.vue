@@ -1,24 +1,5 @@
 <script setup lang="ts">
-/**
- * The start screen.
- *
- * Two panes, the way a welcome window has worked on this platform for years:
- * what this is and how to start something new on the left, and everything you
- * could open on the right.
- *
- * The split is what makes the screen worth the window it is given. A single
- * centred stack leaves a large display mostly empty and still runs out of room
- * for a long list; side by side, the identity keeps its space, the list gets
- * the height, and neither pushes the other around.
- *
- * On the right the databases are grouped and each group folds away, because the
- * list is the part that grows without limit — Recent is short by design, Saved
- * is however long it is, and the sample sits with them rather than in a banner
- * of its own. Recent and Saved are a partition rather than two views of one
- * list: a connection appears in exactly one of them, because the same
- * "localhost" in two sections a hundred pixels apart is a puzzle, not a
- * shortcut.
- */
+/** A searchable library with bounded pages, sharing the workspace materials. */
 import { computed, onMounted, ref, watch } from 'vue';
 import { useTranslation } from 'i18next-vue';
 import { elapsedSince, FOREVER } from '@shared/elapsed';
@@ -32,47 +13,57 @@ import ContextMenu, { type MenuItem } from '../components/ui/ContextMenu.vue';
 import ConnectionEditor from '../components/connection/ConnectionEditor.vue';
 import LineupRow from '../components/connection/LineupRow.vue';
 import AppIcon from '../components/ui/AppIcon.vue';
-import AppMark from '../components/ui/AppMark.vue';
+import SegmentedControl from '../components/ui/SegmentedControl.vue';
+import SqlCode from '../components/assistant/SqlCode.vue';
+import { useTabs } from '../stores/tabs';
+import { HISTORY_LIMIT, type HistoryEntry } from '@shared/appdb';
 import DisclosureGroup from '../components/ui/DisclosureGroup.vue';
 import SettingsSheet from '../components/settings/SettingsSheet.vue';
 import ShortcutSheet from '../components/settings/ShortcutSheet.vue';
 import StorageSheet from '../components/settings/StorageSheet.vue';
 import ProviderSheet from '../components/assistant/ProviderSheet.vue';
+import Sheet from '../components/ui/Sheet.vue';
+import PressButton from '../components/ui/PressButton.vue';
+import { vTip } from '../lib/hoverTip';
 import { useConnections } from '../stores/connections';
 import { useToasts } from '../stores/toasts';
 
-/**
- * How many databases count as "recent".
- *
- * Short on purpose: the point of the section is that the one you want is
- * already on it, and a list long enough to search is the list below it.
- */
-const RECENT_LIMIT = 4;
+const props = defineProps<{ embedded?: boolean }>();
+const emit = defineEmits<{ connected: [] }>();
+const removing = ref<SavedConnection>();
+const removeOpen = ref(false);
+const removeBusy = ref(false);
+const removeError = ref('');
 
 const connections = useConnections();
 const toasts = useToasts();
 const { t } = useTranslation();
 
+const history = ref<HistoryEntry[]>([]);
+const selectedHistory = ref<HistoryEntry>();
+const historyOpen = ref(false);
+const tabs = useTabs();
+const view = ref('saved');
+const page = ref(0);
+const scroller = ref<HTMLElement>();
+watch(
+  [page, view],
+  () => {
+    if (scroller.value) scroller.value.scrollTop = 0;
+  },
+  { flush: 'post' }
+);
+const PAGE_SIZE = 40;
+const viewOptions = computed(() => [
+  { value: 'saved', label: t('start.saved') },
+  { value: 'recent', label: t('start.recent') },
+  ...(!props.embedded ? [{ value: 'history', label: t('start.queryHistory') }] : []),
+]);
 const search = ref('');
-const editing = ref<SavedConnection | null | undefined>(undefined);
-const seed = ref<ParsedConnection | undefined>(undefined);
-const opening = ref<string | null>(null);
-const sampling = ref(false);
-const settingsOpen = ref(false);
-const shortcutsOpen = ref(false);
-const storageOpen = ref(false);
-const providersOpen = ref(false);
-
-/**
- * Which groups are unfolded. All of them, to start.
- *
- * The sample in particular: it is the only way in for someone whose first run
- * this is, and a way in behind a fold is one they have to be told about.
- */
-const unfolded = ref<Record<string, boolean>>({ recent: true, saved: true, sample: true });
-
-onMounted(() => void connections.refresh());
-
+watch([view, search], () => {
+  page.value = 0;
+  if (scroller.value) scroller.value.scrollTop = 0;
+});
 /** A pasted URL is an offer to add a connection, not a filter over the list. */
 const parsed = computed(() =>
   looksLikeUrl(search.value) ? parseConnectionUrl(search.value) : undefined
@@ -88,18 +79,83 @@ function haystack(connection: SavedConnection): string {
     .toLowerCase();
 }
 
-const recent = computed(() =>
-  connections.saved
-    .filter((connection) => connection.lastUsedAt !== null)
-    .sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0))
-    .slice(0, RECENT_LIMIT)
+const connectionRows = computed(() => {
+  const rows = connections.saved.filter((entry) => haystack(entry).includes(needle.value));
+  if (view.value === 'recent')
+    return rows
+      .filter((entry) => entry.lastUsedAt !== null)
+      .sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0));
+  return rows.sort((a, b) => a.name.localeCompare(b.name));
+});
+const connectionNames = computed(
+  () => new Map(connections.saved.map((entry) => [entry.id, entry.name]))
 );
+const historyRows = computed(() =>
+  history.value.filter((entry) => {
+    return [entry.text, connectionNames.value.get(entry.connectionId ?? '') ?? '']
+      .join(' ')
+      .toLowerCase()
+      .includes(needle.value);
+  })
+);
+const count = computed(() =>
+  view.value === 'history' ? historyRows.value.length : connectionRows.value.length
+);
+const pages = computed(() => Math.max(1, Math.ceil(count.value / PAGE_SIZE)));
+const historyPage = computed(() =>
+  historyRows.value.slice(page.value * PAGE_SIZE, (page.value + 1) * PAGE_SIZE)
+);
+watch(pages, (total) => {
+  page.value = Math.min(page.value, total - 1);
+});
+async function openHistory(entry: HistoryEntry): Promise<void> {
+  const connection = connections.saved.find((saved) => saved.id === entry.connectionId);
+  if (!connection) return;
+  tabs.queueQuery(connection.id, entry.text);
+  if (await connections.connect(connection)) emit('connected');
+  else tabs.clearQueuedQuery();
+}
+async function copyStatement(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+    toasts.show({ tone: 'success', message: t('assistant.copied') });
+  } catch (caught) {
+    toasts.show({ tone: 'error', message: errorMessage(caught) });
+  }
+}
+function historyConnection(entry: HistoryEntry): string {
+  return (
+    connections.saved.find((saved) => saved.id === entry.connectionId)?.name ??
+    t('start.unavailableConnection')
+  );
+}
+const editing = ref<SavedConnection | null | undefined>(undefined);
+const seed = ref<ParsedConnection | undefined>(undefined);
+const opening = ref<string | null>(null);
+const sampling = ref(false);
+const settingsOpen = ref(false);
+const shortcutsOpen = ref(false);
+const storageOpen = ref(false);
+const providersOpen = ref(false);
 
-const rest = computed(() => {
-  const shown = new Set(recent.value.map((connection) => connection.id));
-  return connections.saved
-    .filter((connection) => !shown.has(connection.id))
-    .sort((a, b) => a.name.localeCompare(b.name));
+/**
+ * Which groups are unfolded. All of them, to start.
+ *
+ * The sample in particular: it is the only way in for someone whose first run
+ * this is, and a way in behind a fold is one they have to be told about.
+ */
+const unfolded = ref<Record<string, boolean>>({ sample: true });
+
+onMounted(() => {
+  void connections.refresh();
+  if (!props.embedded) {
+    void window.shelf.db
+      .listHistory(null, HISTORY_LIMIT)
+      .then((entries) => {
+        history.value = entries;
+      })
+      .catch((caught) => toasts.show({ tone: 'error', message: errorMessage(caught) }));
+  }
 });
 
 interface Group {
@@ -108,41 +164,22 @@ interface Group {
   readonly rows: readonly SavedConnection[];
 }
 
-/**
- * The sections, in the order they are read.
- *
- * Searching collapses the partition into one list: with a query typed, "which
- * of these did I open recently" is no longer the question being asked.
- */
-const groups = computed<Group[]>(() => {
-  const sections = needle.value
-    ? [
+const groups = computed<Group[]>(() =>
+  view.value === 'history'
+    ? []
+    : [
         {
-          id: 'matches',
-          title: t('start.matches'),
-          rows: connections.saved.filter((connection) =>
-            haystack(connection).includes(needle.value)
+          id: 'library',
+          title: view.value === 'recent' ? t('start.recent') : t('start.saved'),
+          rows: connectionRows.value.slice(
+            page.value * PAGE_SIZE,
+            (page.value + 1) * PAGE_SIZE
           ),
         },
-      ]
-    : [
-        { id: 'recent', title: t('start.recent'), rows: recent.value },
-        { id: 'saved', title: t('start.saved'), rows: rest.value },
-      ];
+      ].filter((group) => group.rows.length)
+);
 
-  return sections.filter((section) => section.rows.length > 0);
-});
-
-const nothingMatches = computed(() => groups.value.length === 0);
-
-/**
- * Searching opens whatever it found. A match hidden inside a folded group is
- * the same as no match at all.
- */
-watch(needle, (value) => {
-  if (!value) return;
-  for (const group of groups.value) unfolded.value[group.id] = true;
-});
+const nothingMatches = computed(() => count.value === 0);
 
 /** What this connection actually points at, in one line. */
 function where(connection: SavedConnection): string {
@@ -206,6 +243,7 @@ const exportTrigger = ref<HTMLElement>();
 const exporting = ref<SavedConnection | null>(null);
 
 const exportItems = computed<MenuItem[]>(() => [
+  { id: 'notice', label: t('connection.exportIncludesSecrets'), disabled: true },
   { id: 'file', label: t('start.exportToFile'), icon: 'download' },
   { id: 'clipboard', label: t('start.exportToClipboard'), icon: 'copy' },
 ]);
@@ -300,7 +338,20 @@ async function importPresets(): Promise<void> {
     return;
   }
 
-  for (const input of result.connections) await connections.save(input);
+  let imported = 0;
+  try {
+    for (const input of result.connections) {
+      await connections.save(input);
+      imported++;
+    }
+  } catch (caught) {
+    toasts.show({
+      tone: 'error',
+      title: t('start.imported', { n: imported }),
+      message: errorMessage(caught),
+    });
+    return;
+  }
   toasts.show({
     id: 'connection-import',
     tone: 'success',
@@ -308,6 +359,30 @@ async function importPresets(): Promise<void> {
   });
 }
 
+function requestRemove(connection: SavedConnection): void {
+  removing.value = connection;
+  removeError.value = '';
+  removeOpen.value = true;
+}
+async function remove(): Promise<void> {
+  if (!removing.value || removeBusy.value) return;
+  removeBusy.value = true;
+  try {
+    await connections.remove(removing.value.id);
+    removeOpen.value = false;
+  } catch (caught) {
+    removeError.value = errorMessage(caught);
+  } finally {
+    removeBusy.value = false;
+  }
+}
+async function duplicate(connection: SavedConnection): Promise<void> {
+  try {
+    editing.value = await connections.duplicate(connection, t('noun.copy'));
+  } catch (caught) {
+    toasts.show({ tone: 'error', message: errorMessage(caught) });
+  }
+}
 function startNew(): void {
   seed.value = undefined;
   editing.value = null;
@@ -323,7 +398,7 @@ function useParsed(): void {
 async function open(connection: SavedConnection): Promise<void> {
   opening.value = connection.id;
   try {
-    await connections.connect(connection);
+    if (await connections.connect(connection)) emit('connected');
   } finally {
     opening.value = null;
   }
@@ -332,7 +407,7 @@ async function open(connection: SavedConnection): Promise<void> {
 async function openSample(): Promise<void> {
   sampling.value = true;
   try {
-    await connections.exploreSample();
+    if (await connections.exploreSample()) emit('connected');
   } finally {
     sampling.value = false;
   }
@@ -364,9 +439,27 @@ watch(
 </script>
 
 <template>
-  <div class="manager panel-content">
+  <div class="manager" :class="embedded ? 'manager--embedded' : 'mat-regular panel-sidebar'">
+    <div v-if="embedded" class="library-toolbar">
+      <input
+        v-model="search"
+        class="textfield"
+        :placeholder="view === 'history' ? $t('start.historySearch') : $t('start.search')"
+        :aria-label="$t('start.searchLabel')"
+        @keydown.enter="parsed && useParsed()"
+      />
+      <PressButton variant="glass" @click="importPresets">{{
+        $t('start.importPresets')
+      }}</PressButton>
+      <PressButton variant="primary" @click="startNew">{{
+        $t('connection.newTitle')
+      }}</PressButton>
+    </div>
+    <button v-if="embedded && parsed" class="parsed" @click="useParsed">
+      {{ $t('start.setUp') }} · {{ parsed.suggestedName }}
+    </button>
     <!-- What this is, and how to start something that is not on the list. -->
-    <aside class="intro">
+    <aside v-if="!embedded" class="intro">
       <!--
         Traffic-light clearance and a surface to drag the window by, over this
         pane only: across the whole width it would sit on top of the list beside
@@ -375,46 +468,13 @@ watch(
       <div class="intro__chrome drag-region" />
       <div class="intro__inner">
         <header class="identity" style="--step: 0">
-          <AppMark class="identity__mark" />
+          <span class="identity__edition type-label">{{ $t('start.workspaceLabel') }}</span>
           <h1 class="identity__title">
             {{ $t('app.name') }}
           </h1>
         </header>
 
-        <div class="finder" style="--step: 1">
-          <AppIcon class="finder__icon" name="search" :size="16" />
-
-          <input
-            v-model="search"
-            class="finder__input"
-            type="text"
-            :placeholder="$t('start.search')"
-            spellcheck="false"
-            autocomplete="off"
-            :aria-label="$t('start.searchLabel')"
-            @keydown.enter="parsed ? useParsed() : undefined"
-          />
-
-          <button
-            v-if="search"
-            class="finder__clear"
-            type="button"
-            :aria-label="$t('action.clear')"
-            @click="search = ''"
-          >
-            <AppIcon name="close" :size="16" />
-          </button>
-        </div>
-
-        <Transition name="rise">
-          <button v-if="parsed" class="parsed" type="button" @click="useParsed">
-            <span class="parsed__label">{{ $t('start.recognised') }}</span>
-            <span class="parsed__name">{{ parsed.suggestedName }}</span>
-            <span class="parsed__engine">{{ parsed.engine }}</span>
-            <span class="parsed__go">{{ $t('start.setUp') }} ↩</span>
-          </button>
-        </Transition>
-
+        <p class="identity__description">{{ $t('start.welcomeBody') }}</p>
         <div class="intro__action" style="--step: 2">
           <LineupRow
             :title="$t('start.newConnection')"
@@ -437,6 +497,29 @@ watch(
           />
         </div>
 
+        <!--
+          The sample sits with the databases rather than in a banner of its own.
+          It is a real feature and not a demo hook: the same database backs the
+          screenshots and the tests.
+        -->
+        <DisclosureGroup
+          v-if="!embedded"
+          v-model="unfolded.sample"
+          :label="$t('start.sample')"
+          class="fold"
+          :style="{ '--step': groups.length }"
+        >
+          <div class="group__list">
+            <LineupRow
+              :title="$t('start.sampleTitle')"
+              :subtitle="sampling ? $t('start.sampleOpening') : $t('start.sampleBody')"
+              icon="database"
+              :busy="sampling"
+              @open="openSample"
+            />
+          </div>
+        </DisclosureGroup>
+
         <p v-if="!connections.keyringAvailable" class="keyring" style="--step: 3">
           {{ $t('start.noKeyring') }}
         </p>
@@ -447,17 +530,77 @@ watch(
       Everything there is to open. The one part of the screen that grows without
       limit, so it is the one part that scrolls.
     -->
-    <section class="browser mat-regular panel-sidebar">
-      <div class="browser__scroll">
-        <DisclosureGroup
-          v-for="(group, position) in groups"
-          :key="group.id"
-          v-model="unfolded[group.id]"
-          :label="group.title"
-          :hint="String(group.rows.length)"
-          class="fold"
-          :style="{ '--step': position }"
-        >
+    <section class="browser" :class="{ 'panel-content': !embedded }">
+      <header class="library-head">
+        <div class="library-heading">
+          <h2 class="type-title">{{ $t('start.library') }}</h2>
+          <span class="library-count">{{ count.toLocaleString() }}</span>
+        </div>
+        <div v-if="!embedded" class="finder" style="--step: 1">
+          <AppIcon class="finder__icon" name="search" :size="16" />
+
+          <input
+            v-model="search"
+            class="finder__input"
+            type="text"
+            :placeholder="view === 'history' ? $t('start.historySearch') : $t('start.search')"
+            spellcheck="false"
+            autocomplete="off"
+            :aria-label="$t('start.searchLabel')"
+            @keydown.enter="parsed ? useParsed() : undefined"
+          />
+
+          <button
+            v-if="search"
+            class="finder__clear"
+            type="button"
+            :aria-label="$t('action.clear')"
+            @click="search = ''"
+          >
+            <AppIcon name="close" :size="16" />
+          </button>
+        </div>
+
+        <Transition name="rise">
+          <button v-if="!embedded && parsed" class="parsed" type="button" @click="useParsed">
+            <span class="parsed__label">{{ $t('start.recognised') }}</span>
+            <span class="parsed__name">{{ parsed.suggestedName }}</span>
+            <span class="parsed__engine">{{ parsed.engine }}</span>
+            <span class="parsed__go">{{ $t('start.setUp') }} ↩</span>
+          </button>
+        </Transition>
+
+        <SegmentedControl
+          v-model="view"
+          :options="viewOptions"
+          :aria-label="$t('start.library')"
+        />
+      </header>
+      <div ref="scroller" class="browser__scroll">
+        <ul v-if="view === 'history'" class="history-list">
+          <li v-for="entry in historyPage" :key="entry.id">
+            <button
+              class="history-entry focus-fill"
+              @click="
+                selectedHistory = entry;
+                historyOpen = true;
+              "
+            >
+              <AppIcon :name="entry.succeeded ? 'check' : 'warning'" :size="14" />
+              <span class="history-entry__text"
+                ><span class="history-entry__sql">{{
+                  entry.text.replace(/\s+/g, ' ').trim()
+                }}</span
+                ><span class="history-entry__meta"
+                  >{{ historyConnection(entry) }} ·
+                  {{ new Date(entry.executedAt).toLocaleString() }}</span
+                ></span
+              >
+              <AppIcon name="chevron" :size="12" />
+            </button>
+          </li>
+        </ul>
+        <div v-for="group in groups" :key="group.id" class="collection">
           <div class="group__list">
             <LineupRow
               v-for="(connection, index) in group.rows"
@@ -483,6 +626,7 @@ watch(
                   type="button"
                   class="rowaction"
                   :aria-label="$t('start.export', { name: connection.name })"
+                  v-tip="$t('start.export', { name: connection.name })"
                   @click="openExport(connection, $event)"
                 >
                   <AppIcon name="download" :size="16" />
@@ -491,7 +635,8 @@ watch(
                   type="button"
                   class="rowaction"
                   :aria-label="$t('start.duplicate', { name: connection.name })"
-                  @click="connections.duplicate(connection, t('noun.copy'))"
+                  v-tip="$t('start.duplicate', { name: connection.name })"
+                  @click="duplicate(connection)"
                 >
                   <AppIcon name="copy" :size="16" />
                 </button>
@@ -499,6 +644,7 @@ watch(
                   type="button"
                   class="rowaction"
                   :aria-label="$t('start.edit', { name: connection.name })"
+                  v-tip="$t('start.edit', { name: connection.name })"
                   @click="
                     seed = undefined;
                     editing = connection;
@@ -510,41 +656,39 @@ watch(
                   type="button"
                   class="rowaction rowaction--danger"
                   :aria-label="$t('start.remove', { name: connection.name })"
-                  @click="connections.remove(connection.id)"
+                  v-tip="$t('start.remove', { name: connection.name })"
+                  @click="requestRemove(connection)"
                 >
                   <AppIcon name="close" :size="16" />
                 </button>
               </template>
             </LineupRow>
           </div>
-        </DisclosureGroup>
+        </div>
 
         <p v-if="nothingMatches" class="blank">
-          {{ needle ? $t('start.noMatches') : $t('start.nothingSaved') }}
+          {{
+            needle
+              ? $t('start.noMatches')
+              : view === 'history'
+                ? $t('history.empty')
+                : view === 'recent'
+                  ? $t('start.noRecent')
+                  : $t('start.nothingSaved')
+          }}
         </p>
-
-        <!--
-          The sample sits with the databases rather than in a banner of its own.
-          It is a real feature and not a demo hook: the same database backs the
-          screenshots and the tests.
-        -->
-        <DisclosureGroup
-          v-model="unfolded.sample"
-          :label="$t('start.sample')"
-          class="fold"
-          :style="{ '--step': groups.length }"
-        >
-          <div class="group__list">
-            <LineupRow
-              :title="$t('start.sampleTitle')"
-              :subtitle="sampling ? $t('start.sampleOpening') : $t('start.sampleBody')"
-              icon="database"
-              :busy="sampling"
-              @open="openSample"
-            />
-          </div>
-        </DisclosureGroup>
       </div>
+      <footer v-if="pages > 1" class="library-foot">
+        <span>{{ $t('start.pageCount', { page: page + 1, pages, count }) }}</span>
+        <div class="library-pages">
+          <PressButton :disabled="page === 0" @click="page--">{{
+            $t('start.previousPage')
+          }}</PressButton
+          ><PressButton :disabled="page + 1 >= pages" @click="page++">{{
+            $t('start.nextPage')
+          }}</PressButton>
+        </div>
+      </footer>
     </section>
 
     <!--
@@ -571,9 +715,54 @@ watch(
       @choose="chooseExport"
     />
 
+    <Sheet
+      v-model="removeOpen"
+      :title="$t('connection.removeTitle', { name: removing?.name })"
+      over-sheets
+    >
+      <p class="remove-copy">{{ $t('connection.removeHelp') }}</p>
+      <p v-if="removeError" role="alert">{{ removeError }}</p>
+      <template #footer>
+        <PressButton :disabled="removeBusy" @click="removeOpen = false">{{
+          $t('action.cancel')
+        }}</PressButton>
+        <PressButton variant="primary" :disabled="removeBusy" @click="remove">{{
+          $t('action.delete')
+        }}</PressButton>
+      </template>
+    </Sheet>
+    <Sheet v-model="historyOpen" :title="$t('start.queryHistory')">
+      <template v-if="selectedHistory">
+        <p class="remove-copy">
+          {{ historyConnection(selectedHistory) }} ·
+          {{ new Date(selectedHistory.executedAt).toLocaleString() }}
+        </p>
+        <div class="history-statement selectable"><SqlCode :sql="selectedHistory.text" /></div>
+        <p
+          v-if="!connections.saved.some((saved) => saved.id === selectedHistory?.connectionId)"
+          class="blank"
+        >
+          {{ $t('start.unavailableConnection') }}
+        </p>
+      </template>
+      <template #footer>
+        <PressButton @click="selectedHistory && copyStatement(selectedHistory.text)">{{
+          $t('action.copy')
+        }}</PressButton>
+        <PressButton
+          variant="primary"
+          :disabled="
+            !connections.saved.some((saved) => saved.id === selectedHistory?.connectionId)
+          "
+          @click="selectedHistory && openHistory(selectedHistory)"
+          >{{ $t('assistant.openInTab') }}</PressButton
+        >
+      </template>
+    </Sheet>
     <ConnectionEditor
       v-if="editing !== undefined"
       :editing="editing"
+      :over-sheets="embedded"
       :seed="seed"
       :keyring-available="connections.keyringAvailable"
       @close="editing = undefined"
@@ -583,422 +772,324 @@ watch(
 </template>
 
 <style scoped>
-/*
- * Two panes: what this is on the left, what you can open on the right.
- *
- * The start screen paints a surface of its own. It used to paint nothing,
- * relying on the window being translucent — which works only for as long as
- * whatever is behind the window is dark. On the dark theme its text is light,
- * so over a bright desktop the title and the cards were light-on-light and
- * effectively invisible.
- *
- * Translucent still, so the window keeps its material — but no
- * `backdrop-filter` on it. There is nothing painted behind this screen to
- * filter: the glass is the OS's own material behind the whole window, which no
- * in-page filter can reach, so a blur here is a full-screen compositing pass a
- * frame producing exactly what not running it produces.
- */
 .manager {
   position: relative;
-  height: 100%;
   display: grid;
-  /*
-   * The golden section, with the larger part on the left.
-   *
-   * The left pane is the one you read — a name, a line about what this is, and
-   * the field you type into — and the right is a list you scan. Giving the
-   * reading side 1.618 of the scanning side is the oldest answer there is to
-   * "how much bigger", and unlike the 1 : 1.1 it replaces it is a proportion
-   * rather than a number that happened to look right in one window.
-   */
-  grid-template-columns: minmax(15rem, 1.618fr) minmax(16rem, 1fr);
+  grid-template-columns: minmax(14rem, 0.36fr) minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
   overflow: hidden;
-  /*
-   * The app's own materials, not a surface of this view's own.
-   *
-   * This painted `color-mix(base-100 86%)` — a number written here and nowhere
-   * else, near enough to opaque that the window's glass had nothing left to
-   * show through it. So the one screen that is *entirely* window, with the
-   * desktop directly behind it, was the one screen with no vibrancy.
-   *
-   * It is the same two surfaces the workspace is made of instead: the reading
-   * pane is the working surface and the list beside it is the sidebar's glass,
-   * which means the welcome screen and the window it opens into are built from
-   * the same materials, follow the same opacity dial, and go solid together
-   * under `prefers-reduced-transparency`.
-   */
 }
-
-@media (prefers-reduced-transparency: reduce) {
-  .manager {
-    background-color: var(--color-base-100);
-  }
-}
-
-/*
- * One scale for both panes, taken from the size of the window.
- *
- * A start screen laid out at one fixed size is a small block adrift in the
- * middle of a large display — the window grows and the thing you came for does
- * not. Everything inside the panes is expressed in `em`, so rows, marks,
- * headings and the spacing between them grow together and the proportion
- * between the content and the window stays where it was designed. Both ends of
- * the clamp are in rem, so an enlarged OS text size still scales the layout
- * rather than being overridden by it.
- */
-.intro,
-.browser {
-  font-size: clamp(0.8125rem, 0.35rem + 0.25vw + 0.65vh, 1.0625rem);
-}
-
-/* --- left: what this is ------------------------------------------------- */
-
 .intro {
   position: relative;
-  display: flex;
   min-width: 0;
   padding: calc(var(--titlebar-h) + var(--gap-section)) var(--gap-section) var(--gap-section);
+  overflow-y: auto;
 }
-
 .intro__chrome {
   position: absolute;
   inset-inline: 0;
   top: 0;
   height: var(--titlebar-h);
 }
-
 .intro__inner {
-  width: 100%;
-  max-width: 30em;
-  margin: auto;
   display: flex;
   flex-direction: column;
+  gap: var(--gap-section);
 }
-
-/*
- * Everything arrives in the order it is read, one after another. Capped,
- * because a cascade long enough to notice is a wait.
- */
-.identity,
-.finder,
-.intro__action,
-.keyring,
-.fold {
-  animation: lift-in var(--t-panel) var(--ease-out) backwards;
-  /*
-   * Capped, the way the connection rows below already cap theirs.
-   *
-   * This is the first screen of every launch, and it used to finish arriving
-   * about two thirds of a second in — 420ms of travel with 55ms between each
-   * item, which compounds. The cascade is worth keeping and the wait is not, so
-   * the step is shorter and the whole sequence is bounded rather than growing
-   * with the number of things on screen.
-   */
-  animation-delay: min(calc(var(--step) * 40ms), 160ms);
-}
-
-@keyframes lift-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-}
-
-/*
- * Spacing is declared by the thing above the gap rather than by one `gap` on
- * the column, so a row that is not drawn takes its own separation with it
- * instead of leaving a hole where it used to be.
- */
-.identity,
-.finder,
-.parsed {
-  margin-bottom: 1.5em;
-}
-
-.keyring {
-  margin-top: 1.5em;
-}
-
 .identity {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
+  align-items: flex-start;
+  gap: var(--gap);
 }
-
-/*
- * The mark itself is `AppMark`; its place in this column is set here — and its
- * size, which is larger than the mark it replaced. That one was a glyph on a
- * tinted square and could afford to be small; this one is a drawing with three
- * things in it, and at the old size the shortest column was a few pixels wide.
- */
-.identity__mark {
-  /*
-   * Wider than the mark looks, because a fifth of the artwork is the padding
-   * macOS wants around an icon — the same file draws the dock tile, and the box
-   * grows so the *drawing* stays the size the composition wants.
-   */
-  width: 6em;
-  height: 6em;
-  margin-bottom: 0.35em;
-}
-
-/* Large text wants negative tracking; at this size the default reads loose. */
 .identity__title {
-  font-size: 2.15em;
-  font-weight: 650;
-  letter-spacing: -0.028em;
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 600;
+  letter-spacing: -0.05em;
   line-height: 1.1;
 }
-
-.finder {
-  position: relative;
-  display: flex;
-  align-items: center;
-  border-radius: 0.75em;
-  background: var(--fill-4);
-  border: 1px solid var(--separator);
-  transition:
-    border-color var(--t-hover) var(--ease-out),
-    box-shadow var(--t-hover) var(--ease-out),
-    background-color var(--t-hover) var(--ease-out);
-}
-
-.finder:focus-within {
-  background: var(--fill-3);
-  border-color: color-mix(in oklab, var(--color-primary) 55%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 16%, transparent);
-}
-
-.finder__icon {
-  width: 1em;
-  height: 1em;
-  margin-inline-start: 0.75em;
+.identity__edition {
   color: var(--text-soft);
 }
-
+.identity__description {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--text-soft);
+}
+.intro :deep(.row__sub) {
+  white-space: normal;
+}
+.intro__action {
+  border-block: 1px solid var(--separator);
+}
+.browser {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-inline-start: 1px solid var(--separator);
+}
+.library-head {
+  flex: none;
+  padding: calc(var(--titlebar-h) + var(--gap-section)) var(--gap-section) var(--gap-loose);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-loose);
+  border-bottom: 1px solid var(--separator);
+}
+.library-heading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gap);
+}
+.library-heading h2 {
+  margin: 0;
+}
+.library-count {
+  margin-inline-start: auto;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-soft);
+}
+.finder {
+  display: flex;
+  align-items: center;
+  border-radius: var(--control-radius);
+  background: var(--surface-well);
+  border: 1px solid var(--separator);
+}
+.finder:focus-within {
+  border-color: var(--color-primary-text);
+}
+.finder__icon {
+  margin-inline-start: var(--gap);
+  color: var(--text-soft);
+}
 .finder__input {
   flex: 1;
   min-width: 0;
-  height: max(var(--hit-min), 2.5em);
-  padding-inline: 0.6em;
+  height: max(var(--hit-min), var(--field-h));
+  padding-inline: var(--gap);
   border: 0;
   background: transparent;
   color: var(--color-base-content);
-  font-size: 0.95em;
+  font-size: 0.8125rem;
 }
-
-/* The wrapper owns the focus ring; the input drawing its own gives two. */
-.finder__input:focus,
 .finder__input:focus-visible {
   outline: none;
 }
-
 .finder__input::placeholder {
   color: var(--text-soft);
 }
-
 .finder__clear {
   display: grid;
   place-items: center;
-  width: max(var(--hit-min), 1.8em);
-  height: max(var(--hit-min), 1.8em);
-  margin-inline-end: 0.35em;
-  border-radius: 999px;
+  width: var(--hit-min);
+  height: var(--hit-min);
+  border-radius: var(--control-radius);
   color: var(--text-soft);
-  transition: background-color var(--t-press) var(--ease-out);
 }
-
-.finder__clear .icon {
-  width: 0.7em;
-  height: 0.7em;
-}
-
 .parsed {
   display: flex;
   align-items: center;
-  gap: 0.5em;
-  padding: 0.5em 0.75em;
-  border-radius: 0.75em;
-  border: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
-  background: color-mix(in oklab, var(--color-primary) 10%, transparent);
+  gap: var(--gap);
+  padding: var(--gap);
+  min-height: var(--hit-min);
+  border-radius: var(--control-radius);
+  border: 1px solid var(--separator);
+  background: var(--fill-2);
   text-align: start;
-  transition: background-color var(--t-hover) var(--ease-out);
+  font-size: 0.75rem;
 }
-
-.parsed__label {
-  font-size: 0.6em;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-primary-text, var(--color-primary));
+.parsed__label,
+.parsed__go {
+  color: var(--color-primary-text);
 }
-
 .parsed__name {
   font-family: var(--font-mono);
-  font-size: 0.75em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 .parsed__engine {
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: color-mix(in oklab, var(--color-primary) 22%, transparent);
-  font-size: 0.6em;
+  color: var(--text-soft);
 }
-
 .parsed__go {
   margin-inline-start: auto;
-  font-size: 0.7em;
-  color: var(--color-primary-text, var(--color-primary));
   white-space: nowrap;
 }
-
-/* --- right: what there is to open --------------------------------------- */
-
-/*
- * The second tone, and the whole reason the split reads as two places rather
- * than one page with a rule down it. The left pane is the window's own surface;
- * this one is a step back from it, so the list on it needs no card of its own to
- * be a list — a border and the hairlines between the rows are enough.
- */
-.browser {
-  display: flex;
-  min-width: 0;
-  border-inline-start: 1px solid var(--separator);
-}
-
 .browser__scroll {
   flex: 1;
-  min-width: 0;
   min-height: 0;
   overflow-y: auto;
-  padding: calc(var(--titlebar-h) + var(--gap)) var(--gap-section) var(--gap-section);
+  padding: var(--gap-loose) var(--gap-section);
+  overflow-anchor: none;
 }
-
-.fold + .fold {
-  margin-top: 0.9em;
-}
-
-/* One object per group, with the rows ruled inside it. */
 .group__list {
-  border-radius: 0.9em;
   border: 1px solid var(--separator);
+  border-radius: var(--radius-field);
   overflow: hidden;
 }
-
-/* The one thing to start on this side, as a filled row rather than an outlined
-   one: it is an action, and the groups opposite are a list. */
-.intro__action {
-  border-radius: 0.9em;
-  background: var(--fill-3);
-  overflow: hidden;
-}
-
-.group__list > :deep(* + *),
-.intro__action > :deep(* + *) {
+.group__row + .group__row {
   border-top: 1px solid var(--separator);
 }
-
-.group__row {
-  animation: lift-in var(--t-sheet) var(--ease-out) backwards;
-  animation-delay: min(calc(var(--index) * 35ms), 280ms);
+.flag {
+  color: var(--text-soft);
+  font-size: 0.625rem;
+  white-space: nowrap;
 }
-
-/*
- * A row's own actions.
- *
- * Sized well above the pointer floor rather than at it: they appear on hover
- * over a row whose whole width is also a target, so the two have to be told
- * apart by eye at a glance, and a 28px square carrying a 10px glyph reads as a
- * speck rather than a button.
- */
 .rowaction {
   display: grid;
   place-items: center;
-  width: max(var(--hit-min), 2.4em);
-  height: max(var(--hit-min), 2.4em);
-  border-radius: 0.55em;
+  width: var(--hit-min);
+  height: var(--hit-min);
+  border-radius: var(--control-radius);
   color: var(--text-soft);
-  transition:
-    background-color var(--t-press) var(--ease-out),
-    color var(--t-press) var(--ease-out);
 }
-
-.rowaction .icon {
-  width: 1.15em;
-  height: 1.15em;
-}
-
-.flag {
-  flex: 0 0 auto;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: color-mix(in oklab, var(--color-warning) 26%, transparent);
-  font-size: 0.65em;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 .blank {
-  padding: 1.5em 0;
+  padding-block: var(--gap-section);
   text-align: center;
-  font-size: 0.85em;
+  font-size: 0.8125rem;
   color: var(--text-soft);
 }
-
 .keyring {
-  text-align: center;
-  font-size: 0.8em;
-  color: color-mix(in oklab, var(--color-warning) 90%, var(--color-base-content));
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-warning);
 }
-
-/* Enter and exit along the same path, so the two read as one movement. */
+.library-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  padding: var(--gap) var(--gap-section);
+  border-top: 1px solid var(--separator);
+  color: var(--text-soft);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+.library-pages {
+  display: flex;
+  gap: var(--gap);
+}
+.history-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.history-list li + li {
+  border-top: 1px solid var(--separator);
+}
+.history-entry {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  width: 100%;
+  min-height: calc(var(--hit-min) + var(--gap-loose));
+  padding: var(--gap);
+  text-align: start;
+  border-radius: var(--radius-field);
+}
+.history-entry__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-tight);
+  min-width: 0;
+  flex: 1;
+}
+.history-entry__sql {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-entry__meta {
+  font-size: 0.6875rem;
+  color: var(--text-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-statement {
+  max-height: 24rem;
+  overflow: auto;
+  border-radius: var(--radius-field);
+  background: var(--surface-well);
+}
+.remove-copy {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+.manager--embedded {
+  height: auto;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gap-loose);
+}
+.library-toolbar {
+  display: flex;
+  gap: var(--gap);
+  align-items: center;
+}
+.library-toolbar input {
+  flex: 1;
+  min-width: 0;
+  height: var(--field-h);
+  border-radius: var(--radius-field);
+  background: var(--surface-well);
+  padding-inline: var(--gap);
+}
+.manager--embedded .browser {
+  border: 0;
+}
+.manager--embedded .browser__scroll {
+  padding: 0;
+  max-height: 26rem;
+}
+.manager--embedded .library-head {
+  padding: 0 0 var(--gap);
+}
+.manager--embedded .library-heading {
+  display: none;
+}
+.manager--embedded .library-foot {
+  padding-inline: 0;
+}
 .rise-enter-active,
 .rise-leave-active {
   transition:
     opacity var(--t-pop) var(--ease-out),
     transform var(--t-pop) var(--ease-out);
 }
-
 .rise-enter-from,
 .rise-leave-to {
   opacity: 0;
-  transform: translateY(-6px);
+  transform: translateY(0.25rem);
 }
-
 @media (hover: hover) and (pointer: fine) {
-  .finder__clear:hover {
+  .rowaction:hover,
+  .finder__clear:hover,
+  .history-entry:hover {
     background: var(--fill-2);
     color: var(--color-base-content);
   }
-
-  .parsed:hover {
-    background: color-mix(in oklab, var(--color-primary) 16%, transparent);
-  }
-
-  .rowaction:hover {
-    background: var(--fill-1);
-    color: var(--color-base-content);
-  }
-
   .rowaction--danger:hover {
-    background: var(--color-error);
-    color: var(--color-error-content);
+    color: var(--color-error);
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .identity,
-  .finder,
-  .intro__action,
-  .keyring,
-  .fold,
-  .group__row {
-    animation: none;
+@media (max-width: 700px) {
+  .manager:not(.manager--embedded) {
+    grid-template-columns: 12rem minmax(0, 1fr);
   }
-
+  .intro {
+    padding-inline: var(--gap-loose);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
   .rise-enter-from,
   .rise-leave-to {
     transform: none;

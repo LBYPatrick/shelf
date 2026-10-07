@@ -17,7 +17,7 @@ const meta = {
   render: (args) => ({
     components: { ConnectionForm },
     setup: () => ({ args }),
-    template: `<div style="width:34rem; padding:1rem;"><ConnectionForm v-bind="args" /></div>`,
+    template: `<div style="width:48rem; max-width:100%; padding:1rem;"><ConnectionForm v-bind="args" /></div>`,
   }),
 } satisfies Meta<typeof ConnectionForm>;
 

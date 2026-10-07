@@ -34,6 +34,7 @@ import AppIcon from '../ui/AppIcon.vue';
 import PressButton from '../ui/PressButton.vue';
 import { errorMessage } from '@shared/errors';
 import { slugify } from '@shared/fileNames';
+import { vTip } from '../../lib/hoverTip';
 
 const props = defineProps<{ entity: EntityRef; active: boolean }>();
 
@@ -166,7 +167,7 @@ async function loadMetadata(): Promise<void> {
 /** Sorting or filtering would throw away pending edits, so ask first. */
 async function guardPending(action: () => void): Promise<void> {
   if (pendingCount.value > 0) {
-    const message = `Discard ${pendingCount.value} unsaved change${pendingCount.value === 1 ? '' : 's'}?`;
+    const message = t('table.discardChanges', { count: pendingCount.value });
     if (!globalThis.confirm(message)) return;
     pending.value = { inserts: [], updates: [], deletes: [] };
   }
@@ -453,9 +454,9 @@ watch(
       <button
         type="button"
         class="toolbar__action toolbar__action--icon focus-fill"
-        :title="$t('action.refresh')"
+        v-tip="$t('action.refresh')"
         :aria-label="$t('action.refresh')"
-        @click="load()"
+        @click="guardPending(() => undefined)"
       >
         <AppIcon name="refresh" :size="12" />
       </button>

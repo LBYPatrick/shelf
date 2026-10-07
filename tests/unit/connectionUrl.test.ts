@@ -70,3 +70,8 @@ describe('connection urls', () => {
     expect(looksLikeUrl('album')).toBe(false);
   });
 });
+
+it('rejects malformed percent escapes without throwing', () => {
+  expect(parseConnectionUrl('postgres://name:%ZZ@localhost/database')).toBeUndefined();
+  expect(parseConnectionUrl('sqlite:///tmp/%ZZ.db')).toBeUndefined();
+});

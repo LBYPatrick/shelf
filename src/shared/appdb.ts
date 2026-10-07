@@ -1,3 +1,6 @@
+/** Maximum retained statements; library retrieval and trimming share this limit. */
+export const HISTORY_LIMIT = 2000;
+
 import type { AiProvider, AiProviderInput } from './ai';
 import type { ConnectionConfig } from '../drivers/types';
 import type { ConnectionFolder, SaveConnectionInput, SavedConnection } from './connections';
@@ -130,7 +133,7 @@ export interface AppDbApi {
   revealSecrets(connectionId: string): Promise<Readonly<Record<string, string>>>;
 
   recordHistory(entry: HistoryInput): Promise<void>;
-  listHistory(connectionId: string | null): Promise<HistoryEntry[]>;
+  listHistory(connectionId: string | null, limit?: number): Promise<HistoryEntry[]>;
   clearHistory(connectionId: string | null): Promise<void>;
   listSavedQueries(connectionId: string | null): Promise<SavedQuery[]>;
   saveQuery(input: SaveQueryInput): Promise<SavedQuery>;

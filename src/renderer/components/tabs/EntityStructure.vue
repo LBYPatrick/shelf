@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vTip } from '../../lib/hoverTip';
 /**
  * A table's structure: its columns, indexes, relations, triggers and partitions.
  *
@@ -517,7 +518,7 @@ watch(() => props.entity, load);
                   $t('structure.generated')
                 }}</span>
               </span>
-              <span v-if="column.comment" class="rows__note" :title="column.comment">{{
+              <span v-if="column.comment" class="rows__note" v-tip="column.comment">{{
                 column.comment
               }}</span>
             </td>
@@ -539,7 +540,7 @@ watch(() => props.entity, load);
                 type="button"
                 class="rows__drop"
                 :aria-label="$t('structure.dropColumn', { name: column.name })"
-                :title="$t('structure.dropColumn', { name: column.name })"
+                v-tip="$t('structure.dropColumn', { name: column.name })"
                 @click="propose({ kind: 'drop-column', entity: entity, name: column.name })"
               >
                 <AppIcon name="close" :size="11" />
@@ -599,7 +600,7 @@ watch(() => props.entity, load);
                 type="button"
                 class="rows__drop"
                 :aria-label="$t('structure.dropIndex', { name: index.name })"
-                :title="$t('structure.dropIndex', { name: index.name })"
+                v-tip="$t('structure.dropIndex', { name: index.name })"
                 @click="propose({ kind: 'drop-index', entity: entity, name: index.name })"
               >
                 <AppIcon name="close" :size="11" />
