@@ -199,7 +199,9 @@ function run(
   bridge: ToolBridge | undefined
 ): Promise<AiReply> {
   return new Promise<AiReply>((resolve, reject) => {
-    const toolNames = bridge ? request.tools.map((tool) => `${BRIDGE_NAME}__${tool.name}`) : [];
+    const toolNames = bridge
+      ? [...request.tools.map((tool) => `${BRIDGE_NAME}__${tool.name}`), ...bridge.toolNames]
+      : [];
     const toolCalls = new Map<string, Record<string, unknown>>();
     const child = spawn(executable(), ['agent', 'stdio'], {
       cwd: tmpdir(),

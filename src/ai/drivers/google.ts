@@ -19,18 +19,22 @@ import {
  *
  *   - The assistant's role is `model`, and the system prompt is a field of its
  *     own rather than a first message.
- *   - A function call carries **no id**. There is nothing to echo back, so a
- *     result is matched to its call by *name*, and the ids this adapter reports
- *     upward are positions it made up so the layer above can keep its shape.
+ *   - Function calls may omit an id. Those results are matched by name; when
+ *     the provider supplies an id it must be echoed back too.
  *   - Reasoning arrives as ordinary text parts flagged `thought`, in the same
  *     list as the answer. Reading the flag is the whole difference between a
- *     chat that shows working and one that pastes it into the reply.
+ *     chat that shows working and one that pastes it into the reply. Original
+ *     parts, including thought signatures, are replayed after tool execution.
  */
 
 interface Part {
   readonly text?: string;
   readonly thought?: boolean;
-  readonly functionCall?: { readonly name: string; readonly args?: Record<string, unknown> };
+  readonly functionCall?: {
+    readonly id?: string;
+    readonly name: string;
+    readonly args?: Record<string, unknown>;
+  };
 }
 
 interface Frame {
@@ -48,6 +52,7 @@ function toContents(request: AiRequest): unknown[] {
   const contents: unknown[] = [];
   /** Which call each synthesised id belonged to, so a result can name it. */
   const nameOf = new Map<string, string>();
+  const providerIds = new Set<string>();
 
   for (const message of request.messages) {
     if (message.role === 'user') {
@@ -64,6 +69,14 @@ function toContents(request: AiRequest): unknown[] {
     }
 
     if (message.role === 'assistant') {
+      if (message.raw !== undefined) {
+        for (const call of message.calls) nameOf.set(call.id, call.name);
+        for (const part of message.raw as readonly Part[]) {
+          if (part.functionCall?.id) providerIds.add(part.functionCall.id);
+        }
+        contents.push({ role: 'model', parts: message.raw });
+        continue;
+      }
       const parts: unknown[] = [];
       if (message.text) parts.push({ text: message.text });
       for (const call of message.calls) {
@@ -79,6 +92,7 @@ function toContents(request: AiRequest): unknown[] {
       parts: message.results.map((result) => ({
         functionResponse: {
           name: nameOf.get(result.id) ?? result.name,
+          ...(providerIds.has(result.id) ? { id: result.id } : {}),
           /*
            * The response must be an object, and the tools here answer with
            * JSON text. Wrapping it in one field rather than parsing it keeps
@@ -138,6 +152,9 @@ function createAdapter(instance: AiProvider, apiKey: string | undefined): AiAdap
       let text = '';
       let finish = '';
       const calls: AiToolCall[] = [];
+      // Preserve part boundaries and opaque thought signatures verbatim. A
+      // reconstructed functionCall loses the signature required on continuation.
+      const parts: Part[] = [];
       let usage: AiReply['usage'];
 
       for await (const data of sseData(response, signal)) {
@@ -160,9 +177,10 @@ function createAdapter(instance: AiProvider, apiKey: string | undefined): AiAdap
         if (candidate.finishReason) finish = candidate.finishReason;
 
         for (const part of candidate.content?.parts ?? []) {
+          parts.push(part);
           if (part.functionCall) {
             calls.push({
-              id: `call_${calls.length}`,
+              id: part.functionCall.id ?? `call_${calls.length}`,
               name: part.functionCall.name,
               input: part.functionCall.args ?? {},
             });
@@ -181,6 +199,7 @@ function createAdapter(instance: AiProvider, apiKey: string | undefined): AiAdap
       return {
         text,
         calls,
+        raw: parts,
         stop: calls.length > 0 ? 'tools' : finish === 'MAX_TOKENS' ? 'length' : 'end',
         ...(usage ? { usage } : {}),
       };

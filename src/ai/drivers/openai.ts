@@ -85,6 +85,7 @@ function toMessages(request: AiRequest): unknown[] {
         // An assistant turn that only called tools has no content, and some
         // servers reject an empty string where they accept a null.
         content: message.text || null,
+        ...(message.raw as Record<string, unknown> | undefined),
         ...(message.calls.length > 0
           ? {
               tool_calls: message.calls.map((call) => ({
@@ -201,6 +202,7 @@ function createAdapter(
       if (!response.ok) throw await describeFailure(response);
 
       let text = '';
+      const reasoningState: Record<string, string> = {};
       let finish = '';
       const partial = new Map<number, PartialCall>();
       let usage: AiReply['usage'];
@@ -234,6 +236,13 @@ function createAdapter(
 
         const reasoning = delta.reasoning_content ?? delta.reasoning;
         if (reasoning) sink.thinking(reasoning);
+        // Thinking providers require their working back with tool results.
+        // Keep the original field name; the two dialects are not aliases on input.
+        for (const key of ['reasoning_content', 'reasoning'] as const) {
+          if (delta[key] !== undefined && delta[key] !== null) {
+            reasoningState[key] = (reasoningState[key] ?? '') + delta[key];
+          }
+        }
 
         /*
          * Tool calls arrive a few characters of JSON at a time, keyed by
@@ -264,6 +273,7 @@ function createAdapter(
       return {
         text,
         calls,
+        ...(Object.keys(reasoningState).length > 0 ? { raw: reasoningState } : {}),
         stop:
           calls.length > 0 || finish === 'tool_calls'
             ? 'tools'

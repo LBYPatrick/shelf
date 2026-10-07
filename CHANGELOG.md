@@ -6,6 +6,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Preserve Google tool-call signatures and OpenAI reasoning when the assistant
+  takes another turn after inspecting or querying a database.
+- Accept the read-only Shelf tool names used by both Grok ACP naming formats.
+
 ## [1.4.2] - 2026-09-09
 
 ### Fixed
@@ -21,7 +27,6 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Double-clicking a tab renames it again.** Pointer capture starts only after
   a drag begins, so it no longer swallows double-clicks. Dragging still reorders
   tabs, Enter saves a rename, and Escape cancels it.
-
 
 - **Stored-data popups no longer clip their last row.** The height correction
   now accounts for padding correctly after the sheet finishes opening.

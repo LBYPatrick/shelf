@@ -59,7 +59,7 @@ export async function startToolBridge(
     description: tool.description,
     inputSchema: tool.schema,
     // The executor enforces this; clients use the hint for approval decisions.
-    annotations: { readOnlyHint: true, destructiveHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   }));
 
   const handle = async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
