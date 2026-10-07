@@ -375,27 +375,29 @@ const languageOptions = computed(() => [
   <Sheet v-model="open" :title="$t('settings.title')" icon="settings" broad flush>
     <div class="settings-layout">
       <nav class="settings-nav" :aria-label="$t('settings.title')">
-        <p class="settings-nav__caption">{{ $t('settings.personalize') }}</p>
-        <button
-          v-for="item in categories"
-          :key="item.id"
-          :data-settings-category="item.id"
-          class="settings-nav__item focus-fill"
-          :class="{
-            'settings-nav__item--active': category === item.id,
-            'settings-nav__item--document': item.id === 'json',
-          }"
-          :aria-current="category === item.id ? 'page' : undefined"
-          @click="selectCategory(item.id, $event)"
-        >
-          <AppIcon :name="item.icon" :size="16" />
-          <span>{{ item.label }}</span>
-        </button>
-        <p class="settings-nav__note">
-          {{
-            category === 'json' ? $t('settings.documentChanges') : $t('settings.liveChanges')
-          }}
-        </p>
+        <div class="settings-nav__inner">
+          <p class="settings-nav__caption">{{ $t('settings.personalize') }}</p>
+          <button
+            v-for="item in categories"
+            :key="item.id"
+            :data-settings-category="item.id"
+            class="settings-nav__item focus-fill"
+            :class="{
+              'settings-nav__item--active': category === item.id,
+              'settings-nav__item--document': item.id === 'json',
+            }"
+            :aria-current="category === item.id ? 'page' : undefined"
+            @click="selectCategory(item.id, $event)"
+          >
+            <AppIcon :name="item.icon" :size="16" />
+            <span>{{ item.label }}</span>
+          </button>
+          <p class="settings-nav__note">
+            {{
+              category === 'json' ? $t('settings.documentChanges') : $t('settings.liveChanges')
+            }}
+          </p>
+        </div>
       </nav>
       <div ref="content" class="settings-content">
         <div v-show="view === 'visual'" class="panels">
@@ -1044,12 +1046,19 @@ const languageOptions = computed(() => [
   border-top: 1px solid var(--separator);
 }
 .settings-nav {
+  min-width: 0;
+  border-inline-end: 1px solid var(--separator);
+  background: var(--fill-4);
+}
+.settings-nav__inner {
+  position: sticky;
+  top: 0;
   display: flex;
   flex-direction: column;
   gap: var(--gap-tight);
+  max-height: calc(80vh - 4rem);
+  overflow-y: auto;
   padding: var(--gap-loose);
-  border-inline-end: 1px solid var(--separator);
-  background: var(--fill-4);
 }
 .settings-nav__caption {
   padding: var(--gap-tight) var(--gap);
@@ -1362,11 +1371,22 @@ label.row__label {
     grid-template-columns: minmax(0, 1fr);
   }
   .settings-nav {
-    flex-direction: row;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: linear-gradient(var(--fill-4), var(--fill-4)), var(--color-base-100);
     overflow-x: auto;
     border-inline-end: 0;
     border-bottom: 1px solid var(--separator);
     padding: var(--gap);
+  }
+  .settings-nav__inner {
+    position: static;
+    flex-direction: row;
+    width: max-content;
+    max-height: none;
+    overflow: visible;
+    padding: 0;
   }
   .settings-nav__item {
     flex: 0 0 auto;
