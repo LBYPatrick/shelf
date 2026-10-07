@@ -2,6 +2,7 @@ import { createServer, connect as tcpConnect, type Server, type Socket } from 'n
 import { readFile } from 'node:fs/promises';
 import { Client as SshClient } from 'ssh2';
 import type { ConnectionConfig } from '@drivers/types';
+import { expandHome, resolveSshEndpoint } from './sshConfig';
 
 /**
  * Reaching a database that is not directly reachable.
@@ -33,6 +34,7 @@ export interface Tunnel {
 
 /** Sockets are opened per database connection, and none should hang forever. */
 const CONNECT_TIMEOUT_MS = 20_000;
+const sockets = new WeakMap<Server, Set<Socket>>();
 
 /**
  * A local listener that forwards every connection somewhere else.
@@ -51,12 +53,19 @@ function listen(
   ) => void
 ): Promise<{ server: Server; port: number }> {
   return new Promise((resolve, reject) => {
+    const active = new Set<Socket>();
     const server = createServer((socket) => {
+      active.add(socket);
+      socket.once('close', () => active.delete(socket));
       socket.on('error', () => socket.destroy());
 
       forward(
         target,
         (stream) => {
+          if (socket.destroyed) {
+            (stream as unknown as Socket).destroy?.();
+            return;
+          }
           /*
            * Piped both ways and destroyed together. A half-closed pair leaks a
            * file descriptor per connection, which on a pool that reconnects is
@@ -70,6 +79,7 @@ function listen(
         () => socket.destroy()
       );
     });
+    sockets.set(server, active);
 
     server.on('error', reject);
     // Loopback only. A forwarder bound to every interface is an open relay into
@@ -86,6 +96,7 @@ function listen(
 }
 
 function closeServer(server: Server): Promise<void> {
+  for (const socket of sockets.get(server) ?? []) socket.destroy();
   return new Promise((resolve) => server.close(() => resolve()));
 }
 
@@ -95,23 +106,25 @@ async function openSsh(config: ConnectionConfig): Promise<Tunnel> {
   const ssh = config.ssh;
   if (!ssh) throw new Error('No SSH configuration.');
 
+  const endpoint = await resolveSshEndpoint(ssh);
+  const privateKey =
+    ssh.mode === 'keyfile' && ssh.keyfile ? await readFile(expandHome(ssh.keyfile)) : undefined;
+
   const client = new SshClient();
 
-  await new Promise<void>((resolve, reject) => {
-    client.on('ready', resolve);
-    client.on('error', (error: Error) => reject(new Error(`SSH tunnel: ${error.message}`)));
+  try {
+    await new Promise<void>((resolve, reject) => {
+      client.on('ready', resolve);
+      client.on('error', (error: Error) => reject(new Error(`SSH tunnel: ${error.message}`)));
 
-    void (async () => {
       try {
         client.connect({
-          host: ssh.host,
-          port: ssh.port || 22,
-          username: ssh.username,
+          ...endpoint,
           readyTimeout: CONNECT_TIMEOUT_MS,
           ...(ssh.keepaliveInterval ? { keepaliveInterval: ssh.keepaliveInterval } : {}),
-          ...(ssh.mode === 'keyfile' && ssh.keyfile
+          ...(privateKey
             ? {
-                privateKey: await readFile(ssh.keyfile),
+                privateKey,
                 ...(ssh.passphrase ? { passphrase: ssh.passphrase } : {}),
               }
             : {}),
@@ -123,8 +136,11 @@ async function openSsh(config: ConnectionConfig): Promise<Tunnel> {
       } catch (error) {
         reject(error instanceof Error ? error : new Error(String(error)));
       }
-    })();
-  });
+    });
+  } catch (error) {
+    client.destroy();
+    throw error;
+  }
 
   const { server, port } = await listen(destinationOf(config), (target, onReady, onError) => {
     client.forwardOut('127.0.0.1', 0, target.host, target.port, (error, stream) => {
@@ -132,6 +148,7 @@ async function openSsh(config: ConnectionConfig): Promise<Tunnel> {
       else onReady(stream);
     });
   });
+  client.once('close', () => void closeServer(server));
 
   return {
     host: '127.0.0.1',

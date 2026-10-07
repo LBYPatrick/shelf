@@ -35,11 +35,11 @@ is high enough for real work, and nothing is withheld.
 
 Download the latest build from [Releases](../../releases/latest).
 
-| Platform | File | Notes |
-| --- | --- | --- |
-| macOS (Apple Silicon) | `.dmg` or `.zip` | Unsigned — see [Troubleshooting](#troubleshooting) |
-| Windows | `Shelf Setup *.exe`, or the portable `.exe` | x64 |
-| Linux | `.deb`, `.rpm` or `.AppImage` | x64; the packages install a desktop entry, the AppImage runs as it is |
+| Platform              | File                                        | Notes                                                                 |
+| --------------------- | ------------------------------------------- | --------------------------------------------------------------------- |
+| macOS (Apple Silicon) | `.dmg` or `.zip`                            | Unsigned — see [Troubleshooting](#troubleshooting)                    |
+| Windows               | `Shelf Setup *.exe`, or the portable `.exe` | x64                                                                   |
+| Linux                 | `.deb`, `.rpm` or `.AppImage`               | x64; the packages install a desktop entry, the AppImage runs as it is |
 
 Nothing asks for an account.
 
@@ -54,10 +54,10 @@ in the command palette — asks on demand.
 When there is a new version, a panel says which one it is and what changed. What
 the button then does depends on how this copy was installed:
 
-| Install | What happens |
-| --- | --- |
-| macOS, the Windows installer, the Linux AppImage | Shelf downloads the update, installs it and restarts into it |
-| `.deb`, `.rpm`, the Windows portable build, a build from source | Shelf opens the release page; the update is yours to apply |
+| Install                                                         | What happens                                                 |
+| --------------------------------------------------------------- | ------------------------------------------------------------ |
+| macOS, the Windows installer, the Linux AppImage                | Shelf downloads the update, installs it and restarts into it |
+| `.deb`, `.rpm`, the Windows portable build, a build from source | Shelf opens the release page; the update is yours to apply   |
 
 A `.deb` or `.rpm` belongs to the package manager that installed it, so Shelf
 does not write over its own files behind `apt`'s back.
@@ -66,6 +66,10 @@ Opening the app gives you a start screen, not an empty workspace: paste a
 connection URL and it fills in the form, or open the **sample database** — a
 synthetic database with schemas, views, foreign keys, JSON, binary, big integers
 and nulls. Everything works against it, and nothing is installed or saved.
+
+For a database behind a bastion, enable SSH under **Security & routing** in the
+connection editor. SSH host aliases use your local OpenSSH configuration;
+explicit port and username fields take precedence, and key paths accept `~/`.
 
 ---
 
@@ -76,17 +80,17 @@ of showing controls that do nothing — DynamoDB has no column sort because it h
 no column sort, and Redis has no transactions because it has none. **No
 capability is ever tied to a licence, because there is no licence.**
 
-| Engine | Query language | Notes |
-| --- | --- | --- |
-| PostgreSQL | SQL | Pooled, cursor streaming, server-side cancel, SSL, SSH tunnel |
-| MySQL | SQL | Pooled, `KILL QUERY` cancel, timezone-safe dates, big-number-safe |
-| TiDB | SQL | MySQL wire protocol, same driver |
-| SQLite | SQL | File or in-memory, WAL |
-| DuckDB | SQL | File or in-memory, cheap counts |
-| MongoDB | `db.coll.find(…)` | Collections as entities, schema inferred by sampling |
-| Redis | Redis commands | Keyspace browser with type, TTL, size and encoding |
-| ScyllaDB | CQL | Keyspaces, token paging, batched writes |
-| DynamoDB | PartiQL | Regions, key-aware editing, exclusive-start-key paging |
+| Engine     | Query language    | Notes                                                             |
+| ---------- | ----------------- | ----------------------------------------------------------------- |
+| PostgreSQL | SQL               | Pooled, cursor streaming, server-side cancel, SSL, SSH tunnel     |
+| MySQL      | SQL               | Pooled, `KILL QUERY` cancel, timezone-safe dates, big-number-safe |
+| TiDB       | SQL               | MySQL wire protocol, same driver                                  |
+| SQLite     | SQL               | File or in-memory, WAL                                            |
+| DuckDB     | SQL               | File or in-memory, cheap counts                                   |
+| MongoDB    | `db.coll.find(…)` | Collections as entities, schema inferred by sampling              |
+| Redis      | Redis commands    | Keyspace browser with type, TTL, size and encoding                |
+| ScyllaDB   | CQL               | Keyspaces, token paging, batched writes                           |
+| DynamoDB   | PartiQL           | Regions, key-aware editing, exclusive-start-key paging            |
 
 ---
 
@@ -102,7 +106,7 @@ capability is ever tied to a licence, because there is no licence.**
   the builder is a subset of what SQL can say, so both are offered.
 - **Write** — inline editing that accumulates in a pending-changes ledger,
   previews as SQL, and applies in one transaction. A locked cell always says
-  *why* it is locked.
+  _why_ it is locked.
 - **Query** — a Monaco editor that completes your own tables and columns as well
   as the words the engine itself understands, the statement under the cursor
   highlighted, run-all or run-current, cancellation that reaches the server,
@@ -213,21 +217,21 @@ system locale or set explicitly. `prefers-reduced-motion`,
 
 ## Keyboard
 
-| Chord | Action |
-| --- | --- |
-| `⌘K` / `⌘P` | Command palette |
-| `⌘↩` | Run |
-| `⇧⌘↩` | Run current statement |
-| `⌘T` | New query tab |
-| `⇧⌘A` | New assistant chat |
-| `⌘W` | Close tab |
-| `⇧⌘T` | Reopen last closed tab |
-| `⌃⇥` / `⌃⇧⇥` | Next / previous tab |
-| `⌘B` | Toggle sidebar |
-| `⌘F` | Focus filter |
-| `⌘S` | Save — a query, or a table's pending changes |
-| `⌘,` | Settings |
-| `F5` | Refresh schema |
+| Chord        | Action                                       |
+| ------------ | -------------------------------------------- |
+| `⌘K` / `⌘P`  | Command palette                              |
+| `⌘↩`         | Run                                          |
+| `⇧⌘↩`        | Run current statement                        |
+| `⌘T`         | New query tab                                |
+| `⇧⌘A`        | New assistant chat                           |
+| `⌘W`         | Close tab                                    |
+| `⇧⌘T`        | Reopen last closed tab                       |
+| `⌃⇥` / `⌃⇧⇥` | Next / previous tab                          |
+| `⌘B`         | Toggle sidebar                               |
+| `⌘F`         | Focus filter                                 |
+| `⌘S`         | Save — a query, or a table's pending changes |
+| `⌘,`         | Settings                                     |
+| `F5`         | Refresh schema                               |
 
 Use `Ctrl` for `⌘` off macOS. Every one of these can be rebound in Settings.
 
