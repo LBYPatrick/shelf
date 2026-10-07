@@ -34,14 +34,23 @@ test('keyboard context menus are immediate while pointer menus remain anchored',
   await expect(menu).toHaveCount(0);
   await tab.click({ button: 'right' });
   await expect(menu).toBeVisible();
+  await expect
+    .poll(
+      () =>
+        menu.evaluate(
+          (element) =>
+            element.classList.contains('menu-enter-active') &&
+            element.getAnimations().some((animation) => animation.playState === 'running')
+        ),
+      { intervals: [16], timeout: 500 }
+    )
+    .toBe(true);
   const pointerMotion = await menu.evaluate((element) => ({
     entering: element.classList.contains('menu-enter-active'),
-    activeTransitions: element
-      .getAnimations()
-      .some((animation) => animation.playState === 'running'),
+
     origin: getComputedStyle(element).transformOrigin,
   }));
   expect(pointerMotion.entering).toBe(true);
-  expect(pointerMotion.activeTransitions).toBe(true);
+
   expect(pointerMotion.origin).toMatch(/px/);
 });
