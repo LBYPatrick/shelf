@@ -24,6 +24,8 @@ export interface DialogApi {
   /** Returns the chosen path, or undefined if the user cancelled. */
   openFile(options: {
     title?: string;
+    defaultPath?: string;
+    showHiddenFiles?: boolean;
     extensions?: readonly string[];
     allowCreate?: boolean;
   }): Promise<string | undefined>;

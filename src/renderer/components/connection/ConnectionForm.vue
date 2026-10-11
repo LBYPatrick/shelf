@@ -512,6 +512,15 @@ async function pickFile(create = false): Promise<void> {
   if (path) draft.filePath = path;
 }
 
+async function pickSshKey(): Promise<void> {
+  const path = await window.shelf.dialogs.openFile({
+    title: t('connection.chooseSshKey'),
+    ...(draft.sshKeyfile ? { defaultPath: draft.sshKeyfile } : {}),
+    showHiddenFiles: true,
+  });
+  if (path) draft.sshKeyfile = path;
+}
+
 function chooseEngine(engine: EngineId | null): void {
   detailPage.value = 'details';
   draft.engine = engine;
@@ -800,8 +809,15 @@ function reenterCredentials(): void {
                 v-if="draft.sshMode === 'keyfile'"
                 v-slot="{ id }"
                 :label="$t('connection.sshKeyfile')"
+                class="span-2"
               >
-                <TextInput :id="id" v-model="draft.sshKeyfile" monospace />
+                <div class="key-picker">
+                  <TextInput :id="id" v-model="draft.sshKeyfile" monospace />
+                  <PressButton variant="glass" @click="pickSshKey">
+                    <AppIcon name="folder" :size="14" />
+                    {{ $t('connection.chooseSshKey') }}
+                  </PressButton>
+                </div>
               </FormField>
               <FormField
                 v-if="draft.sshMode === 'password'"
@@ -928,6 +944,15 @@ function reenterCredentials(): void {
 .file-actions {
   display: flex;
   gap: var(--gap);
+}
+.key-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+}
+.key-picker :deep(.textfield) {
+  flex: 1 1 12rem;
+  min-width: 0;
 }
 .security-summary {
   margin-inline-start: auto;

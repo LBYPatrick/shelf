@@ -123,6 +123,7 @@
     "sshPort": "SSH 端口",
     "sshUser": "SSH 用户",
     "sshKeyfile": "密钥文件",
+    "chooseSshKey": "选择密钥文件…",
     "sshPassword": "SSH 密码",
     "readOnly": "只读",
     "readOnlyHelp": "在驱动层拒绝任何写入操作。",

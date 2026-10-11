@@ -4,6 +4,61 @@ import { join } from 'node:path';
 import { test, expect } from './fixtures';
 import { createConnection } from './helpers';
 
+test('chooses an SSH key through the native picker and preserves it on cancel', async ({
+  app,
+  page,
+}) => {
+  const oldPath = '/tmp/.ssh/previous_key';
+  const chosenPath = '/tmp/.ssh/key with spaces';
+  await app.evaluate(
+    ({ dialog }, paths) => {
+      let calls = 0;
+      dialog.showOpenDialog = (async (...args: unknown[]) => {
+        const options = args.at(-1) as {
+          properties: string[];
+          defaultPath: string;
+          title: string;
+          filters?: unknown;
+        };
+        if (
+          !options.properties.includes('openFile') ||
+          !options.properties.includes('showHiddenFiles') ||
+          options.defaultPath !== paths.oldPath ||
+          options.title !== 'Choose key file…' ||
+          options.filters
+        )
+          throw new Error('SSH key picker must allow hidden, extensionless keys.');
+        return calls++ === 0
+          ? { canceled: true, filePaths: [] }
+          : { canceled: false, filePaths: [paths.chosenPath] };
+      }) as typeof dialog.showOpenDialog;
+    },
+    { oldPath, chosenPath }
+  );
+  await page
+    .getByRole('button', { name: /New connection/ })
+    .first()
+    .click();
+  await page.getByRole('radio', { name: 'PostgreSQL', exact: true }).click();
+  await page.getByLabel('Name', { exact: true }).fill('SSH key picker');
+  await page.getByRole('radio', { name: 'Security & routing', exact: true }).click();
+  await page.getByText('Connect through an SSH tunnel', { exact: true }).click();
+  await page.getByLabel('SSH host', { exact: true }).fill('ssh.example.test');
+  await page.getByLabel('SSH user', { exact: true }).fill('patrick');
+  await page.getByRole('combobox', { name: 'Authentication', exact: true }).click();
+  await page.getByRole('option', { name: 'Key file', exact: true }).click();
+  await page.getByLabel('Key file', { exact: true }).fill(oldPath);
+  const choose = page.getByRole('button', { name: 'Choose key file…', exact: true });
+  await choose.click();
+  await expect(page.getByLabel('Key file', { exact: true })).toHaveValue(oldPath);
+  await choose.click();
+  await expect(page.getByLabel('Key file', { exact: true })).toHaveValue(chosenPath);
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  const saved = await page.evaluate(async () => (await window.shelf.db.listConnections())[0]);
+  expect(saved?.config.ssh?.keyfile).toBe(chosenPath);
+  expect(saved?.config.ssh?.mode).toBe('keyfile');
+});
+
 test('validates ports and exposes socket and URL methods', async ({ page }) => {
   await page
     .getByRole('button', { name: /New connection/ })

@@ -4,6 +4,8 @@ import { DIALOG_CHANNELS } from '@shared/window';
 
 interface OpenOptions {
   title?: string;
+  defaultPath?: string;
+  showHiddenFiles?: boolean;
   extensions?: readonly string[];
   /** Offer a path that does not exist yet, for creating a new database file. */
   allowCreate?: boolean;
@@ -15,7 +17,7 @@ interface SaveOptions {
   extensions?: readonly string[];
 }
 
-/** Native file pickers, for the engines that connect to a file. */
+/** Native file pickers for database files, SSH keys and document transfers. */
 export function registerDialogHandlers(): void {
   ipcMain.handle(DIALOG_CHANNELS.openFile, async (event, options: OpenOptions) => {
     const window = BrowserWindow.fromWebContents(event.sender);
@@ -26,16 +28,21 @@ export function registerDialogHandlers(): void {
         ]
       : undefined;
 
-    const properties: Array<'openFile' | 'createDirectory' | 'promptToCreate'> = ['openFile'];
+    const properties: Array<
+      'openFile' | 'createDirectory' | 'promptToCreate' | 'showHiddenFiles'
+    > = ['openFile'];
     if (options.allowCreate) properties.push('promptToCreate');
+    if (options.showHiddenFiles) properties.push('showHiddenFiles');
+    const settings = {
+      ...(options.title ? { title: options.title } : {}),
+      ...(options.defaultPath ? { defaultPath: options.defaultPath } : {}),
+      properties,
+      ...(filters ? { filters } : {}),
+    };
 
     const result = await (window
-      ? dialog.showOpenDialog(window, {
-          ...(options.title ? { title: options.title } : {}),
-          properties,
-          ...(filters ? { filters } : {}),
-        })
-      : dialog.showOpenDialog({ properties, ...(filters ? { filters } : {}) }));
+      ? dialog.showOpenDialog(window, settings)
+      : dialog.showOpenDialog(settings));
 
     return result.canceled ? undefined : result.filePaths[0];
   });

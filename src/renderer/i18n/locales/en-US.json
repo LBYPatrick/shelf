@@ -123,6 +123,7 @@
     "sshPort": "SSH port",
     "sshUser": "SSH user",
     "sshKeyfile": "Key file",
+    "chooseSshKey": "Choose key file…",
     "sshPassword": "SSH password",
     "readOnly": "Read-only",
     "readOnlyHelp": "Refuses anything that writes, at the driver.",

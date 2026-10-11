@@ -8,6 +8,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Add a native file picker for SSH private keys, including hidden and extensionless files.
 - Preserve completed assistant answers when a provider emits no text deltas.
 - Let assistants discover missing tables and columns across the connection before
   asking for schema details, and retain name-only tables beyond the initial

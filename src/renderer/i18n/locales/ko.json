@@ -123,6 +123,7 @@
     "sshPort": "SSH 포트",
     "sshUser": "SSH 사용자",
     "sshKeyfile": "키 파일",
+    "chooseSshKey": "키 파일 선택…",
     "sshPassword": "SSH 비밀번호",
     "readOnly": "읽기 전용",
     "readOnlyHelp": "쓰기 작업을 드라이버 단계에서 거부합니다.",

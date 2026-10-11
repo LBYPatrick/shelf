@@ -123,6 +123,7 @@
     "sshPort": "Cổng SSH",
     "sshUser": "Người dùng SSH",
     "sshKeyfile": "Tệp khoá",
+    "chooseSshKey": "Chọn tệp khóa…",
     "sshPassword": "Mật khẩu SSH",
     "readOnly": "Chỉ đọc",
     "readOnlyHelp": "Từ chối mọi thao tác ghi, ngay tại driver.",
