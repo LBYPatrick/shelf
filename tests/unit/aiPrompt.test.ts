@@ -216,3 +216,15 @@ describe('splitting a chat reply', () => {
     });
   });
 });
+
+it('requires discovering missing fields before asking for schema details', () => {
+  const prompt = systemPrompt({ document: document(), canRun: true });
+  expect(prompt).toContain('not the whole database');
+  expect(prompt).toContain('tables: []');
+  expect(prompt).toContain('column names');
+  expect(prompt).toContain('JSON keys');
+  expect(prompt).toContain('before asking');
+  expect(systemPrompt({ document: document(), canRun: false })).not.toContain(
+    'Call inspect_schema'
+  );
+});

@@ -8,6 +8,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Preserve completed assistant answers when a provider emits no text deltas.
+- Let assistants discover missing tables and columns across the connection before
+  asking for schema details, and retain name-only tables beyond the initial
+  schema read budget.
 - Keep Settings the same height across categories and fill its JSON pane with the editor.
 - Preserve rapid tree actions and pinned assistant scrolling during streamed
   answers; keep sheet exits and interrupted gestures continuous.

@@ -12,7 +12,7 @@ import { imagesOf, questionWithAttachments } from '@shared/aiAttachments';
 import { splitReply, systemPrompt } from '@shared/aiPrompt';
 import { classifyStatement } from '@shared/sqlSafety';
 import { schemaDocumentText, type SchemaDocument } from '@shared/schemaDoc';
-import { gatherTables } from './schema';
+import { discoverSchema, gatherTables } from './schema';
 import type { SchemaCache } from './schemaCache';
 import {
   AiError,
@@ -53,14 +53,21 @@ export const TOOLS: readonly AiToolDef[] = [
   {
     name: 'inspect_schema',
     description:
-      'Read the full definition of specific tables — every column, index and foreign key. Use this when the schema you were given lists a table by name only, or when you need to be certain about a column before writing a query.',
+      'Discover or inspect schema anywhere in the connected database. Use tables: [] to list all tables, or tables: [] with search terms to find unknown tables by table names, column names and comments. Use named tables to read their full columns, indexes and foreign keys. Missing fields in the selected table should be discovered here before asking the person for schema details.',
     schema: {
       type: 'object',
       properties: {
         tables: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Table names, qualified with a schema where the engine has schemas.',
+          description:
+            'Qualified table names to inspect. An empty array discovers tables across the connection.',
+        },
+        search: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'With tables: [], find tables matching any of these table/column names or comment fragments. Omit to list all table names. Does not search row values or nested JSON keys; sample those with run_sql.',
         },
       },
       required: ['tables'],
@@ -376,6 +383,18 @@ export async function runTurn(
     usage.inputTokens += reply.usage?.inputTokens ?? 0;
     usage.outputTokens += reply.usage?.outputTokens ?? 0;
 
+    // Some transports return a completed answer without emitting text deltas
+    // (Claude Code's result-only fallback is one). Preserve it through the same
+    // transcript/fence path, without duplicating answers that already streamed.
+    if (!roundText && reply.text) {
+      if (!textId) {
+        textId = nextId('text');
+        emit({ kind: 'text', id: textId, text: '' });
+      }
+      roundText = textSoFar = reply.text;
+      sink.delta(textId, reply.text);
+    }
+
     // Whatever is still open at the end of the round is closed the same way.
     seal();
 
@@ -433,6 +452,17 @@ async function executeCall(
     const tables = Array.isArray(call.input['tables'])
       ? (call.input['tables'] as unknown[]).map(String)
       : [];
+    const search = Array.isArray(call.input['search'])
+      ? (call.input['search'] as unknown[])
+          .map(String)
+          .map((term) => term.trim())
+          .filter(Boolean)
+      : [];
+    const detail = tables.length
+      ? tables.join(', ')
+      : search.length
+        ? search.join(', ')
+        : 'All tables';
 
     emit({
       kind: 'step',
@@ -440,18 +470,20 @@ async function executeCall(
       tool,
       state: 'running',
       label: 'Reading the schema',
-      detail: tables.join(', '),
+      detail,
     });
 
     try {
-      const document = await gatherTables(client, tables, cache);
+      const document = tables.length
+        ? await gatherTables(client, tables, cache)
+        : await discoverSchema(client, search, cache, signal);
       emit({
         kind: 'step',
         id: stepId,
         tool,
         state: 'done',
         label: 'Read the schema',
-        detail: tables.join(', '),
+        detail,
       });
       return { id: call.id, name: call.name, content: schemaDocumentText(document) };
     } catch (error) {

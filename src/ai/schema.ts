@@ -199,7 +199,10 @@ export async function gatherSchema(
     language: capabilities.queryLanguage,
     nouns: capabilities.nouns,
     scope,
-    entities: facts,
+    entities: [
+      ...facts,
+      ...relevant.slice(detailed.length).map((entity) => ({ entity, columns: [] })),
+    ],
   });
 
   const withNotes: SchemaDocument =
@@ -209,6 +212,80 @@ export async function gatherSchema(
     budget: options.budget,
     keep: scope.kind === 'entity' ? [qualifiedName(scope.entity)] : [],
   });
+}
+
+/** Discover unknown names outside the initial scope without guessing a join. */
+export async function discoverSchema(
+  client: DatabaseClient,
+  terms: readonly string[],
+  cache?: SchemaCache,
+  signal?: AbortSignal
+): Promise<SchemaDocument> {
+  signal?.throwIfAborted();
+  const all = (await read(cache, 'entities:*', () => client.listEntities())).filter(
+    (entity) => entity.kind !== 'routine'
+  );
+  const normalize = (value: string) => value.toLowerCase().replace(/[\s_-]+/g, '');
+  const search = terms.map(normalize).filter(Boolean);
+  const failures: string[] = [];
+  const matches = (value: string) => search.some((term) => normalize(value).includes(term));
+  const facts = search.length
+    ? (
+        await mapLimited(all, CONCURRENCY, async (entity) => {
+          signal?.throwIfAborted();
+          const name = qualifiedName(entity);
+          const columns = await read(cache, `columns:${name}`, () =>
+            client.listColumns(entity)
+          ).catch(() => {
+            failures.push(name);
+            return [];
+          });
+          signal?.throwIfAborted();
+          return matches(name) ||
+            matches(entity.comment ?? '') ||
+            columns.some((column) => matches(column.name) || matches(column.comment ?? ''))
+            ? { entity, columns }
+            : undefined;
+        })
+      ).filter(
+        (
+          fact
+        ): fact is {
+          entity: Entity;
+          columns: Awaited<ReturnType<DatabaseClient['listColumns']>>;
+        } => fact !== undefined
+      )
+    : all.map((entity) => ({ entity, columns: [] }));
+  const shown = search.length ? facts.slice(0, 20) : facts;
+  const omissions = search.length
+    ? [
+        'Search covers table and column names/comments, not row values or nested JSON keys. Inspect named tables for indexes and foreign keys; sample values with run_sql.',
+      ]
+    : [
+        'Table names only, across the connected database. Inspect candidate tables by qualified name to read their definitions.',
+      ];
+  if (facts.length > shown.length)
+    omissions.push(
+      `${facts.length} tables matched; only the first ${shown.length} definitions are shown. Narrow the search. Other matches: ${facts
+        .slice(shown.length)
+        .map((fact) => qualifiedName(fact.entity))
+        .join(', ')}.`
+    );
+  if (failures.length)
+    omissions.push(
+      `Could not read columns for: ${failures.join(', ')}. These tables cannot be ruled out by this search.`
+    );
+  signal?.throwIfAborted();
+  return {
+    ...buildSchemaDocument({
+      engine: client.engine,
+      language: client.capabilities.queryLanguage,
+      nouns: client.capabilities.nouns,
+      scope: { kind: 'connection' },
+      entities: shown,
+    }),
+    omissions,
+  };
 }
 
 /**
