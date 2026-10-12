@@ -6,14 +6,18 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-12
+
 ### Fixed
 
-- Add a native file picker for SSH private keys, including hidden and extensionless files.
+- Add a native file picker for SSH private keys, including hidden and
+  extensionless files.
 - Preserve completed assistant answers when a provider emits no text deltas.
 - Let assistants discover missing tables and columns across the connection before
   asking for schema details, and retain name-only tables beyond the initial
   schema read budget.
-- Keep Settings the same height across categories and fill its JSON pane with the editor.
+- Keep Settings the same height across categories and fill its JSON pane with
+  the editor.
 - Preserve rapid tree actions and pinned assistant scrolling during streamed
   answers; keep sheet exits and interrupted gestures continuous.
 - Honor keyboard input and live reduced-motion preferences in controls,
@@ -37,18 +41,16 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Show live job counts in the top-right toolbar with accessible tooltips and animated completion or failure feedback.
+- Show live job counts in the top-right toolbar with accessible tooltips and
+  animated completion or failure feedback.
 - Redesign Settings with category navigation and result exports with a format,
   scope and sample preview, using the window's width and adapting when narrow.
 - Unify control, card, menu and sheet corners while preserving structural seams,
   grid cells and grouped control joins; add copy and import progress feedback.
-
 - Add tab context menus for duplication and closing other tabs, tabs to the left,
   or tabs to the right. Keep long titles and scopes inside crowded tabs and
   reserve a full-size close target.
-
 - Consolidate connection tile actions into an animated three-dot menu.
-
 - Refine connection tiles with aligned metadata and actions, balanced engine
   marks, separate card spacing, and subtle pointer feedback that respects
   reduced motion.
